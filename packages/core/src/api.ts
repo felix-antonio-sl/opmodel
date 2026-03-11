@@ -1,11 +1,11 @@
 import type {
   Model, Thing, State, Link, OPD, Appearance,
   Modifier, Fan, Assertion, Requirement, Stereotype,
-  SubModel, Scenario,
+  SubModel, Scenario, Meta, Settings,
 } from "./types";
 import type { InvariantError } from "./result";
 import { ok, err, type Result } from "./result";
-import { collectAllIds, touch } from "./helpers";
+import { collectAllIds, touch, cleanPatch } from "./helpers";
 
 export function addThing(
   model: Model,
@@ -412,6 +412,30 @@ export function removeScenario(model: Model, id: string): Result<Model, Invarian
   const scenarios = new Map(model.scenarios);
   scenarios.delete(id);
   return ok(touch({ ...model, scenarios }));
+}
+
+// ── Singleton Updates ─────────────────────────────────────────────────
+
+export function updateMeta(
+  model: Model,
+  patch: Partial<Omit<Meta, "created" | "modified">>,
+): Result<Model, InvariantError> {
+  const cleaned = cleanPatch(patch as Record<string, unknown>);
+  return ok(touch({
+    ...model,
+    meta: { ...model.meta, ...cleaned },
+  }));
+}
+
+export function updateSettings(
+  model: Model,
+  patch: Partial<Settings>,
+): Result<Model, InvariantError> {
+  const cleaned = cleanPatch(patch as Record<string, unknown>);
+  return ok(touch({
+    ...model,
+    settings: { ...model.settings, ...cleaned },
+  }));
 }
 
 // ── Batch Validate ─────────────────────────────────────────────────────
