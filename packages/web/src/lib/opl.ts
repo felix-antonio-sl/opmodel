@@ -48,8 +48,6 @@ function linkLabel(link: Link, things: Map<string, Thing>, states: Map<string, S
       return `${src} exhibits ${tgt}.`;
     case "generalization":
       return `${tgt} is a ${src}.`;
-    case "instantiation":
-      return `${tgt} is an instance of ${src}.`;
     case "classification":
       return `${tgt} is classified by ${src}.`;
     case "invocation":

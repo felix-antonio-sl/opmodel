@@ -1,5 +1,6 @@
-import { useRef, useState, useCallback, useMemo } from "react";
+import { useRef, useState, useCallback, useMemo, useEffect } from "react";
 import type { Model, Thing, State, Link, Appearance, Modifier } from "@opmodel/core";
+import type { Command } from "../lib/commands";
 import {
   center,
   rectEdgePoint,
@@ -15,7 +16,7 @@ interface Props {
   model: Model;
   opdId: string;
   selectedThing: string | null;
-  onSelectThing: (id: string | null) => void;
+  dispatch: (cmd: Command) => void;
 }
 
 /* ─── Link type → color mapping ─── */
@@ -31,7 +32,6 @@ const LINK_COLORS: Record<string, string> = {
   aggregation: "#8a7ec8",
   exhibition: "#8a7ec8",
   generalization: "#8a7ec8",
-  instantiation: "#8a7ec8",
   classification: "#8a7ec8",
   invocation: "#d4804e",
   exception: "#d4804e",
@@ -58,12 +58,10 @@ function statesForThing(model: Model, thingId: string): State[] {
 function SvgDefs() {
   return (
     <defs>
-      {/* Dot grid */}
       <pattern id="grid-dots" width="20" height="20" patternUnits="userSpaceOnUse">
         <circle cx="10" cy="10" r="0.6" fill="rgba(255,255,255,0.035)" />
       </pattern>
 
-      {/* Arrowheads per category */}
       <marker id="arrow-proc" viewBox="0 0 10 8" refX="10" refY="4" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
         <path d="M0,0 L10,4 L0,8Z" fill="#3fae96" />
       </marker>
@@ -77,15 +75,23 @@ function SvgDefs() {
         <path d="M0,0 L10,4 L0,8Z" fill="#d4804e" />
       </marker>
 
-      {/* Consumption circle */}
       <marker id="dot-consumption" viewBox="0 0 8 8" refX="4" refY="4" markerWidth="6" markerHeight="6" orient="auto">
         <circle cx="4" cy="4" r="3" fill="#3fae96" />
       </marker>
 
-      {/* Selection glow filter */}
       <filter id="glow-selected" x="-20%" y="-20%" width="140%" height="140%">
         <feGaussianBlur stdDeviation="4" result="blur" />
         <feFlood floodColor="#c8973e" floodOpacity="0.35" />
+        <feComposite in2="blur" operator="in" />
+        <feMerge>
+          <feMergeNode />
+          <feMergeNode in="SourceGraphic" />
+        </feMerge>
+      </filter>
+
+      <filter id="glow-drag" x="-20%" y="-20%" width="140%" height="140%">
+        <feGaussianBlur stdDeviation="6" result="blur" />
+        <feFlood floodColor="#c8973e" floodOpacity="0.5" />
         <feComposite in2="blur" operator="in" />
         <feMerge>
           <feMergeNode />
@@ -96,6 +102,59 @@ function SvgDefs() {
   );
 }
 
+/* ─── Inline Rename Input ─── */
+
+function InlineRename({
+  x,
+  y,
+  width,
+  currentName,
+  onCommit,
+  onCancel,
+}: {
+  x: number;
+  y: number;
+  width: number;
+  currentName: string;
+  onCommit: (name: string) => void;
+  onCancel: () => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const el = inputRef.current;
+    if (el) {
+      el.focus();
+      el.select();
+    }
+  }, []);
+
+  return (
+    <foreignObject x={x} y={y} width={width} height={26}>
+      <input
+        ref={inputRef}
+        className="inline-rename"
+        defaultValue={currentName}
+        onBlur={(e) => {
+          const val = e.target.value.trim();
+          if (val && val !== currentName) onCommit(val);
+          else onCancel();
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            const val = (e.target as HTMLInputElement).value.trim();
+            if (val && val !== currentName) onCommit(val);
+            else onCancel();
+          }
+          if (e.key === "Escape") onCancel();
+        }}
+        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+      />
+    </foreignObject>
+  );
+}
+
 /* ─── Thing Renderer ─── */
 
 function ThingNode({
@@ -103,15 +162,27 @@ function ThingNode({
   appearance,
   states,
   isSelected,
+  isDragging,
+  dragDelta,
+  onMouseDown,
   onSelect,
+  onDoubleClick,
 }: {
   thing: Thing;
   appearance: Appearance;
   states: State[];
   isSelected: boolean;
+  isDragging: boolean;
+  dragDelta: Point;
+  onMouseDown: (e: React.MouseEvent) => void;
   onSelect: () => void;
+  onDoubleClick: () => void;
 }) {
-  const { x, y, w, h } = appearance;
+  const ox = isDragging ? dragDelta.x : 0;
+  const oy = isDragging ? dragDelta.y : 0;
+  const x = appearance.x + ox;
+  const y = appearance.y + oy;
+  const { w, h } = appearance;
   const hasStates = states.length > 0;
   const extraH = hasStates ? 24 : 0;
   const totalH = h + extraH;
@@ -121,16 +192,31 @@ function ThingNode({
   const strokeWidth = thing.essence === "physical" ? 2.5 : 1.5;
   const strokeDash = thing.affiliation === "environmental" ? "6,3" : undefined;
 
+  const filterStr = isDragging
+    ? "url(#glow-drag)"
+    : isSelected
+      ? "url(#glow-selected)"
+      : undefined;
+
+  const className = `thing-group${isSelected ? " thing-group--selected" : ""}${isDragging ? " thing-group--dragging" : ""}`;
+
   return (
     <g
-      className={`thing-group${isSelected ? " thing-group--selected" : ""}`}
+      className={className}
+      filter={filterStr}
+      onMouseDown={(e) => {
+        e.stopPropagation();
+        onMouseDown(e);
+      }}
       onClick={(e) => {
         e.stopPropagation();
         onSelect();
       }}
-      filter={isSelected ? "url(#glow-selected)" : undefined}
+      onDoubleClick={(e) => {
+        e.stopPropagation();
+        onDoubleClick();
+      }}
     >
-      {/* Shape */}
       {thing.kind === "process" ? (
         <ellipse
           className="thing-shape"
@@ -159,7 +245,6 @@ function ThingNode({
         />
       )}
 
-      {/* Name label */}
       <text
         className={`thing-label${thing.kind === "process" ? " thing-label--process" : ""}`}
         x={x + w / 2}
@@ -168,7 +253,6 @@ function ThingNode({
         {thing.name}
       </text>
 
-      {/* States */}
       {hasStates && (
         <g>
           {states.map((state, i) => {
@@ -233,7 +317,7 @@ function LinkLine({
   const color = LINK_COLORS[link.type] ?? "#505878";
 
   const arrowId =
-    link.type === "aggregation" || link.type === "exhibition" || link.type === "generalization" || link.type === "instantiation" || link.type === "classification"
+    link.type === "aggregation" || link.type === "exhibition" || link.type === "generalization" || link.type === "classification"
       ? "arrow-struct"
       : link.type === "invocation" || link.type === "exception"
         ? "arrow-control"
@@ -253,11 +337,9 @@ function LinkLine({
         markerEnd={`url(#${arrowId})`}
         markerStart={link.type === "consumption" ? "url(#dot-consumption)" : undefined}
       />
-      {/* Link type label */}
       <text className="link-label" x={mid.x} y={mid.y - 7}>
         {link.type}
       </text>
-      {/* Modifier badge */}
       {modifier && (
         <text className="modifier-badge" x={mid.x} y={mid.y + 8}>
           [{modifier.type}]
@@ -269,12 +351,22 @@ function LinkLine({
 
 /* ─── Main Canvas Component ─── */
 
-export function OpdCanvas({ model, opdId, selectedThing, onSelectThing }: Props) {
+export function OpdCanvas({ model, opdId, selectedThing, dispatch }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [pan, setPan] = useState({ x: 40, y: 20 });
   const [zoom, setZoom] = useState(1);
-  const [dragging, setDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+  // Pan state
+  const [panning, setPanning] = useState(false);
+  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+
+  // Drag thing state (visual delta, not model mutation until drop)
+  const [dragTarget, setDragTarget] = useState<string | null>(null);
+  const [dragDelta, setDragDelta] = useState<Point>({ x: 0, y: 0 });
+  const [dragOrigin, setDragOrigin] = useState<Point>({ x: 0, y: 0 });
+
+  // Inline rename state
+  const [renaming, setRenaming] = useState<string | null>(null);
 
   // Collect appearances for this OPD
   const appearances = useMemo(() => {
@@ -285,7 +377,7 @@ export function OpdCanvas({ model, opdId, selectedThing, onSelectThing }: Props)
     return map;
   }, [model, opdId]);
 
-  // Collect visible links (both endpoints have appearances)
+  // Collect visible links
   const visibleLinks = useMemo(() => {
     const links: { link: Link; modifier?: Modifier }[] = [];
     for (const link of model.links.values()) {
@@ -297,25 +389,78 @@ export function OpdCanvas({ model, opdId, selectedThing, onSelectThing }: Props)
     return links;
   }, [model, opdId, appearances]);
 
-  // Pan handlers
+  // Convert client coords to SVG model coords
+  const clientToModel = useCallback(
+    (clientX: number, clientY: number): Point => {
+      return {
+        x: (clientX - pan.x) / zoom,
+        y: (clientY - pan.y) / zoom,
+      };
+    },
+    [pan, zoom],
+  );
+
+  /* ─── Mouse handlers ─── */
+
   const onMouseDown = useCallback(
     (e: React.MouseEvent) => {
       if (e.button !== 0) return;
-      setDragging(true);
-      setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+      // Only start pan if not dragging a thing
+      setPanning(true);
+      setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
     },
     [pan],
   );
 
-  const onMouseMove = useCallback(
-    (e: React.MouseEvent) => {
-      if (!dragging) return;
-      setPan({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
+  const onThingMouseDown = useCallback(
+    (thingId: string, e: React.MouseEvent) => {
+      if (e.button !== 0) return;
+      e.stopPropagation();
+      const svgRect = svgRef.current?.getBoundingClientRect();
+      if (!svgRect) return;
+      setDragTarget(thingId);
+      setDragDelta({ x: 0, y: 0 });
+      setDragOrigin({ x: e.clientX, y: e.clientY });
+      setPanning(false);
+      dispatch({ tag: "selectThing", thingId });
     },
-    [dragging, dragStart],
+    [dispatch],
   );
 
-  const onMouseUp = useCallback(() => setDragging(false), []);
+  const onMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      if (dragTarget) {
+        const dx = (e.clientX - dragOrigin.x) / zoom;
+        const dy = (e.clientY - dragOrigin.y) / zoom;
+        setDragDelta({ x: dx, y: dy });
+        return;
+      }
+      if (panning) {
+        setPan({ x: e.clientX - panStart.x, y: e.clientY - panStart.y });
+      }
+    },
+    [dragTarget, dragOrigin, zoom, panning, panStart],
+  );
+
+  const onMouseUp = useCallback(() => {
+    if (dragTarget) {
+      // Commit drag as a single model mutation
+      const app = appearances.get(dragTarget);
+      if (app && (Math.abs(dragDelta.x) > 1 || Math.abs(dragDelta.y) > 1)) {
+        dispatch({
+          tag: "moveThing",
+          thingId: dragTarget,
+          opdId,
+          x: Math.round(app.x + dragDelta.x),
+          y: Math.round(app.y + dragDelta.y),
+        });
+      }
+      setDragTarget(null);
+      setDragDelta({ x: 0, y: 0 });
+      return;
+    }
+    setPanning(false);
+  }, [dragTarget, dragDelta, appearances, opdId, dispatch]);
 
   const onWheel = useCallback(
     (e: React.WheelEvent) => {
@@ -326,10 +471,56 @@ export function OpdCanvas({ model, opdId, selectedThing, onSelectThing }: Props)
     [],
   );
 
+  const onCanvasClick = useCallback(() => {
+    if (!dragTarget) {
+      dispatch({ tag: "selectThing", thingId: null });
+      setRenaming(null);
+    }
+  }, [dragTarget, dispatch]);
+
+  const onThingDoubleClick = useCallback((thingId: string) => {
+    setRenaming(thingId);
+  }, []);
+
+  const commitRename = useCallback(
+    (name: string) => {
+      if (renaming) {
+        dispatch({ tag: "renameThing", thingId: renaming, name });
+      }
+      setRenaming(null);
+    },
+    [renaming, dispatch],
+  );
+
   const opd = model.opds.get(opdId);
 
+  // Build effective rects for links, accounting for drag delta
+  const getEffectiveRect = useCallback(
+    (thingId: string): Rect | null => {
+      const app = appearances.get(thingId);
+      if (!app) return null;
+      const states = statesForThing(model, thingId);
+      const ox = dragTarget === thingId ? dragDelta.x : 0;
+      const oy = dragTarget === thingId ? dragDelta.y : 0;
+      return {
+        x: app.x + ox,
+        y: app.y + oy,
+        w: app.w,
+        h: app.h + (states.length > 0 ? 24 : 0),
+      };
+    },
+    [appearances, model, dragTarget, dragDelta],
+  );
+
+  // Cursor
+  const cursorClass = dragTarget
+    ? "opd-canvas--dragging"
+    : panning
+      ? ""
+      : "";
+
   return (
-    <div className="opd-canvas">
+    <div className={`opd-canvas ${cursorClass}`}>
       <div className="canvas-opd-label">
         <span>{opd?.name ?? opdId}</span>
         {opd?.refines && ` — ${model.things.get(opd.refines)?.name ?? opd.refines}`}
@@ -343,25 +534,21 @@ export function OpdCanvas({ model, opdId, selectedThing, onSelectThing }: Props)
         onMouseUp={onMouseUp}
         onMouseLeave={onMouseUp}
         onWheel={onWheel}
-        onClick={() => onSelectThing(null)}
+        onClick={onCanvasClick}
       >
         <SvgDefs />
 
-        {/* Background grid */}
         <rect width="100%" height="100%" fill="var(--bg-canvas)" />
         <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
           <rect x="-500" y="-500" width="3000" height="3000" fill="url(#grid-dots)" />
 
-          {/* Links (behind things) */}
+          {/* Links (behind things) — re-route during drag */}
           {visibleLinks.map(({ link, modifier }) => {
-            const srcApp = appearances.get(link.source)!;
-            const tgtApp = appearances.get(link.target)!;
-            const srcThing = model.things.get(link.source)!;
-            const tgtThing = model.things.get(link.target)!;
-            const srcStates = statesForThing(model, link.source);
-            const tgtStates = statesForThing(model, link.target);
-            const srcRect: Rect = { x: srcApp.x, y: srcApp.y, w: srcApp.w, h: srcApp.h + (srcStates.length > 0 ? 24 : 0) };
-            const tgtRect: Rect = { x: tgtApp.x, y: tgtApp.y, w: tgtApp.w, h: tgtApp.h + (tgtStates.length > 0 ? 24 : 0) };
+            const srcRect = getEffectiveRect(link.source);
+            const tgtRect = getEffectiveRect(link.target);
+            const srcThing = model.things.get(link.source);
+            const tgtThing = model.things.get(link.target);
+            if (!srcRect || !tgtRect || !srcThing || !tgtThing) return null;
 
             return (
               <LinkLine
@@ -381,6 +568,7 @@ export function OpdCanvas({ model, opdId, selectedThing, onSelectThing }: Props)
             const thing = model.things.get(thingId);
             if (!thing) return null;
             const states = statesForThing(model, thingId);
+            const isDragging = dragTarget === thingId;
 
             return (
               <ThingNode
@@ -389,10 +577,36 @@ export function OpdCanvas({ model, opdId, selectedThing, onSelectThing }: Props)
                 appearance={app}
                 states={states}
                 isSelected={selectedThing === thingId}
-                onSelect={() => onSelectThing(selectedThing === thingId ? null : thingId)}
+                isDragging={isDragging}
+                dragDelta={isDragging ? dragDelta : { x: 0, y: 0 }}
+                onMouseDown={(e) => onThingMouseDown(thingId, e)}
+                onSelect={() =>
+                  dispatch({
+                    tag: "selectThing",
+                    thingId: selectedThing === thingId ? null : thingId,
+                  })
+                }
+                onDoubleClick={() => onThingDoubleClick(thingId)}
               />
             );
           })}
+
+          {/* Inline rename overlay */}
+          {renaming && (() => {
+            const app = appearances.get(renaming);
+            const thing = model.things.get(renaming);
+            if (!app || !thing) return null;
+            return (
+              <InlineRename
+                x={app.x}
+                y={app.y + app.h / 2 - 13}
+                width={app.w}
+                currentName={thing.name}
+                onCommit={commitRename}
+                onCancel={() => setRenaming(null)}
+              />
+            );
+          })()}
         </g>
       </svg>
     </div>

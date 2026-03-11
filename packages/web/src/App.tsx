@@ -1,47 +1,33 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { loadModel, isOk, validate, type Model } from "@opmodel/core";
+import { useModelStore } from "./hooks/useModelStore";
 import { OpdTree } from "./components/OpdTree";
 import { OpdCanvas } from "./components/OpdCanvas";
 import { OplPanel } from "./components/OplPanel";
 
-export function App() {
-  const [model, setModel] = useState<Model | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [currentOpd, setCurrentOpd] = useState("opd-sd");
-  const [selectedThing, setSelectedThing] = useState<string | null>(null);
+function Editor({ initialModel }: { initialModel: Model }) {
+  const store = useModelStore(initialModel);
+  const { model, ui, dispatch, doUndo, doRedo, canUndo, canRedo, lastError } = store;
+
+  // Keyboard shortcuts
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "z") {
+        e.preventDefault();
+        if (e.shiftKey) {
+          doRedo();
+        } else {
+          doUndo();
+        }
+      }
+    },
+    [doUndo, doRedo],
+  );
 
   useEffect(() => {
-    fetch("/coffee-making.opmodel")
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.text();
-      })
-      .then((json) => {
-        const result = loadModel(json);
-        if (isOk(result)) {
-          setModel(result.value);
-        } else {
-          setError(`Load error: ${result.error.message}`);
-        }
-      })
-      .catch((e) => setError(e.message));
-  }, []);
-
-  if (error) {
-    return (
-      <div className="loading">
-        <span style={{ color: "var(--danger)" }}>{error}</span>
-      </div>
-    );
-  }
-
-  if (!model) {
-    return (
-      <div className="loading">
-        <div className="loading__spinner" />
-      </div>
-    );
-  }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleKeyDown]);
 
   const errors = validate(model);
   const isValid = errors.length === 0;
@@ -57,27 +43,46 @@ export function App() {
         <div className="header__sep" />
         <div className="header__model-name">{model.meta.name}</div>
         <div className="header__spacer" />
-        <div className="header__badge">v{model.meta.schema_version}</div>
+
+        {/* Undo/Redo */}
+        <div className="header__actions">
+          <button
+            className={`header__action${canUndo ? "" : " header__action--disabled"}`}
+            onClick={doUndo}
+            title="Undo (Ctrl+Z)"
+          >
+            ↶
+          </button>
+          <button
+            className={`header__action${canRedo ? "" : " header__action--disabled"}`}
+            onClick={doRedo}
+            title="Redo (Ctrl+Shift+Z)"
+          >
+            ↷
+          </button>
+        </div>
+        <div className="header__sep" />
+        <div className="header__badge">v{model.opmodel}</div>
       </header>
 
       {/* Panels */}
       <OpdTree
         model={model}
-        currentOpd={currentOpd}
-        selectedThing={selectedThing}
-        onSelectOpd={setCurrentOpd}
-        onSelectThing={setSelectedThing}
+        currentOpd={ui.currentOpd}
+        selectedThing={ui.selectedThing}
+        onSelectOpd={(id) => dispatch({ tag: "selectOpd", opdId: id })}
+        onSelectThing={(id) => dispatch({ tag: "selectThing", thingId: id })}
       />
       <OpdCanvas
         model={model}
-        opdId={currentOpd}
-        selectedThing={selectedThing}
-        onSelectThing={setSelectedThing}
+        opdId={ui.currentOpd}
+        selectedThing={ui.selectedThing}
+        dispatch={dispatch}
       />
       <OplPanel
         model={model}
-        opdId={currentOpd}
-        selectedThing={selectedThing}
+        opdId={ui.currentOpd}
+        selectedThing={ui.selectedThing}
       />
 
       {/* Status Bar */}
@@ -92,8 +97,60 @@ export function App() {
         <span className="status-bar__count">{model.links.size} links</span>
         <span className="status-bar__count">{model.opds.size} OPDs</span>
         <div className="status-bar__spacer" />
-        <span className="status-bar__version">opmodel {model.meta.schema_version}</span>
+        {lastError && (
+          <>
+            <span className="status-bar__error">{lastError}</span>
+            <div className="status-bar__sep" />
+          </>
+        )}
+        {canUndo && (
+          <>
+            <span className="status-bar__hint">Ctrl+Z undo</span>
+            <div className="status-bar__sep" />
+          </>
+        )}
+        <span className="status-bar__version">opmodel {model.opmodel}</span>
       </footer>
     </div>
   );
+}
+
+export function App() {
+  const [initialModel, setInitialModel] = useState<Model | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/coffee-making.opmodel")
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.text();
+      })
+      .then((json) => {
+        const result = loadModel(json);
+        if (isOk(result)) {
+          setInitialModel(result.value);
+        } else {
+          setError(`Load error: ${result.error.message}`);
+        }
+      })
+      .catch((e) => setError(e.message));
+  }, []);
+
+  if (error) {
+    return (
+      <div className="loading">
+        <span style={{ color: "var(--danger)" }}>{error}</span>
+      </div>
+    );
+  }
+
+  if (!initialModel) {
+    return (
+      <div className="loading">
+        <div className="loading__spinner" />
+      </div>
+    );
+  }
+
+  return <Editor initialModel={initialModel} />;
 }
