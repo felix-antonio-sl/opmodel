@@ -4,6 +4,7 @@ import { useModelStore } from "./hooks/useModelStore";
 import { OpdTree } from "./components/OpdTree";
 import { OpdCanvas } from "./components/OpdCanvas";
 import { OplPanel } from "./components/OplPanel";
+import { Toolbar } from "./components/Toolbar";
 
 function Editor({ initialModel }: { initialModel: Model }) {
   const store = useModelStore(initialModel);
@@ -27,6 +28,16 @@ function Editor({ initialModel }: { initialModel: Model }) {
       if ((e.key === "Delete" || e.key === "Backspace") && ui.selectedThing && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
         dispatch({ tag: "removeThing", thingId: ui.selectedThing });
+      }
+      if (e.key === "Escape") {
+        dispatch({ tag: "setMode", mode: "select" });
+      }
+      // Only activate mode shortcuts when not typing in an input
+      const target = e.target as HTMLElement;
+      if (!e.metaKey && !e.ctrlKey && target.tagName !== "INPUT" && target.tagName !== "SELECT") {
+        if (e.key === "o") dispatch({ tag: "setMode", mode: "addObject" });
+        if (e.key === "p") dispatch({ tag: "setMode", mode: "addProcess" });
+        if (e.key === "l") dispatch({ tag: "setMode", mode: "addLink" });
       }
     },
     [doUndo, doRedo, save, ui.selectedThing, dispatch],
@@ -79,6 +90,9 @@ function Editor({ initialModel }: { initialModel: Model }) {
         <div className="header__badge">v{model.opmodel}</div>
       </header>
 
+      {/* Toolbar */}
+      <Toolbar mode={ui.mode} dispatch={dispatch} />
+
       {/* Panels */}
       <OpdTree
         model={model}
@@ -91,6 +105,7 @@ function Editor({ initialModel }: { initialModel: Model }) {
         model={model}
         opdId={ui.currentOpd}
         selectedThing={ui.selectedThing}
+        mode={ui.mode}
         dispatch={dispatch}
       />
       <OplPanel

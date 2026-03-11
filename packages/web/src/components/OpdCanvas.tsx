@@ -1,6 +1,7 @@
 import { useRef, useState, useCallback, useMemo, useEffect } from "react";
 import type { Model, Thing, State, Link, Appearance, Modifier } from "@opmodel/core";
-import type { Command } from "../lib/commands";
+import type { Command, EditorMode } from "../lib/commands";
+import { genId } from "../lib/ids";
 import {
   center,
   rectEdgePoint,
@@ -16,6 +17,7 @@ interface Props {
   model: Model;
   opdId: string;
   selectedThing: string | null;
+  mode: EditorMode;
   dispatch: (cmd: Command) => void;
 }
 
@@ -351,7 +353,7 @@ function LinkLine({
 
 /* ─── Main Canvas Component ─── */
 
-export function OpdCanvas({ model, opdId, selectedThing, dispatch }: Props) {
+export function OpdCanvas({ model, opdId, selectedThing, mode, dispatch }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [pan, setPan] = useState({ x: 40, y: 20 });
   const [zoom, setZoom] = useState(1);
@@ -471,12 +473,44 @@ export function OpdCanvas({ model, opdId, selectedThing, dispatch }: Props) {
     [],
   );
 
-  const onCanvasClick = useCallback(() => {
-    if (!dragTarget) {
+  const onCanvasClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (dragTarget) return;
+
+      if (mode === "addObject" || mode === "addProcess") {
+        const svgRect = svgRef.current?.getBoundingClientRect();
+        if (!svgRect) return;
+        const x = (e.clientX - svgRect.left - pan.x) / zoom;
+        const y = (e.clientY - svgRect.top - pan.y) / zoom;
+        const kind = mode === "addObject" ? "object" : "process";
+        const prefix = kind === "object" ? "obj" : "proc";
+        const id = genId(prefix);
+
+        dispatch({
+          tag: "addThing",
+          thing: {
+            id,
+            kind,
+            name: `New ${kind.charAt(0).toUpperCase() + kind.slice(1)}`,
+            essence: "informatical" as const,
+            affiliation: "systemic" as const,
+          },
+          opdId,
+          x: Math.round(x - 60),
+          y: Math.round(y - 25),
+          w: 120,
+          h: 50,
+        });
+        dispatch({ tag: "selectThing", thingId: id });
+        dispatch({ tag: "setMode", mode: "select" });
+        return;
+      }
+
       dispatch({ tag: "selectThing", thingId: null });
       setRenaming(null);
-    }
-  }, [dragTarget, dispatch]);
+    },
+    [dragTarget, mode, pan, zoom, opdId, dispatch],
+  );
 
   const onThingDoubleClick = useCallback((thingId: string) => {
     setRenaming(thingId);
@@ -515,9 +549,11 @@ export function OpdCanvas({ model, opdId, selectedThing, dispatch }: Props) {
   // Cursor
   const cursorClass = dragTarget
     ? "opd-canvas--dragging"
-    : panning
-      ? ""
-      : "";
+    : mode === "addObject" || mode === "addProcess"
+      ? "opd-canvas--placing"
+      : mode === "addLink"
+        ? "opd-canvas--linking"
+        : "";
 
   return (
     <div className={`opd-canvas ${cursorClass}`}>
