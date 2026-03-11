@@ -8,6 +8,7 @@ import { executeList } from "./commands/list";
 import { executeShow } from "./commands/show";
 import { executeValidate } from "./commands/validate";
 import { executeUpdate } from "./commands/update";
+import { executeRefine } from "./commands/refine";
 
 const program = new Command();
 
@@ -379,6 +380,27 @@ update
       console.log(JSON.stringify({ action: "updated", type: result.type, entity: result.entity }, null, 2));
     } else {
       console.log(`Updated ${result.type}`);
+    }
+  });
+
+program
+  .command("refine")
+  .description("Refine a thing (in-zoom or unfold)")
+  .argument("<thingId>", "Thing ID to refine")
+  .requiredOption("--opd <opd>", "Parent OPD ID")
+  .requiredOption("--type <type>", "Refinement type (in-zoom|unfold)")
+  .option("--file <file>", "Path to .opmodel file")
+  .action((thingId: string, opts: Record<string, unknown>) => {
+    const jsonFlag = program.opts().json as boolean;
+    const result = executeRefine(thingId, {
+      opd: opts.opd as string,
+      type: opts.type as any,
+      file: opts.file as string,
+    });
+    if (jsonFlag) {
+      console.log(JSON.stringify(result, null, 2));
+    } else {
+      console.log(`Refined ${thingId} → ${result.opd.name} (${result.opd.refinement_type}, ${result.appearancesCreated} appearances)`);
     }
   });
 
