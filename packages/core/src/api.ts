@@ -225,6 +225,10 @@ export function addOPD(
       return err({ code: "I-03", message: `Parent OPD not found: ${opd.parent_opd}`, entity: opd.id });
     }
   }
+  // I-03: view OPDs must have parent_opd = null
+  if (opd.opd_type === "view" && opd.parent_opd !== null) {
+    return err({ code: "I-03", message: `View OPD must have parent_opd=null`, entity: opd.id });
+  }
   return ok({ ...model, opds: new Map(model.opds).set(opd.id, opd) });
 }
 
@@ -428,6 +432,15 @@ export function validate(model: Model): InvariantError[] {
       if (!model.opds.has(opd.parent_opd)) errors.push({ code: "I-03", message: `OPD ${id} parent not found: ${opd.parent_opd}`, entity: id });
     }
     if (opd.opd_type === "view" && opd.parent_opd !== null) errors.push({ code: "I-03", message: `View OPD ${id} must have parent_opd=null`, entity: id });
+  }
+
+  // I-04: appearance (thing, opd) uniqueness — structurally enforced by Map key,
+  // but verify no duplicate thing+opd pairs exist in values
+  const seenAppearances = new Set<string>();
+  for (const app of model.appearances.values()) {
+    const key = `${app.thing}::${app.opd}`;
+    if (seenAppearances.has(key)) errors.push({ code: "I-04", message: `Duplicate appearance: ${key}`, entity: key });
+    seenAppearances.add(key);
   }
 
   // I-05
