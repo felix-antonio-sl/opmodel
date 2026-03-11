@@ -12,15 +12,15 @@ Marco metodológico: `knowledge/fxsl/opm-methodology/` (ISO 19450)
 **DA-1: CLI-First (AI-Agent Ready)**
 La app expone `opmod`, una CLI con paridad 100% de la UI. Toda operación invocable desde terminal. Habilita que agentes AI (Claude Code, OpenClaw, etc.) operen el modelo vía tool-use.
 
-**DA-2: Typed Category Store (evolución de Graph-Native Storage)**
-El graph store es una categoría tipada donde:
+**DA-2: Typed Category Store (con fibración OPD nativa)**
+El graph store es una categoría tipada — no un property graph plano — donde:
 - **0-celdas** = Things (Object ⊔ Process) + States + OPDs
-- **1-celdas** = Links tipados (procedural, structural, control, contención)
-- **2-celdas** = Control modifiers (event 'e', condition 'c') como transformaciones SOBRE links
-- La fibración π: C_opm → C_opd_tree se implementa nativamente (OPDs como fibras, `appears_in`/`child_of` como morphisms de la fibración)
-- States como subobjetos (monos) de Objects con cascade delete por composición
-- Composición de links verificable (path equations)
-Formato de persistencia text-based, git-diffable.
+- **1-celdas** = Links tipados (procedural, structural, control, contención `appears_in`/`child_of`/`has_state`)
+- **2-celdas** = Control modifiers (event 'e', condition 'c') como transformaciones naturales SOBRE links
+- **Fibración nativa:** π: C_opm → C_opd_tree se implementa como estructura de primera clase. Los OPDs son fibras (no nodes planos); `appears_in` y `child_of` son morfismos de la fibración. Cada fibra es el subgrafo de things visibles en ese OPD.
+- **States como subobjetos:** State ↪ Object es mono (inyección). El reticulado Sub(O) es exclusivo. Cascade delete por composición: eliminar el mono elimina el subobjeto.
+- **Composición verificable:** Si f:A→B y g:B→C existen como 1-celdas, la composición g∘f:A→C es verificable. Path equations se validan al cargar y al mutar.
+- **Persistencia:** Formato text-based, git-diffable. La serialización preserva 0-celdas, 1-celdas y 2-celdas con sus tipos. La deserialización reconstruye la categoría con composición verificable.
 
 **DA-3: Single-User Pro**
 Sin auth. Arquitectura sofisticada: separación de capas, API interna, modelo de datos formal.
@@ -29,7 +29,7 @@ Sin auth. Arquitectura sofisticada: separación de capas, API interna, modelo de
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                      Interfaces                               │
+│                        Interfaces                            │
 │  ┌──────────┐  ┌──────────┐  ┌───────────────┐              │
 │  │  Web UI   │  │   CLI    │  │ LLM Adapter   │              │
 │  │ (browser) │  │ (opmod)  │  │ (NL→OPL→OPD)  │              │
@@ -57,27 +57,50 @@ Sin auth. Arquitectura sofisticada: separación de capas, API interna, modelo de
 ```
 
 **DA-5: Motor de Simulación como Coalgebra Evaluator**
-El motor ECA no es un loop imperativo que "recorre tokens". Es un evaluador coalgebraico:
-c: ModelState → Event × (Precond → ModelState + 1).
-La simulación avanza evaluando la coalgebra paso a paso, produciendo trazas para bisimulación y coinducción.
+El motor ECA no es un loop imperativo que recorre tokens por enlaces. Es un evaluador coalgebraico:
+
+```
+Coalgebra: c: ModelState → Event × (Precond → ModelState + 1)
+
+Donde:
+  ModelState = Π_{o ∈ Objects} (State(o) × Existence(o))
+  Event = creación de objeto | entrada a estado específico
+  Precond = preprocess object set satisfecho
+  +1 = proceso no ejecuta (evento perdido, Maybe monad)
+```
+
+La simulación avanza evaluando la coalgebra paso a paso. Cada paso produce: (1) una observación (estado actual de todos los objetos), (2) una transición (cuál proceso se activa y qué cambia), (3) un log de traza (secuencia coinductiva para bisimulación posterior). Las propiedades de safety y liveness se verifican por coinducción sobre trazas, no solo por análisis estático del grafo.
 
 **DA-6: Motor OPL como Bidirectional Lens**
-La bimodalidad OPD↔OPL no son dos parsers independientes, es un lens formal con operaciones `expose` y `update` que cumplen las leyes PutGet y GetPut.
+La bimodalidad OPD↔OPL no son dos parsers independientes. Es un lens formal:
+
+```
+Lens_bimodal = (expose: Graph → OPL, update: Graph × OPL_edit → Graph)
+
+Leyes:
+  PutGet: update(g, edit) |> expose = apply(edit, expose(g))
+  GetPut: update(g, expose(g)) = g
+```
+
+El Domain Engine expone UN lens, no dos funciones. La UI y la CLI invocan `expose` para ver OPL y `update` para editar desde OPL. Las leyes PutGet y GetPut se verifican como tests automáticos de integridad. Si hay pérdida de información por limitación del formato, se señala explícitamente como `Functor Information Loss`.
 
 ### Fundamento Categórico
 
-| Concepto OPM | Construcción CT | Implicación |
-|-------------|----------------|-------------|
-| Thing | 0-celda | Node en el store |
-| Link | 1-celda | Edge tipado en el store |
-| Control modifier | 2-celda | Transformación sobre edge |
-| OPD Tree | Opfibración | OPDs como fibras, no como "carpetas" |
-| States | Subobjetos (monos) | Cascade delete, reticulado exclusivo |
-| ECA simulation | Coalgebra | Evaluador paso a paso, no loop |
-| OPD↔OPL | Lens bidireccional | Round-trip by construction |
-| Aggregation | Producto (límite) | JOINs, integridad referencial |
-| In-zoom | Retracción en fibración | Nueva fibra en el árbol |
-| Generalization | Functor inclusión + pullback | Herencia por pullback |
+Correspondencias OPM↔CT que justifican la arquitectura:
+
+| Concepto OPM | Construcción CT | Implicación Arquitectural |
+|-------------|----------------|--------------------------|
+| Thing | 0-celda | Node tipado en el Typed Category Store |
+| Link | 1-celda | Edge tipado con composición verificable |
+| Control modifier (event, condition) | 2-celda | Transformación natural sobre edge, no propiedad del edge |
+| OPD Tree | Opfibración π: C_opm → C_opd_tree | OPDs como fibras con semántica de contención, no como "carpetas" |
+| States | Subobjetos (monos: State ↪ Object) | Cascade delete por composición, reticulado exclusivo Sub(O) |
+| Simulación ECA | Coalgebra S → F(S) | Evaluador paso a paso con trazas coinductivas, no loop imperativo |
+| Bimodalidad OPD↔OPL | Lens bidireccional (expose/update) | Round-trip by construction con leyes PutGet/GetPut |
+| Aggregation | Producto (límite) | JOINs e integridad referencial por construcción universal |
+| In-zoom | Retracción en la opfibración | Nueva fibra en C_opd_tree; objetos heredados = pullback del proceso sobre su fibra |
+| Generalization | Functor inclusión + pullback | Herencia de features por pullback, no por copia ad-hoc |
+| Classification | Free ⊣ Forget | Instancias como evaluación del patrón libre |
 
 ### Distribución por prioridad
 
@@ -134,8 +157,8 @@ CLI (L-M6-03) ← deps base: L-M1-02, L-M1-03, L-M1-07, L-M2-01, L-M6-01
 
 | Pulso | HUs                                                                    | Entregable                                   |
 | ----- | ---------------------------------------------------------------------- | -------------------------------------------- |
-| P0    | L-M1-02, L-M1-03, L-M3-01, L-M3-02, L-M3-03, L-M2-01, L-M6-03(base) | Canvas + CLI base → SD básico con OPL        |
-| P1    | L-M1-06, L-M1-07, L-M1-10, L-M1-01, L-M6-01, L-M6-02               | **MVP: modelo OPM completo, guardable**      |
+| P0    | L-M1-02, L-M1-03, L-M3-01, L-M3-02, L-M3-03, L-M2-01, L-M6-03(base)    | Canvas + CLI base → SD básico con OPL        |
+| P1    | L-M1-06, L-M1-07, L-M1-10, L-M1-01, L-M6-01, L-M6-02                   | **MVP: modelo OPM completo, guardable**      |
 | P2    | L-M1-04, L-M1-05, L-M2-02, L-M2-03, L-M2-04                            | OPL bidireccional + NL→OPL→OPD               |
 | P3    | L-M1-08, L-M1-09, L-M1-11, L-M1-12, L-M3-04, L-M3-05, L-M3-06, L-M6-07 | Navegación inteligente + command palette     |
 | P4    | L-M4-01, L-M4-02, L-M3-07, L-M6-04, L-M6-05                            | Validación continua + coverage               |
@@ -239,7 +262,11 @@ Como modelador, quiero crear enlaces entre things mediante arrastre con tabla fi
 - Given un enlace procedural existente, when el modelador hace clic derecho sobre él, then se abre un panel con campos editables de multiplicidad fuente, multiplicidad destino, tag y probabilidad de ruta.
 - Given un objeto stateful y un proceso, when el modelador arrastra desde un estado específico del objeto hacia el proceso y luego arrastra desde el proceso de vuelta al objeto (sin apuntar a un estado específico), then se crea un input-specified effect link y el OPL refleja "Processing changes Object from input-state" (sin especificar estado de salida).
 - Given un objeto stateful y un proceso, when el modelador arrastra desde el objeto (sin apuntar a un estado) hacia el proceso y luego arrastra desde el proceso hacia un estado específico del objeto, then se crea un output-specified effect link y el OPL refleja "Processing changes Object to output-state" (sin especificar estado de entrada, el objeto puede estar en cualquier estado).
-- Given el Domain Engine gestionando enlaces, when el sistema procesa procedural links, then la composición de links es asociativa: si f:A→B y g:B→C, entonces g∘f:A→C existe y es verificable; el sistema mantiene un registro de composiciones válidas.
+
+**Invariantes categóricos de implementación:**
+
+- Given el Domain Engine con enlaces procedurales creados, when se verifica la composición de 1-celdas, then si existen f:A→B y g:B→C como links procedurales, la composición g∘f:A→C es representable y verificable en el Typed Category Store; la composición es asociativa: h∘(g∘f) = (h∘g)∘f.
+- Given el Domain Engine con un enlace procedimental creado como 1-celda, when se le aplica un control modifier (event 'e' o condition 'c'), then el modifier se almacena como 2-celda (transformación natural sobre la 1-celda), no como propiedad del edge; la distinción preserva la estructura bicategórica del dominio OPM.
 
 **Dependencias:** L-M1-02
 
@@ -287,7 +314,11 @@ Como modelador, quiero crear enlaces estructurales OPM (composición, caracteriz
 - Given un enlace de clasificación-instanciación entre un Class y sus Instances, when el modelador crea una Instance, then los features definidos por el pattern del Class requieren valores explícitos en la Instance; el sistema muestra campos editables para cada feature heredado y el OPL refleja "Instance-thing is an instance of Class-thing" con los valores asignados.
 - Given cualquier enlace procedimental existente (transforming: consumption, effect, result, input/output pair, input-specified, output-specified; enabling: agent, instrument) con o sin state-specification, when el modelador aplica un modifier 'e' (event) o 'c' (condition), then el sistema genera la sentencia OPL compuesta según la gramática ISO 19450 correspondiente, combinando la sentencia base del enlace con la semántica del modifier; ejemplos: "Object triggers Process, which consumes Object" (consumption + event), "Agent handles Process if Agent is qualifying-state, else Process is skipped" (condition + state-specified agent), "Input-state Object triggers Process, which changes Object from input-state to output-state" (input-output-specified effect + event), "Process occurs if Object is input-state, in which case Process changes Object from input-state to output-state, otherwise Process is skipped" (condition + input-output-specified effect).
 - Given un link fan (XOR o OR) cuyos enlaces tienen modifiers de control ('e' o 'c'), when el sistema renderiza el fan, then los modifiers se preservan en cada rama del fan y la OPL de cada rama refleja su combinación específica de tipo de enlace + modifier + state-specification; esto habilita control-modified link fans como tipo diferenciado.
-- Given el Domain Engine estructurando el modelo, when procesa enlaces estructurales, then trata Aggregation como un producto (límite), Exhibition como fibración, Generalization como functor de inclusión con pullback, y Classification como adjunción Free ⊣ Forget; estas estructuras determinan reglas formales inquebrantables de composición.
+
+**Invariantes categóricos de implementación:**
+
+- Given el Domain Engine con enlaces estructurales, when se verifica la semántica de cada tipo, then: Aggregation = producto (límite) con integridad referencial por construcción universal; Exhibition = fibración (el atributo exhibido vive en la fibra del exhibidor); Generalization = functor de inclusión con pullback de herencia (features del General se propagan por pullback, no por copia ad-hoc); Classification = Free ⊣ Forget (instancias como evaluación del patrón libre del Class).
+- Given un enlace exhibition-characterization creado entre un exhibidor y un atributo, when el Domain Engine procesa la creación, then ejecuta el endofunctor ExhibitionAction: C_opm → C_opm que fuerza essence(attribute) := Informatical; este side-effect es por construcción functorial, no por constraint ad-hoc.
 
 **Dependencias:** L-M1-02, L-M1-03
 
@@ -357,7 +388,10 @@ Como modelador, quiero agregar estados a los objetos, nombrarlos, marcarlos como
 - Given que un mismo estado está marcado como Initial, when el modelador también lo marca como Final, then el sistema permite la coexistencia de ambas marcas y el OPL refleja ambas propiedades.
 - Given un objeto stateful con un estado marcado como Default, when un proceso con enlace de efecto (sin estado de entrada especificado) afecta a este objeto, then el sistema asume que el objeto está en su estado Default como estado de entrada implícito; si no hay Default configurado, el sistema lo señala como advertencia.
 - Given un objeto stateful sin estado Default configurado, when el modelador ejecuta la validación metodológica, then el validador emite una advertencia: "Object [name] has states but no default state — simulation may produce ambiguous results".
-- Given el Domain Engine gestionando el reticulado Sub(O), when procesa estados, then garantiza que States son subobjetos (monos) de Objects y el reticulado es exclusivo (un object está en exactamente un state o en transición); cascade delete se aplica por composición eliminando el subobjeto si el object se elimina.
+
+**Invariantes categóricos de implementación:**
+
+- Given el Domain Engine con estados creados para un objeto, when se verifica la estructura de subobjetos, then cada State es un mono (inyección) State ↪ Object en el Typed Category Store; el reticulado Sub(O) es exclusivo (un objeto está en exactamente un estado o en transición entre estados); eliminar el object-node cascadea la eliminación de todos sus state-nodes por composición del mono, no por constraint ad-hoc.
 
 **Dependencias:** L-M1-02
 
@@ -384,7 +418,10 @@ Como modelador, quiero hacer in-zoom a un proceso para crear un OPD descendiente
 - Given un proceso in-zoomed con múltiples subprocesos en distintos niveles verticales, when el sistema genera el OPL, then el OPL refleja la invocación implícita como secuencia ordenada de subprocesos; esta invocación implícita NO genera un enlace gráfico visible — el orden vertical ES la invocación.
 - Given un OBJETO (no proceso) en el canvas, when el modelador hace clic en "In-zoom", then se crea un OPD descendiente que revela los objetos constituyentes con orden espacial o lógico; a diferencia del in-zoom de procesos (donde el orden vertical es temporal), en el in-zoom de objetos la posición espacial de los objetos internos tiene significado (ej. secciones de un documento: título → resumen → cuerpo) y el OPL refleja el orden unidimensional de las partes.
 - Given el modelador está en un OPD descendiente creado por in-zoom (de proceso u objeto), when hace clic en "Out-zoom" desde el halo del thing refinado o desde la barra secundaria, then el canvas navega al OPD padre y resalta el thing que fue in-zoomed; Out-zoom es la operación inversa de In-zoom y equivale a "Go to Parent" pero con el contexto semántico de colapsar el refinamiento.
-- Given el Domain Engine interactuando con la opfibración, when ejecuta in-zoom, then implementa una retracción en la opfibración generando una nueva fibra en C_opd_tree; los objetos "heredados" del padre son el pullback del proceso sobre su fibra.
+
+**Invariantes categóricos de implementación:**
+
+- Given el Domain Engine con un in-zoom ejecutado sobre un proceso p, when se crea el OPD descendiente, then la operación implementa una retracción en la opfibración π: C_opm → C_opd_tree generando una nueva fibra OPD_{p} en C_opd_tree. Los objetos "heredados" del OPD padre son el pullback del proceso sobre su fibra: exactamente los objetos del padre conectados a p aparecen como externos en OPD_{p}. El diagrama conmuta: External_Objects → OPD_{parent} ↓ OPD_{child} → Process p.
 
 **Dependencias:** L-M1-02, L-M1-03
 
@@ -563,6 +600,11 @@ Como modelador, quiero un panel OPL que se actualice automáticamente al modific
 - Given el modelador selecciona la opción de ver todo el OPL, when el panel carga el contenido completo, then se muestra el OPL de todo el modelo (no solo el OPD actual) con posibilidad de scroll y redimensionamiento manual.
 - Given el panel OPL está visible, when el modelador hace clic en el nombre de un thing dentro del OPL, then el thing correspondiente se resalta y centra en el canvas OPD, facilitando la navegación desde texto a diagrama. (La edición desde OPL se cubre en L-M2-02.)
 
+**Invariantes categóricos de implementación (Lens — compartido con L-M2-02):**
+
+- Given el Domain Engine con el motor OPL activo, when se invoca `expose: Graph → OPL`, then la función es el componente "get" del lens bidireccional (DA-6). La generación OPL es determinista y completa: todo elemento del grafo con representación OPL definida por ISO 19450 produce exactamente una sentencia.
+- Given el Domain Engine con el motor OPL activo, when se verifica la ley GetPut del lens, then `update(g, expose(g)) = g` — re-importar el OPL generado sin modificaciones no altera el grafo. Esta propiedad se verifica automáticamente como test de integridad.
+
 **Dependencias:** L-M1-02, L-M1-03
 
 ---
@@ -592,7 +634,11 @@ Como modelador, quiero editar nombres y propiedades de things directamente en el
 - Given el modelador intenta escribir una sentencia que violaría la unicidad del enlace procedimental, when confirma la sentencia, then el sistema rechaza la creación con el mismo mensaje de enforcement que en la edición gráfica.
 - Given el modelador edita una sentencia OPL y el sistema actualiza el OPD, when el sistema regenera el OPL desde el OPD modificado, then la sentencia resultante es semánticamente idéntica a la que el modelador editó (ley PutGet del lens bimodal: edit → regenerate = edit aplicado); si hay pérdida de información por limitación del formato, el sistema la señala como "Functor Information Loss".
 - Given el modelador abre el panel OPL sin hacer cambios, when ese OPL se re-importa al grafo sin modificaciones, then el grafo no cambia (ley GetPut del lens bimodal: expose → re-import sin cambios = sin cambio en el grafo); esta propiedad se verifica automáticamente como test de integridad.
-- Given el Domain Engine procesando operaciones OPL, when el motor bidireccional actúa, then implementa un lens formal con leyes PutGet y GetPut verificadas automáticamente como test de integridad; `expose` y `update` son las dos operaciones del lens, no dos parsers independientes.
+
+**Invariantes categóricos de implementación (Lens — compartido con L-M2-01):**
+
+- Given el Domain Engine con el motor OPL en modo bidireccional, when se invoca `update: Graph × OPL_edit → Graph`, then la función es el componente "put" del lens bidireccional (DA-6). La ley PutGet garantiza round-trip: `update(g, edit) |> expose = apply(edit, expose(g))`. Si esta ley se viola para algún edit, el sistema emite `Functor Information Loss` explicitando qué información se perdió en el round-trip.
+- Given el Domain Engine con el lens bimodal operando, when se ejecutan las operaciones expose y update, then estas son las DOS ÚNICAS operaciones del lens — no existen parsers independientes OPD→OPL y OPL→OPD. La implementación es un lens, no dos funciones ad-hoc.
 
 **Dependencias:** L-M2-01, L-M1-05
 
@@ -1058,7 +1104,11 @@ Como modelador, quiero ejecutar una simulación conceptual del modelo basada en 
 - Given el panel OPL visible durante simulación con motor ECA activo, when un proceso se ejecuta, then el OPL resalta dinámicamente la sentencia correspondiente indicando qué objetos son parte del preprocess set y cuáles del postprocess set.
 - Given un proceso en el modelo, when el modelador selecciona "Show Involved Object Set" desde el menú contextual del proceso, then el sistema muestra la unión del preprocess object set (consumees + affectees antes de ejecución) y el postprocess object set (resultees + affectees después de ejecución) como lista consolidada, identificando el rol de cada objeto; esta es la Involved Object Set definida en ISO 19450.
 - Given una simulación en curso o pausada, when el modelador selecciona "Capture System State" o el sistema lo registra automáticamente en cada paso, then se genera un snapshot del estado actual del modelo: qué objetos existen, en qué estado está cada objeto stateful, qué procesos están activos/completados/esperando; este System State es consultable y comparable con otros snapshots para trazar la evolución del sistema durante la simulación.
-- Given el Domain Engine ejecutando una simulación, when el motor coalgebraico interviene, then evalúa la coalgebra S → F(S) paso a paso; cada paso produce un par (observación, transición) y la traza es una secuencia coinductiva; el motor rechaza explícitamente el recorrido imperativo sobre tokens.
+
+**Invariantes categóricos de implementación:**
+
+- Given el Domain Engine con el motor de simulación activo, when evalúa un paso de simulación, then ejecuta la coalgebra c: ModelState → Event × (Precond → ModelState + 1) definida en DA-5. Cada paso produce un par (observación, transición) — no es un loop imperativo que recorre tokens por enlaces. El `+1` (Maybe monad) modela eventos perdidos cuando la precondición falla.
+- Given el motor de simulación con múltiples pasos ejecutados, when acumula la traza de ejecución, then la traza es una secuencia coinductiva (no una lista finita predeterminada). Las propiedades de safety ("nunca se alcanza un estado malo") y liveness ("eventualmente se alcanza un estado bueno") se verifican por coinducción sobre la traza, complementando el análisis estático del grafo. Dos model states son bisimilares si producen las mismas observaciones bajo las mismas acciones.
 
 **Dependencias:** L-M1-06, L-M1-07, L-M2-01
 
@@ -1257,7 +1307,11 @@ Como modelador, quiero guardar y cargar modelos desde el sistema de archivos loc
 - Given una sección "Recent Models" en el explorador, when la abro, then se muestran los 5 modelos más recientemente abiertos, ordenados del más reciente al más antiguo.
 - Given el modelo persiste como property graph, when el sistema serializa, then cada node tiene tipo (object, process, state, opd), cada edge tiene tipo (procedural, structural, control, appears_in, child_of, has_state), y cada OPD es un node conectado a sus things vía edges `appears_in` y a su OPD padre vía edge `child_of`; esta estructura implementa la fibración π: C_opm → C_opd_tree.
 - Given un modelo cargado, when el sistema valida integridad del grafo, then verifica que todo state-node está conectado a exactamente un object-node vía `has_state`, y que eliminar un object-node cascadea la eliminación de todos sus state-nodes (invariante de subobjeto: State ↪ Object es mono).
-- Given el Typed Category Store, when el sistema persiste el modelo, then el formato serializa 0-celdas, 1-celdas y 2-celdas con sus tipos explícitos; la deserialización reconstruye la categoría completa con composición verificable y verifica las path equations al cargar.
+
+**Invariantes categóricos de implementación:**
+
+- Given el Domain Engine serializando un modelo, when persiste al formato graph-native, then el archivo serializa explícitamente las tres capas de celdas: 0-celdas (Things + States + OPDs con sus tipos), 1-celdas (Links con tipo procedimental/estructural/control/contención), y 2-celdas (control modifiers event/condition como transformaciones sobre 1-celdas). La estructura de celdas es reconstructible sin ambigüedad.
+- Given el Domain Engine cargando un modelo desde archivo, when deserializa y reconstruye la categoría en memoria, then verifica las path equations de composición: para toda cadena f:A→B, g:B→C existente, la composición g∘f es calculable y consistente. Si alguna path equation falla, el sistema emite un error de integridad categórica indicando los morfismos involucrados.
 
 **Dependencias:** ninguna
 
