@@ -37,17 +37,22 @@ interface UpdateResult {
 }
 
 function parseInputPatch<T>(input: string, entityType: string): T {
+  let parsed: unknown;
   try {
-    const parsed = JSON.parse(input);
-    delete parsed.id;
-    delete parsed.thing;
-    delete parsed.opd;
-    delete parsed.created;
-    delete parsed.modified;
-    return parsed as T;
+    parsed = JSON.parse(input);
   } catch {
     fatal(`Invalid JSON input for ${entityType}: ${input.slice(0, 80)}`);
   }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    fatal(`Input must be a JSON object for ${entityType}`);
+  }
+  const obj = parsed as Record<string, unknown>;
+  delete obj.id;
+  delete obj.thing;
+  delete obj.opd;
+  delete obj.created;
+  delete obj.modified;
+  return obj as T;
 }
 
 type UpdateHandler = (model: Model, id: string, opts: UpdateOptions) => { model: Model; result: UpdateResult };
