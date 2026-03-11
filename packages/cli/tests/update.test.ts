@@ -25,13 +25,13 @@ describe("opmod update thing", () => {
   it("updates thing name and essence via flags", () => {
     const filePath = setupModel(dir);
     executeAdd("thing", { name: "Water", kind: "object", essence: "physical", file: filePath });
-    const result = executeUpdate("thing", "obj-water", { name: "Hot Water", essence: "informational", file: filePath });
+    const result = executeUpdate("thing", "obj-water", { name: "Hot Water", essence: "informatical", file: filePath });
     expect(result.type).toBe("thing");
     expect(result.id).toBe("obj-water");
 
     const { model } = readModel(filePath);
     expect(model.things.get("obj-water")!.name).toBe("Hot Water");
-    expect(model.things.get("obj-water")!.essence).toBe("informational");
+    expect(model.things.get("obj-water")!.essence).toBe("informatical");
   });
 
   it("updates thing via --input JSON", () => {

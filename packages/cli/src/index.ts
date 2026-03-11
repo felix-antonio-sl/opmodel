@@ -10,3 +10,4 @@ export { executeRemove } from "./commands/remove";
 export { executeList } from "./commands/list";
 export { executeShow } from "./commands/show";
 export { executeValidate } from "./commands/validate";
+export { executeUpdate } from "./commands/update";
