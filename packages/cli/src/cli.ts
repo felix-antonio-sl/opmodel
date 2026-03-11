@@ -7,6 +7,7 @@ import { executeRemove } from "./commands/remove";
 import { executeList } from "./commands/list";
 import { executeShow } from "./commands/show";
 import { executeValidate } from "./commands/validate";
+import { executeUpdate } from "./commands/update";
 
 const program = new Command();
 
@@ -251,6 +252,130 @@ program
     } else {
       console.log(formatErrors(result.errors, { json: false }));
       throw new CliError(`Validation failed with ${result.errors.length} errors`, 1);
+    }
+  });
+
+const update = program
+  .command("update")
+  .description("Update an entity in the model");
+
+update
+  .command("thing")
+  .description("Update a thing (object or process)")
+  .argument("<id>", "Thing ID")
+  .option("--name <name>", "New name")
+  .option("--kind <kind>", "object or process")
+  .option("--essence <essence>", "physical or informatical")
+  .option("--affiliation <affiliation>", "systemic or environmental")
+  .option("--input <input>", "JSON input (agent mode)")
+  .option("--file <file>", "Path to .opmodel file")
+  .action((id: string, opts: Record<string, unknown>) => {
+    const jsonFlag = program.opts().json as boolean;
+    const result = executeUpdate("thing", id, opts as any);
+    if (jsonFlag) {
+      console.log(JSON.stringify({ action: "updated", type: result.type, id: result.id, entity: result.entity }, null, 2));
+    } else {
+      const nameStr = (result.entity as any)?.name ? ` (${(result.entity as any).name})` : "";
+      console.log(`Updated ${result.type} ${result.id}${nameStr}`);
+    }
+  });
+
+update
+  .command("state")
+  .description("Update a state")
+  .argument("<id>", "State ID")
+  .option("--name <name>", "New name")
+  .option("--parent <parent>", "Parent object ID")
+  .option("--initial", "Set as initial state (use --no-initial to unset)")
+  .option("--final", "Set as final state (use --no-final to unset)")
+  .option("--default", "Set as default state (use --no-default to unset)")
+  .option("--input <input>", "JSON input (agent mode)")
+  .option("--file <file>", "Path to .opmodel file")
+  .action((id: string, opts: Record<string, unknown>) => {
+    const jsonFlag = program.opts().json as boolean;
+    const result = executeUpdate("state", id, opts as any);
+    if (jsonFlag) {
+      console.log(JSON.stringify({ action: "updated", type: result.type, id: result.id, entity: result.entity }, null, 2));
+    } else {
+      const nameStr = (result.entity as any)?.name ? ` (${(result.entity as any).name})` : "";
+      console.log(`Updated ${result.type} ${result.id}${nameStr}`);
+    }
+  });
+
+update
+  .command("link")
+  .description("Update a link")
+  .argument("<id>", "Link ID")
+  .option("--type <type>", "Link type")
+  .option("--source <source>", "Source thing ID")
+  .option("--target <target>", "Target thing ID")
+  .option("--source-state <state>", "Source state ID")
+  .option("--target-state <state>", "Target state ID")
+  .option("--input <input>", "JSON input (agent mode)")
+  .option("--file <file>", "Path to .opmodel file")
+  .action((id: string, opts: Record<string, unknown>) => {
+    const jsonFlag = program.opts().json as boolean;
+    const result = executeUpdate("link", id, opts as any);
+    if (jsonFlag) {
+      console.log(JSON.stringify({ action: "updated", type: result.type, id: result.id, entity: result.entity }, null, 2));
+    } else {
+      console.log(`Updated ${result.type} ${result.id}`);
+    }
+  });
+
+update
+  .command("opd")
+  .description("Update an OPD (Object Process Diagram)")
+  .argument("<id>", "OPD ID")
+  .option("--name <name>", "New name")
+  .option("--opd-type <type>", "hierarchical or view")
+  .option("--parent <parent>", "Parent OPD ID")
+  .option("--refines <thing>", "Thing ID this OPD refines")
+  .option("--refinement <type>", "in-zoom or unfold")
+  .option("--input <input>", "JSON input (agent mode)")
+  .option("--file <file>", "Path to .opmodel file")
+  .action((id: string, opts: Record<string, unknown>) => {
+    const jsonFlag = program.opts().json as boolean;
+    const result = executeUpdate("opd", id, opts as any);
+    if (jsonFlag) {
+      console.log(JSON.stringify({ action: "updated", type: result.type, id: result.id, entity: result.entity }, null, 2));
+    } else {
+      const nameStr = (result.entity as any)?.name ? ` (${(result.entity as any).name})` : "";
+      console.log(`Updated ${result.type} ${result.id}${nameStr}`);
+    }
+  });
+
+update
+  .command("meta")
+  .description("Update model metadata")
+  .option("--name <name>", "New model name")
+  .option("--description <description>", "New description")
+  .option("--system-type <type>", "System type")
+  .option("--input <input>", "JSON input (agent mode)")
+  .option("--file <file>", "Path to .opmodel file")
+  .action((opts: Record<string, unknown>) => {
+    const jsonFlag = program.opts().json as boolean;
+    const result = executeUpdate("meta", undefined, opts as any);
+    if (jsonFlag) {
+      console.log(JSON.stringify({ action: "updated", type: result.type, entity: result.entity }, null, 2));
+    } else {
+      const nameStr = (result.entity as any)?.name ? ` (${(result.entity as any).name})` : "";
+      console.log(`Updated ${result.type}${nameStr}`);
+    }
+  });
+
+update
+  .command("settings")
+  .description("Update model settings")
+  .option("--input <input>", "JSON input (agent mode)")
+  .option("--file <file>", "Path to .opmodel file")
+  .action((opts: Record<string, unknown>) => {
+    const jsonFlag = program.opts().json as boolean;
+    const result = executeUpdate("settings", undefined, opts as any);
+    if (jsonFlag) {
+      console.log(JSON.stringify({ action: "updated", type: result.type, entity: result.entity }, null, 2));
+    } else {
+      console.log(`Updated ${result.type}`);
     }
   });
 
