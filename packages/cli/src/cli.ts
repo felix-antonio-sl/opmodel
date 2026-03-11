@@ -1,13 +1,12 @@
 // packages/cli/src/cli.ts
 import { Command, CommanderError } from "commander";
-import { CliError, formatOutput, formatErrors, formatThingList, formatStateList, formatLinkList, formatOPDList, formatOPDTree } from "./format";
+import { CliError, formatOutput, formatErrors, formatThingList, formatStateList, formatLinkList, formatOPDList, formatOPDTree, formatThing, formatState, formatLink, formatOPD } from "./format";
 import { executeNew } from "./commands/new";
 import { executeAdd } from "./commands/add";
 import { executeRemove } from "./commands/remove";
 import { executeList } from "./commands/list";
 import { executeShow } from "./commands/show";
 import { executeValidate } from "./commands/validate";
-import { formatThing, formatState, formatLink, formatOPD } from "./format";
 
 const program = new Command();
 
@@ -89,11 +88,7 @@ add
   .option("--file <file>", "Path to .opmodel file")
   .action((opts: Record<string, unknown>) => {
     const jsonFlag = program.opts().json as boolean;
-    const result = executeAdd("link", {
-      ...opts,
-      sourceState: opts.sourceState as string,
-      targetState: opts.targetState as string,
-    } as any);
+    const result = executeAdd("link", opts as any);
     console.log(formatOutput(
       { action: "added", ...result },
       { json: jsonFlag },
@@ -249,7 +244,7 @@ program
 
     if (jsonFlag) {
       console.log(JSON.stringify(result, null, 2));
-      if (!result.valid) process.exit(1);
+      if (!result.valid) throw new CliError("Validation failed", 1);
     } else if (result.valid) {
       const s = result.summary;
       console.log(`Model valid. ${s.things} things, ${s.states} states, ${s.links} links, ${s.opds} OPDs.`);

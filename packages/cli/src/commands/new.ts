@@ -27,7 +27,11 @@ export function executeNew(name: string, opts: NewOptions = {}): NewResult {
 
   const model = createModel(name, opts.type);
   const json = saveModel(model);
-  writeFileSync(filePath, json);
+  try {
+    writeFileSync(filePath, json);
+  } catch {
+    fatal(`Cannot write file: ${filePath}`);
+  }
 
   return { name, filePath };
 }
