@@ -11,7 +11,7 @@
 | Decision | Eleccion | Razon |
 |----------|----------|-------|
 | Arquitectura | Monolito Commander.js | 6 comandos no justifican middleware/pipeline |
-| Session | Sin sesion — operacion directa sobre .opmodel | Git es el session manager (branch, checkout, diff) |
+| Session | Sin sesion — operacion directa sobre .opmodel | Git es el session manager (branch, checkout, diff). Diverge de §4.4 del stack design doc que especifica `.opmod-session`; esta simplificacion es deliberada para P0 — cada comando lee/muta/escribe el .opmodel directamente |
 | File resolution | Convencion de directorio + `--file` override | Como git/cargo: busca unico *.opmodel en cwd |
 | Input mode | Hibrido: posicional+flags (humano) + `--json` (agente) | DA-1 agent-ready sin sacrificar UX humana |
 | Scope P0 | Standard: new, add, remove, list, show, validate | 4 entidades: thing, state, link, opd |
@@ -92,6 +92,7 @@ readModel(filePath: string): { model: Model; filePath: string }
 writeModel(model: Model, filePath: string): void
 ```
 
+- Actualiza `meta.modified` al timestamp actual (ISO 8601) antes de serializar
 - Serializa con `saveModel()` del core
 - Escribe con `writeFileSync`
 - Si falla escritura: `fatal()`
@@ -105,7 +106,8 @@ Responsabilidad: traducir Result y datos a salida terminal + exit codes.
 ### Morfismo de error centralizado
 
 ```typescript
-// ok → retorna Model; err → stderr + process.exit(1)
+// ok → retorna T; err → throw CliError (catch en cli.ts → exit code)
+// Lanza en vez de process.exit para permitir testing unitario sin mocks de process
 handleResult<T>(result: Result<T, InvariantError>, options: { json: boolean }): T
 
 // Error fatal → stderr + process.exit(2)
@@ -121,13 +123,29 @@ formatErrors(errors: InvariantError[], options: { json: boolean }): string
 // Punto unico de decision de formato
 formatOutput(data: unknown, options: { json: boolean }): string
 
-// Formateadores por entidad
+// Formateadores individuales (show)
 formatThing(thing: Thing, options: { json: boolean }): string
+formatState(state: State, options: { json: boolean }): string
+formatLink(link: Link, options: { json: boolean }): string
+formatOPD(opd: OPD, options: { json: boolean }): string
+
+// Formateadores de lista (list)
 formatThingList(things: Thing[], options: { json: boolean }): string
+formatStateList(states: State[], options: { json: boolean }): string
 formatLinkList(links: Link[], options: { json: boolean }): string
 formatOPDTree(opds: OPD[], options: { json: boolean }): string
-formatStateList(states: State[], options: { json: boolean }): string
 ```
+
+### CliError
+
+```typescript
+// Error tipado que cli.ts captura para determinar exit code
+class CliError extends Error {
+  constructor(message: string, public exitCode: 1 | 2) { super(message); }
+}
+```
+
+`handleResult` y `fatal` lanzan `CliError`. El entry point `cli.ts` tiene un try/catch global que captura `CliError`, imprime a stderr, y llama `process.exit(error.exitCode)`.
 
 ### Exit codes
 
@@ -158,17 +176,20 @@ Dispatch explicito via `Map<string, AddHandler>`:
 
 ```bash
 # Thing: nombre posicional, resto flags
-opmod add thing "Water" --kind object --essence physical [--affiliation systemic]
+opmod add thing "Water" --kind object --essence physical [--affiliation systemic]  # affiliation default: "systemic"
 opmod add thing --json '{"id":"obj-water","kind":"object","name":"Water","essence":"physical","affiliation":"systemic"}'
 
 # State: nombre posicional, parent obligatorio
+# Flags booleanos default a false cuando se omiten
 opmod add state "cold" --parent obj-water [--initial] [--final] [--default]
 
 # Link: todo flags (no hay nombre natural)
+# Campos opcionales del tipo Link (multiplicity, probability, etc.) se omiten; no se incluyen en el objeto
 opmod add link --type effect --source proc-heating --target obj-water [--source-state state-cold] [--target-state state-hot]
 
 # OPD: nombre posicional
-opmod add opd "SD1" --parent opd-sd [--refines proc-heating --refinement in-zoom]
+# --opd-type default "hierarchical"; inferido como "view" si --parent no se proporciona y no hay parent
+opmod add opd "SD1" --parent opd-sd [--opd-type hierarchical|view] [--refines proc-heating --refinement in-zoom]
 ```
 
 **ID generation:** Si no se pasa `--id`:
@@ -178,6 +199,8 @@ opmod add opd "SD1" --parent opd-sd [--refines proc-heating --refinement in-zoom
 - OPD: `opd-{slug(name)}` → `opd-sd1`
 
 Con `--json` el id es obligatorio (no se autogenera).
+
+**Slugificacion:** `slug(name)` convierte a lowercase, reemplaza espacios y caracteres no-alfanumericos por `-`, colapsa guiones multiples, trim de guiones en extremos. Ej: `"Coffee Beans"` → `coffee-beans`, `"SD1"` → `sd1`.
 
 ### 5.3 `remove` — Eliminar entidad
 
@@ -190,8 +213,8 @@ opmod remove opd opd-sd1        # cascada recursiva
 
 - Posicional: tipo + ID
 - Sin confirmacion interactiva (agentes no pueden confirmar)
-- `--dry-run` muestra que se eliminaria sin ejecutar
-- Stdout: confirmacion con resumen de cascada
+- `--dry-run`: ejecuta la operacion sobre el modelo en memoria, diferea el modelo antes/despues para reportar que se eliminaria, pero NO escribe a disco
+- Stdout: confirmacion con resumen de cascada (entidades eliminadas por tipo y conteo)
 
 ### 5.4 `list` — Listar entidades
 
@@ -211,11 +234,11 @@ opmod list opds [--tree]
 opmod show <id>
 ```
 
-- Busca el ID en todas las colecciones del modelo
+- Busca el ID en las 4 colecciones P0 (things, states, links, opds). Si el ID coincide con una entidad de coleccion P1+ (modifiers, fans, etc.), la muestra en formato JSON crudo sin formatter especializado
 - Muestra todos los campos de la entidad
-- Para OPDs: incluye lista de appearances en ese OPD
 - Para Things: incluye states asociados
-- Error si ID no existe
+- Para OPDs: incluye lista de appearances en ese OPD
+- Error si ID no existe en ninguna coleccion
 
 ### 5.6 `validate` — Validar modelo
 
