@@ -157,6 +157,8 @@ describe("loadModel", () => {
   });
 });
 
+// I-25: round-trip invariant — serialization must be lossless.
+// load(save(m)) ≅ m for all Models m.
 describe("round-trip (I-25)", () => {
   it("load(save(model)) preserves all data", () => {
     const json = readFileSync(
