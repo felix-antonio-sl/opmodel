@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { createModel } from "../src/model";
-import { addThing, addOPD, addAppearance, addLink, refineThing, removeThing } from "../src/api";
+import { addThing, addOPD, addAppearance, addLink, refineThing, removeThing, validate } from "../src/api";
 
 function unwrap<T, E>(result: { ok: boolean; value?: T; error?: E }): T {
   if (!result.ok) throw new Error(`Expected ok, got error: ${JSON.stringify((result as any).error)}`);
@@ -160,6 +160,43 @@ describe("refineThing", () => {
       expect(app).toBeDefined();
       expect(app!.internal).toBe(true);
     });
+  });
+});
+
+describe("validate() refinement checks", () => {
+  it("detects DANGLING_REFINES — OPD refines non-existent thing", () => {
+    let m = createModel("test");
+    // Manually insert OPD with dangling refines (bypass addOPD guards)
+    const opds = new Map(m.opds);
+    opds.set("opd-sd1", { id: "opd-sd1", name: "SD1", opd_type: "hierarchical", parent_opd: "opd-sd", refines: "proc-nonexistent", refinement_type: "in-zoom" });
+    m = { ...m, opds };
+    const errors = validate(m);
+    expect(errors.some(e => e.code === "DANGLING_REFINES")).toBe(true);
+  });
+
+  it("detects INCONSISTENT_REFINEMENT — refines without refinement_type", () => {
+    let m = createModel("test");
+    const opds = new Map(m.opds);
+    opds.set("opd-sd1", { id: "opd-sd1", name: "SD1", opd_type: "hierarchical", parent_opd: "opd-sd", refines: "proc-something" } as any);
+    m = { ...m, opds };
+    const errors = validate(m);
+    expect(errors.some(e => e.code === "INCONSISTENT_REFINEMENT")).toBe(true);
+  });
+
+  it("detects INCONSISTENT_REFINEMENT — refinement_type without refines", () => {
+    let m = createModel("test");
+    const opds = new Map(m.opds);
+    opds.set("opd-sd1", { id: "opd-sd1", name: "SD1", opd_type: "hierarchical", parent_opd: "opd-sd", refinement_type: "in-zoom" } as any);
+    m = { ...m, opds };
+    const errors = validate(m);
+    expect(errors.some(e => e.code === "INCONSISTENT_REFINEMENT")).toBe(true);
+  });
+
+  it("passes validation for correctly formed refinement", () => {
+    let m = buildTestModel();
+    m = unwrap(refineThing(m, "proc-make-coffee", "opd-sd", "in-zoom", "opd-sd1", "SD1"));
+    const errors = validate(m);
+    expect(errors.length).toBe(0);
   });
 });
 

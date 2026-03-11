@@ -955,6 +955,22 @@ export function validate(model: Model): InvariantError[] {
     }
   }
 
+  // DANGLING_REFINES: OPD.refines must reference existing thing
+  for (const [id, opd] of model.opds) {
+    if (opd.refines !== undefined && !model.things.has(opd.refines)) {
+      errors.push({ code: "DANGLING_REFINES", message: `OPD ${id} refines non-existent thing: ${opd.refines}`, entity: id });
+    }
+  }
+
+  // INCONSISTENT_REFINEMENT: refines and refinement_type must be both present or both absent
+  for (const [id, opd] of model.opds) {
+    const hasRefines = opd.refines !== undefined;
+    const hasType = opd.refinement_type !== undefined;
+    if (hasRefines !== hasType) {
+      errors.push({ code: "INCONSISTENT_REFINEMENT", message: `OPD ${id} has refines without refinement_type or vice versa`, entity: id });
+    }
+  }
+
   // I-18
   for (const [id, link] of model.links) {
     if (link.type === "agent") {
