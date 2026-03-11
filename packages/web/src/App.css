@@ -908,6 +908,11 @@ body,
   flex: 1;
 }
 
+.status-bar__mode {
+  color: var(--accent);
+  font-weight: 500;
+}
+
 .status-bar__error {
   color: var(--danger);
   font-size: 10px;

@@ -133,6 +133,14 @@ function Editor({ initialModel }: { initialModel: Model }) {
         <span className="status-bar__count">{model.links.size} links</span>
         <span className="status-bar__count">{model.opds.size} OPDs</span>
         <div className="status-bar__spacer" />
+        {ui.mode !== "select" && (
+          <>
+            <span className="status-bar__mode">
+              {ui.mode === "addObject" ? "Add Object" : ui.mode === "addProcess" ? "Add Process" : "Add Link"}
+            </span>
+            <div className="status-bar__sep" />
+          </>
+        )}
         {lastError && (
           <>
             <span className="status-bar__error">{lastError}</span>
