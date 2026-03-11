@@ -138,7 +138,7 @@ Error: `{code: "INCONSISTENT_REFINEMENT", message: "OPD ${opd.id} has refines wi
 
 ### Problema actual
 
-`removeThing` no cascadea OPDs donde `refines === thingId`. Esto deja OPDs huérfanos con `refines` apuntando a un Thing inexistente — violación de I-20 (DANGLING-REF).
+`removeThing` no cascadea OPDs donde `refines === thingId`. Esto deja OPDs huérfanos con `refines` apuntando a un Thing inexistente — violación de `DANGLING_REFINES`.
 
 ### Corrección
 
@@ -202,7 +202,7 @@ function computeChildOpdName(parentName: string, existingChildCount: number): st
 
 | Archivo | Acción | Responsabilidad |
 |---------|--------|-----------------|
-| `packages/core/src/api.ts` | Modificar | Agregar `refineThing`, fix `removeThing` cascade, agregar I-20/I-21 a `validate()` |
+| `packages/core/src/api.ts` | Modificar | Agregar `refineThing`, fix `removeThing` cascade, agregar `DANGLING_REFINES` / `INCONSISTENT_REFINEMENT` a `validate()` |
 | `packages/core/src/index.ts` | Modificar | Exportar `refineThing` |
 | `packages/core/tests/api-refinement.test.ts` | Crear | Tests para `refineThing`, cascade, invariantes |
 | `packages/cli/src/commands/refine.ts` | Crear | Handler del comando `opmod refine` |
@@ -220,6 +220,7 @@ function computeChildOpdName(parentName: string, existingChildCount: number): st
 - **Semi-fold visual**: es rendering web (L-M1-08 visual), la estructura ya queda con `suppressed_states` y `semi_folded` en Appearance
 - **Reordenamiento automático de OPD tree**: es feature de L-M3-01
 - **Distribución de links al boundary**: es feature visual de L-M1-07 que requiere web
+- **Point-of-mutation guards en `addOPD`/`updateOPD`**: actualmente no validan `refines` ni `refinement_type`. `refineThing` valida internamente antes de crear el OPD, pero callers directos de `addOPD` pueden crear OPDs con `refines` inválido. Gap conocido — se detecta en `validate()` via `DANGLING_REFINES` / `INCONSISTENT_REFINEMENT`, y se puede agregar guards a `addOPD`/`updateOPD` en un ciclo posterior
 
 ---
 
