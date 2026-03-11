@@ -471,6 +471,18 @@ body,
   cursor: grabbing;
 }
 
+.thing-group--link-source .thing-shape {
+  stroke: var(--accent) !important;
+  stroke-width: 2.5;
+  stroke-dasharray: 6,3;
+  animation: pulse-link 1s ease-in-out infinite;
+}
+
+@keyframes pulse-link {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
 .thing-label {
   font-family: var(--font-mono);
   font-size: 12px;

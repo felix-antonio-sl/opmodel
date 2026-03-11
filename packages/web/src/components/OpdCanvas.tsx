@@ -165,6 +165,7 @@ function ThingNode({
   states,
   isSelected,
   isDragging,
+  isLinkSource,
   dragDelta,
   onMouseDown,
   onSelect,
@@ -175,6 +176,7 @@ function ThingNode({
   states: State[];
   isSelected: boolean;
   isDragging: boolean;
+  isLinkSource: boolean;
   dragDelta: Point;
   onMouseDown: (e: React.MouseEvent) => void;
   onSelect: () => void;
@@ -200,7 +202,7 @@ function ThingNode({
       ? "url(#glow-selected)"
       : undefined;
 
-  const className = `thing-group${isSelected ? " thing-group--selected" : ""}${isDragging ? " thing-group--dragging" : ""}`;
+  const className = `thing-group${isSelected ? " thing-group--selected" : ""}${isDragging ? " thing-group--dragging" : ""}${isLinkSource ? " thing-group--link-source" : ""}`;
 
   return (
     <g
@@ -370,6 +372,14 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, dispatch }: Props
   // Inline rename state
   const [renaming, setRenaming] = useState<string | null>(null);
 
+  // Link creation state
+  const [linkSource, setLinkSource] = useState<string | null>(null);
+
+  // Reset linkSource when mode changes away from addLink
+  useEffect(() => {
+    if (mode !== "addLink") setLinkSource(null);
+  }, [mode]);
+
   // Collect appearances for this OPD
   const appearances = useMemo(() => {
     const map = new Map<string, Appearance>();
@@ -506,6 +516,11 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, dispatch }: Props
         return;
       }
 
+      if (mode === "addLink") {
+        setLinkSource(null);
+        return;
+      }
+
       dispatch({ tag: "selectThing", thingId: null });
       setRenaming(null);
     },
@@ -605,6 +620,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, dispatch }: Props
             if (!thing) return null;
             const states = statesForThing(model, thingId);
             const isDragging = dragTarget === thingId;
+            const isLinkSource = linkSource === thingId;
 
             return (
               <ThingNode
@@ -614,14 +630,40 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, dispatch }: Props
                 states={states}
                 isSelected={selectedThing === thingId}
                 isDragging={isDragging}
+                isLinkSource={isLinkSource}
                 dragDelta={isDragging ? dragDelta : { x: 0, y: 0 }}
                 onMouseDown={(e) => onThingMouseDown(thingId, e)}
-                onSelect={() =>
+                onSelect={() => {
+                  if (mode === "addLink") {
+                    if (!linkSource) {
+                      setLinkSource(thingId);
+                      dispatch({ tag: "selectThing", thingId });
+                    } else if (linkSource !== thingId) {
+                      const srcThing = model.things.get(linkSource);
+                      const tgtThing = model.things.get(thingId);
+                      let linkType: string = "agent";
+                      if (srcThing?.kind === "process") linkType = "effect";
+                      if (srcThing?.kind === "object" && tgtThing?.kind === "object") linkType = "aggregation";
+
+                      dispatch({
+                        tag: "addLink",
+                        link: {
+                          id: genId("lnk"),
+                          type: linkType as any,
+                          source: linkSource,
+                          target: thingId,
+                        },
+                      });
+                      setLinkSource(null);
+                      dispatch({ tag: "setMode", mode: "select" });
+                    }
+                    return;
+                  }
                   dispatch({
                     tag: "selectThing",
                     thingId: selectedThing === thingId ? null : thingId,
-                  })
-                }
+                  });
+                }}
                 onDoubleClick={() => onThingDoubleClick(thingId)}
               />
             );
