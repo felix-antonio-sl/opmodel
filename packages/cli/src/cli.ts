@@ -5,6 +5,8 @@ import { executeNew } from "./commands/new";
 import { executeAdd } from "./commands/add";
 import { executeRemove } from "./commands/remove";
 import { executeList } from "./commands/list";
+import { executeShow } from "./commands/show";
+import { formatThing, formatState, formatLink, formatOPD } from "./format";
 
 const program = new Command();
 
@@ -197,6 +199,43 @@ list
     const result = executeList("opds", opts as any);
     const formatter = opts.tree ? formatOPDTree : formatOPDList;
     console.log(formatter(result.entities as any[], { json: jsonFlag }));
+  });
+
+program
+  .command("show")
+  .description("Show details of an entity")
+  .argument("<id>", "Entity ID")
+  .option("--file <file>", "Path to .opmodel file")
+  .action((id: string, opts: Record<string, unknown>) => {
+    const jsonFlag = program.opts().json as boolean;
+    const result = executeShow(id, { file: opts.file as string });
+
+    if (jsonFlag) {
+      console.log(JSON.stringify(result.entity, null, 2));
+      return;
+    }
+
+    const formatters: Record<string, (entity: any, opts: { json: boolean }) => string> = {
+      thing: formatThing,
+      state: formatState,
+      link: formatLink,
+      opd: formatOPD,
+    };
+    const formatter = formatters[result.entityType];
+    if (formatter) {
+      let output = formatter(result.entity as any, { json: false });
+      if (result.related?.states && (result.related.states as any[]).length > 0) {
+        output += `\n  states:     ${(result.related.states as any[]).map((s: any) => s.id).join(", ")}`;
+      }
+      if (result.related?.appearances && (result.related.appearances as any[]).length > 0) {
+        output += `\n  appearances: ${(result.related.appearances as any[]).length} in this OPD`;
+      }
+      console.log(output);
+    } else {
+      // P1+ fallback
+      console.log(`${result.entityType}: ${id}`);
+      console.log(JSON.stringify(result.entity, null, 2));
+    }
   });
 
 // Global error handler
