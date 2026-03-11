@@ -421,9 +421,10 @@ export function updateMeta(
   patch: Partial<Omit<Meta, "created" | "modified">>,
 ): Result<Model, InvariantError> {
   const cleaned = cleanPatch(patch as Record<string, unknown>);
+  const { created, modified, ...safe } = cleaned as Record<string, unknown>;
   return ok(touch({
     ...model,
-    meta: { ...model.meta, ...cleaned },
+    meta: { ...model.meta, ...safe },
   }));
 }
 
