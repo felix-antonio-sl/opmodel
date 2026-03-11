@@ -670,6 +670,67 @@ export function updateThing(
   return ok(touch({ ...model, things: new Map(model.things).set(id, updated) }));
 }
 
+// ── updateLink (complex fibered checks + I-19 coercion) ───────────────
+
+export function updateLink(
+  model: Model,
+  id: string,
+  patch: Partial<Omit<Link, "id">>,
+): Result<Model, InvariantError> {
+  const existing = model.links.get(id);
+  if (!existing) return err({ code: "NOT_FOUND", message: `Link not found: ${id}`, entity: id });
+  const cleaned = cleanPatch(patch as Record<string, unknown>);
+  const updated = { ...existing, ...cleaned } as Link;
+
+  // I-05: source and target must exist
+  if (cleaned.source !== undefined && !model.things.has(updated.source)) {
+    return err({ code: "I-05", message: `Source thing not found: ${updated.source}`, entity: id });
+  }
+  if (cleaned.target !== undefined && !model.things.has(updated.target)) {
+    return err({ code: "I-05", message: `Target thing not found: ${updated.target}`, entity: id });
+  }
+
+  // Validate source_state/target_state when source, target, source_state, or target_state changes
+  if ((cleaned.source !== undefined || cleaned.source_state !== undefined) && updated.source_state) {
+    const state = model.states.get(updated.source_state);
+    if (!state || state.parent !== updated.source) {
+      return err({ code: "DANGLING_STATE", message: `source_state ${updated.source_state} does not belong to source ${updated.source}`, entity: id });
+    }
+  }
+  if ((cleaned.target !== undefined || cleaned.target_state !== undefined) && updated.target_state) {
+    const state = model.states.get(updated.target_state);
+    if (!state || state.parent !== updated.target) {
+      return err({ code: "DANGLING_STATE", message: `target_state ${updated.target_state} does not belong to target ${updated.target}`, entity: id });
+    }
+  }
+
+  // If any of {source, target, type} changed, re-check I-14, I-18, I-19
+  let things = model.things;
+  if (cleaned.source !== undefined || cleaned.target !== undefined || cleaned.type !== undefined) {
+    const source = things.get(updated.source);
+    if (!source) return err({ code: "I-05", message: `Source thing not found: ${updated.source}`, entity: id });
+
+    // I-18: agent source must be physical
+    if (updated.type === "agent" && source.essence !== "physical") {
+      return err({ code: "I-18", message: `Agent source must be physical: ${updated.source}`, entity: id });
+    }
+
+    // I-14: exception source must have duration.max
+    if (updated.type === "exception" && !source.duration?.max) {
+      return err({ code: "I-14", message: `Exception source must have duration.max: ${updated.source}`, entity: id });
+    }
+
+    // I-19: exhibition coercion
+    if (updated.type === "exhibition") {
+      if (source.essence !== "informatical") {
+        things = new Map(things).set(source.id, { ...source, essence: "informatical" });
+      }
+    }
+  }
+
+  return ok(touch({ ...model, things, links: new Map(model.links).set(id, updated) }));
+}
+
 // ── Batch Validate ─────────────────────────────────────────────────────
 
 export function validate(model: Model): InvariantError[] {

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createModel } from "../src/model";
 import { isOk, isErr } from "../src/result";
-import { updateMeta, updateSettings, updateModifier, updateAssertion, updateRequirement, updateStereotype, updateSubModel, updateScenario, updateState, updateOPD, updateAppearance, updateFan, updateThing, addThing, addLink, addState, addOPD, addAppearance, addFan, addModifier, addAssertion, addRequirement, addStereotype, addSubModel, addScenario } from "../src/api";
+import { updateMeta, updateSettings, updateModifier, updateAssertion, updateRequirement, updateStereotype, updateSubModel, updateScenario, updateState, updateOPD, updateAppearance, updateFan, updateThing, updateLink, addThing, addLink, addState, addOPD, addAppearance, addFan, addModifier, addAssertion, addRequirement, addStereotype, addSubModel, addScenario } from "../src/api";
 import type { Thing, Link } from "../src/types";
 
 beforeEach(() => {
@@ -441,5 +441,142 @@ describe("updateThing", () => {
     const originalName = m.things.get("obj-water")!.name;
     updateThing(m, "obj-water", { name: "New" });
     expect(m.things.get("obj-water")!.name).toBe(originalName);
+  });
+});
+
+describe("updateLink", () => {
+  it("updates link type", () => {
+    let m = buildModelWithLink();
+    const r = updateLink(m, "lnk-1", { type: "result" });
+    expect(isOk(r)).toBe(true);
+    if (isOk(r)) expect(r.value.links.get("lnk-1")?.type).toBe("result");
+  });
+
+  it("rejects update to non-existent link", () => {
+    const r = updateLink(createModel("Test"), "lnk-ghost", { type: "result" });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("NOT_FOUND");
+  });
+
+  it("rejects update with non-existent source (I-05)", () => {
+    let m = buildModelWithLink();
+    const r = updateLink(m, "lnk-1", { source: "proc-ghost" });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-05");
+  });
+
+  it("rejects update with non-existent target (I-05)", () => {
+    let m = buildModelWithLink();
+    const r = updateLink(m, "lnk-1", { target: "obj-ghost" });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-05");
+  });
+
+  it("rejects type change to agent when source is not physical (I-18)", () => {
+    let m = createModel("Test");
+    const infoObj: Thing = { id: "obj-info", kind: "object", name: "Info", essence: "informatical", affiliation: "systemic" };
+    m = (addThing(m, infoObj) as any).value;
+    m = (addThing(m, proc) as any).value;
+    m = (addLink(m, { id: "lnk-1", type: "instrument", source: "obj-info", target: "proc-heat" }) as any).value;
+    const r = updateLink(m, "lnk-1", { type: "agent" });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-18");
+  });
+
+  it("coerces source to informatical when type changes to exhibition (I-19)", () => {
+    let m = createModel("Test");
+    const physObj: Thing = { id: "obj-phys", kind: "object", name: "Phys", essence: "physical", affiliation: "systemic" };
+    m = (addThing(m, water) as any).value;
+    m = (addThing(m, physObj) as any).value;
+    m = (addLink(m, { id: "lnk-1", type: "aggregation", source: "obj-phys", target: "obj-water" }) as any).value;
+    const r = updateLink(m, "lnk-1", { type: "exhibition" });
+    expect(isOk(r)).toBe(true);
+    if (isOk(r)) {
+      expect(r.value.things.get("obj-phys")?.essence).toBe("informatical");
+    }
+  });
+
+  it("coerces new source to informatical on exhibition link (I-19)", () => {
+    let m = createModel("Test");
+    const attr1: Thing = { id: "obj-attr1", kind: "object", name: "Attr1", essence: "informatical", affiliation: "systemic" };
+    const attr2: Thing = { id: "obj-attr2", kind: "object", name: "Attr2", essence: "physical", affiliation: "systemic" };
+    m = (addThing(m, water) as any).value;
+    m = (addThing(m, attr1) as any).value;
+    m = (addThing(m, attr2) as any).value;
+    m = (addLink(m, { id: "lnk-ex", type: "exhibition", source: "obj-attr1", target: "obj-water" }) as any).value;
+    const r = updateLink(m, "lnk-ex", { source: "obj-attr2" });
+    expect(isOk(r)).toBe(true);
+    if (isOk(r)) {
+      expect(r.value.things.get("obj-attr2")?.essence).toBe("informatical");
+    }
+  });
+
+  it("rejects type change to exception when source has no duration.max (I-14)", () => {
+    let m = createModel("Test");
+    const proc2: Thing = { id: "proc-main", kind: "process", name: "Main", essence: "physical", affiliation: "systemic" };
+    m = (addThing(m, proc) as any).value;
+    m = (addThing(m, proc2) as any).value;
+    m = (addLink(m, { id: "lnk-1", type: "invocation", source: "proc-heat", target: "proc-main" }) as any).value;
+    const r = updateLink(m, "lnk-1", { type: "exception" });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-14");
+  });
+
+  it("rejects target change when target_state would dangle", () => {
+    let m = createModel("Test");
+    const obj2: Thing = { id: "obj-cup", kind: "object", name: "Cup", essence: "physical", affiliation: "systemic" };
+    m = (addThing(m, water) as any).value;
+    m = (addThing(m, obj2) as any).value;
+    m = (addThing(m, proc) as any).value;
+    m = (addState(m, { id: "state-cold", parent: "obj-water", name: "cold", initial: true, final: false, default: true }) as any).value;
+    m = (addLink(m, { id: "lnk-1", type: "effect", source: "proc-heat", target: "obj-water", target_state: "state-cold" }) as any).value;
+    // Change target to obj-cup — state-cold belongs to obj-water, not obj-cup
+    const r = updateLink(m, "lnk-1", { target: "obj-cup" });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("DANGLING_STATE");
+  });
+
+  it("rejects patching target_state to state not belonging to target", () => {
+    let m = createModel("Test");
+    const obj2: Thing = { id: "obj-cup", kind: "object", name: "Cup", essence: "physical", affiliation: "systemic" };
+    m = (addThing(m, water) as any).value;
+    m = (addThing(m, obj2) as any).value;
+    m = (addThing(m, proc) as any).value;
+    m = (addState(m, { id: "state-cold", parent: "obj-water", name: "cold", initial: true, final: false, default: true }) as any).value;
+    // Link from proc-heat to obj-cup (no states on obj-cup)
+    m = (addLink(m, { id: "lnk-1", type: "effect", source: "proc-heat", target: "obj-cup" }) as any).value;
+    // Try to set target_state to state-cold which belongs to obj-water, not obj-cup
+    const r = updateLink(m, "lnk-1", { target_state: "state-cold" });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("DANGLING_STATE");
+  });
+
+  it("rejects patching source_state to state not belonging to source", () => {
+    let m = createModel("Test");
+    m = (addThing(m, water) as any).value;
+    m = (addThing(m, proc) as any).value;
+    m = (addState(m, { id: "state-cold", parent: "obj-water", name: "cold", initial: true, final: false, default: true }) as any).value;
+    // Link from proc-heat to obj-water — proc-heat is a process, has no states
+    m = (addLink(m, { id: "lnk-1", type: "effect", source: "proc-heat", target: "obj-water" }) as any).value;
+    // Try to set source_state to state-cold which belongs to obj-water, not proc-heat
+    const r = updateLink(m, "lnk-1", { source_state: "state-cold" });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("DANGLING_STATE");
+  });
+
+  it("does not revert source essence when type changes from exhibition (I-19 irreversibility)", () => {
+    let m = createModel("Test");
+    const attr: Thing = { id: "obj-attr", kind: "object", name: "Attr", essence: "physical", affiliation: "systemic" };
+    m = (addThing(m, water) as any).value;
+    m = (addThing(m, attr) as any).value;
+    // Add exhibition link — coerces attr to informatical
+    m = (addLink(m, { id: "lnk-ex", type: "exhibition", source: "obj-attr", target: "obj-water" }) as any).value;
+    expect(m.things.get("obj-attr")?.essence).toBe("informatical");
+    // Change type from exhibition to aggregation — source stays informatical
+    const r = updateLink(m, "lnk-ex", { type: "aggregation" });
+    expect(isOk(r)).toBe(true);
+    if (isOk(r)) {
+      expect(r.value.things.get("obj-attr")?.essence).toBe("informatical");
+    }
   });
 });
