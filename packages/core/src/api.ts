@@ -93,10 +93,32 @@ export function removeThing(
     if (s.thing === thingId) stereotypes.delete(id);
   }
 
+  // Cascade: remove OPDs that refine this thing (DANGLING_REFINES prevention)
+  let opds = new Map(model.opds);
+  const opdsToRemove = new Set<string>();
+  for (const [id, opd] of opds) {
+    if (opd.refines === thingId) {
+      const collectDescendants = (parentId: string) => {
+        opdsToRemove.add(parentId);
+        for (const [cid, copd] of opds) {
+          if (copd.parent_opd === parentId && !opdsToRemove.has(cid)) {
+            collectDescendants(cid);
+          }
+        }
+      };
+      collectDescendants(id);
+    }
+  }
+  for (const id of opdsToRemove) opds.delete(id);
+  // Also remove appearances in cascaded OPDs
+  for (const [key, a] of appearances) {
+    if (opdsToRemove.has(a.opd)) appearances.delete(key);
+  }
+
   const things = new Map(model.things);
   things.delete(thingId);
 
-  return ok(touch({ ...model, things, states, links, modifiers, appearances, requirements, fans, assertions, stereotypes }));
+  return ok(touch({ ...model, things, states, links, modifiers, appearances, requirements, fans, assertions, stereotypes, opds }));
 }
 
 export function addState(

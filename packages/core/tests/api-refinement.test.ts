@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { createModel } from "../src/model";
-import { addThing, addOPD, addAppearance, addLink, refineThing } from "../src/api";
+import { addThing, addOPD, addAppearance, addLink, refineThing, removeThing } from "../src/api";
 
 function unwrap<T, E>(result: { ok: boolean; value?: T; error?: E }): T {
   if (!result.ok) throw new Error(`Expected ok, got error: ${JSON.stringify((result as any).error)}`);
@@ -119,5 +119,71 @@ describe("refineThing", () => {
       expect(result.ok).toBe(false);
       expect((result as any).error.code).toBe("INVALID_REFINEMENT");
     });
+  });
+
+  describe("unfold", () => {
+    function buildUnfoldModel() {
+      let m = createModel("test");
+      // Note: createModel already creates "opd-sd" (SD)
+      m = unwrap(addThing(m, { id: "obj-car", kind: "object", name: "Car", essence: "physical", affiliation: "systemic" }));
+      m = unwrap(addThing(m, { id: "obj-engine", kind: "object", name: "Engine", essence: "physical", affiliation: "systemic" }));
+      m = unwrap(addThing(m, { id: "obj-wheel", kind: "object", name: "Wheel", essence: "physical", affiliation: "systemic" }));
+      m = unwrap(addThing(m, { id: "obj-color", kind: "object", name: "Color", essence: "informatical", affiliation: "systemic" }));
+      m = unwrap(addThing(m, { id: "proc-drive", kind: "process", name: "Driving", essence: "physical", affiliation: "systemic" }));
+      m = unwrap(addAppearance(m, { thing: "obj-car", opd: "opd-sd", x: 100, y: 100, w: 150, h: 80 }));
+      m = unwrap(addAppearance(m, { thing: "obj-engine", opd: "opd-sd", x: 50, y: 200, w: 120, h: 60 }));
+      m = unwrap(addAppearance(m, { thing: "obj-wheel", opd: "opd-sd", x: 200, y: 200, w: 120, h: 60 }));
+      m = unwrap(addAppearance(m, { thing: "obj-color", opd: "opd-sd", x: 350, y: 200, w: 120, h: 60 }));
+      m = unwrap(addAppearance(m, { thing: "proc-drive", opd: "opd-sd", x: 350, y: 100, w: 150, h: 80 }));
+      m = unwrap(addLink(m, { id: "lnk-agg1", type: "aggregation", source: "obj-car", target: "obj-engine" }));
+      m = unwrap(addLink(m, { id: "lnk-agg2", type: "aggregation", source: "obj-car", target: "obj-wheel" }));
+      m = unwrap(addLink(m, { id: "lnk-exh1", type: "exhibition", source: "obj-car", target: "obj-color" }));
+      m = unwrap(addLink(m, { id: "lnk-eff1", type: "effect", source: "proc-drive", target: "obj-car" }));
+      return m;
+    }
+
+    it("pulls back aggregation and exhibition targets only", () => {
+      const m = buildUnfoldModel();
+      const model = unwrap(refineThing(m, "obj-car", "opd-sd", "unfold", "opd-sd1", "SD1"));
+      expect(model.appearances.has("obj-engine::opd-sd1")).toBe(true);
+      expect(model.appearances.has("obj-wheel::opd-sd1")).toBe(true);
+      expect(model.appearances.has("obj-color::opd-sd1")).toBe(true);
+      expect(model.appearances.has("proc-drive::opd-sd1")).toBe(false);
+      expect(model.appearances.get("obj-engine::opd-sd1")!.internal).toBe(false);
+      expect(model.appearances.get("obj-color::opd-sd1")!.internal).toBe(false);
+    });
+
+    it("creates internal appearance for unfolded object", () => {
+      const m = buildUnfoldModel();
+      const model = unwrap(refineThing(m, "obj-car", "opd-sd", "unfold", "opd-sd1", "SD1"));
+      const app = model.appearances.get("obj-car::opd-sd1");
+      expect(app).toBeDefined();
+      expect(app!.internal).toBe(true);
+    });
+  });
+});
+
+describe("removeThing cascade to refinement OPDs", () => {
+  it("removes refinement OPDs when thing is deleted", () => {
+    let m = buildTestModel();
+    m = unwrap(refineThing(m, "proc-make-coffee", "opd-sd", "in-zoom", "opd-sd1", "SD1"));
+    expect(m.opds.has("opd-sd1")).toBe(true);
+    const result = removeThing(m, "proc-make-coffee");
+    expect(result.ok).toBe(true);
+    const model = unwrap(result);
+    expect(model.opds.has("opd-sd1")).toBe(false);
+    expect(model.appearances.has("obj-water::opd-sd1")).toBe(false);
+    expect(model.appearances.has("proc-make-coffee::opd-sd1")).toBe(false);
+  });
+
+  it("cascades nested refinement OPDs", () => {
+    let m = buildTestModel();
+    m = unwrap(refineThing(m, "proc-make-coffee", "opd-sd", "in-zoom", "opd-sd1", "SD1"));
+    m = unwrap(addThing(m, { id: "proc-grind", kind: "process", name: "Grinding", essence: "physical", affiliation: "systemic" }));
+    m = unwrap(addAppearance(m, { thing: "proc-grind", opd: "opd-sd1", x: 50, y: 50, w: 120, h: 60, internal: true }));
+    m = unwrap(addOPD(m, { id: "opd-sd1-1", name: "SD1.1", opd_type: "hierarchical", parent_opd: "opd-sd1", refines: "proc-grind", refinement_type: "in-zoom" }));
+    const model = unwrap(removeThing(m, "proc-make-coffee"));
+    expect(model.opds.has("opd-sd1")).toBe(false);
+    expect(model.opds.has("opd-sd1-1")).toBe(false);
   });
 });
