@@ -3,6 +3,7 @@ import { Command, CommanderError } from "commander";
 import { CliError, formatOutput } from "./format";
 import { executeNew } from "./commands/new";
 import { executeAdd } from "./commands/add";
+import { executeRemove } from "./commands/remove";
 
 const program = new Command();
 
@@ -114,6 +115,39 @@ add
       { json: jsonFlag },
     ));
   });
+
+const remove = program
+  .command("remove")
+  .description("Remove an entity from the model");
+
+for (const entityType of ["thing", "state", "link", "opd"]) {
+  remove
+    .command(entityType)
+    .description(`Remove a ${entityType}`)
+    .argument("<id>", `${entityType} ID`)
+    .option("--dry-run", "Show what would be removed without removing", false)
+    .option("--file <file>", "Path to .opmodel file")
+    .action((id: string, opts: Record<string, unknown>) => {
+      const jsonFlag = program.opts().json as boolean;
+      const result = executeRemove(entityType, id, {
+        file: opts.file as string,
+        dryRun: opts.dryRun as boolean,
+      });
+      if (jsonFlag) {
+        console.log(formatOutput(
+          { action: result.dryRun ? "dry-run" : "removed", ...result },
+          { json: true },
+        ));
+      } else {
+        const cascadeEntries = Object.entries(result.cascade).filter(([, v]) => v > 0);
+        const cascadeStr = cascadeEntries.length > 0
+          ? ` (cascade: ${cascadeEntries.map(([k, v]) => `${v} ${k}`).join(", ")})`
+          : "";
+        const prefix = result.dryRun ? "Would remove" : "Removed";
+        console.log(`${prefix} ${entityType} ${id}${cascadeStr}`);
+      }
+    });
+}
 
 // Global error handler
 try {
