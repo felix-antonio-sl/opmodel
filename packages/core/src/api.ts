@@ -1,4 +1,8 @@
-import type { Model, Thing, State, Link, OPD, Appearance } from "./types";
+import type {
+  Model, Thing, State, Link, OPD, Appearance,
+  Modifier, Fan, Assertion, Requirement, Stereotype,
+  SubModel, Scenario,
+} from "./types";
 import type { InvariantError } from "./result";
 import { ok, err, type Result } from "./result";
 import { collectAllIds } from "./helpers";
@@ -287,4 +291,245 @@ export function removeAppearance(
   const appearances = new Map(model.appearances);
   appearances.delete(key);
   return ok({ ...model, appearances });
+}
+
+// ── Modifiers ──────────────────────────────────────────────────────────
+
+export function addModifier(model: Model, mod: Modifier): Result<Model, InvariantError> {
+  if (collectAllIds(model).has(mod.id)) return err({ code: "I-08", message: `Duplicate id: ${mod.id}`, entity: mod.id });
+  if (!model.links.has(mod.over)) return err({ code: "I-06", message: `Link not found: ${mod.over}`, entity: mod.id });
+  return ok({ ...model, modifiers: new Map(model.modifiers).set(mod.id, mod) });
+}
+
+export function removeModifier(model: Model, modId: string): Result<Model, InvariantError> {
+  if (!model.modifiers.has(modId)) return err({ code: "NOT_FOUND", message: `Modifier not found: ${modId}`, entity: modId });
+  const modifiers = new Map(model.modifiers);
+  modifiers.delete(modId);
+  return ok({ ...model, modifiers });
+}
+
+// ── Fans ───────────────────────────────────────────────────────────────
+
+export function addFan(model: Model, fan: Fan): Result<Model, InvariantError> {
+  if (collectAllIds(model).has(fan.id)) return err({ code: "I-08", message: `Duplicate id: ${fan.id}`, entity: fan.id });
+  if (fan.members.length < 2) return err({ code: "I-07", message: `Fan must have at least 2 members, got ${fan.members.length}`, entity: fan.id });
+  for (const memberId of fan.members) {
+    if (!model.links.has(memberId)) return err({ code: "I-07", message: `Fan member link not found: ${memberId}`, entity: fan.id });
+  }
+  return ok({ ...model, fans: new Map(model.fans).set(fan.id, fan) });
+}
+
+export function removeFan(model: Model, fanId: string): Result<Model, InvariantError> {
+  if (!model.fans.has(fanId)) return err({ code: "NOT_FOUND", message: `Fan not found: ${fanId}`, entity: fanId });
+  const fans = new Map(model.fans);
+  fans.delete(fanId);
+  return ok({ ...model, fans });
+}
+
+// ── Assertions ─────────────────────────────────────────────────────────
+
+export function addAssertion(model: Model, assertion: Assertion): Result<Model, InvariantError> {
+  if (collectAllIds(model).has(assertion.id)) return err({ code: "I-08", message: `Duplicate id: ${assertion.id}`, entity: assertion.id });
+  if (assertion.target != null && !model.things.has(assertion.target) && !model.links.has(assertion.target)) {
+    return err({ code: "I-09", message: `Assertion target not found: ${assertion.target}`, entity: assertion.id });
+  }
+  return ok({ ...model, assertions: new Map(model.assertions).set(assertion.id, assertion) });
+}
+
+export function removeAssertion(model: Model, id: string): Result<Model, InvariantError> {
+  if (!model.assertions.has(id)) return err({ code: "NOT_FOUND", message: `Assertion not found: ${id}`, entity: id });
+  const assertions = new Map(model.assertions);
+  assertions.delete(id);
+  return ok({ ...model, assertions });
+}
+
+// ── Requirements ───────────────────────────────────────────────────────
+
+export function addRequirement(model: Model, req: Requirement): Result<Model, InvariantError> {
+  if (collectAllIds(model).has(req.id)) return err({ code: "I-08", message: `Duplicate id: ${req.id}`, entity: req.id });
+  if (!model.things.has(req.target) && !model.states.has(req.target) && !model.links.has(req.target)) {
+    return err({ code: "I-10", message: `Requirement target not found: ${req.target}`, entity: req.id });
+  }
+  return ok({ ...model, requirements: new Map(model.requirements).set(req.id, req) });
+}
+
+export function removeRequirement(model: Model, id: string): Result<Model, InvariantError> {
+  if (!model.requirements.has(id)) return err({ code: "NOT_FOUND", message: `Requirement not found: ${id}`, entity: id });
+  const requirements = new Map(model.requirements);
+  requirements.delete(id);
+  return ok({ ...model, requirements });
+}
+
+// ── Stereotypes ────────────────────────────────────────────────────────
+
+export function addStereotype(model: Model, stp: Stereotype): Result<Model, InvariantError> {
+  if (collectAllIds(model).has(stp.id)) return err({ code: "I-08", message: `Duplicate id: ${stp.id}`, entity: stp.id });
+  if (!model.things.has(stp.thing)) return err({ code: "I-11", message: `Stereotype target thing not found: ${stp.thing}`, entity: stp.id });
+  return ok({ ...model, stereotypes: new Map(model.stereotypes).set(stp.id, stp) });
+}
+
+export function removeStereotype(model: Model, id: string): Result<Model, InvariantError> {
+  if (!model.stereotypes.has(id)) return err({ code: "NOT_FOUND", message: `Stereotype not found: ${id}`, entity: id });
+  const stereotypes = new Map(model.stereotypes);
+  stereotypes.delete(id);
+  return ok({ ...model, stereotypes });
+}
+
+// ── SubModels ──────────────────────────────────────────────────────────
+
+export function addSubModel(model: Model, sub: SubModel): Result<Model, InvariantError> {
+  if (collectAllIds(model).has(sub.id)) return err({ code: "I-08", message: `Duplicate id: ${sub.id}`, entity: sub.id });
+  for (const thingId of sub.shared_things) {
+    if (!model.things.has(thingId)) return err({ code: "I-12", message: `Shared thing not found: ${thingId}`, entity: sub.id });
+  }
+  return ok({ ...model, subModels: new Map(model.subModels).set(sub.id, sub) });
+}
+
+export function removeSubModel(model: Model, id: string): Result<Model, InvariantError> {
+  if (!model.subModels.has(id)) return err({ code: "NOT_FOUND", message: `SubModel not found: ${id}`, entity: id });
+  const subModels = new Map(model.subModels);
+  subModels.delete(id);
+  return ok({ ...model, subModels });
+}
+
+// ── Scenarios ──────────────────────────────────────────────────────────
+
+export function addScenario(model: Model, scn: Scenario): Result<Model, InvariantError> {
+  if (collectAllIds(model).has(scn.id)) return err({ code: "I-08", message: `Duplicate id: ${scn.id}`, entity: scn.id });
+  const allPathLabels = new Set([...model.links.values()].map((l) => l.path_label).filter(Boolean) as string[]);
+  for (const pl of scn.path_labels) {
+    if (!allPathLabels.has(pl)) return err({ code: "I-13", message: `Path label not found in any link: ${pl}`, entity: scn.id });
+  }
+  return ok({ ...model, scenarios: new Map(model.scenarios).set(scn.id, scn) });
+}
+
+export function removeScenario(model: Model, id: string): Result<Model, InvariantError> {
+  if (!model.scenarios.has(id)) return err({ code: "NOT_FOUND", message: `Scenario not found: ${id}`, entity: id });
+  const scenarios = new Map(model.scenarios);
+  scenarios.delete(id);
+  return ok({ ...model, scenarios });
+}
+
+// ── Batch Validate ─────────────────────────────────────────────────────
+
+export function validate(model: Model): InvariantError[] {
+  const errors: InvariantError[] = [];
+
+  // I-01
+  for (const [id, state] of model.states) {
+    const parent = model.things.get(state.parent);
+    if (!parent) errors.push({ code: "I-01", message: `State ${id} parent not found: ${state.parent}`, entity: id });
+    else if (parent.kind !== "object") errors.push({ code: "I-01", message: `State ${id} parent must be object: ${state.parent}`, entity: id });
+  }
+
+  // I-03
+  for (const [id, opd] of model.opds) {
+    if (opd.opd_type === "hierarchical" && opd.parent_opd !== null) {
+      if (!model.opds.has(opd.parent_opd)) errors.push({ code: "I-03", message: `OPD ${id} parent not found: ${opd.parent_opd}`, entity: id });
+    }
+    if (opd.opd_type === "view" && opd.parent_opd !== null) errors.push({ code: "I-03", message: `View OPD ${id} must have parent_opd=null`, entity: id });
+  }
+
+  // I-05
+  for (const [id, link] of model.links) {
+    if (!model.things.has(link.source)) errors.push({ code: "I-05", message: `Link ${id} source not found: ${link.source}`, entity: id });
+    if (!model.things.has(link.target)) errors.push({ code: "I-05", message: `Link ${id} target not found: ${link.target}`, entity: id });
+  }
+
+  // I-06
+  for (const [id, mod] of model.modifiers) {
+    if (!model.links.has(mod.over)) errors.push({ code: "I-06", message: `Modifier ${id} link not found: ${mod.over}`, entity: id });
+  }
+
+  // I-07
+  for (const [id, fan] of model.fans) {
+    if (fan.members.length < 2) errors.push({ code: "I-07", message: `Fan ${id} must have >= 2 members`, entity: id });
+    for (const memberId of fan.members) {
+      if (!model.links.has(memberId)) errors.push({ code: "I-07", message: `Fan ${id} member not found: ${memberId}`, entity: id });
+    }
+  }
+
+  // I-08
+  const seen = new Map<string, string>();
+  const checkId = (id: string, collection: string) => {
+    if (seen.has(id)) errors.push({ code: "I-08", message: `Duplicate id ${id} in ${collection} and ${seen.get(id)}`, entity: id });
+    seen.set(id, collection);
+  };
+  for (const id of model.things.keys()) checkId(id, "things");
+  for (const id of model.states.keys()) checkId(id, "states");
+  for (const id of model.opds.keys()) checkId(id, "opds");
+  for (const id of model.links.keys()) checkId(id, "links");
+  for (const id of model.modifiers.keys()) checkId(id, "modifiers");
+  for (const id of model.fans.keys()) checkId(id, "fans");
+  for (const id of model.scenarios.keys()) checkId(id, "scenarios");
+  for (const id of model.assertions.keys()) checkId(id, "assertions");
+  for (const id of model.requirements.keys()) checkId(id, "requirements");
+  for (const id of model.stereotypes.keys()) checkId(id, "stereotypes");
+  for (const id of model.subModels.keys()) checkId(id, "subModels");
+
+  // I-09
+  for (const [id, a] of model.assertions) {
+    if (a.target != null && !model.things.has(a.target) && !model.links.has(a.target))
+      errors.push({ code: "I-09", message: `Assertion ${id} target not found: ${a.target}`, entity: id });
+  }
+
+  // I-10
+  for (const [id, req] of model.requirements) {
+    if (!model.things.has(req.target) && !model.states.has(req.target) && !model.links.has(req.target))
+      errors.push({ code: "I-10", message: `Requirement ${id} target not found: ${req.target}`, entity: id });
+  }
+
+  // I-11
+  for (const [id, stp] of model.stereotypes) {
+    if (!model.things.has(stp.thing)) errors.push({ code: "I-11", message: `Stereotype ${id} thing not found: ${stp.thing}`, entity: id });
+  }
+
+  // I-12
+  for (const [id, sub] of model.subModels) {
+    for (const thingId of sub.shared_things) {
+      if (!model.things.has(thingId)) errors.push({ code: "I-12", message: `SubModel ${id} shared thing not found: ${thingId}`, entity: id });
+    }
+  }
+
+  // I-13
+  const allPathLabels = new Set([...model.links.values()].map((l) => l.path_label).filter(Boolean) as string[]);
+  for (const [id, scn] of model.scenarios) {
+    for (const pl of scn.path_labels) {
+      if (!allPathLabels.has(pl)) errors.push({ code: "I-13", message: `Scenario ${id} path label not found: ${pl}`, entity: id });
+    }
+  }
+
+  // I-14
+  for (const [id, link] of model.links) {
+    if (link.type === "exception") {
+      const source = model.things.get(link.source);
+      if (source && !source.duration?.max) errors.push({ code: "I-14", message: `Exception link ${id} source must have duration.max`, entity: id });
+    }
+  }
+
+  // I-15
+  for (const [key, app] of model.appearances) {
+    if (app.internal) {
+      const opd = model.opds.get(app.opd);
+      if (!opd || !opd.refines) errors.push({ code: "I-15", message: `Appearance ${key} internal=true in non-refinement OPD`, entity: key });
+    }
+  }
+
+  // I-18
+  for (const [id, link] of model.links) {
+    if (link.type === "agent") {
+      const source = model.things.get(link.source);
+      if (source && source.essence !== "physical") errors.push({ code: "I-18", message: `Agent link ${id} source must be physical`, entity: id });
+    }
+  }
+
+  // I-19
+  for (const [id, link] of model.links) {
+    if (link.type === "exhibition") {
+      const source = model.things.get(link.source);
+      if (source && source.essence !== "informatical") errors.push({ code: "I-19", message: `Exhibition link ${id} source must be informatical`, entity: id });
+    }
+  }
+
+  return errors;
 }
