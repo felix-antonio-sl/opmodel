@@ -626,6 +626,50 @@ export function updateFan(
   return ok(touch({ ...model, fans: new Map(model.fans).set(id, updated) }));
 }
 
+// ── updateThing (complex fibered checks) ──────────────────────────────
+
+export function updateThing(
+  model: Model,
+  id: string,
+  patch: Partial<Omit<Thing, "id">>,
+): Result<Model, InvariantError> {
+  const existing = model.things.get(id);
+  if (!existing) return err({ code: "NOT_FOUND", message: `Thing not found: ${id}`, entity: id });
+  const cleaned = cleanPatch(patch as Record<string, unknown>);
+  const updated = { ...existing, ...cleaned } as Thing;
+
+  // I-01: if kind changes to process, reject if states exist
+  if (cleaned.kind !== undefined && updated.kind === "process") {
+    for (const state of model.states.values()) {
+      if (state.parent === id) {
+        return err({ code: "I-01", message: `Cannot change kind to process: thing has states`, entity: id });
+      }
+    }
+  }
+
+  // Check links where this thing is source
+  if (cleaned.essence !== undefined || cleaned.duration !== undefined) {
+    for (const link of model.links.values()) {
+      if (link.source === id) {
+        // I-18: agent source must be physical
+        if (link.type === "agent" && updated.essence !== "physical") {
+          return err({ code: "I-18", message: `Agent source must be physical: ${id}`, entity: id });
+        }
+        // I-19: exhibition source must be informatical
+        if (link.type === "exhibition" && updated.essence !== "informatical") {
+          return err({ code: "I-19", message: `Exhibition source must be informatical: ${id}`, entity: id });
+        }
+        // I-14: exception source must have duration.max
+        if (link.type === "exception" && !updated.duration?.max) {
+          return err({ code: "I-14", message: `Exception source must have duration.max: ${id}`, entity: id });
+        }
+      }
+    }
+  }
+
+  return ok(touch({ ...model, things: new Map(model.things).set(id, updated) }));
+}
+
 // ── Batch Validate ─────────────────────────────────────────────────────
 
 export function validate(model: Model): InvariantError[] {

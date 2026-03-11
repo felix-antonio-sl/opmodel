@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createModel } from "../src/model";
 import { isOk, isErr } from "../src/result";
-import { updateMeta, updateSettings, updateModifier, updateAssertion, updateRequirement, updateStereotype, updateSubModel, updateScenario, updateState, updateOPD, updateAppearance, updateFan, addThing, addLink, addState, addOPD, addAppearance, addFan, addModifier, addAssertion, addRequirement, addStereotype, addSubModel, addScenario } from "../src/api";
+import { updateMeta, updateSettings, updateModifier, updateAssertion, updateRequirement, updateStereotype, updateSubModel, updateScenario, updateState, updateOPD, updateAppearance, updateFan, updateThing, addThing, addLink, addState, addOPD, addAppearance, addFan, addModifier, addAssertion, addRequirement, addStereotype, addSubModel, addScenario } from "../src/api";
 import type { Thing, Link } from "../src/types";
 
 beforeEach(() => {
@@ -366,5 +366,80 @@ describe("updateFan", () => {
     const r = updateFan(m, "fan-1", { members: ["lnk-1", "lnk-ghost"] });
     expect(isErr(r)).toBe(true);
     if (isErr(r)) expect(r.error.code).toBe("I-07");
+  });
+});
+
+describe("updateThing", () => {
+  it("updates thing name", () => {
+    let m = createModel("Test");
+    m = (addThing(m, water) as any).value;
+    const r = updateThing(m, "obj-water", { name: "H2O" });
+    expect(isOk(r)).toBe(true);
+    if (isOk(r)) expect(r.value.things.get("obj-water")?.name).toBe("H2O");
+  });
+
+  it("rejects update to non-existent thing", () => {
+    const r = updateThing(createModel("Test"), "obj-ghost", { name: "x" });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("NOT_FOUND");
+  });
+
+  it("rejects kind change object→process when states exist (I-01)", () => {
+    let m = createModel("Test");
+    m = (addThing(m, water) as any).value;
+    m = (addState(m, { id: "state-cold", parent: "obj-water", name: "cold", initial: true, final: false, default: true }) as any).value;
+    const r = updateThing(m, "obj-water", { kind: "process" });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-01");
+  });
+
+  it("allows kind change object→process when no states", () => {
+    let m = createModel("Test");
+    m = (addThing(m, water) as any).value;
+    const r = updateThing(m, "obj-water", { kind: "process" });
+    expect(isOk(r)).toBe(true);
+    if (isOk(r)) expect(r.value.things.get("obj-water")?.kind).toBe("process");
+  });
+
+  it("rejects essence change to informatical when thing is agent source (I-18)", () => {
+    let m = createModel("Test");
+    const barista: Thing = { id: "obj-barista", kind: "object", name: "Barista", essence: "physical", affiliation: "systemic" };
+    m = (addThing(m, barista) as any).value;
+    m = (addThing(m, proc) as any).value;
+    m = (addLink(m, { id: "lnk-agent", type: "agent", source: "obj-barista", target: "proc-heat" }) as any).value;
+    const r = updateThing(m, "obj-barista", { essence: "informatical" });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-18");
+  });
+
+  it("rejects essence change to physical when thing is exhibition source (I-19)", () => {
+    let m = createModel("Test");
+    const attr: Thing = { id: "obj-attr", kind: "object", name: "Color", essence: "informatical", affiliation: "systemic" };
+    m = (addThing(m, water) as any).value;
+    m = (addThing(m, attr) as any).value;
+    m = (addLink(m, { id: "lnk-exhibit", type: "exhibition", source: "obj-attr", target: "obj-water" }) as any).value;
+    const r = updateThing(m, "obj-attr", { essence: "physical" });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-19");
+  });
+
+  it("rejects removing duration.max when exception link depends on it (I-14)", () => {
+    let m = createModel("Test");
+    const timedProc: Thing = { id: "proc-timed", kind: "process", name: "Timed", essence: "physical", affiliation: "systemic", duration: { nominal: 60, max: 120, unit: "s" } };
+    const handler: Thing = { id: "proc-handler", kind: "process", name: "Handler", essence: "physical", affiliation: "systemic" };
+    m = (addThing(m, timedProc) as any).value;
+    m = (addThing(m, handler) as any).value;
+    m = (addLink(m, { id: "lnk-exc", type: "exception", source: "proc-timed", target: "proc-handler" }) as any).value;
+    const r = updateThing(m, "proc-timed", { duration: { nominal: 60, unit: "s" } });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-14");
+  });
+
+  it("does not mutate original model", () => {
+    let m = createModel("Test");
+    m = (addThing(m, water) as any).value;
+    const originalName = m.things.get("obj-water")!.name;
+    updateThing(m, "obj-water", { name: "New" });
+    expect(m.things.get("obj-water")!.name).toBe(originalName);
   });
 });
