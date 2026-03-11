@@ -177,7 +177,7 @@ Dispatch explicito via `Map<string, AddHandler>`:
 ```bash
 # Thing: nombre posicional, resto flags
 opmod add thing "Water" --kind object --essence physical [--affiliation systemic]  # affiliation default: "systemic"
-opmod add thing --json '{"id":"obj-water","kind":"object","name":"Water","essence":"physical","affiliation":"systemic"}'
+opmod add thing --input '{"id":"obj-water","kind":"object","name":"Water","essence":"physical","affiliation":"systemic"}'
 
 # State: nombre posicional, parent obligatorio
 # Flags booleanos default a false cuando se omiten
@@ -198,7 +198,7 @@ opmod add opd "SD1" --parent opd-sd [--opd-type hierarchical|view] [--refines pr
 - Link: `lnk-{type}-{slug(source)}-{slug(target)}` → `lnk-effect-heating-water`
 - OPD: `opd-{slug(name)}` → `opd-sd1`
 
-Con `--json` el id es obligatorio (no se autogenera).
+Con `--input` el id es obligatorio (no se autogenera). Nota: `--input` (no `--json`) para evitar colision con el flag global `--json` de formato de salida.
 
 **Slugificacion:** `slug(name)` convierte a lowercase, reemplaza espacios y caracteres no-alfanumericos por `-`, colapsa guiones multiples, trim de guiones en extremos. Ej: `"Coffee Beans"` → `coffee-beans`, `"SD1"` → `sd1`.
 
