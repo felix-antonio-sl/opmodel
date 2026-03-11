@@ -601,13 +601,197 @@ body,
    OPL Panel
    ═══════════════════ */
 
-.opl-panel {
+.right-panel {
   grid-area: opl;
   background: var(--bg-panel);
   border-left: 1px solid var(--border);
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+}
+
+.opl-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+/* ═══════════════════
+   Properties Panel
+   ═══════════════════ */
+
+.props-panel {
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.props-panel__title {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+}
+
+.props-panel__section {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.props-panel__row {
+  display: flex;
+  gap: 10px;
+}
+
+.props-panel__row > * {
+  flex: 1;
+}
+
+.props-panel__label {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.props-panel__value {
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 4px 0;
+}
+
+.props-panel__input {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 4px 8px;
+  outline: none;
+}
+
+.props-panel__input:focus {
+  border-color: var(--accent-dim);
+}
+
+.props-panel__select {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 4px 6px;
+  outline: none;
+  cursor: pointer;
+}
+
+.props-panel__select:focus {
+  border-color: var(--accent-dim);
+}
+
+.props-panel__states {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.props-panel__states-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.props-panel__add-btn {
+  font-size: 10px;
+  padding: 2px 8px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--accent-dim);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.props-panel__add-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.props-panel__state-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  background: var(--bg-surface);
+  border-radius: 3px;
+  font-size: 11px;
+}
+
+.props-panel__state-name {
+  flex: 1;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+
+.props-panel__state-flags {
+  font-size: 9px;
+  color: var(--text-muted);
+  letter-spacing: 2px;
+}
+
+.props-panel__link-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.props-panel__link-type {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  min-width: 70px;
+}
+
+.props-panel__remove-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 4px;
+  line-height: 1;
+  margin-left: auto;
+}
+
+.props-panel__remove-btn:hover {
+  color: var(--danger);
+}
+
+.props-panel__delete-btn {
+  margin-top: 6px;
+  padding: 5px 12px;
+  background: transparent;
+  border: 1px solid var(--danger);
+  border-radius: 3px;
+  color: var(--danger);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.props-panel__delete-btn:hover {
+  background: rgba(217, 79, 79, 0.1);
 }
 
 .opl-panel__title {

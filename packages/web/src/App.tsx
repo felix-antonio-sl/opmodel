@@ -4,6 +4,7 @@ import { useModelStore } from "./hooks/useModelStore";
 import { OpdTree } from "./components/OpdTree";
 import { OpdCanvas } from "./components/OpdCanvas";
 import { OplPanel } from "./components/OplPanel";
+import { PropertiesPanel } from "./components/PropertiesPanel";
 import { Toolbar } from "./components/Toolbar";
 
 function Editor({ initialModel }: { initialModel: Model }) {
@@ -108,11 +109,17 @@ function Editor({ initialModel }: { initialModel: Model }) {
         mode={ui.mode}
         dispatch={dispatch}
       />
-      <OplPanel
-        model={model}
-        opdId={ui.currentOpd}
-        selectedThing={ui.selectedThing}
-      />
+      <aside className="right-panel">
+        {ui.selectedThing && (
+          <PropertiesPanel
+            model={model}
+            thingId={ui.selectedThing}
+            opdId={ui.currentOpd}
+            dispatch={dispatch}
+          />
+        )}
+        <OplPanel model={model} opdId={ui.currentOpd} selectedThing={ui.selectedThing} />
+      </aside>
 
       {/* Status Bar */}
       <footer className="status-bar">
