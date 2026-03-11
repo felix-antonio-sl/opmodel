@@ -1,0 +1,4 @@
+node_modules/
+dist/
+.opmod-session
+*.tsbuildinfo
