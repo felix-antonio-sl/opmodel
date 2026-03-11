@@ -24,6 +24,10 @@ import {
   type Result,
 } from "@opmodel/core";
 
+/* ─── Editor Mode ─── */
+
+export type EditorMode = "select" | "addObject" | "addProcess" | "addLink";
+
 /* ─── Command Sum Type ─── */
 
 export type Command =
@@ -36,14 +40,20 @@ export type Command =
   | { tag: "addLink"; link: Omit<Link, never> }
   | { tag: "removeLink"; linkId: string }
   | { tag: "selectThing"; thingId: string | null }
-  | { tag: "selectOpd"; opdId: string };
+  | { tag: "selectOpd"; opdId: string }
+  | { tag: "addState"; state: { id: string; parent: string; name: string; initial: boolean; final: boolean; default: boolean } }
+  | { tag: "removeState"; stateId: string }
+  | { tag: "updateLink"; linkId: string; patch: Partial<Omit<Link, "id">> }
+  | { tag: "setMode"; mode: EditorMode };
 
 /* ─── Effect Coproduct ─── */
 
 export type Effect =
   | { type: "modelMutation"; apply: (model: Model) => Result<Model, InvariantError> }
   | { type: "uiTransition"; field: "selectedThing"; value: string | null }
-  | { type: "uiTransition"; field: "currentOpd"; value: string };
+  | { type: "uiTransition"; field: "currentOpd"; value: string }
+  | { type: "uiTransition"; field: "mode"; value: EditorMode }
+  | { type: "uiTransition"; field: "linkSource"; value: string | null };
 
 /* ─── Interpret: Natural Transformation η ─── */
 
@@ -113,5 +123,26 @@ export function interpret(cmd: Command): Effect {
 
     case "selectOpd":
       return { type: "uiTransition", field: "currentOpd", value: cmd.opdId };
+
+    case "addState":
+      return {
+        type: "modelMutation",
+        apply: (m) => addState(m, cmd.state as any),
+      };
+
+    case "removeState":
+      return {
+        type: "modelMutation",
+        apply: (m) => removeState(m, cmd.stateId),
+      };
+
+    case "updateLink":
+      return {
+        type: "modelMutation",
+        apply: (m) => updateLink(m, cmd.linkId, cmd.patch),
+      };
+
+    case "setMode":
+      return { type: "uiTransition", field: "mode", value: cmd.mode };
   }
 }

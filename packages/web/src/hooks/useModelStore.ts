@@ -17,12 +17,16 @@ import {
   undo,
   redo,
   isOk,
+  saveModel,
 } from "@opmodel/core";
 import { type Command, interpret } from "../lib/commands";
+import type { EditorMode } from "../lib/commands";
 
 export interface UIState {
   currentOpd: string;
   selectedThing: string | null;
+  mode: EditorMode;
+  linkSource: string | null;
 }
 
 export interface ModelStore {
@@ -42,6 +46,8 @@ export interface ModelStore {
   doRedo: () => void;
   /** Last error from a rejected mutation */
   lastError: string | null;
+  /** Save model to .opmodel file */
+  save: () => void;
 }
 
 export function useModelStore(initialModel: Model): ModelStore {
@@ -51,6 +57,8 @@ export function useModelStore(initialModel: Model): ModelStore {
   const [ui, setUi] = useState<UIState>({
     currentOpd: "opd-sd",
     selectedThing: null,
+    mode: "select",
+    linkSource: null,
   });
   const [lastError, setLastError] = useState<string | null>(null);
 
@@ -84,6 +92,19 @@ export function useModelStore(initialModel: Model): ModelStore {
     setHistory((h) => redo(h) ?? h);
   }, []);
 
+  const save = useCallback(() => {
+    const json = saveModel(history.present);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${history.present.meta.name.toLowerCase().replace(/\s+/g, "-")}.opmodel`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [history]);
+
   return {
     model: history.present,
     ui,
@@ -93,5 +114,6 @@ export function useModelStore(initialModel: Model): ModelStore {
     doUndo,
     doRedo,
     lastError,
+    save,
   };
 }

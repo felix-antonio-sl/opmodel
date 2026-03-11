@@ -7,7 +7,7 @@ import { OplPanel } from "./components/OplPanel";
 
 function Editor({ initialModel }: { initialModel: Model }) {
   const store = useModelStore(initialModel);
-  const { model, ui, dispatch, doUndo, doRedo, canUndo, canRedo, lastError } = store;
+  const { model, ui, dispatch, doUndo, doRedo, canUndo, canRedo, lastError, save } = store;
 
   // Keyboard shortcuts
   const handleKeyDown = useCallback(
@@ -20,8 +20,16 @@ function Editor({ initialModel }: { initialModel: Model }) {
           doUndo();
         }
       }
+      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+        e.preventDefault();
+        save();
+      }
+      if ((e.key === "Delete" || e.key === "Backspace") && ui.selectedThing && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        dispatch({ tag: "removeThing", thingId: ui.selectedThing });
+      }
     },
-    [doUndo, doRedo],
+    [doUndo, doRedo, save, ui.selectedThing, dispatch],
   );
 
   useEffect(() => {
@@ -59,6 +67,12 @@ function Editor({ initialModel }: { initialModel: Model }) {
             title="Redo (Ctrl+Shift+Z)"
           >
             ↷
+          </button>
+        </div>
+        <div className="header__sep" />
+        <div className="header__actions">
+          <button className="header__action" onClick={save} title="Save (Ctrl+S)">
+            ⤓
           </button>
         </div>
         <div className="header__sep" />
