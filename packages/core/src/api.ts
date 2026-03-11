@@ -1,4 +1,4 @@
-import type { Model, Thing, State, Link } from "./types";
+import type { Model, Thing, State, Link, OPD } from "./types";
 import type { InvariantError } from "./result";
 import { ok, err, type Result } from "./result";
 import { collectAllIds } from "./helpers";
@@ -204,4 +204,52 @@ export function removeLink(
     }
   }
   return ok({ ...model, links, modifiers, fans });
+}
+
+// ── OPDs ───────────────────────────────────────────────────────────────
+
+export function addOPD(
+  model: Model,
+  opd: OPD,
+): Result<Model, InvariantError> {
+  if (collectAllIds(model).has(opd.id)) {
+    return err({ code: "I-08", message: `Duplicate id: ${opd.id}`, entity: opd.id });
+  }
+  // I-03: hierarchical OPD parent must exist
+  if (opd.opd_type === "hierarchical" && opd.parent_opd !== null) {
+    if (!model.opds.has(opd.parent_opd)) {
+      return err({ code: "I-03", message: `Parent OPD not found: ${opd.parent_opd}`, entity: opd.id });
+    }
+  }
+  return ok({ ...model, opds: new Map(model.opds).set(opd.id, opd) });
+}
+
+export function removeOPD(
+  model: Model,
+  opdId: string,
+): Result<Model, InvariantError> {
+  if (!model.opds.has(opdId)) {
+    return err({ code: "NOT_FOUND", message: `OPD not found: ${opdId}`, entity: opdId });
+  }
+  // Collect this OPD and all descendant OPDs recursively
+  const opdsToRemove = new Set<string>();
+  const collectDescendants = (parentId: string) => {
+    opdsToRemove.add(parentId);
+    for (const [id, opd] of model.opds) {
+      if (opd.parent_opd === parentId && !opdsToRemove.has(id)) {
+        collectDescendants(id);
+      }
+    }
+  };
+  collectDescendants(opdId);
+
+  const opds = new Map(model.opds);
+  for (const id of opdsToRemove) opds.delete(id);
+
+  // Cascade: remove appearances in any removed OPD
+  const appearances = new Map(model.appearances);
+  for (const [key, a] of appearances) {
+    if (opdsToRemove.has(a.opd)) appearances.delete(key);
+  }
+  return ok({ ...model, opds, appearances });
 }
