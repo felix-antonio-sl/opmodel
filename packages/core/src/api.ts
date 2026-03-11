@@ -438,6 +438,113 @@ export function updateSettings(
   }));
 }
 
+// ── Entity Updates (simple reference checks) ──────────────────────────
+
+export function updateModifier(
+  model: Model,
+  id: string,
+  patch: Partial<Omit<Modifier, "id">>,
+): Result<Model, InvariantError> {
+  const existing = model.modifiers.get(id);
+  if (!existing) return err({ code: "NOT_FOUND", message: `Modifier not found: ${id}`, entity: id });
+  const cleaned = cleanPatch(patch as Record<string, unknown>);
+  const updated = { ...existing, ...cleaned } as Modifier;
+  if (cleaned.over !== undefined && !model.links.has(updated.over)) {
+    return err({ code: "I-06", message: `Link not found: ${updated.over}`, entity: id });
+  }
+  return ok(touch({ ...model, modifiers: new Map(model.modifiers).set(id, updated) }));
+}
+
+export function updateAssertion(
+  model: Model,
+  id: string,
+  patch: Partial<Omit<Assertion, "id">>,
+): Result<Model, InvariantError> {
+  const existing = model.assertions.get(id);
+  if (!existing) return err({ code: "NOT_FOUND", message: `Assertion not found: ${id}`, entity: id });
+  const cleaned = cleanPatch(patch as Record<string, unknown>);
+  const updated = { ...existing, ...cleaned } as Assertion;
+  if (cleaned.target !== undefined && updated.target != null) {
+    if (!model.things.has(updated.target) && !model.links.has(updated.target)) {
+      return err({ code: "I-09", message: `Assertion target not found: ${updated.target}`, entity: id });
+    }
+  }
+  return ok(touch({ ...model, assertions: new Map(model.assertions).set(id, updated) }));
+}
+
+export function updateRequirement(
+  model: Model,
+  id: string,
+  patch: Partial<Omit<Requirement, "id">>,
+): Result<Model, InvariantError> {
+  const existing = model.requirements.get(id);
+  if (!existing) return err({ code: "NOT_FOUND", message: `Requirement not found: ${id}`, entity: id });
+  const cleaned = cleanPatch(patch as Record<string, unknown>);
+  const updated = { ...existing, ...cleaned } as Requirement;
+  if (cleaned.target !== undefined) {
+    if (!model.things.has(updated.target) && !model.states.has(updated.target) && !model.links.has(updated.target)) {
+      return err({ code: "I-10", message: `Requirement target not found: ${updated.target}`, entity: id });
+    }
+  }
+  return ok(touch({ ...model, requirements: new Map(model.requirements).set(id, updated) }));
+}
+
+export function updateStereotype(
+  model: Model,
+  id: string,
+  patch: Partial<Omit<Stereotype, "id">>,
+): Result<Model, InvariantError> {
+  const existing = model.stereotypes.get(id);
+  if (!existing) return err({ code: "NOT_FOUND", message: `Stereotype not found: ${id}`, entity: id });
+  const cleaned = cleanPatch(patch as Record<string, unknown>);
+  const updated = { ...existing, ...cleaned } as Stereotype;
+  if (cleaned.thing !== undefined && !model.things.has(updated.thing)) {
+    return err({ code: "I-11", message: `Stereotype target thing not found: ${updated.thing}`, entity: id });
+  }
+  return ok(touch({ ...model, stereotypes: new Map(model.stereotypes).set(id, updated) }));
+}
+
+export function updateSubModel(
+  model: Model,
+  id: string,
+  patch: Partial<Omit<SubModel, "id">>,
+): Result<Model, InvariantError> {
+  const existing = model.subModels.get(id);
+  if (!existing) return err({ code: "NOT_FOUND", message: `SubModel not found: ${id}`, entity: id });
+  const cleaned = cleanPatch(patch as Record<string, unknown>);
+  const updated = { ...existing, ...cleaned } as SubModel;
+  if (cleaned.shared_things !== undefined) {
+    for (const thingId of updated.shared_things) {
+      if (!model.things.has(thingId)) {
+        return err({ code: "I-12", message: `Shared thing not found: ${thingId}`, entity: id });
+      }
+    }
+  }
+  return ok(touch({ ...model, subModels: new Map(model.subModels).set(id, updated) }));
+}
+
+export function updateScenario(
+  model: Model,
+  id: string,
+  patch: Partial<Omit<Scenario, "id">>,
+): Result<Model, InvariantError> {
+  const existing = model.scenarios.get(id);
+  if (!existing) return err({ code: "NOT_FOUND", message: `Scenario not found: ${id}`, entity: id });
+  const cleaned = cleanPatch(patch as Record<string, unknown>);
+  const updated = { ...existing, ...cleaned } as Scenario;
+  if (cleaned.path_labels !== undefined) {
+    const allPathLabels = new Set(
+      [...model.links.values()].map((l) => l.path_label).filter(Boolean) as string[]
+    );
+    for (const pl of updated.path_labels) {
+      if (!allPathLabels.has(pl)) {
+        return err({ code: "I-13", message: `Path label not found in any link: ${pl}`, entity: id });
+      }
+    }
+  }
+  return ok(touch({ ...model, scenarios: new Map(model.scenarios).set(id, updated) }));
+}
+
 // ── Batch Validate ─────────────────────────────────────────────────────
 
 export function validate(model: Model): InvariantError[] {
