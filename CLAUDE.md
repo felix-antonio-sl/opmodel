@@ -4,17 +4,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-OPModel is a specification and design workspace for **OPModeling** — a single-user power tool for Object Process Methodology (ISO 19450) modeling. The repository contains no application code yet; it holds specifications, audits, formal analysis, plans, and session logs that define the system to be built.
+OPModel is a specification and implementation workspace for **OPModeling** — a single-user power tool for Object Process Methodology (ISO 19450) modeling. The repository contains the Domain Engine core (`packages/core/`) with full CRUD operations, 18 invariant guards, and serialization. It also holds specifications, audits, formal analysis, plans, and session logs.
 
 All documentation follows OPM (ISO 19450) guidelines and KODA Framework architectural principles.
 
 ## Repository Structure
 
-- **specs/** — Product specifications and requirements. The central artifact is `opm-modeling-app-backlog-lean.md` (50 user stories, 6 modules, architectural decisions, dependency graphs).
-- **analysis/** — Formal foundations research. Read-only reference material (OPM formalized as bicategory, fibration, coalgebra, lens).
-- **audits/** — Formal verification against ISO 19450 and internal consistency checks.
-- **plans/** — Pending structural proposals and architectural evolution plans.
-- **sessions/** — Session handoffs and raw logs. Always check the latest handoff file for current state and next steps.
+- **packages/core/** — Domain Engine (TypeScript, zero dependencies). Types, Result monad, createModel, serialization, CRUD API, invariant guards. 72 tests.
+- **packages/cli/** — CLI `opmod` command (planned, not yet implemented).
+- **packages/web/** — Web UI (future).
+- **specs/** — Product specifications and requirements. Central artifacts: `opm-modeling-app-backlog-lean.md`, `opm-data-model.md` (Rev.3), `opm-json-schema.json`.
+- **tests/** — Shared fixture files (e.g., `coffee-making.opmodel`).
+- **analysis/** — Formal foundations research. Read-only reference material.
+- **audits/** — Formal verification against ISO 19450.
+- **docs/superpowers/** — Design specs and implementation plans.
+- **sessions/** — Session handoffs. Always check the latest handoff file for current state.
 
 ## Language and Conventions
 
@@ -51,6 +55,14 @@ L-M1-02 → L-M1-06 (States)
 L-M1-02 → L-M3-01 (OPD tree)
 L-M1-02 → L-M1-07 (In-zoom)
 ```
+
+## Development
+
+- **Runtime:** Bun v1.3.10 (`~/.bun/bin/bun`). Requiere: `export BUN_INSTALL="$HOME/.bun" && export PATH="$BUN_INSTALL/bin:$PATH"`
+- **Tests:** `bunx vitest run` (desde raiz del proyecto)
+- **Type check:** `cd packages/core && bunx tsc --noEmit`
+- **Monorepo:** Bun workspaces (root `package.json`)
+- **Pattern:** Immutable Model — funciones puras retornan `Result<Model, InvariantError>`, Maps para O(1) lookups
 
 ## Session Continuity
 
