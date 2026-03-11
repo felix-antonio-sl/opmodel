@@ -6,6 +6,7 @@ import { executeAdd } from "./commands/add";
 import { executeRemove } from "./commands/remove";
 import { executeList } from "./commands/list";
 import { executeShow } from "./commands/show";
+import { executeValidate } from "./commands/validate";
 import { formatThing, formatState, formatLink, formatOPD } from "./format";
 
 const program = new Command();
@@ -235,6 +236,26 @@ program
       // P1+ fallback
       console.log(`${result.entityType}: ${id}`);
       console.log(JSON.stringify(result.entity, null, 2));
+    }
+  });
+
+program
+  .command("validate")
+  .description("Validate the model")
+  .option("--file <file>", "Path to .opmodel file")
+  .action((opts: Record<string, unknown>) => {
+    const jsonFlag = program.opts().json as boolean;
+    const result = executeValidate({ file: opts.file as string });
+
+    if (jsonFlag) {
+      console.log(JSON.stringify(result, null, 2));
+      if (!result.valid) process.exit(1);
+    } else if (result.valid) {
+      const s = result.summary;
+      console.log(`Model valid. ${s.things} things, ${s.states} states, ${s.links} links, ${s.opds} OPDs.`);
+    } else {
+      console.log(formatErrors(result.errors, { json: false }));
+      throw new CliError(`Validation failed with ${result.errors.length} errors`, 1);
     }
   });
 
