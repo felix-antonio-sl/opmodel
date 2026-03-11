@@ -1,0 +1,59 @@
+{
+  "opmodel": "1.1.0",
+  "meta": {
+    "created": "2026-03-10T15:30:00Z",
+    "description": "Sistema de preparación de café — SD con wizard artificial",
+    "modified": "2026-03-10T16:45:00Z",
+    "name": "Coffee Making System",
+    "system_type": "artificial"
+  },
+  "settings": {
+    "autosave_interval_s": 300,
+    "methodology_coaching": true,
+    "opl_language": "en",
+    "primary_essence": "physical"
+  },
+  "things": [
+    {"affiliation": "systemic", "essence": "physical", "id": "obj-barista", "kind": "object", "name": "Barista"},
+    {"affiliation": "systemic", "essence": "physical", "id": "obj-coffee", "kind": "object", "name": "Coffee"},
+    {"affiliation": "systemic", "essence": "physical", "id": "obj-coffee-beans", "kind": "object", "name": "Coffee Beans"},
+    {"affiliation": "systemic", "essence": "physical", "id": "obj-water", "kind": "object", "name": "Water"},
+    {"affiliation": "systemic", "duration": {"nominal": 120, "unit": "s"}, "essence": "physical", "id": "proc-coffee-making", "kind": "process", "name": "Coffee Making"}
+  ],
+  "states": [
+    {"current": true, "default": true, "final": false, "id": "state-coffee-unmade", "initial": true, "name": "unmade", "parent": "obj-coffee"},
+    {"default": false, "final": true, "id": "state-coffee-ready", "initial": false, "name": "ready", "parent": "obj-coffee"},
+    {"current": true, "default": true, "final": false, "id": "state-water-cold", "initial": true, "name": "cold", "parent": "obj-water"},
+    {"default": false, "final": true, "id": "state-water-hot", "initial": false, "name": "hot", "parent": "obj-water"}
+  ],
+  "opds": [
+    {"id": "opd-sd", "name": "SD", "opd_type": "hierarchical", "parent_opd": null},
+    {"id": "opd-sd1", "name": "SD1", "opd_type": "hierarchical", "parent_opd": "opd-sd", "refines": "proc-coffee-making", "refinement_type": "in-zoom"}
+  ],
+  "links": [
+    {"id": "lnk-barista-agent-coffee-making", "source": "obj-barista", "target": "proc-coffee-making", "type": "agent"},
+    {"id": "lnk-coffee-making-consumption-beans", "source": "proc-coffee-making", "target": "obj-coffee-beans", "type": "consumption"},
+    {"id": "lnk-coffee-making-consumption-water", "source": "proc-coffee-making", "target": "obj-water", "type": "consumption"},
+    {"id": "lnk-coffee-making-effect-water", "source": "proc-coffee-making", "source_state": "state-water-cold", "target": "obj-water", "target_state": "state-water-hot", "type": "effect"},
+    {"id": "lnk-coffee-making-result-coffee", "source": "proc-coffee-making", "target": "obj-coffee", "type": "result"}
+  ],
+  "modifiers": [
+    {"id": "mod-water-event", "over": "lnk-coffee-making-effect-water", "type": "event"}
+  ],
+  "appearances": [
+    {"h": 50, "opd": "opd-sd", "thing": "obj-barista", "w": 120, "x": 50, "y": 50},
+    {"h": 50, "opd": "opd-sd", "thing": "obj-coffee", "w": 120, "x": 500, "y": 200},
+    {"h": 50, "opd": "opd-sd", "thing": "obj-coffee-beans", "w": 140, "x": 50, "y": 200},
+    {"h": 50, "opd": "opd-sd", "thing": "obj-water", "w": 120, "x": 50, "y": 350},
+    {"h": 80, "opd": "opd-sd", "thing": "proc-coffee-making", "w": 180, "x": 280, "y": 180},
+    {"h": 50, "internal": false, "opd": "opd-sd1", "thing": "obj-water", "w": 120, "x": 50, "y": 100}
+  ],
+  "fans": [],
+  "scenarios": [],
+  "assertions": [
+    {"category": "correctness", "enabled": true, "id": "ast-coffee-ready", "predicate": "after Coffee Making, Coffee is ready", "target": "proc-coffee-making"}
+  ],
+  "requirements": [],
+  "stereotypes": [],
+  "sub_models": []
+}

@@ -1,0 +1,659 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opmodeling.dev/schemas/opmodel-v1.json",
+  "title": "OPModel File Schema",
+  "description": "JSON Schema for .opmodel files — OPModeling (ISO 19450 OPM). Source: specs/opm-data-model.md Rev.3",
+  "type": "object",
+  "required": [
+    "opmodel",
+    "meta",
+    "settings",
+    "things",
+    "states",
+    "opds",
+    "links",
+    "modifiers",
+    "appearances",
+    "fans",
+    "scenarios",
+    "assertions",
+    "requirements",
+    "stereotypes",
+    "sub_models"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "opmodel": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Schema version (semver)"
+    },
+    "meta": { "$ref": "#/$defs/Meta" },
+    "settings": { "$ref": "#/$defs/Settings" },
+    "things": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Thing" }
+    },
+    "states": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/State" }
+    },
+    "opds": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/OPD" }
+    },
+    "links": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Link" }
+    },
+    "modifiers": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Modifier" }
+    },
+    "appearances": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Appearance" }
+    },
+    "fans": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Fan" }
+    },
+    "scenarios": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Scenario" }
+    },
+    "assertions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Assertion" }
+    },
+    "requirements": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Requirement" }
+    },
+    "stereotypes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Stereotype" }
+    },
+    "sub_models": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/SubModel" }
+    }
+  },
+
+  "$defs": {
+
+    "Duration": {
+      "type": "object",
+      "description": "Temporal dimension (§2.4). Functor parcial T: Obj(C_opm) ⇀ Duration",
+      "required": ["nominal", "unit"],
+      "additionalProperties": false,
+      "properties": {
+        "nominal": { "type": "number" },
+        "min": { "type": "number" },
+        "max": { "type": "number" },
+        "unit": {
+          "type": "string",
+          "enum": ["ms", "s", "min", "h", "d"]
+        }
+      }
+    },
+
+    "Range": {
+      "type": "object",
+      "description": "Value range for ComputationalObject (§2.5)",
+      "required": ["min", "max", "min_inclusive", "max_inclusive"],
+      "additionalProperties": false,
+      "properties": {
+        "min": { "type": "number" },
+        "max": { "type": "number" },
+        "min_inclusive": { "type": "boolean" },
+        "max_inclusive": { "type": "boolean" }
+      }
+    },
+
+    "Position": {
+      "type": "object",
+      "description": "2D coordinate (§2.4)",
+      "required": ["x", "y"],
+      "additionalProperties": false,
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" }
+      }
+    },
+
+    "Style": {
+      "type": "object",
+      "description": "Visual styling for Appearance (§2.4)",
+      "additionalProperties": false,
+      "properties": {
+        "fill_color": { "type": "string" },
+        "text_color": { "type": "string" },
+        "border_color": { "type": "string" }
+      }
+    },
+
+    "Rate": {
+      "type": "object",
+      "description": "Consumption/production rate (§3.1)",
+      "required": ["value", "unit"],
+      "additionalProperties": false,
+      "properties": {
+        "value": { "type": "number" },
+        "unit": { "type": "string" }
+      }
+    },
+
+    "ComputationalObject": {
+      "type": "object",
+      "description": "Computational properties for Objects (§2.1, L-M5-03)",
+      "required": ["value", "value_type"],
+      "additionalProperties": false,
+      "properties": {
+        "value": { "description": "Current value (any JSON type)" },
+        "value_type": {
+          "type": "string",
+          "enum": ["integer", "float", "string", "character", "boolean"]
+        },
+        "unit": { "type": "string" },
+        "alias": { "type": "string" },
+        "ranges": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/Range" }
+        },
+        "default_value": { "description": "Default value (any JSON type)" }
+      }
+    },
+
+    "ComputationalProcess": {
+      "type": "object",
+      "description": "Computational properties for Processes (§2.1, L-M5-04)",
+      "required": ["function_type"],
+      "additionalProperties": false,
+      "properties": {
+        "function_type": {
+          "type": "string",
+          "enum": ["predefined", "user_defined"]
+        },
+        "function_name": { "type": "string" },
+        "function_code": { "type": "string" }
+      }
+    },
+
+    "RequirementStereotype": {
+      "type": "object",
+      "description": "Stereotype attached to a Requirement (§5.4)",
+      "required": ["essence", "actual_name", "attributes"],
+      "additionalProperties": false,
+      "properties": {
+        "essence": { "type": "string" },
+        "actual_name": { "type": "string" },
+        "attributes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/RequirementAttribute" }
+        }
+      }
+    },
+
+    "RequirementAttribute": {
+      "type": "object",
+      "description": "Custom attribute within a RequirementStereotype (§5.4)",
+      "required": ["name", "value", "validation"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "value": { "type": "string" },
+        "validation": {
+          "type": "string",
+          "enum": ["hard", "soft"]
+        }
+      }
+    },
+
+    "Thing": {
+      "type": "object",
+      "description": "0-cell: fundamental ontological unit (§2.1). Kind ∈ {Object, Process}",
+      "required": ["id", "kind", "name", "essence", "affiliation"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "kind": {
+          "type": "string",
+          "enum": ["object", "process"]
+        },
+        "name": { "type": "string" },
+        "essence": {
+          "type": "string",
+          "enum": ["physical", "informatical"]
+        },
+        "affiliation": {
+          "type": "string",
+          "enum": ["systemic", "environmental"]
+        },
+        "perseverance": {
+          "type": "string",
+          "enum": ["static", "dynamic"]
+        },
+        "duration": { "$ref": "#/$defs/Duration" },
+        "notes": { "type": "string" },
+        "hyperlinks": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "user_input_enabled": { "type": "boolean" },
+        "computational": {
+          "oneOf": [
+            { "$ref": "#/$defs/ComputationalObject" },
+            { "$ref": "#/$defs/ComputationalProcess" }
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "kind": { "const": "object" } },
+            "required": ["kind"]
+          },
+          "then": {
+            "properties": { "id": { "pattern": "^obj-" } },
+            "not": { "required": ["user_input_enabled"] }
+          }
+        },
+        {
+          "if": {
+            "properties": { "kind": { "const": "process" } },
+            "required": ["kind"]
+          },
+          "then": {
+            "properties": { "id": { "pattern": "^proc-" } }
+          }
+        }
+      ]
+    },
+
+    "State": {
+      "type": "object",
+      "description": "0-cell: sub-object mono State ↪ Object (§2.2)",
+      "required": ["id", "parent", "name", "initial", "final", "default"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^state-" },
+        "parent": { "type": "string" },
+        "name": { "type": "string" },
+        "initial": { "type": "boolean" },
+        "final": { "type": "boolean" },
+        "default": { "type": "boolean" },
+        "current": { "type": "boolean" },
+        "duration": { "$ref": "#/$defs/Duration" },
+        "hyperlinks": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+
+    "OPD": {
+      "type": "object",
+      "description": "0-cell: node in the OPD tree / fibration base (§2.3)",
+      "required": ["id", "name", "opd_type", "parent_opd"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^opd-" },
+        "name": { "type": "string" },
+        "opd_type": {
+          "type": "string",
+          "enum": ["hierarchical", "view"]
+        },
+        "parent_opd": {
+          "type": ["string", "null"],
+          "description": "Parent OPD id. null = root (SD). ONLY required+nullable field (§7.2 conv. 4 exception)"
+        },
+        "refines": { "type": "string" },
+        "refinement_type": {
+          "type": "string",
+          "enum": ["in-zoom", "unfold"]
+        }
+      },
+      "if": {
+        "properties": { "opd_type": { "const": "view" } },
+        "required": ["opd_type"]
+      },
+      "then": {
+        "properties": { "parent_opd": { "const": null } },
+        "allOf": [
+          { "not": { "required": ["refines"] } },
+          { "not": { "required": ["refinement_type"] } }
+        ]
+      }
+    },
+
+    "Link": {
+      "type": "object",
+      "description": "1-cell: typed morphism between Things (§3.1)",
+      "required": ["id", "type", "source", "target"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^lnk-" },
+        "type": {
+          "type": "string",
+          "enum": [
+            "effect", "consumption", "result", "input", "output",
+            "agent", "instrument",
+            "aggregation", "exhibition", "generalization", "classification", "tagged",
+            "invocation", "exception"
+          ]
+        },
+        "source": { "type": "string" },
+        "target": { "type": "string" },
+        "source_state": { "type": "string" },
+        "target_state": { "type": "string" },
+        "multiplicity_source": { "type": "string" },
+        "multiplicity_target": { "type": "string" },
+        "probability": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "rate": { "$ref": "#/$defs/Rate" },
+        "path_label": { "type": "string" },
+        "tag": { "type": "string" },
+        "direction": {
+          "type": "string",
+          "enum": ["unidirectional", "bidirectional", "reciprocal"]
+        },
+        "tag_reverse": { "type": "string" },
+        "ordered": { "type": "boolean" },
+        "invocation_interval": { "$ref": "#/$defs/Duration" },
+        "discriminating": { "type": "boolean" },
+        "discriminating_values": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "hyperlinks": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "vertices": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/Position" }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "type": { "const": "tagged" } },
+            "required": ["type"]
+          },
+          "then": {
+            "required": ["tag"]
+          },
+          "else": {
+            "allOf": [
+              { "not": { "required": ["tag"] } },
+              { "not": { "required": ["direction"] } },
+              { "not": { "required": ["tag_reverse"] } }
+            ]
+          }
+        },
+        {
+          "if": {
+            "not": {
+              "properties": { "type": { "const": "aggregation" } },
+              "required": ["type"]
+            }
+          },
+          "then": {
+            "not": { "required": ["ordered"] }
+          }
+        },
+        {
+          "if": {
+            "not": {
+              "properties": { "type": { "const": "invocation" } },
+              "required": ["type"]
+            }
+          },
+          "then": {
+            "not": { "required": ["invocation_interval"] }
+          }
+        },
+        {
+          "if": {
+            "not": {
+              "properties": { "type": { "const": "exhibition" } },
+              "required": ["type"]
+            }
+          },
+          "then": {
+            "not": { "required": ["discriminating"] }
+          }
+        },
+        {
+          "if": {
+            "not": {
+              "properties": { "type": { "const": "generalization" } },
+              "required": ["type"]
+            }
+          },
+          "then": {
+            "not": { "required": ["discriminating_values"] }
+          }
+        }
+      ]
+    },
+
+    "Modifier": {
+      "type": "object",
+      "description": "2-cell: natural transformation over a Link (§4)",
+      "required": ["id", "over", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^mod-" },
+        "over": { "type": "string" },
+        "type": {
+          "type": "string",
+          "enum": ["event", "condition"]
+        },
+        "negated": { "type": "boolean" }
+      }
+    },
+
+    "Appearance": {
+      "type": "object",
+      "description": "Fibration morphism π: Thing → OPD (§3.2). PK = (thing, opd)",
+      "required": ["thing", "opd", "x", "y", "w", "h"],
+      "additionalProperties": false,
+      "properties": {
+        "thing": { "type": "string" },
+        "opd": { "type": "string" },
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "w": { "type": "number" },
+        "h": { "type": "number" },
+        "internal": { "type": "boolean" },
+        "pinned": { "type": "boolean" },
+        "auto_sizing": { "type": "boolean" },
+        "state_alignment": {
+          "type": "string",
+          "enum": ["left", "top", "right", "bottom"]
+        },
+        "suppressed_states": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "semi_folded": { "type": "boolean" },
+        "style": { "$ref": "#/$defs/Style" }
+      }
+    },
+
+    "Fan": {
+      "type": "object",
+      "description": "XOR/OR grouping of links (§5.1)",
+      "required": ["id", "type", "members"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^fan-" },
+        "type": {
+          "type": "string",
+          "enum": ["xor", "or"]
+        },
+        "members": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 2
+        }
+      }
+    },
+
+    "Scenario": {
+      "type": "object",
+      "description": "Sub-object of the path space for simulation (§5.2)",
+      "required": ["id", "name", "path_labels"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^scn-" },
+        "name": { "type": "string" },
+        "path_labels": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+
+    "Assertion": {
+      "type": "object",
+      "description": "Coalgebra observer: ModelState → {PASS, FAIL} (§5.3)",
+      "required": ["id", "predicate", "category", "enabled"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^ast-" },
+        "target": { "type": "string" },
+        "predicate": { "type": "string" },
+        "category": {
+          "type": "string",
+          "enum": ["safety", "liveness", "correctness"]
+        },
+        "enabled": { "type": "boolean" }
+      }
+    },
+
+    "Requirement": {
+      "type": "object",
+      "description": "Decoration functor R: C_opm → C_req (§5.4)",
+      "required": ["id", "target", "name"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^req-" },
+        "target": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "req_id": { "type": "string" },
+        "stereotype": { "$ref": "#/$defs/RequirementStereotype" },
+        "hyperlinks": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+
+    "Stereotype": {
+      "type": "object",
+      "description": "Pushout injection S: C_template → C_opm (§5.5)",
+      "required": ["id", "thing", "stereotype_id", "global"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^stp-" },
+        "thing": { "type": "string" },
+        "stereotype_id": { "type": "string" },
+        "global": { "type": "boolean" },
+        "hyperlinks": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+
+    "SubModel": {
+      "type": "object",
+      "description": "Span C_main ← I → C_sub (§5.6)",
+      "required": ["id", "name", "path", "shared_things", "sync_status"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^sub-" },
+        "name": { "type": "string" },
+        "path": { "type": "string" },
+        "shared_things": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "sync_status": {
+          "type": "string",
+          "enum": ["synced", "pending", "unloaded", "disconnected"]
+        }
+      }
+    },
+
+    "Meta": {
+      "type": "object",
+      "description": "Model metadata (§5.7)",
+      "required": ["name", "created", "modified"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "system_type": {
+          "type": "string",
+          "enum": ["artificial", "natural", "social", "socio-technical"]
+        },
+        "created": { "type": "string", "format": "date-time" },
+        "modified": { "type": "string", "format": "date-time" }
+      }
+    },
+
+    "Settings": {
+      "type": "object",
+      "description": "Model-level configuration with implicit defaults (§5.8)",
+      "additionalProperties": false,
+      "properties": {
+        "opl_language": { "type": "string" },
+        "opl_essence_visibility": {
+          "type": "string",
+          "enum": ["all", "non_default", "none"]
+        },
+        "opl_units_visibility": {
+          "type": "string",
+          "enum": ["always", "hide", "when_applicable"]
+        },
+        "opl_alias_visibility": { "type": "boolean" },
+        "opl_highlight_opd": { "type": "boolean" },
+        "opl_highlight_opl": { "type": "boolean" },
+        "opl_color_sync": { "type": "boolean" },
+        "autoformat": { "type": "boolean" },
+        "autosave_interval_s": { "type": "number" },
+        "decimal_precision": { "type": "number" },
+        "notes_visible": { "type": "boolean" },
+        "opd_name_format": {
+          "type": "string",
+          "enum": ["full", "short"]
+        },
+        "opd_rearranging": {
+          "type": "string",
+          "enum": ["automatic", "manual", "inherited"]
+        },
+        "primary_essence": {
+          "type": "string",
+          "enum": ["physical", "informatical"]
+        },
+        "range_validation_design": {
+          "type": "string",
+          "enum": ["soft", "hard"]
+        },
+        "range_validation_simulation": {
+          "type": "string",
+          "enum": ["soft", "hard"]
+        },
+        "methodology_coaching": { "type": "boolean" }
+      }
+    }
+  }
+}
