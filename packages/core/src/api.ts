@@ -5,7 +5,7 @@ import type {
 } from "./types";
 import type { InvariantError } from "./result";
 import { ok, err, type Result } from "./result";
-import { collectAllIds } from "./helpers";
+import { collectAllIds, touch } from "./helpers";
 
 export function addThing(
   model: Model,
@@ -16,10 +16,10 @@ export function addThing(
     return err({ code: "I-08", message: `Duplicate id: ${thing.id}`, entity: thing.id });
   }
 
-  return ok({
+  return ok(touch({
     ...model,
     things: new Map(model.things).set(thing.id, thing),
-  });
+  }));
 }
 
 export function removeThing(
@@ -96,7 +96,7 @@ export function removeThing(
   const things = new Map(model.things);
   things.delete(thingId);
 
-  return ok({ ...model, things, states, links, modifiers, appearances, requirements, fans, assertions, stereotypes });
+  return ok(touch({ ...model, things, states, links, modifiers, appearances, requirements, fans, assertions, stereotypes }));
 }
 
 export function addState(
@@ -115,10 +115,10 @@ export function addState(
   if (parent.kind !== "object") {
     return err({ code: "I-01", message: `State parent must be object, got process: ${state.parent}`, entity: state.id });
   }
-  return ok({
+  return ok(touch({
     ...model,
     states: new Map(model.states).set(state.id, state),
-  });
+  }));
 }
 
 export function removeState(
@@ -130,7 +130,7 @@ export function removeState(
   }
   const states = new Map(model.states);
   states.delete(stateId);
-  return ok({ ...model, states });
+  return ok(touch({ ...model, states }));
 }
 
 // ── Links ──────────────────────────────────────────────────────────────
@@ -174,11 +174,11 @@ export function addLink(
     }
   }
 
-  return ok({
+  return ok(touch({
     ...model,
     things,
     links: new Map(model.links).set(link.id, link),
-  });
+  }));
 }
 
 export function removeLink(
@@ -207,7 +207,7 @@ export function removeLink(
       }
     }
   }
-  return ok({ ...model, links, modifiers, fans });
+  return ok(touch({ ...model, links, modifiers, fans }));
 }
 
 // ── OPDs ───────────────────────────────────────────────────────────────
@@ -229,7 +229,7 @@ export function addOPD(
   if (opd.opd_type === "view" && opd.parent_opd !== null) {
     return err({ code: "I-03", message: `View OPD must have parent_opd=null`, entity: opd.id });
   }
-  return ok({ ...model, opds: new Map(model.opds).set(opd.id, opd) });
+  return ok(touch({ ...model, opds: new Map(model.opds).set(opd.id, opd) }));
 }
 
 export function removeOPD(
@@ -259,7 +259,7 @@ export function removeOPD(
   for (const [key, a] of appearances) {
     if (opdsToRemove.has(a.opd)) appearances.delete(key);
   }
-  return ok({ ...model, opds, appearances });
+  return ok(touch({ ...model, opds, appearances }));
 }
 
 // ── Appearances ────────────────────────────────────────────────────────
@@ -280,7 +280,7 @@ export function addAppearance(
       return err({ code: "I-15", message: `internal=true only allowed in refinement OPDs`, entity: key });
     }
   }
-  return ok({ ...model, appearances: new Map(model.appearances).set(key, appearance) });
+  return ok(touch({ ...model, appearances: new Map(model.appearances).set(key, appearance) }));
 }
 
 export function removeAppearance(
@@ -294,7 +294,7 @@ export function removeAppearance(
   }
   const appearances = new Map(model.appearances);
   appearances.delete(key);
-  return ok({ ...model, appearances });
+  return ok(touch({ ...model, appearances }));
 }
 
 // ── Modifiers ──────────────────────────────────────────────────────────
@@ -302,14 +302,14 @@ export function removeAppearance(
 export function addModifier(model: Model, mod: Modifier): Result<Model, InvariantError> {
   if (collectAllIds(model).has(mod.id)) return err({ code: "I-08", message: `Duplicate id: ${mod.id}`, entity: mod.id });
   if (!model.links.has(mod.over)) return err({ code: "I-06", message: `Link not found: ${mod.over}`, entity: mod.id });
-  return ok({ ...model, modifiers: new Map(model.modifiers).set(mod.id, mod) });
+  return ok(touch({ ...model, modifiers: new Map(model.modifiers).set(mod.id, mod) }));
 }
 
 export function removeModifier(model: Model, modId: string): Result<Model, InvariantError> {
   if (!model.modifiers.has(modId)) return err({ code: "NOT_FOUND", message: `Modifier not found: ${modId}`, entity: modId });
   const modifiers = new Map(model.modifiers);
   modifiers.delete(modId);
-  return ok({ ...model, modifiers });
+  return ok(touch({ ...model, modifiers }));
 }
 
 // ── Fans ───────────────────────────────────────────────────────────────
@@ -320,14 +320,14 @@ export function addFan(model: Model, fan: Fan): Result<Model, InvariantError> {
   for (const memberId of fan.members) {
     if (!model.links.has(memberId)) return err({ code: "I-07", message: `Fan member link not found: ${memberId}`, entity: fan.id });
   }
-  return ok({ ...model, fans: new Map(model.fans).set(fan.id, fan) });
+  return ok(touch({ ...model, fans: new Map(model.fans).set(fan.id, fan) }));
 }
 
 export function removeFan(model: Model, fanId: string): Result<Model, InvariantError> {
   if (!model.fans.has(fanId)) return err({ code: "NOT_FOUND", message: `Fan not found: ${fanId}`, entity: fanId });
   const fans = new Map(model.fans);
   fans.delete(fanId);
-  return ok({ ...model, fans });
+  return ok(touch({ ...model, fans }));
 }
 
 // ── Assertions ─────────────────────────────────────────────────────────
@@ -337,14 +337,14 @@ export function addAssertion(model: Model, assertion: Assertion): Result<Model, 
   if (assertion.target != null && !model.things.has(assertion.target) && !model.links.has(assertion.target)) {
     return err({ code: "I-09", message: `Assertion target not found: ${assertion.target}`, entity: assertion.id });
   }
-  return ok({ ...model, assertions: new Map(model.assertions).set(assertion.id, assertion) });
+  return ok(touch({ ...model, assertions: new Map(model.assertions).set(assertion.id, assertion) }));
 }
 
 export function removeAssertion(model: Model, id: string): Result<Model, InvariantError> {
   if (!model.assertions.has(id)) return err({ code: "NOT_FOUND", message: `Assertion not found: ${id}`, entity: id });
   const assertions = new Map(model.assertions);
   assertions.delete(id);
-  return ok({ ...model, assertions });
+  return ok(touch({ ...model, assertions }));
 }
 
 // ── Requirements ───────────────────────────────────────────────────────
@@ -354,14 +354,14 @@ export function addRequirement(model: Model, req: Requirement): Result<Model, In
   if (!model.things.has(req.target) && !model.states.has(req.target) && !model.links.has(req.target)) {
     return err({ code: "I-10", message: `Requirement target not found: ${req.target}`, entity: req.id });
   }
-  return ok({ ...model, requirements: new Map(model.requirements).set(req.id, req) });
+  return ok(touch({ ...model, requirements: new Map(model.requirements).set(req.id, req) }));
 }
 
 export function removeRequirement(model: Model, id: string): Result<Model, InvariantError> {
   if (!model.requirements.has(id)) return err({ code: "NOT_FOUND", message: `Requirement not found: ${id}`, entity: id });
   const requirements = new Map(model.requirements);
   requirements.delete(id);
-  return ok({ ...model, requirements });
+  return ok(touch({ ...model, requirements }));
 }
 
 // ── Stereotypes ────────────────────────────────────────────────────────
@@ -369,14 +369,14 @@ export function removeRequirement(model: Model, id: string): Result<Model, Invar
 export function addStereotype(model: Model, stp: Stereotype): Result<Model, InvariantError> {
   if (collectAllIds(model).has(stp.id)) return err({ code: "I-08", message: `Duplicate id: ${stp.id}`, entity: stp.id });
   if (!model.things.has(stp.thing)) return err({ code: "I-11", message: `Stereotype target thing not found: ${stp.thing}`, entity: stp.id });
-  return ok({ ...model, stereotypes: new Map(model.stereotypes).set(stp.id, stp) });
+  return ok(touch({ ...model, stereotypes: new Map(model.stereotypes).set(stp.id, stp) }));
 }
 
 export function removeStereotype(model: Model, id: string): Result<Model, InvariantError> {
   if (!model.stereotypes.has(id)) return err({ code: "NOT_FOUND", message: `Stereotype not found: ${id}`, entity: id });
   const stereotypes = new Map(model.stereotypes);
   stereotypes.delete(id);
-  return ok({ ...model, stereotypes });
+  return ok(touch({ ...model, stereotypes }));
 }
 
 // ── SubModels ──────────────────────────────────────────────────────────
@@ -386,14 +386,14 @@ export function addSubModel(model: Model, sub: SubModel): Result<Model, Invarian
   for (const thingId of sub.shared_things) {
     if (!model.things.has(thingId)) return err({ code: "I-12", message: `Shared thing not found: ${thingId}`, entity: sub.id });
   }
-  return ok({ ...model, subModels: new Map(model.subModels).set(sub.id, sub) });
+  return ok(touch({ ...model, subModels: new Map(model.subModels).set(sub.id, sub) }));
 }
 
 export function removeSubModel(model: Model, id: string): Result<Model, InvariantError> {
   if (!model.subModels.has(id)) return err({ code: "NOT_FOUND", message: `SubModel not found: ${id}`, entity: id });
   const subModels = new Map(model.subModels);
   subModels.delete(id);
-  return ok({ ...model, subModels });
+  return ok(touch({ ...model, subModels }));
 }
 
 // ── Scenarios ──────────────────────────────────────────────────────────
@@ -404,14 +404,14 @@ export function addScenario(model: Model, scn: Scenario): Result<Model, Invarian
   for (const pl of scn.path_labels) {
     if (!allPathLabels.has(pl)) return err({ code: "I-13", message: `Path label not found in any link: ${pl}`, entity: scn.id });
   }
-  return ok({ ...model, scenarios: new Map(model.scenarios).set(scn.id, scn) });
+  return ok(touch({ ...model, scenarios: new Map(model.scenarios).set(scn.id, scn) }));
 }
 
 export function removeScenario(model: Model, id: string): Result<Model, InvariantError> {
   if (!model.scenarios.has(id)) return err({ code: "NOT_FOUND", message: `Scenario not found: ${id}`, entity: id });
   const scenarios = new Map(model.scenarios);
   scenarios.delete(id);
-  return ok({ ...model, scenarios });
+  return ok(touch({ ...model, scenarios }));
 }
 
 // ── Batch Validate ─────────────────────────────────────────────────────
