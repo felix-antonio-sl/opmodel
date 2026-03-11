@@ -2,6 +2,7 @@
 import { Command, CommanderError } from "commander";
 import { CliError, formatOutput } from "./format";
 import { executeNew } from "./commands/new";
+import { executeAdd } from "./commands/add";
 
 const program = new Command();
 
@@ -24,6 +25,93 @@ program
     console.log(formatOutput(
       { action: "created", type: "model", id: result.name, path: result.filePath },
       { json },
+    ));
+  });
+
+const add = program
+  .command("add")
+  .description("Add an entity to the model");
+
+add
+  .command("thing")
+  .description("Add a thing (object or process)")
+  .argument("[name]", "Thing name")
+  .option("--kind <kind>", "object or process")
+  .option("--essence <essence>", "physical or informatical")
+  .option("--affiliation <affiliation>", "systemic or environmental", "systemic")
+  .option("--id <id>", "Custom ID")
+  .option("--input <input>", "JSON input (agent mode)")
+  .option("--file <file>", "Path to .opmodel file")
+  .action((name: string | undefined, opts: Record<string, unknown>) => {
+    const jsonFlag = program.opts().json as boolean;
+    const result = executeAdd("thing", { name, ...opts } as any);
+    console.log(formatOutput(
+      { action: "added", ...result },
+      { json: jsonFlag },
+    ));
+  });
+
+add
+  .command("state")
+  .description("Add a state to an object")
+  .argument("[name]", "State name")
+  .option("--parent <parent>", "Parent object ID (required)")
+  .option("--initial", "Mark as initial state", false)
+  .option("--final", "Mark as final state", false)
+  .option("--default", "Mark as default state", false)
+  .option("--id <id>", "Custom ID")
+  .option("--input <input>", "JSON input (agent mode)")
+  .option("--file <file>", "Path to .opmodel file")
+  .action((name: string | undefined, opts: Record<string, unknown>) => {
+    const jsonFlag = program.opts().json as boolean;
+    const result = executeAdd("state", { name, ...opts } as any);
+    console.log(formatOutput(
+      { action: "added", ...result },
+      { json: jsonFlag },
+    ));
+  });
+
+add
+  .command("link")
+  .description("Add a link between things")
+  .option("--type <type>", "Link type (effect|agent|consumption|...)")
+  .option("--source <source>", "Source thing ID")
+  .option("--target <target>", "Target thing ID")
+  .option("--source-state <state>", "Source state ID")
+  .option("--target-state <state>", "Target state ID")
+  .option("--id <id>", "Custom ID")
+  .option("--input <input>", "JSON input (agent mode)")
+  .option("--file <file>", "Path to .opmodel file")
+  .action((opts: Record<string, unknown>) => {
+    const jsonFlag = program.opts().json as boolean;
+    const result = executeAdd("link", {
+      ...opts,
+      sourceState: opts.sourceState as string,
+      targetState: opts.targetState as string,
+    } as any);
+    console.log(formatOutput(
+      { action: "added", ...result },
+      { json: jsonFlag },
+    ));
+  });
+
+add
+  .command("opd")
+  .description("Add an OPD (Object Process Diagram)")
+  .argument("[name]", "OPD name")
+  .option("--parent <parent>", "Parent OPD ID")
+  .option("--opd-type <type>", "hierarchical or view")
+  .option("--refines <thing>", "Thing ID this OPD refines")
+  .option("--refinement <type>", "in-zoom or unfold")
+  .option("--id <id>", "Custom ID")
+  .option("--input <input>", "JSON input (agent mode)")
+  .option("--file <file>", "Path to .opmodel file")
+  .action((name: string | undefined, opts: Record<string, unknown>) => {
+    const jsonFlag = program.opts().json as boolean;
+    const result = executeAdd("opd", { name, ...opts } as any);
+    console.log(formatOutput(
+      { action: "added", ...result },
+      { json: jsonFlag },
     ));
   });
 
