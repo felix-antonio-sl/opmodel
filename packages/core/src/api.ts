@@ -1,4 +1,4 @@
-import type { Model, Thing, State } from "./types";
+import type { Model, Thing, State, Link } from "./types";
 import type { InvariantError } from "./result";
 import { ok, err, type Result } from "./result";
 import { collectAllIds } from "./helpers";
@@ -127,4 +127,81 @@ export function removeState(
   const states = new Map(model.states);
   states.delete(stateId);
   return ok({ ...model, states });
+}
+
+// ── Links ──────────────────────────────────────────────────────────────
+
+export function addLink(
+  model: Model,
+  link: Link,
+): Result<Model, InvariantError> {
+  // I-08: unique ID
+  if (collectAllIds(model).has(link.id)) {
+    return err({ code: "I-08", message: `Duplicate id: ${link.id}`, entity: link.id });
+  }
+  // I-05: source and target must exist (as things)
+  if (!model.things.has(link.source)) {
+    return err({ code: "I-05", message: `Source thing not found: ${link.source}`, entity: link.id });
+  }
+  if (!model.things.has(link.target)) {
+    return err({ code: "I-05", message: `Target thing not found: ${link.target}`, entity: link.id });
+  }
+  // I-18: agent source must be physical
+  if (link.type === "agent") {
+    const source = model.things.get(link.source)!;
+    if (source.essence !== "physical") {
+      return err({ code: "I-18", message: `Agent source must be physical: ${link.source}`, entity: link.id });
+    }
+  }
+  // I-14: exception link requires source process to have duration.max
+  if (link.type === "exception") {
+    const source = model.things.get(link.source)!;
+    if (!source.duration?.max) {
+      return err({ code: "I-14", message: `Exception source must have duration.max: ${link.source}`, entity: link.id });
+    }
+  }
+
+  let things = model.things;
+  // I-19 effect: exhibition forces source.essence := informatical
+  if (link.type === "exhibition") {
+    const source = things.get(link.source)!;
+    if (source.essence !== "informatical") {
+      things = new Map(things).set(source.id, { ...source, essence: "informatical" });
+    }
+  }
+
+  return ok({
+    ...model,
+    things,
+    links: new Map(model.links).set(link.id, link),
+  });
+}
+
+export function removeLink(
+  model: Model,
+  linkId: string,
+): Result<Model, InvariantError> {
+  if (!model.links.has(linkId)) {
+    return err({ code: "NOT_FOUND", message: `Link not found: ${linkId}`, entity: linkId });
+  }
+  const links = new Map(model.links);
+  links.delete(linkId);
+  // Cascade: remove modifiers over this link
+  const modifiers = new Map(model.modifiers);
+  for (const [id, m] of modifiers) {
+    if (m.over === linkId) modifiers.delete(id);
+  }
+  // Cascade: remove fans that lost this member
+  const fans = new Map(model.fans);
+  for (const [id, fan] of fans) {
+    if (fan.members.includes(linkId)) {
+      const remaining = fan.members.filter((m) => m !== linkId);
+      if (remaining.length < 2) {
+        fans.delete(id);
+      } else {
+        fans.set(id, { ...fan, members: remaining });
+      }
+    }
+  }
+  return ok({ ...model, links, modifiers, fans });
 }
