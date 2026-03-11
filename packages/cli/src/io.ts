@@ -16,7 +16,7 @@ export function resolveModelFile(fileOption?: string, cwd?: string): string {
   if (files.length > 1) {
     fatal("Multiple .opmodel files found. Use --file to specify.");
   }
-  return join(dir, files[0]);
+  return join(dir, files[0]!);
 }
 
 export function readModel(filePath: string): { model: Model; filePath: string } {

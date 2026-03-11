@@ -1,6 +1,6 @@
 // packages/cli/src/cli.ts
 import { Command, CommanderError } from "commander";
-import { CliError, formatOutput, formatThingList, formatStateList, formatLinkList, formatOPDList, formatOPDTree } from "./format";
+import { CliError, formatOutput, formatErrors, formatThingList, formatStateList, formatLinkList, formatOPDList, formatOPDTree } from "./format";
 import { executeNew } from "./commands/new";
 import { executeAdd } from "./commands/add";
 import { executeRemove } from "./commands/remove";
