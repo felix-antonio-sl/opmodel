@@ -139,9 +139,10 @@ export function loadModel(json: string): Result<Model, LoadError> {
     }
   }
 
+  const opmodelVersion = (raw as Record<string, unknown>).opmodel;
   if (
-    typeof (raw as Record<string, unknown>).opmodel !== "string" ||
-    !/^\d+\.\d+\.\d+$/.test((raw as Record<string, string>).opmodel)
+    typeof opmodelVersion !== "string" ||
+    !/^\d+\.\d+\.\d+$/.test(opmodelVersion)
   ) {
     return err({ phase: "structure", message: "Invalid opmodel version (must be semver)" });
   }
