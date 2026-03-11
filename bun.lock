@@ -9,6 +9,17 @@
         "vitest": "^4.0.18",
       },
     },
+    "packages/cli": {
+      "name": "@opmodel/cli",
+      "version": "0.1.0",
+      "bin": {
+        "opmod": "src/cli.ts",
+      },
+      "dependencies": {
+        "@opmodel/core": "workspace:*",
+        "commander": "^13.1.0",
+      },
+    },
     "packages/core": {
       "name": "@opmodel/core",
       "version": "0.1.0",
@@ -131,6 +142,8 @@
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
 
+    "@opmodel/cli": ["@opmodel/cli@workspace:packages/cli"],
+
     "@opmodel/core": ["@opmodel/core@workspace:packages/core"],
 
     "@opmodel/web": ["@opmodel/web@workspace:packages/web"],
@@ -238,6 +251,8 @@
     "caniuse-lite": ["caniuse-lite@1.0.30001777", "", {}, "sha512-tmN+fJxroPndC74efCdp12j+0rk0RHwV5Jwa1zWaFVyw2ZxAuPeG8ZgWC3Wz7uSjT3qMRQ5XHZ4COgQmsCMJAQ=="],
 
     "chai": ["chai@6.2.2", "", {}, "sha512-NUPRluOfOiTKBKvWPtSD4PhFvWCqOi0BGStNWs57X9js7XGTprSmFoz5F0tWhR4WPjNeR9jXqdC7/UpSJTnlRg=="],
+
+    "commander": ["commander@13.1.0", "", {}, "sha512-/rFeCpNJQbhSZjGVwO9RFV3xPqbnERS8MmIQzCtD/zl6gpJuV/bMLuN92oG3F7d8oDEHHRrujSXNUr8fpjntKw=="],
 
     "convert-source-map": ["convert-source-map@2.0.0", "", {}, "sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg=="],
 
