@@ -26,5 +26,5 @@ export function undo<T>(h: History<T>): History<T> | null {
 export function redo<T>(h: History<T>): History<T> | null {
   if (h.future.length === 0) return null;
   const [next, ...rest] = h.future;
-  return { past: [...h.past, h.present], present: next, future: rest };
+  return { past: [...h.past, h.present], present: next!, future: rest };
 }

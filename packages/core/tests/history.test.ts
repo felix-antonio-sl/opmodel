@@ -104,7 +104,7 @@ describe("structural sharing", () => {
     const h = createHistory(objA);
     const h2 = pushHistory(h, objB);
     // Settings is same reference in both snapshots
-    expect(h2.past[0].settings).toBe(objA.settings);
+    expect(h2.past[0]!.settings).toBe(objA.settings);
     expect(h2.present.settings).toBe(objA.settings);
   });
 });
