@@ -1,3 +1,4 @@
 export * from "./types";
 export * from "./result";
 export { createModel } from "./model";
+export { loadModel, saveModel, type LoadError } from "./serialization";
