@@ -545,6 +545,87 @@ export function updateScenario(
   return ok(touch({ ...model, scenarios: new Map(model.scenarios).set(id, updated) }));
 }
 
+// ── Entity Updates (structural checks) ────────────────────────────────
+
+export function updateState(
+  model: Model,
+  id: string,
+  patch: Partial<Omit<State, "id">>,
+): Result<Model, InvariantError> {
+  const existing = model.states.get(id);
+  if (!existing) return err({ code: "NOT_FOUND", message: `State not found: ${id}`, entity: id });
+  const cleaned = cleanPatch(patch as Record<string, unknown>);
+  const updated = { ...existing, ...cleaned } as State;
+  if (cleaned.parent !== undefined) {
+    const parent = model.things.get(updated.parent);
+    if (!parent) return err({ code: "I-01", message: `Parent thing not found: ${updated.parent}`, entity: id });
+    if (parent.kind !== "object") return err({ code: "I-01", message: `State parent must be object, got process: ${updated.parent}`, entity: id });
+  }
+  return ok(touch({ ...model, states: new Map(model.states).set(id, updated) }));
+}
+
+export function updateOPD(
+  model: Model,
+  id: string,
+  patch: Partial<Omit<OPD, "id">>,
+): Result<Model, InvariantError> {
+  const existing = model.opds.get(id);
+  if (!existing) return err({ code: "NOT_FOUND", message: `OPD not found: ${id}`, entity: id });
+  const cleaned = cleanPatch(patch as Record<string, unknown>);
+  const updated = { ...existing, ...cleaned } as OPD;
+  if (updated.opd_type === "view" && updated.parent_opd !== null) {
+    return err({ code: "I-03", message: `View OPD must have parent_opd=null`, entity: id });
+  }
+  if (updated.opd_type === "hierarchical" && updated.parent_opd !== null) {
+    if (!model.opds.has(updated.parent_opd)) {
+      return err({ code: "I-03", message: `Parent OPD not found: ${updated.parent_opd}`, entity: id });
+    }
+  }
+  return ok(touch({ ...model, opds: new Map(model.opds).set(id, updated) }));
+}
+
+export function updateAppearance(
+  model: Model,
+  thing: string,
+  opd: string,
+  patch: Partial<Omit<Appearance, "thing" | "opd">>,
+): Result<Model, InvariantError> {
+  const key = `${thing}::${opd}`;
+  const existing = model.appearances.get(key);
+  if (!existing) return err({ code: "NOT_FOUND", message: `Appearance not found: ${key}`, entity: key });
+  const cleaned = cleanPatch(patch as Record<string, unknown>);
+  const updated = { ...existing, ...cleaned } as Appearance;
+  if (updated.internal) {
+    const opdEntity = model.opds.get(opd);
+    if (!opdEntity || !opdEntity.refines) {
+      return err({ code: "I-15", message: `internal=true only allowed in refinement OPDs`, entity: key });
+    }
+  }
+  return ok(touch({ ...model, appearances: new Map(model.appearances).set(key, updated) }));
+}
+
+export function updateFan(
+  model: Model,
+  id: string,
+  patch: Partial<Omit<Fan, "id">>,
+): Result<Model, InvariantError> {
+  const existing = model.fans.get(id);
+  if (!existing) return err({ code: "NOT_FOUND", message: `Fan not found: ${id}`, entity: id });
+  const cleaned = cleanPatch(patch as Record<string, unknown>);
+  const updated = { ...existing, ...cleaned } as Fan;
+  if (cleaned.members !== undefined) {
+    if (updated.members.length < 2) {
+      return err({ code: "I-07", message: `Fan must have at least 2 members, got ${updated.members.length}`, entity: id });
+    }
+    for (const memberId of updated.members) {
+      if (!model.links.has(memberId)) {
+        return err({ code: "I-07", message: `Fan member link not found: ${memberId}`, entity: id });
+      }
+    }
+  }
+  return ok(touch({ ...model, fans: new Map(model.fans).set(id, updated) }));
+}
+
 // ── Batch Validate ─────────────────────────────────────────────────────
 
 export function validate(model: Model): InvariantError[] {

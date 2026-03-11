@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createModel } from "../src/model";
 import { isOk, isErr } from "../src/result";
-import { updateMeta, updateSettings, updateModifier, updateAssertion, updateRequirement, updateStereotype, updateSubModel, updateScenario, addThing, addLink, addModifier, addAssertion, addRequirement, addStereotype, addSubModel, addScenario } from "../src/api";
+import { updateMeta, updateSettings, updateModifier, updateAssertion, updateRequirement, updateStereotype, updateSubModel, updateScenario, updateState, updateOPD, updateAppearance, updateFan, addThing, addLink, addState, addOPD, addAppearance, addFan, addModifier, addAssertion, addRequirement, addStereotype, addSubModel, addScenario } from "../src/api";
 import type { Thing, Link } from "../src/types";
 
 beforeEach(() => {
@@ -239,5 +239,132 @@ describe("updateScenario", () => {
     const r = updateScenario(m, "scn-1", { path_labels: ["nonexistent"] });
     expect(isErr(r)).toBe(true);
     if (isErr(r)) expect(r.error.code).toBe("I-13");
+  });
+});
+
+describe("updateState", () => {
+  it("updates state name", () => {
+    let m = createModel("Test");
+    m = (addThing(m, water) as any).value;
+    m = (addState(m, { id: "state-cold", parent: "obj-water", name: "cold", initial: true, final: false, default: true }) as any).value;
+    const r = updateState(m, "state-cold", { name: "freezing" });
+    expect(isOk(r)).toBe(true);
+    if (isOk(r)) expect(r.value.states.get("state-cold")?.name).toBe("freezing");
+  });
+
+  it("rejects update to non-existent state", () => {
+    const r = updateState(createModel("Test"), "state-ghost", { name: "x" });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("NOT_FOUND");
+  });
+
+  it("rejects reparenting to non-existent thing (I-01)", () => {
+    let m = createModel("Test");
+    m = (addThing(m, water) as any).value;
+    m = (addState(m, { id: "state-cold", parent: "obj-water", name: "cold", initial: true, final: false, default: true }) as any).value;
+    const r = updateState(m, "state-cold", { parent: "obj-ghost" });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-01");
+  });
+
+  it("rejects reparenting to process (I-01)", () => {
+    let m = createModel("Test");
+    m = (addThing(m, water) as any).value;
+    m = (addThing(m, proc) as any).value;
+    m = (addState(m, { id: "state-cold", parent: "obj-water", name: "cold", initial: true, final: false, default: true }) as any).value;
+    const r = updateState(m, "state-cold", { parent: "proc-heat" });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-01");
+  });
+});
+
+describe("updateOPD", () => {
+  it("updates OPD name", () => {
+    const m = createModel("Test");
+    const r = updateOPD(m, "opd-sd", { name: "System Diagram" });
+    expect(isOk(r)).toBe(true);
+    if (isOk(r)) expect(r.value.opds.get("opd-sd")?.name).toBe("System Diagram");
+  });
+
+  it("rejects update to non-existent OPD", () => {
+    const r = updateOPD(createModel("Test"), "opd-ghost", { name: "x" });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("NOT_FOUND");
+  });
+
+  it("rejects reparenting to non-existent OPD (I-03)", () => {
+    let m = createModel("Test");
+    m = (addOPD(m, { id: "opd-child", name: "Child", opd_type: "hierarchical", parent_opd: "opd-sd" }) as any).value;
+    const r = updateOPD(m, "opd-child", { parent_opd: "opd-ghost" });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-03");
+  });
+
+  it("rejects view OPD with non-null parent (I-03)", () => {
+    let m = createModel("Test");
+    m = (addOPD(m, { id: "opd-view", name: "View", opd_type: "view", parent_opd: null }) as any).value;
+    const r = updateOPD(m, "opd-view", { parent_opd: "opd-sd" });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-03");
+  });
+});
+
+describe("updateAppearance", () => {
+  it("updates position", () => {
+    let m = createModel("Test");
+    m = (addThing(m, water) as any).value;
+    m = (addAppearance(m, { thing: "obj-water", opd: "opd-sd", x: 0, y: 0, w: 100, h: 50 }) as any).value;
+    const r = updateAppearance(m, "obj-water", "opd-sd", { x: 200, y: 150 });
+    expect(isOk(r)).toBe(true);
+    if (isOk(r)) {
+      const app = r.value.appearances.get("obj-water::opd-sd");
+      expect(app?.x).toBe(200);
+      expect(app?.y).toBe(150);
+      expect(app?.w).toBe(100); // unchanged
+    }
+  });
+
+  it("rejects update to non-existent appearance", () => {
+    const r = updateAppearance(createModel("Test"), "obj-ghost", "opd-sd", { x: 10 });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("NOT_FOUND");
+  });
+
+  it("rejects internal=true in non-refinement OPD (I-15)", () => {
+    let m = createModel("Test");
+    m = (addThing(m, water) as any).value;
+    m = (addAppearance(m, { thing: "obj-water", opd: "opd-sd", x: 0, y: 0, w: 100, h: 50 }) as any).value;
+    const r = updateAppearance(m, "obj-water", "opd-sd", { internal: true });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-15");
+  });
+});
+
+describe("updateFan", () => {
+  it("updates fan type", () => {
+    let m = buildModelWithLink();
+    m = (addLink(m, { id: "lnk-2", type: "consumption", source: "proc-heat", target: "obj-water" }) as any).value;
+    m = (addFan(m, { id: "fan-1", type: "xor", members: ["lnk-1", "lnk-2"] }) as any).value;
+    const r = updateFan(m, "fan-1", { type: "or" });
+    expect(isOk(r)).toBe(true);
+    if (isOk(r)) expect(r.value.fans.get("fan-1")?.type).toBe("or");
+  });
+
+  it("rejects update with fewer than 2 members (I-07)", () => {
+    let m = buildModelWithLink();
+    m = (addLink(m, { id: "lnk-2", type: "consumption", source: "proc-heat", target: "obj-water" }) as any).value;
+    m = (addFan(m, { id: "fan-1", type: "xor", members: ["lnk-1", "lnk-2"] }) as any).value;
+    const r = updateFan(m, "fan-1", { members: ["lnk-1"] });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-07");
+  });
+
+  it("rejects update with non-existent member link (I-07)", () => {
+    let m = buildModelWithLink();
+    m = (addLink(m, { id: "lnk-2", type: "consumption", source: "proc-heat", target: "obj-water" }) as any).value;
+    m = (addFan(m, { id: "fan-1", type: "xor", members: ["lnk-1", "lnk-2"] }) as any).value;
+    const r = updateFan(m, "fan-1", { members: ["lnk-1", "lnk-ghost"] });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-07");
   });
 });
