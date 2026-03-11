@@ -27,6 +27,8 @@ function Editor({ initialModel }: { initialModel: Model }) {
         save();
       }
       if ((e.key === "Delete" || e.key === "Backspace") && ui.selectedThing && !e.metaKey && !e.ctrlKey) {
+        const target = e.target as HTMLElement;
+        if (target.tagName === "INPUT" || target.tagName === "SELECT" || target.tagName === "TEXTAREA") return;
         e.preventDefault();
         dispatch({ tag: "removeThing", thingId: ui.selectedThing });
       }

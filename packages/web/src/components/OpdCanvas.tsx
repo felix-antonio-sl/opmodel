@@ -24,19 +24,19 @@ interface Props {
 /* ─── Link type → color mapping ─── */
 
 const LINK_COLORS: Record<string, string> = {
-  agent: "#5b8fd9",
-  instrument: "#5b8fd9",
-  consumption: "#3fae96",
-  effect: "#3fae96",
-  result: "#3fae96",
-  input: "#5b8fd9",
-  output: "#3fae96",
-  aggregation: "#8a7ec8",
-  exhibition: "#8a7ec8",
-  generalization: "#8a7ec8",
-  classification: "#8a7ec8",
-  invocation: "#d4804e",
-  exception: "#d4804e",
+  agent: "#2b6cb0",
+  instrument: "#2b6cb0",
+  consumption: "#16794a",
+  effect: "#16794a",
+  result: "#16794a",
+  input: "#2b6cb0",
+  output: "#16794a",
+  aggregation: "#6b5fad",
+  exhibition: "#6b5fad",
+  generalization: "#6b5fad",
+  classification: "#6b5fad",
+  invocation: "#c05621",
+  exception: "#c05621",
 };
 
 /* ─── Helpers ─── */
@@ -61,29 +61,29 @@ function SvgDefs() {
   return (
     <defs>
       <pattern id="grid-dots" width="20" height="20" patternUnits="userSpaceOnUse">
-        <circle cx="10" cy="10" r="0.6" fill="rgba(255,255,255,0.035)" />
+        <circle cx="10" cy="10" r="0.6" fill="rgba(0,0,0,0.06)" />
       </pattern>
 
       <marker id="arrow-proc" viewBox="0 0 10 8" refX="10" refY="4" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
-        <path d="M0,0 L10,4 L0,8Z" fill="#3fae96" />
+        <path d="M0,0 L10,4 L0,8Z" fill="#16794a" />
       </marker>
       <marker id="arrow-enabling" viewBox="0 0 10 8" refX="10" refY="4" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
-        <path d="M0,0 L10,4 L0,8Z" fill="#5b8fd9" />
+        <path d="M0,0 L10,4 L0,8Z" fill="#2b6cb0" />
       </marker>
       <marker id="arrow-struct" viewBox="0 0 10 8" refX="10" refY="4" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
-        <path d="M0,0 L10,4 L0,8" fill="none" stroke="#8a7ec8" strokeWidth="1.5" />
+        <path d="M0,0 L10,4 L0,8" fill="none" stroke="#6b5fad" strokeWidth="1.5" />
       </marker>
       <marker id="arrow-control" viewBox="0 0 10 8" refX="10" refY="4" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
-        <path d="M0,0 L10,4 L0,8Z" fill="#d4804e" />
+        <path d="M0,0 L10,4 L0,8Z" fill="#c05621" />
       </marker>
 
       <marker id="dot-consumption" viewBox="0 0 8 8" refX="4" refY="4" markerWidth="6" markerHeight="6" orient="auto">
-        <circle cx="4" cy="4" r="3" fill="#3fae96" />
+        <circle cx="4" cy="4" r="3" fill="#16794a" />
       </marker>
 
       <filter id="glow-selected" x="-20%" y="-20%" width="140%" height="140%">
-        <feGaussianBlur stdDeviation="4" result="blur" />
-        <feFlood floodColor="#c8973e" floodOpacity="0.35" />
+        <feGaussianBlur stdDeviation="3" result="blur" />
+        <feFlood floodColor="#2b6cb0" floodOpacity="0.25" />
         <feComposite in2="blur" operator="in" />
         <feMerge>
           <feMergeNode />
@@ -92,8 +92,8 @@ function SvgDefs() {
       </filter>
 
       <filter id="glow-drag" x="-20%" y="-20%" width="140%" height="140%">
-        <feGaussianBlur stdDeviation="6" result="blur" />
-        <feFlood floodColor="#c8973e" floodOpacity="0.5" />
+        <feGaussianBlur stdDeviation="5" result="blur" />
+        <feFlood floodColor="#2b6cb0" floodOpacity="0.35" />
         <feComposite in2="blur" operator="in" />
         <feMerge>
           <feMergeNode />
@@ -192,8 +192,11 @@ function ThingNode({
   const totalH = h + extraH;
 
   const strokeColor = thing.kind === "process" ? "var(--process-stroke)" : "var(--object-stroke)";
-  const fillColor = thing.kind === "process" ? "var(--process-fill)" : "var(--object-fill)";
-  const strokeWidth = thing.essence === "physical" ? 2.5 : 1.5;
+  const isPhysical = thing.essence === "physical";
+  const fillColor = thing.kind === "process"
+    ? (isPhysical ? "var(--process-fill-physical)" : "var(--process-fill)")
+    : (isPhysical ? "var(--object-fill-physical)" : "var(--object-fill)");
+  const strokeWidth = isPhysical ? 3.5 : 1.2;
   const strokeDash = thing.affiliation === "environmental" ? "6,3" : undefined;
 
   const filterStr = isDragging
@@ -659,10 +662,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, dispatch }: Props
                     }
                     return;
                   }
-                  dispatch({
-                    tag: "selectThing",
-                    thingId: selectedThing === thingId ? null : thingId,
-                  });
+                  dispatch({ tag: "selectThing", thingId });
                 }}
                 onDoubleClick={() => onThingDoubleClick(thingId)}
               />

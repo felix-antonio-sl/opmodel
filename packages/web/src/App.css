@@ -1,57 +1,57 @@
 /* ═══════════════════════════════════════════════════
-   OPModeling — "The Drafting Table"
-   Precision instrument aesthetic: dark + amber brass
+   OPModeling — Light Blueprint
+   Clean, precise, professional light theme
    ═══════════════════════════════════════════════════ */
 
 :root {
   /* ── Backgrounds ── */
-  --bg-deep: #0b0d13;
-  --bg-panel: #111420;
-  --bg-canvas: #0e1018;
-  --bg-surface: #181c28;
-  --bg-hover: #1e2233;
-  --bg-active: #252a3a;
+  --bg-deep: #f4f5f7;
+  --bg-panel: #ffffff;
+  --bg-canvas: #f0f1f4;
+  --bg-surface: #f4f5f8;
+  --bg-hover: #ebedf2;
+  --bg-active: #e2e4ea;
 
   /* ── Borders ── */
-  --border: #1e2338;
-  --border-hover: #2e3450;
-  --border-active: #3a4060;
+  --border: #d8dbe3;
+  --border-hover: #c0c4d0;
+  --border-active: #a8adb8;
 
   /* ── Text ── */
-  --text-primary: #dce0ea;
-  --text-secondary: #7a8098;
-  --text-muted: #505570;
+  --text-primary: #1a1d26;
+  --text-secondary: #50566a;
+  --text-muted: #8890a4;
 
-  /* ── Accent: Brass/Amber ── */
-  --accent: #c8973e;
-  --accent-dim: #9a7430;
-  --accent-glow: rgba(200, 151, 62, 0.12);
-  --accent-glow-strong: rgba(200, 151, 62, 0.25);
+  /* ── Accent: Deep blue ── */
+  --accent: #2b6cb0;
+  --accent-dim: #3a7bc8;
+  --accent-glow: rgba(43, 108, 176, 0.08);
+  --accent-glow-strong: rgba(43, 108, 176, 0.18);
 
   /* ── OPM entities ── */
-  --object-stroke: #5b8fd9;
-  --object-fill: rgba(91, 143, 217, 0.05);
-  --object-fill-hover: rgba(91, 143, 217, 0.1);
+  --object-stroke: #2b6cb0;
+  --object-fill: rgba(43, 108, 176, 0.04);
+  --object-fill-physical: rgba(43, 108, 176, 0.10);
 
-  --process-stroke: #3fae96;
-  --process-fill: rgba(63, 174, 150, 0.05);
-  --process-fill-hover: rgba(63, 174, 150, 0.1);
+  --process-stroke: #16794a;
+  --process-fill: rgba(22, 121, 74, 0.04);
+  --process-fill-physical: rgba(22, 121, 74, 0.10);
 
-  --state-bg: #1a1f30;
-  --state-border: #2e3450;
-  --state-current-bg: var(--accent);
-  --state-current-text: #0b0d13;
+  --state-bg: #f0f2f6;
+  --state-border: #d0d4de;
+  --state-current-bg: #2b6cb0;
+  --state-current-text: #ffffff;
 
   /* ── Links ── */
-  --link-procedural: #3fae96;
-  --link-structural: #8a7ec8;
-  --link-enabling: #5b8fd9;
-  --link-control: #d4804e;
+  --link-procedural: #16794a;
+  --link-structural: #6b5fad;
+  --link-enabling: #2b6cb0;
+  --link-control: #c05621;
 
   /* ── Status ── */
-  --success: #4eb87a;
-  --danger: #d94f4f;
-  --warning: #d4a04e;
+  --success: #16794a;
+  --danger: #c53030;
+  --warning: #c05621;
 
   /* ── Typography ── */
   --font-ui: "Plus Jakarta Sans", system-ui, sans-serif;
@@ -262,8 +262,9 @@ body,
 
 .toolbar__btn--active {
   background: var(--accent-glow);
-  border-color: var(--accent-dim);
+  border-color: var(--accent);
   color: var(--accent);
+  font-weight: 600;
 }
 
 .toolbar__sep {
@@ -459,11 +460,11 @@ body,
 }
 
 .thing-group:hover .thing-shape {
-  filter: brightness(1.3);
+  filter: brightness(0.96);
 }
 
 .thing-group--selected .thing-shape {
-  filter: drop-shadow(0 0 8px var(--accent-glow-strong));
+  filter: drop-shadow(0 0 6px var(--accent-glow-strong));
 }
 
 .thing-group--dragging {
@@ -484,8 +485,9 @@ body,
 }
 
 .thing-label {
-  font-family: var(--font-mono);
+  font-family: var(--font-ui);
   font-size: 12px;
+  font-weight: 500;
   fill: var(--text-primary);
   pointer-events: none;
   dominant-baseline: central;
@@ -554,14 +556,14 @@ body,
   width: 100%;
   height: 24px;
   padding: 2px 6px;
-  background: var(--bg-surface);
+  background: #ffffff;
   border: 1px solid var(--accent);
   border-radius: 3px;
   color: var(--text-primary);
-  font-family: var(--font-mono);
+  font-family: var(--font-ui);
   font-size: 12px;
   outline: none;
-  box-shadow: 0 0 10px rgba(200, 151, 62, 0.3);
+  box-shadow: 0 0 0 3px rgba(43, 108, 176, 0.15);
 }
 
 .inline-rename:focus {
@@ -583,7 +585,7 @@ body,
 }
 
 .canvas-opd-label span {
-  color: var(--accent-dim);
+  color: var(--accent);
 }
 
 .canvas-zoom {
@@ -671,14 +673,15 @@ body,
   border: 1px solid var(--border);
   border-radius: 3px;
   color: var(--text-primary);
-  font-family: var(--font-mono);
+  font-family: var(--font-ui);
   font-size: 12px;
   padding: 4px 8px;
   outline: none;
 }
 
 .props-panel__input:focus {
-  border-color: var(--accent-dim);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(43, 108, 176, 0.1);
 }
 
 .props-panel__select {
@@ -686,7 +689,7 @@ body,
   border: 1px solid var(--border);
   border-radius: 3px;
   color: var(--text-primary);
-  font-family: var(--font-mono);
+  font-family: var(--font-ui);
   font-size: 11px;
   padding: 4px 6px;
   outline: none;
@@ -694,7 +697,7 @@ body,
 }
 
 .props-panel__select:focus {
-  border-color: var(--accent-dim);
+  border-color: var(--accent);
 }
 
 .props-panel__states {
@@ -715,14 +718,14 @@ body,
   background: transparent;
   border: 1px solid var(--border);
   border-radius: 3px;
-  color: var(--accent-dim);
+  color: var(--accent);
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .props-panel__add-btn:hover {
   border-color: var(--accent);
-  color: var(--accent);
+  background: var(--accent-glow);
 }
 
 .props-panel__state-row {
@@ -791,7 +794,7 @@ body,
 }
 
 .props-panel__delete-btn:hover {
-  background: rgba(217, 79, 79, 0.1);
+  background: rgba(197, 48, 48, 0.06);
 }
 
 .opl-panel__title {
@@ -886,12 +889,12 @@ body,
 
 .status-bar__dot--ok {
   background: var(--success);
-  box-shadow: 0 0 6px rgba(78, 184, 122, 0.4);
+  box-shadow: 0 0 4px rgba(22, 121, 74, 0.3);
 }
 
 .status-bar__dot--error {
   background: var(--danger);
-  box-shadow: 0 0 6px rgba(217, 79, 79, 0.4);
+  box-shadow: 0 0 4px rgba(197, 48, 48, 0.3);
 }
 
 .status-bar__sep {
