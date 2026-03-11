@@ -1,4 +1,4 @@
-import type { Model, Thing, State, Link, OPD } from "./types";
+import type { Model, Thing, State, Link, OPD, Appearance } from "./types";
 import type { InvariantError } from "./result";
 import { ok, err, type Result } from "./result";
 import { collectAllIds } from "./helpers";
@@ -252,4 +252,39 @@ export function removeOPD(
     if (opdsToRemove.has(a.opd)) appearances.delete(key);
   }
   return ok({ ...model, opds, appearances });
+}
+
+// ── Appearances ────────────────────────────────────────────────────────
+
+export function addAppearance(
+  model: Model,
+  appearance: Appearance,
+): Result<Model, InvariantError> {
+  const key = `${appearance.thing}::${appearance.opd}`;
+  // I-04: unique per (thing, opd)
+  if (model.appearances.has(key)) {
+    return err({ code: "I-04", message: `Appearance already exists: ${key}`, entity: key });
+  }
+  // I-15: internal only in refinement OPDs
+  if (appearance.internal) {
+    const opd = model.opds.get(appearance.opd);
+    if (!opd || !opd.refines) {
+      return err({ code: "I-15", message: `internal=true only allowed in refinement OPDs`, entity: key });
+    }
+  }
+  return ok({ ...model, appearances: new Map(model.appearances).set(key, appearance) });
+}
+
+export function removeAppearance(
+  model: Model,
+  thing: string,
+  opd: string,
+): Result<Model, InvariantError> {
+  const key = `${thing}::${opd}`;
+  if (!model.appearances.has(key)) {
+    return err({ code: "NOT_FOUND", message: `Appearance not found: ${key}`, entity: key });
+  }
+  const appearances = new Map(model.appearances);
+  appearances.delete(key);
+  return ok({ ...model, appearances });
 }
