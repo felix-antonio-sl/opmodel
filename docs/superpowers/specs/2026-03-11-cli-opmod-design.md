@@ -1,7 +1,7 @@
 # CLI `opmod` — Design Spec
 
 **Fecha:** 2026-03-11
-**Estado:** Draft
+**Estado:** Approved
 **Scope:** P0 — 6 comandos, 4 entidades principales
 
 ---
