@@ -1,7 +1,7 @@
 import type {
   Model, Thing, State, Link, OPD, Appearance,
   Modifier, Fan, Assertion, Requirement, Stereotype,
-  SubModel, Scenario, Meta, Settings,
+  SubModel, Scenario, Meta, Settings, RefinementType,
 } from "./types";
 import type { InvariantError } from "./result";
 import { ok, err, type Result } from "./result";
@@ -259,6 +259,93 @@ export function removeOPD(
   for (const [key, a] of appearances) {
     if (opdsToRemove.has(a.opd)) appearances.delete(key);
   }
+  return ok(touch({ ...model, opds, appearances }));
+}
+
+// ── Refinement (In-zoom / Unfold) ─────────────────────────────────────
+
+export function refineThing(
+  model: Model,
+  thingId: string,
+  parentOpdId: string,
+  refinementType: RefinementType,
+  childOpdId: string,
+  childOpdName: string,
+): Result<Model, InvariantError> {
+  const thing = model.things.get(thingId);
+  if (!thing) {
+    return err({ code: "NOT_FOUND", message: `Thing not found: ${thingId}`, entity: thingId });
+  }
+  const parentOpd = model.opds.get(parentOpdId);
+  if (!parentOpd) {
+    return err({ code: "NOT_FOUND", message: `OPD not found: ${parentOpdId}`, entity: parentOpdId });
+  }
+  if (parentOpd.opd_type !== "hierarchical") {
+    return err({ code: "INVALID_REFINEMENT", message: `Cannot refine from view OPD: ${parentOpdId}`, entity: parentOpdId });
+  }
+  const thingAppKey = `${thingId}::${parentOpdId}`;
+  if (!model.appearances.has(thingAppKey)) {
+    return err({ code: "NOT_FOUND", message: `Thing ${thingId} has no appearance in OPD ${parentOpdId}`, entity: thingId });
+  }
+  if (refinementType === "unfold" && thing.kind !== "object") {
+    return err({ code: "INVALID_REFINEMENT", message: `Unfold only applies to objects, not processes: ${thingId}`, entity: thingId });
+  }
+  for (const opd of model.opds.values()) {
+    if (opd.refines === thingId && opd.parent_opd === parentOpdId && opd.refinement_type === refinementType) {
+      return err({ code: "ALREADY_REFINED", message: `Thing ${thingId} already has ${refinementType} refinement from OPD ${parentOpdId}`, entity: thingId });
+    }
+  }
+  if (collectAllIds(model).has(childOpdId)) {
+    return err({ code: "I-08", message: `Duplicate id: ${childOpdId}`, entity: childOpdId });
+  }
+
+  // Compute pullback: things in fiber(parentOpd) connected to thingId via selector
+  const thingsInFiber = new Set<string>();
+  for (const app of model.appearances.values()) {
+    if (app.opd === parentOpdId) thingsInFiber.add(app.thing);
+  }
+
+  const externalThings = new Set<string>();
+  for (const link of model.links.values()) {
+    if (refinementType === "in-zoom") {
+      if (link.source === thingId && thingsInFiber.has(link.target) && link.target !== thingId) {
+        externalThings.add(link.target);
+      }
+      if (link.target === thingId && thingsInFiber.has(link.source) && link.source !== thingId) {
+        externalThings.add(link.source);
+      }
+    } else {
+      if ((link.type === "aggregation" || link.type === "exhibition") &&
+          link.source === thingId && thingsInFiber.has(link.target) && link.target !== thingId) {
+        externalThings.add(link.target);
+      }
+    }
+  }
+
+  const childOpd: OPD = {
+    id: childOpdId,
+    name: childOpdName,
+    opd_type: "hierarchical",
+    parent_opd: parentOpdId,
+    refines: thingId,
+    refinement_type: refinementType,
+  };
+  const opds = new Map(model.opds).set(childOpdId, childOpd);
+
+  const appearances = new Map(model.appearances);
+  appearances.set(`${thingId}::${childOpdId}`, {
+    thing: thingId, opd: childOpdId,
+    x: 0, y: 0, w: 200, h: 150, internal: true,
+  });
+  let index = 0;
+  for (const extThingId of externalThings) {
+    appearances.set(`${extThingId}::${childOpdId}`, {
+      thing: extThingId, opd: childOpdId,
+      x: 50 + index * 150, y: 50, w: 120, h: 60, internal: false,
+    });
+    index++;
+  }
+
   return ok(touch({ ...model, opds, appearances }));
 }
 

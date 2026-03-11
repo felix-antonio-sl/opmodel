@@ -6,7 +6,7 @@ export {
   addThing, removeThing, updateThing,
   addState, removeState, updateState,
   addLink, removeLink, updateLink,
-  addOPD, removeOPD, updateOPD,
+  addOPD, removeOPD, updateOPD, refineThing,
   addAppearance, removeAppearance, updateAppearance,
   addModifier, removeModifier, updateModifier,
   addFan, removeFan, updateFan,
