@@ -286,9 +286,12 @@ update
   .argument("<id>", "State ID")
   .option("--name <name>", "New name")
   .option("--parent <parent>", "Parent object ID")
-  .option("--initial", "Set as initial state (use --no-initial to unset)")
-  .option("--final", "Set as final state (use --no-final to unset)")
-  .option("--default", "Set as default state (use --no-default to unset)")
+  .option("--initial", "Set as initial state")
+  .option("--no-initial", "Unset initial state")
+  .option("--final", "Set as final state")
+  .option("--no-final", "Unset final state")
+  .option("--default", "Set as default state")
+  .option("--no-default", "Unset default state")
   .option("--input <input>", "JSON input (agent mode)")
   .option("--file <file>", "Path to .opmodel file")
   .action((id: string, opts: Record<string, unknown>) => {
@@ -367,7 +370,7 @@ update
 update
   .command("settings")
   .description("Update model settings")
-  .option("--input <input>", "JSON input (agent mode)")
+  .option("--input <input>", "JSON input (agent mode, required)")
   .option("--file <file>", "Path to .opmodel file")
   .action((opts: Record<string, unknown>) => {
     const jsonFlag = program.opts().json as boolean;

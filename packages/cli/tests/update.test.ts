@@ -38,14 +38,14 @@ describe("opmod update thing", () => {
     const filePath = setupModel(dir);
     executeAdd("thing", { name: "Water", kind: "object", essence: "physical", file: filePath });
     const result = executeUpdate("thing", "obj-water", {
-      input: '{"name":"Ice Water","essence":"informational"}',
+      input: '{"name":"Ice Water","essence":"informatical"}',
       file: filePath,
     });
 
     const { model } = readModel(filePath);
     const thing = model.things.get("obj-water")!;
     expect(thing.name).toBe("Ice Water");
-    expect(thing.essence).toBe("informational");
+    expect(thing.essence).toBe("informatical");
   });
 
   it("--input strips id field", () => {
