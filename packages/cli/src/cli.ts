@@ -1,9 +1,10 @@
 // packages/cli/src/cli.ts
 import { Command, CommanderError } from "commander";
-import { CliError, formatOutput } from "./format";
+import { CliError, formatOutput, formatThingList, formatStateList, formatLinkList, formatOPDList, formatOPDTree } from "./format";
 import { executeNew } from "./commands/new";
 import { executeAdd } from "./commands/add";
 import { executeRemove } from "./commands/remove";
+import { executeList } from "./commands/list";
 
 const program = new Command();
 
@@ -148,6 +149,55 @@ for (const entityType of ["thing", "state", "link", "opd"]) {
       }
     });
 }
+
+const list = program
+  .command("list")
+  .description("List entities in the model");
+
+list
+  .command("things")
+  .description("List all things")
+  .option("--kind <kind>", "Filter by kind (object|process)")
+  .option("--file <file>", "Path to .opmodel file")
+  .action((opts: Record<string, unknown>) => {
+    const jsonFlag = program.opts().json as boolean;
+    const result = executeList("things", opts as any);
+    console.log(formatThingList(result.entities as any[], { json: jsonFlag }));
+  });
+
+list
+  .command("states")
+  .description("List all states")
+  .option("--parent <parent>", "Filter by parent thing ID")
+  .option("--file <file>", "Path to .opmodel file")
+  .action((opts: Record<string, unknown>) => {
+    const jsonFlag = program.opts().json as boolean;
+    const result = executeList("states", opts as any);
+    console.log(formatStateList(result.entities as any[], { json: jsonFlag }));
+  });
+
+list
+  .command("links")
+  .description("List all links")
+  .option("--type <type>", "Filter by link type")
+  .option("--file <file>", "Path to .opmodel file")
+  .action((opts: Record<string, unknown>) => {
+    const jsonFlag = program.opts().json as boolean;
+    const result = executeList("links", opts as any);
+    console.log(formatLinkList(result.entities as any[], { json: jsonFlag }));
+  });
+
+list
+  .command("opds")
+  .description("List all OPDs")
+  .option("--tree", "Show as tree hierarchy", false)
+  .option("--file <file>", "Path to .opmodel file")
+  .action((opts: Record<string, unknown>) => {
+    const jsonFlag = program.opts().json as boolean;
+    const result = executeList("opds", opts as any);
+    const formatter = opts.tree ? formatOPDTree : formatOPDList;
+    console.log(formatter(result.entities as any[], { json: jsonFlag }));
+  });
 
 // Global error handler
 try {
