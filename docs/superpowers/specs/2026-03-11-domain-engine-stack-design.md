@@ -68,8 +68,8 @@ opmodel/
 │  (funciones puras, punto de entrada)    │
 ├─────────────────────────────────────────┤
 │            Invariants                   │
-│  validate(mutation) -> ok | error       │
-│  I-01..I-32, enforced pre-mutation      │
+│  guards: validate pre-mutation          │
+│  effects: applied during mutation       │
 ├─────────────────────────────────────────┤
 │              Store                      │
 │  Model (in-memory graph)               │
@@ -86,23 +86,25 @@ opmodel/
 
 ```typescript
 interface Model {
-  opmodel: string
+  opmodel: string                      // Schema version, e.g., "1.1.0" (semver pattern ^\d+\.\d+\.\d+$)
   meta: Meta
   settings: Settings
-  things: Map<string, Thing>
-  states: Map<string, State>
-  opds: Map<string, OPD>
-  links: Map<string, Link>
-  modifiers: Map<string, Modifier>
-  appearances: Map<string, Appearance>  // key: `${thing}::${opd}`
-  fans: Map<string, Fan>
-  scenarios: Map<string, Scenario>
-  assertions: Map<string, Assertion>
-  requirements: Map<string, Requirement>
-  stereotypes: Map<string, Stereotype>
-  subModels: Map<string, SubModel>
+  things: Map<string, Thing>           // key: entity id
+  states: Map<string, State>           // key: entity id
+  opds: Map<string, OPD>              // key: entity id
+  links: Map<string, Link>            // key: entity id
+  modifiers: Map<string, Modifier>    // key: entity id
+  appearances: Map<string, Appearance> // key: `${thing}::${opd}` (PK compuesto, no tiene id)
+  fans: Map<string, Fan>              // key: entity id
+  scenarios: Map<string, Scenario>    // key: entity id
+  assertions: Map<string, Assertion>  // key: entity id
+  requirements: Map<string, Requirement> // key: entity id
+  stereotypes: Map<string, Stereotype>   // key: entity id
+  subModels: Map<string, SubModel>       // key: entity id
 }
 ```
+
+**Convencion de keys:** Todos los Maps usan el `id` de la entidad como key, excepto `appearances` que usa `${thing}::${opd}` como key compuesto (la entidad no tiene `id` — su PK es el par `(thing, opd)`, invariante I-04).
 
 Maps (no arrays) porque lookups por ID son O(1). Los invariantes necesitan buscar por ID constantemente. Arrays del `.opmodel` se convierten a Maps al cargar, se serializan como arrays sorted al guardar.
 
@@ -123,7 +125,8 @@ Division de invariantes:
 | Grupo | Cuando | Ejemplos |
 |---|---|---|
 | **Estaticos** (JSON Schema) | Al cargar archivo | Tipos, enums, required, patterns, if/then |
-| **Runtime** (Domain Engine) | Al mutar en memoria | I-01 (state.parent es object), I-05 (link endpoints existen), I-08 (id unico global), I-16 (unicidad enlace procedimental) |
+| **Guards** (pre-mutation) | Antes de aplicar mutacion | I-01 (state.parent es object), I-05 (link endpoints existen), I-08 (id unico global), I-16 (unicidad enlace procedimental) |
+| **Effects** (during mutation) | Aplicados como parte de la mutacion | I-02 (cascade delete: eliminar thing cascadea states, links, modifiers, appearances, requirements), I-19 (exhibition fuerza essence := informatical) |
 
 ### 3.4 Serialization: round-trip
 
@@ -136,10 +139,11 @@ function load(json: string): Result<Model, LoadError>
   // 5. Retornar Model
 
 function save(model: Model): string
-  // 1. Convertir Maps -> arrays sorted por id (conv. §7.2)
-  // 2. Omitir campos null (conv. §7.2)
-  // 3. Sort keys alfabeticamente (conv. §7.2)
-  // 4. JSON.stringify con formato 1-objeto-por-linea
+  // 1. Convertir Maps -> arrays sorted por id (conv. §7.2 conv. 3)
+  //    Excepcion: appearances sorted por (thing, opd), no tiene id
+  // 2. Omitir campos null (conv. §7.2 conv. 4)
+  // 3. Sort keys alfabeticamente en cada objeto (conv. §7.2 conv. 1)
+  // 4. JSON.stringify con formato 1-objeto-por-linea (conv. §7.2 conv. 2)
 ```
 
 Invariante I-25 (round-trip): `load(save(model)) === model` — verificado como test.
@@ -154,21 +158,26 @@ saveModel(model: Model): string
 
 // Things
 addThing(model: Model, thing: Thing): Result<Model, InvariantError>
-removeThing(model: Model, thingId: string): Result<Model, InvariantError>
+removeThing(model: Model, thingId: string): Result<Model, InvariantError>  // cascade I-02
 
 // States
 addState(model: Model, state: State): Result<Model, InvariantError>
+removeState(model: Model, stateId: string): Result<Model, InvariantError>
 
 // Links
 addLink(model: Model, link: Link): Result<Model, InvariantError>
+removeLink(model: Model, linkId: string): Result<Model, InvariantError>
 
 // OPDs
 addOPD(model: Model, opd: OPD): Result<Model, InvariantError>
+removeOPD(model: Model, opdId: string): Result<Model, InvariantError>
 
 // Appearances
 addAppearance(model: Model, appearance: Appearance): Result<Model, InvariantError>
+removeAppearance(model: Model, thing: string, opd: string): Result<Model, InvariantError>
 
-// ... una funcion por mutacion por entidad
+// Modifiers, Fans, Scenarios, Assertions, Requirements, Stereotypes, SubModels
+// siguen el mismo patron add/remove
 
 // Batch validation
 validate(model: Model): InvariantError[]
@@ -223,11 +232,27 @@ opmod diff v1.opmodel v2.opmodel   # P7
 
 | Decision | Razon |
 |---|---|
-| Session-based (`opmod load` carga en memoria, comandos operan sobre el) | Permite encadenar sin re-parsear. State en `.opmod-session` |
+| Session-based (`opmod load` carga en memoria, comandos operan sobre el) | Permite encadenar sin re-parsear. State en `.opmod-session` (ver §4.4) |
 | IDs explicitos en output | `opmod add thing "Water"` retorna `Created obj-water` |
 | Result en stdout, errors en stderr | Standard UNIX. Exit 0=ok, 1=validation, 2=fatal |
 | JSON output con `--json` | Habilita tool-use por agentes AI (DA-1) |
 | Commander.js | Maduro, bien documentado, Claude Code lo conoce |
+
+### 4.4 Archivo de sesion (`.opmod-session`)
+
+El CLI mantiene estado de sesion en un archivo local para evitar re-parsear el `.opmodel` en cada comando.
+
+| Aspecto | Detalle |
+|---|---|
+| **Nombre** | `.opmod-session` |
+| **Ubicacion** | CWD del usuario (junto al `.opmodel`) |
+| **Contenido** | JSON: `{ "model_path": "path/to/model.opmodel", "model": <Model serializado> }` |
+| **Creacion** | `opmod load path/to/model.opmodel` o `opmod new "Name"` |
+| **Actualizacion** | Cada comando mutante (add, remove) sobreescribe el archivo |
+| **Destruccion** | `opmod save` persiste al `.opmodel` y elimina la sesion. `opmod close` descarta sin guardar |
+| **Git** | Debe incluirse en `.gitignore` — es estado transitorio, no artefacto versionable |
+| **Sin sesion** | Comandos que requieren modelo activo (add, remove, list, show, validate) retornan exit 2 con mensaje `No active session. Run 'opmod load <file>' first.` |
+| **`opmod save` sin path** | Usa `model_path` del archivo de sesion como destino por defecto |
 
 ---
 
