@@ -40,7 +40,6 @@ describe("Coffee Making System (end-to-end)", () => {
     // Links
     m = unwrap(addLink(m, { id: "lnk-barista-agent-coffee-making", type: "agent", source: "obj-barista", target: "proc-coffee-making" }));
     m = unwrap(addLink(m, { id: "lnk-coffee-making-consumption-beans", type: "consumption", source: "proc-coffee-making", target: "obj-coffee-beans" }));
-    m = unwrap(addLink(m, { id: "lnk-coffee-making-consumption-water", type: "consumption", source: "proc-coffee-making", target: "obj-water" }));
     m = unwrap(addLink(m, { id: "lnk-coffee-making-effect-water", type: "effect", source: "proc-coffee-making", target: "obj-water", source_state: "state-water-cold", target_state: "state-water-hot" }));
     m = unwrap(addLink(m, { id: "lnk-coffee-making-result-coffee", type: "result", source: "proc-coffee-making", target: "obj-coffee" }));
 
@@ -63,7 +62,7 @@ describe("Coffee Making System (end-to-end)", () => {
     expect(errors).toEqual([]);
     expect(m.things.size).toBe(5);
     expect(m.states.size).toBe(4);
-    expect(m.links.size).toBe(5);
+    expect(m.links.size).toBe(4);
     expect(m.appearances.size).toBe(6);
   });
 

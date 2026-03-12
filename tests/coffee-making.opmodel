@@ -33,7 +33,6 @@
   "links": [
     {"id": "lnk-barista-agent-coffee-making", "source": "obj-barista", "target": "proc-coffee-making", "type": "agent"},
     {"id": "lnk-coffee-making-consumption-beans", "source": "proc-coffee-making", "target": "obj-coffee-beans", "type": "consumption"},
-    {"id": "lnk-coffee-making-consumption-water", "source": "proc-coffee-making", "target": "obj-water", "type": "consumption"},
     {"id": "lnk-coffee-making-effect-water", "source": "proc-coffee-making", "source_state": "state-water-cold", "target": "obj-water", "target_state": "state-water-hot", "type": "effect"},
     {"id": "lnk-coffee-making-result-coffee", "source": "proc-coffee-making", "target": "obj-coffee", "type": "result"}
   ],

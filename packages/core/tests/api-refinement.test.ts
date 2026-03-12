@@ -119,6 +119,72 @@ describe("refineThing", () => {
       expect(result.ok).toBe(false);
       expect((result as any).error.code).toBe("INVALID_REFINEMENT");
     });
+
+    it("I-REFINE-EXT: rejects refining external appearance (pullback projection)", () => {
+      const m = buildTestModel();
+      // In-zoom Making Coffee from SD → Water appears as external in SD1
+      const m2 = unwrap(refineThing(m, "proc-make-coffee", "opd-sd", "in-zoom", "opd-sd1", "SD1"));
+      const waterApp = m2.appearances.get("obj-water::opd-sd1");
+      expect(waterApp?.internal).toBe(false);
+      // Try to refine Water from SD1 — should be blocked
+      const result = refineThing(m2, "obj-water", "opd-sd1", "unfold", "opd-sd1-1", "SD1.1");
+      expect(result.ok).toBe(false);
+      expect((result as any).error.code).toBe("INVALID_REFINEMENT");
+      expect((result as any).error.message).toContain("external");
+    });
+
+    it("I-REFINE-CYCLE: rejects refining container from within its own refinement", () => {
+      const m = buildTestModel();
+      // In-zoom Making Coffee from SD → Making Coffee is internal container in SD1
+      const m2 = unwrap(refineThing(m, "proc-make-coffee", "opd-sd", "in-zoom", "opd-sd1", "SD1"));
+      // Try to in-zoom Making Coffee again from SD1 — circular
+      const result = refineThing(m2, "proc-make-coffee", "opd-sd1", "in-zoom", "opd-sd1-1", "SD1.1");
+      expect(result.ok).toBe(false);
+      expect((result as any).error.code).toBe("INVALID_REFINEMENT");
+      expect((result as any).error.message).toContain("refinement tree");
+    });
+
+    it("I-REFINE-CYCLE: rejects refining from nested descendant of refinement", () => {
+      let m = buildTestModel();
+      // In-zoom Making Coffee from SD → creates SD1
+      m = unwrap(refineThing(m, "proc-make-coffee", "opd-sd", "in-zoom", "opd-sd1", "SD1"));
+      // Add a sub-process Grinding inside SD1
+      m = unwrap(addThing(m, { id: "proc-grind", kind: "process", name: "Grinding", essence: "physical", affiliation: "systemic" }));
+      m = unwrap(addAppearance(m, { thing: "proc-grind", opd: "opd-sd1", x: 50, y: 50, w: 120, h: 60, internal: true }));
+      // In-zoom Grinding from SD1 → creates SD1.1
+      m = unwrap(refineThing(m, "proc-grind", "opd-sd1", "in-zoom", "opd-sd1-1", "SD1.1"));
+      // Making Coffee appears as external in SD1.1 (if it has an appearance there)
+      // Even if it had an internal appearance, trying to refine it should fail
+      // because SD1 (ancestor of SD1.1) refines Making Coffee
+      m = unwrap(addAppearance(m, { thing: "proc-make-coffee", opd: "opd-sd1-1", x: 0, y: 0, w: 100, h: 50, internal: true }));
+      const result = refineThing(m, "proc-make-coffee", "opd-sd1-1", "in-zoom", "opd-sd1-1-1", "SD1.1.1");
+      expect(result.ok).toBe(false);
+      expect((result as any).error.code).toBe("INVALID_REFINEMENT");
+    });
+
+    it("allows refining a different thing from within a refinement tree", () => {
+      let m = buildTestModel();
+      // In-zoom Making Coffee from SD → creates SD1
+      m = unwrap(refineThing(m, "proc-make-coffee", "opd-sd", "in-zoom", "opd-sd1", "SD1"));
+      // Add a new sub-process Grinding inside SD1 (internal: true)
+      m = unwrap(addThing(m, { id: "proc-grind", kind: "process", name: "Grinding", essence: "physical", affiliation: "systemic" }));
+      m = unwrap(addAppearance(m, { thing: "proc-grind", opd: "opd-sd1", x: 50, y: 50, w: 120, h: 60, internal: true }));
+      // In-zoom Grinding from SD1 — should succeed (Grinding ≠ Making Coffee)
+      const result = refineThing(m, "proc-grind", "opd-sd1", "in-zoom", "opd-sd1-1", "SD1.1");
+      expect(result.ok).toBe(true);
+    });
+
+    it("allows same thing to be refined with different type from same OPD", () => {
+      let m = buildTestModel();
+      m = unwrap(addThing(m, { id: "obj-car", kind: "object", name: "Car", essence: "physical", affiliation: "systemic" }));
+      m = unwrap(addAppearance(m, { thing: "obj-car", opd: "opd-sd", x: 400, y: 50, w: 120, h: 60 }));
+      m = unwrap(addLink(m, { id: "lnk-agg", type: "aggregation", source: "obj-water", target: "obj-car" }));
+      // Unfold Car from SD
+      m = unwrap(refineThing(m, "obj-car", "opd-sd", "unfold", "opd-sd1", "SD1"));
+      // In-zoom Car from SD — different type, should succeed
+      const result = refineThing(m, "obj-car", "opd-sd", "in-zoom", "opd-sd2", "SD2");
+      expect(result.ok).toBe(true);
+    });
   });
 
   describe("unfold", () => {
@@ -135,9 +201,10 @@ describe("refineThing", () => {
       m = unwrap(addAppearance(m, { thing: "obj-wheel", opd: "opd-sd", x: 200, y: 200, w: 120, h: 60 }));
       m = unwrap(addAppearance(m, { thing: "obj-color", opd: "opd-sd", x: 350, y: 200, w: 120, h: 60 }));
       m = unwrap(addAppearance(m, { thing: "proc-drive", opd: "opd-sd", x: 350, y: 100, w: 150, h: 80 }));
-      m = unwrap(addLink(m, { id: "lnk-agg1", type: "aggregation", source: "obj-car", target: "obj-engine" }));
-      m = unwrap(addLink(m, { id: "lnk-agg2", type: "aggregation", source: "obj-car", target: "obj-wheel" }));
-      m = unwrap(addLink(m, { id: "lnk-exh1", type: "exhibition", source: "obj-car", target: "obj-color" }));
+      // P-01 fix: correct link directions per spec — aggregation: Part→Whole, exhibition: Attribute→Exhibitor
+      m = unwrap(addLink(m, { id: "lnk-agg1", type: "aggregation", source: "obj-engine", target: "obj-car" }));
+      m = unwrap(addLink(m, { id: "lnk-agg2", type: "aggregation", source: "obj-wheel", target: "obj-car" }));
+      m = unwrap(addLink(m, { id: "lnk-exh1", type: "exhibition", source: "obj-color", target: "obj-car" }));
       m = unwrap(addLink(m, { id: "lnk-eff1", type: "effect", source: "proc-drive", target: "obj-car" }));
       return m;
     }

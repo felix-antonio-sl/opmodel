@@ -99,7 +99,7 @@ describe("loadModel", () => {
     expect(model.things.size).toBe(5);
     expect(model.states.size).toBe(4);
     expect(model.opds.size).toBe(2);
-    expect(model.links.size).toBe(5);
+    expect(model.links.size).toBe(4);
     expect(model.modifiers.size).toBe(1);
     expect(model.appearances.size).toBe(6);
     expect(model.assertions.size).toBe(1);

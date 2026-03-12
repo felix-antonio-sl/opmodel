@@ -137,10 +137,17 @@ export function addState(
   if (parent.kind !== "object") {
     return err({ code: "I-01", message: `State parent must be object, got process: ${state.parent}`, entity: state.id });
   }
-  return ok(touch({
-    ...model,
-    states: new Map(model.states).set(state.id, state),
-  }));
+  // I-21: exclusive current state — auto-unset siblings (radio button coercion)
+  const states = new Map(model.states).set(state.id, state);
+  if (state.current) {
+    for (const [sid, s] of states) {
+      if (sid !== state.id && s.parent === state.parent && s.current) {
+        states.set(sid, { ...s, current: false });
+      }
+    }
+  }
+
+  return ok(touch({ ...model, states }));
 }
 
 export function removeState(
@@ -152,7 +159,24 @@ export function removeState(
   }
   const states = new Map(model.states);
   states.delete(stateId);
-  return ok(touch({ ...model, states }));
+
+  // P-02: cascade — clear dangling source_state/target_state references on links
+  const links = new Map(model.links);
+  for (const [id, l] of links) {
+    let updated = l;
+    let changed = false;
+    if (l.source_state === stateId) {
+      updated = { ...updated, source_state: undefined };
+      changed = true;
+    }
+    if (l.target_state === stateId) {
+      updated = { ...updated, target_state: undefined };
+      changed = true;
+    }
+    if (changed) links.set(id, updated);
+  }
+
+  return ok(touch({ ...model, states, links }));
 }
 
 // ── Links ──────────────────────────────────────────────────────────────
@@ -184,6 +208,15 @@ export function addLink(
     const source = model.things.get(link.source)!;
     if (!source.duration?.max) {
       return err({ code: "I-14", message: `Exception source must have duration.max: ${link.source}`, entity: link.id });
+    }
+  }
+
+  // I-31: at most 1 discriminating exhibition link per exhibitor
+  if (link.type === "exhibition" && link.discriminating) {
+    for (const existingLink of model.links.values()) {
+      if (existingLink.type === "exhibition" && existingLink.discriminating && existingLink.target === link.target) {
+        return err({ code: "I-31", message: `Exhibitor ${link.target} already has a discriminating attribute: ${existingLink.source}`, entity: link.id });
+      }
     }
   }
 
@@ -312,6 +345,21 @@ export function refineThing(
   if (refinementType === "unfold" && thing.kind !== "object") {
     return err({ code: "INVALID_REFINEMENT", message: `Unfold only applies to objects, not processes: ${thingId}`, entity: thingId });
   }
+  // I-REFINE-EXT: cannot refine pullback projections (external appearances)
+  const thingApp = model.appearances.get(thingAppKey)!;
+  if (thingApp.internal === false) {
+    return err({ code: "INVALID_REFINEMENT", message: `Cannot refine external appearance of ${thingId} — refine from its home OPD`, entity: thingId });
+  }
+  // I-REFINE-CYCLE: cannot refine a thing from within its own refinement tree
+  let ancestorId: string | null = parentOpdId;
+  while (ancestorId) {
+    const ancestor = model.opds.get(ancestorId);
+    if (!ancestor) break;
+    if (ancestor.refines === thingId) {
+      return err({ code: "INVALID_REFINEMENT", message: `Cannot refine ${thingId} from within its own refinement tree`, entity: thingId });
+    }
+    ancestorId = ancestor.parent_opd;
+  }
   for (const opd of model.opds.values()) {
     if (opd.refines === thingId && opd.parent_opd === parentOpdId && opd.refinement_type === refinementType) {
       return err({ code: "ALREADY_REFINED", message: `Thing ${thingId} already has ${refinementType} refinement from OPD ${parentOpdId}`, entity: thingId });
@@ -337,9 +385,11 @@ export function refineThing(
         externalThings.add(link.source);
       }
     } else {
+      // P-01 fix: aggregation = Part→Whole (source=Part, target=Whole)
+      // Unfolding Whole X reveals its Parts: links where target=X, collect source
       if ((link.type === "aggregation" || link.type === "exhibition") &&
-          link.source === thingId && thingsInFiber.has(link.target) && link.target !== thingId) {
-        externalThings.add(link.target);
+          link.target === thingId && thingsInFiber.has(link.source) && link.source !== thingId) {
+        externalThings.add(link.source);
       }
     }
   }
@@ -671,7 +721,16 @@ export function updateState(
     if (!parent) return err({ code: "I-01", message: `Parent thing not found: ${updated.parent}`, entity: id });
     if (parent.kind !== "object") return err({ code: "I-01", message: `State parent must be object, got process: ${updated.parent}`, entity: id });
   }
-  return ok(touch({ ...model, states: new Map(model.states).set(id, updated) }));
+  // I-21: exclusive current state — auto-unset siblings (radio button coercion)
+  const states = new Map(model.states).set(id, updated);
+  if (updated.current) {
+    for (const [sid, s] of states) {
+      if (sid !== id && s.parent === updated.parent && s.current) {
+        states.set(sid, { ...s, current: false });
+      }
+    }
+  }
+  return ok(touch({ ...model, states }));
 }
 
 export function updateOPD(
@@ -838,6 +897,15 @@ export function updateLink(
     }
   }
 
+  // I-31: at most 1 discriminating exhibition per exhibitor
+  if (updated.type === "exhibition" && updated.discriminating) {
+    for (const [existingId, existingLink] of model.links) {
+      if (existingId !== id && existingLink.type === "exhibition" && existingLink.discriminating && existingLink.target === updated.target) {
+        return err({ code: "I-31", message: `Exhibitor ${updated.target} already has a discriminating attribute: ${existingLink.source}`, entity: id });
+      }
+    }
+  }
+
   return ok(touch({ ...model, things, links: new Map(model.links).set(id, updated) }));
 }
 
@@ -984,6 +1052,103 @@ export function validate(model: Model): InvariantError[] {
     if (link.type === "exhibition") {
       const source = model.things.get(link.source);
       if (source && source.essence !== "informatical") errors.push({ code: "I-19", message: `Exhibition link ${id} source must be informatical`, entity: id });
+    }
+  }
+
+  // I-16: unique transforming link per (process, object) pair
+  // Transforming links (effect/consumption/result) are mutually exclusive:
+  // effect = object persists with state change, consumption = object ceases to exist, result = object comes into existence
+  const transformingTypes = new Set(["effect", "consumption", "result"]);
+  const proceduralPairs = new Map<string, string>();
+  for (const [id, link] of model.links) {
+    if (transformingTypes.has(link.type)) {
+      const source = model.things.get(link.source);
+      const target = model.things.get(link.target);
+      if (source && target) {
+        const procId = source.kind === "process" ? link.source : link.target;
+        const objId = source.kind === "object" ? link.source : link.target;
+        const pairKey = `${procId}::${objId}`;
+        if (proceduralPairs.has(pairKey)) {
+          errors.push({ code: "I-16", message: `Multiple procedural links between process ${procId} and object ${objId}`, entity: id });
+        } else {
+          proceduralPairs.set(pairKey, id);
+        }
+      }
+    }
+  }
+
+  // I-21: at most 1 current state per object
+  const currentByParent = new Map<string, string[]>();
+  for (const [id, state] of model.states) {
+    if (state.current) {
+      const list = currentByParent.get(state.parent) ?? [];
+      list.push(id);
+      currentByParent.set(state.parent, list);
+    }
+  }
+  for (const [parent, stateIds] of currentByParent) {
+    if (stateIds.length > 1) {
+      errors.push({ code: "I-21", message: `Object ${parent} has ${stateIds.length} current states: ${stateIds.join(", ")}`, entity: parent });
+    }
+  }
+
+  // I-31: at most 1 discriminating exhibition per exhibitor
+  const discByExhibitor = new Map<string, string[]>();
+  for (const [id, link] of model.links) {
+    if (link.type === "exhibition" && link.discriminating) {
+      const list = discByExhibitor.get(link.target) ?? [];
+      list.push(id);
+      discByExhibitor.set(link.target, list);
+    }
+  }
+  for (const [exhibitor, linkIds] of discByExhibitor) {
+    if (linkIds.length > 1) {
+      errors.push({ code: "I-31", message: `Exhibitor ${exhibitor} has ${linkIds.length} discriminating attributes`, entity: exhibitor });
+    }
+  }
+
+  // I-32: discriminating values disjoint and exhaustive
+  for (const [id, link] of model.links) {
+    if (link.type === "exhibition" && link.discriminating) {
+      const discriminatorId = link.source;
+      const generalId = link.target;
+
+      // States of the discriminating attribute
+      const discStates = new Set<string>();
+      for (const [, s] of model.states) {
+        if (s.parent === discriminatorId) discStates.add(s.id);
+      }
+      if (discStates.size === 0) continue;
+
+      // Generalization links pointing to the general
+      const specLinks: Link[] = [];
+      for (const l of model.links.values()) {
+        if (l.type === "generalization" && l.target === generalId) {
+          specLinks.push(l);
+        }
+      }
+      if (specLinks.length === 0) continue;
+
+      // Disjointness: no value appears in two specializations
+      const seen = new Set<string>();
+      for (const sl of specLinks) {
+        if (sl.discriminating_values) {
+          for (const v of sl.discriminating_values) {
+            if (seen.has(v)) {
+              errors.push({ code: "I-32", message: `Discriminating value ${v} appears in multiple specializations of ${generalId}`, entity: sl.id });
+            }
+            seen.add(v);
+          }
+        }
+      }
+
+      // Exhaustiveness: every state of discriminator must be covered
+      const covered = new Set(specLinks.flatMap(sl => sl.discriminating_values ?? []));
+      for (const stateId of discStates) {
+        if (!covered.has(stateId)) {
+          errors.push({ code: "I-32", message: `State ${stateId} of discriminator ${discriminatorId} not covered by specializations of ${generalId}`, entity: id });
+        }
+      }
     }
   }
 

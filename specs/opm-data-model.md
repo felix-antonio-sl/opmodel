@@ -486,7 +486,7 @@ Propiedades que el Domain Engine DEBE verificar al cargar, mutar y serializar.
 
 | # | Invariante | Formalización | HU |
 |---|-----------|---------------|-----|
-| I-16 | **Unicidad enlace procedimental** | ∀ (p:Process, o:Object): \|{lnk ∈ Procedural \| lnk connects (p, o)}\| ≤ 1 por nivel de abstracción | L-M1-05 |
+| I-16 | **Unicidad enlace transformante** | ∀ (p:Process, o:Object): \|{lnk ∈ {effect, consumption, result} \| lnk connects (p, o)}\| ≤ 1 por nivel de abstracción. Los enlaces enabling (agent, instrument) y state-specific (input, output) son ortogonales y pueden coexistir | L-M1-05 |
 | I-17 | **Proceso transforma ≥1 objeto** | ∀ p:Process: ∃ o:Object, ∃ lnk ∈ {effect, consumption, result, input, output}: lnk connects (p, o) | L-M4-02 |
 | I-18 | **Agent es humano físico** | ∀ lnk(type=agent): lnk.source.essence = "physical" | L-M1-03 |
 | I-19 | **Exhibition → esencia informática** | ∀ lnk(type=exhibition): lnk.source.essence := "informatical" | L-M1-04 |
@@ -583,7 +583,6 @@ Propiedades que el Domain Engine DEBE verificar al cargar, mutar y serializar.
   "links": [
     {"id": "lnk-barista-agent-coffee-making", "source": "obj-barista", "target": "proc-coffee-making", "type": "agent"},
     {"id": "lnk-coffee-making-consumption-beans", "source": "proc-coffee-making", "target": "obj-coffee-beans", "type": "consumption"},
-    {"id": "lnk-coffee-making-consumption-water", "source": "proc-coffee-making", "target": "obj-water", "type": "consumption"},
     {"id": "lnk-coffee-making-effect-water", "source": "proc-coffee-making", "source_state": "state-water-cold", "target": "obj-water", "target_state": "state-water-hot", "type": "effect"},
     {"id": "lnk-coffee-making-result-coffee", "source": "proc-coffee-making", "target": "obj-coffee", "type": "result"}
   ],
