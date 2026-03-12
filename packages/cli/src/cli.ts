@@ -9,6 +9,7 @@ import { executeShow } from "./commands/show";
 import { executeValidate } from "./commands/validate";
 import { executeUpdate } from "./commands/update";
 import { executeRefine } from "./commands/refine";
+import { executeOpl } from "./commands/opl";
 
 const program = new Command();
 
@@ -401,6 +402,21 @@ program
       console.log(JSON.stringify(result, null, 2));
     } else {
       console.log(`Refined ${thingId} → ${result.opd.name} (${result.opd.refinement_type}, ${result.appearancesCreated} appearances)`);
+    }
+  });
+
+program
+  .command("opl")
+  .description("Generate OPL sentences for an OPD")
+  .argument("<file>", "Path to .opmodel file")
+  .option("--opd <opdId>", "OPD ID (default: root SD)")
+  .action((file: string, opts: Record<string, unknown>) => {
+    const jsonFlag = program.opts().json as boolean;
+    const result = executeOpl({ file, opd: opts.opd as string, json: jsonFlag });
+    if (jsonFlag) {
+      console.log(JSON.stringify(result.document, null, 2));
+    } else {
+      console.log(result.text ?? "");
     }
   });
 

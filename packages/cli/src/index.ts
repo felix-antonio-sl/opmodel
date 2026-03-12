@@ -12,3 +12,4 @@ export { executeShow } from "./commands/show";
 export { executeValidate } from "./commands/validate";
 export { executeUpdate } from "./commands/update";
 export { executeRefine } from "./commands/refine";
+export { executeOpl } from "./commands/opl";
