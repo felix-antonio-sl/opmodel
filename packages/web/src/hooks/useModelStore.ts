@@ -41,8 +41,8 @@ export interface ModelStore {
   canUndo: boolean;
   /** Can redo? */
   canRedo: boolean;
-  /** Dispatch a Command through η: Command → Effect */
-  dispatch: (cmd: Command) => void;
+  /** Dispatch a Command through η: Command → Effect. Returns true if successful. */
+  dispatch: (cmd: Command) => boolean;
   /** Undo last model mutation */
   doUndo: () => void;
   /** Redo last undone mutation */
@@ -80,26 +80,29 @@ export function useModelStore(initialModel: Model): ModelStore {
     return () => clearTimeout(saveTimer.current);
   }, [history.present]);
 
-  const dispatch = useCallback((cmd: Command) => {
+  const dispatch = useCallback((cmd: Command): boolean => {
     const effect = interpret(cmd);
 
     if (effect.type === "uiTransition") {
       setUi((prev) => ({ ...prev, [effect.field]: effect.value }));
       setLastError(null);
-      return;
+      return true;
     }
 
     // ModelMutation — apply to present, push to History
+    let success = false;
     setHistory((h) => {
       const result = effect.apply(h.present);
       if (isOk(result)) {
         setLastError(null);
+        success = true;
         return pushHistory(h, result.value);
       } else {
         setLastError(`${result.error.code}: ${result.error.message}`);
         return h;
       }
     });
+    return success;
   }, []);
 
   const doUndo = useCallback(() => {

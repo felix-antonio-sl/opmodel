@@ -514,6 +514,24 @@ body,
   font-size: 11px;
 }
 
+.thing-label--container {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  fill: var(--text-muted);
+}
+
+.thing-badge-external {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  fill: var(--text-muted);
+  pointer-events: none;
+  dominant-baseline: central;
+  text-anchor: middle;
+  opacity: 0.6;
+}
+
 /* ── SVG States ── */
 
 .state-pill {
@@ -586,9 +604,9 @@ body,
   border-color: var(--accent);
 }
 
-/* ── Canvas info overlay ── */
+/* ── Breadcrumb overlay ── */
 
-.canvas-opd-label {
+.canvas-breadcrumb {
   position: absolute;
   top: 12px;
   left: 16px;
@@ -596,12 +614,39 @@ body,
   font-size: 11px;
   color: var(--text-muted);
   letter-spacing: 0.04em;
-  pointer-events: none;
   user-select: none;
+  z-index: 1;
 }
 
-.canvas-opd-label span {
+.canvas-breadcrumb__item {
+  cursor: pointer;
+  color: var(--accent-dim);
+  transition: color 0.15s;
+}
+
+.canvas-breadcrumb__item:hover {
   color: var(--accent);
+  text-decoration: underline;
+}
+
+.canvas-breadcrumb__item--current {
+  color: var(--accent);
+  font-weight: 600;
+  cursor: default;
+}
+
+.canvas-breadcrumb__item--current:hover {
+  text-decoration: none;
+}
+
+.canvas-breadcrumb__sep {
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+.canvas-breadcrumb__refines {
+  font-size: 10px;
+  color: var(--text-muted);
 }
 
 .canvas-zoom {
@@ -818,6 +863,56 @@ body,
 
 .props-panel__remove-btn:hover {
   color: var(--danger);
+}
+
+.props-panel__refine {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.props-panel__refine-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.props-panel__refine-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: var(--bg-surface);
+  border-radius: 3px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.props-panel__refine-row:hover {
+  background: var(--accent-glow);
+  color: var(--accent);
+}
+
+.props-panel__refine-type {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  min-width: 50px;
+}
+
+.props-panel__refine-hint {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 2px 0;
+}
+
+.props-panel__refine-arrow {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: 12px;
 }
 
 .props-panel__delete-btn {

@@ -20,7 +20,7 @@ const LINK_TYPES: { value: LinkTypeChoice; label: string; group: string }[] = [
 interface Props {
   mode: EditorMode;
   linkType: LinkTypeChoice;
-  dispatch: (cmd: Command) => void;
+  dispatch: (cmd: Command) => boolean;
 }
 
 export function Toolbar({ mode, linkType, dispatch }: Props) {

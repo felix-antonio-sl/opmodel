@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback, useMemo, useEffect } from "react";
-import type { Model, Thing, State, Link, Appearance, Modifier } from "@opmodel/core";
+import type { Model, Thing, State, Link, Appearance, Modifier, OPD } from "@opmodel/core";
 import type { Command, EditorMode, LinkTypeChoice } from "../lib/commands";
 import { genId } from "../lib/ids";
 import {
@@ -19,7 +19,19 @@ interface Props {
   selectedThing: string | null;
   mode: EditorMode;
   linkType: LinkTypeChoice;
-  dispatch: (cmd: Command) => void;
+  dispatch: (cmd: Command) => boolean;
+}
+
+/* ─── Breadcrumb: OPD ancestor chain ─── */
+
+function opdAncestors(model: Model, opdId: string): OPD[] {
+  const chain: OPD[] = [];
+  let current = model.opds.get(opdId);
+  while (current) {
+    chain.unshift(current);
+    current = current.parent_opd ? model.opds.get(current.parent_opd) : undefined;
+  }
+  return chain;
 }
 
 /* ─── Link type → color mapping ─── */
@@ -167,6 +179,8 @@ function ThingNode({
   isSelected,
   isDragging,
   isLinkSource,
+  isExternal,
+  isContainer,
   dragDelta,
   onMouseDown,
   onSelect,
@@ -178,6 +192,8 @@ function ThingNode({
   isSelected: boolean;
   isDragging: boolean;
   isLinkSource: boolean;
+  isExternal: boolean;
+  isContainer: boolean;
   dragDelta: Point;
   onMouseDown: (e: React.MouseEvent) => void;
   onSelect: () => void;
@@ -192,13 +208,19 @@ function ThingNode({
   const extraH = hasStates ? 24 : 0;
   const totalH = h + extraH;
 
-  const strokeColor = thing.kind === "process" ? "var(--process-stroke)" : "var(--object-stroke)";
+  const strokeColor = isExternal
+    ? "var(--text-muted)"
+    : thing.kind === "process" ? "var(--process-stroke)" : "var(--object-stroke)";
   const isPhysical = thing.essence === "physical";
-  const fillColor = thing.kind === "process"
-    ? (isPhysical ? "var(--process-fill-physical)" : "var(--process-fill)")
-    : (isPhysical ? "var(--object-fill-physical)" : "var(--object-fill)");
-  const strokeWidth = isPhysical ? 3.5 : 1.2;
-  const strokeDash = thing.affiliation === "environmental" ? "6,3" : undefined;
+  const fillColor = isContainer
+    ? "rgba(43, 108, 176, 0.03)"
+    : isExternal
+      ? "var(--bg-panel)"
+      : thing.kind === "process"
+        ? (isPhysical ? "var(--process-fill-physical)" : "var(--process-fill)")
+        : (isPhysical ? "var(--object-fill-physical)" : "var(--object-fill)");
+  const strokeWidth = isContainer ? 2.0 : isExternal ? 1.0 : isPhysical ? 3.5 : 1.2;
+  const strokeDash = isExternal ? "4,3" : thing.affiliation === "environmental" ? "6,3" : undefined;
 
   const filterStr = isDragging
     ? "url(#glow-drag)"
@@ -254,12 +276,15 @@ function ThingNode({
       )}
 
       <text
-        className={`thing-label${thing.kind === "process" ? " thing-label--process" : ""}`}
+        className={`thing-label${thing.kind === "process" ? " thing-label--process" : ""}${isContainer ? " thing-label--container" : ""}`}
         x={x + w / 2}
-        y={y + (hasStates ? h / 2 - 2 : totalH / 2)}
+        y={isContainer ? y + 16 : y + (hasStates ? h / 2 - 2 : totalH / 2)}
       >
         {thing.name}
       </text>
+      {isExternal && (
+        <text className="thing-badge-external" x={x + w - 8} y={y + 12}>↑</text>
+      )}
 
       {hasStates && (
         <g>
@@ -576,9 +601,23 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
 
   return (
     <div className={`opd-canvas ${cursorClass}`}>
-      <div className="canvas-opd-label">
-        <span>{opd?.name ?? opdId}</span>
-        {opd?.refines && ` — ${model.things.get(opd.refines)?.name ?? opd.refines}`}
+      <div className="canvas-breadcrumb">
+        {opdAncestors(model, opdId).map((ancestor, i, arr) => (
+          <span key={ancestor.id}>
+            {i > 0 && <span className="canvas-breadcrumb__sep"> › </span>}
+            <span
+              className={`canvas-breadcrumb__item${ancestor.id === opdId ? " canvas-breadcrumb__item--current" : ""}`}
+              onClick={() => { if (ancestor.id !== opdId) dispatch({ tag: "selectOpd", opdId: ancestor.id }); }}
+            >
+              {ancestor.name}
+            </span>
+          </span>
+        ))}
+        {opd?.refines && (
+          <span className="canvas-breadcrumb__refines">
+            {" "}— {opd.refinement_type}: {model.things.get(opd.refines)?.name ?? opd.refines}
+          </span>
+        )}
       </div>
       <div className="canvas-zoom">{Math.round(zoom * 100)}%</div>
 
@@ -618,23 +657,36 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
             );
           })}
 
-          {/* Things (on top) */}
-          {[...appearances.entries()].map(([thingId, app]) => {
+          {/* Things (on top) — container first (behind), then others */}
+          {[...appearances.entries()]
+            .sort(([, a], [, b]) => {
+              // Render the container (refined thing) first so it appears behind other things
+              const aIsContainer = a.internal === true && opd?.refines === a.thing;
+              const bIsContainer = b.internal === true && opd?.refines === b.thing;
+              if (aIsContainer && !bIsContainer) return -1;
+              if (!aIsContainer && bIsContainer) return 1;
+              return 0;
+            })
+            .map(([thingId, app]) => {
             const thing = model.things.get(thingId);
             if (!thing) return null;
             const states = statesForThing(model, thingId);
             const isDragging = dragTarget === thingId;
             const isLinkSource = linkSource === thingId;
+            const isAppExternal = app.internal === false;
+            const isAppContainer = app.internal === true && opd?.refines === thingId;
 
             return (
               <ThingNode
                 key={thingId}
                 thing={thing}
                 appearance={app}
-                states={states}
+                states={isAppContainer ? [] : states}
                 isSelected={selectedThing === thingId}
                 isDragging={isDragging}
                 isLinkSource={isLinkSource}
+                isExternal={isAppExternal}
+                isContainer={isAppContainer}
                 dragDelta={isDragging ? dragDelta : { x: 0, y: 0 }}
                 onMouseDown={(e) => onThingMouseDown(thingId, e)}
                 onSelect={() => {

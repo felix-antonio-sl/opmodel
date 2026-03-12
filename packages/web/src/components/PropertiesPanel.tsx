@@ -1,4 +1,4 @@
-import type { Model, Thing, State, Link } from "@opmodel/core";
+import type { Model, Thing, State, Link, RefinementType, OPD } from "@opmodel/core";
 import type { Command } from "../lib/commands";
 import { genId } from "../lib/ids";
 
@@ -6,7 +6,7 @@ interface Props {
   model: Model;
   thingId: string;
   opdId: string;
-  dispatch: (cmd: Command) => void;
+  dispatch: (cmd: Command) => boolean;
 }
 
 function statesOf(model: Model, thingId: string): State[] {
@@ -20,7 +20,23 @@ function linksOf(model: Model, thingId: string): Link[] {
     .filter((l) => l.source === thingId || l.target === thingId);
 }
 
-function StateRow({ state, dispatch }: { state: State; dispatch: (cmd: Command) => void }) {
+function refinementsOf(model: Model, thingId: string, opdId: string): OPD[] {
+  return [...model.opds.values()]
+    .filter((o) => o.refines === thingId && o.parent_opd === opdId);
+}
+
+function nextChildOpdName(model: Model, parentOpdId: string): string {
+  const parentOpd = model.opds.get(parentOpdId);
+  const parentName = parentOpd?.name ?? "SD";
+  let maxN = 0;
+  for (const opd of model.opds.values()) {
+    if (opd.parent_opd === parentOpdId) maxN++;
+  }
+  const sep = /\d$/.test(parentName) ? "." : "";
+  return `${parentName}${sep}${maxN + 1}`;
+}
+
+function StateRow({ state, dispatch }: { state: State; dispatch: (cmd: Command) => boolean }) {
   return (
     <div className="props-panel__state-row">
       <input
@@ -66,6 +82,92 @@ function StateRow({ state, dispatch }: { state: State; dispatch: (cmd: Command) 
       >
         ×
       </button>
+    </div>
+  );
+}
+
+function isInOwnRefinementTree(model: Model, thingId: string, opdId: string): boolean {
+  let id: string | null = opdId;
+  while (id) {
+    const opd = model.opds.get(id);
+    if (!opd) break;
+    if (opd.refines === thingId) return true;
+    id = opd.parent_opd;
+  }
+  return false;
+}
+
+function RefineSection({
+  model, thingId, opdId, thing, dispatch,
+}: {
+  model: Model; thingId: string; opdId: string; thing: Thing;
+  dispatch: (cmd: Command) => boolean;
+}) {
+  const existing = refinementsOf(model, thingId, opdId);
+  const parentOpd = model.opds.get(opdId);
+  // Only hierarchical OPDs can be refined (not views)
+  if (!parentOpd || parentOpd.opd_type !== "hierarchical") return null;
+
+  const appKey = `${thingId}::${opdId}`;
+  const app = model.appearances.get(appKey);
+
+  // I-REFINE-EXT: external appearances (pullback projections) cannot be refined
+  const isExternal = app?.internal === false;
+  // I-REFINE-CYCLE: cannot refine from within the thing's own refinement tree
+  const isCyclic = isInOwnRefinementTree(model, thingId, opdId);
+  const blocked = isExternal || isCyclic;
+
+  const handleRefine = (refinementType: RefinementType) => {
+    const childOpdId = genId("opd");
+    const childOpdName = nextChildOpdName(model, opdId);
+    const ok = dispatch({
+      tag: "refineThing", thingId, opdId,
+      refinementType, childOpdId, childOpdName,
+    });
+    if (ok) {
+      dispatch({ tag: "selectOpd", opdId: childOpdId });
+    }
+  };
+
+  const canUnfold = thing.kind === "object";
+  const hasInZoom = existing.some((o) => o.refinement_type === "in-zoom");
+  const hasUnfold = existing.some((o) => o.refinement_type === "unfold");
+
+  return (
+    <div className="props-panel__refine">
+      <div className="props-panel__states-header">
+        <span className="props-panel__label">Refinement</span>
+        {!blocked && (
+          <div className="props-panel__refine-actions">
+            {!hasInZoom && (
+              <button className="props-panel__add-btn" onClick={() => handleRefine("in-zoom")}>
+                In-zoom
+              </button>
+            )}
+            {canUnfold && !hasUnfold && (
+              <button className="props-panel__add-btn" onClick={() => handleRefine("unfold")}>
+                Unfold
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+      {blocked && (
+        <div className="props-panel__refine-hint">
+          {isExternal ? "External — refine from parent OPD" : "Already refined in ancestor"}
+        </div>
+      )}
+      {existing.map((o) => (
+        <div
+          key={o.id}
+          className="props-panel__refine-row"
+          onClick={() => dispatch({ tag: "selectOpd", opdId: o.id })}
+        >
+          <span className="props-panel__refine-type">{o.refinement_type}</span>
+          <span>{o.name}</span>
+          <span className="props-panel__refine-arrow">→</span>
+        </div>
+      ))}
     </div>
   );
 }
@@ -187,6 +289,9 @@ export function PropertiesPanel({ model, thingId, opdId, dispatch }: Props) {
           })}
         </div>
       )}
+
+      {/* Refinement section */}
+      <RefineSection model={model} thingId={thingId} opdId={opdId} thing={thing} dispatch={dispatch} />
 
       <button
         className="props-panel__delete-btn"

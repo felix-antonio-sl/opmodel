@@ -6,7 +6,7 @@
    into Model mutations or UI state transitions.
    ═══════════════════════════════════════════════════ */
 
-import type { Model, Thing, Link, State, InvariantError } from "@opmodel/core";
+import type { Model, Thing, Link, State, InvariantError, RefinementType } from "@opmodel/core";
 import {
   updateAppearance,
   updateThing,
@@ -20,6 +20,7 @@ import {
   removeThing,
   removeState,
   removeLink,
+  refineThing,
   isOk,
   type Result,
 } from "@opmodel/core";
@@ -47,6 +48,7 @@ export type Command =
   | { tag: "removeState"; stateId: string }
   | { tag: "updateLink"; linkId: string; patch: Partial<Omit<Link, "id">> }
   | { tag: "updateState"; stateId: string; patch: Partial<Omit<State, "id" | "parent">> }
+  | { tag: "refineThing"; thingId: string; opdId: string; refinementType: RefinementType; childOpdId: string; childOpdName: string }
   | { tag: "setMode"; mode: EditorMode }
   | { tag: "setLinkType"; linkType: LinkTypeChoice };
 
@@ -94,6 +96,8 @@ export function interpret(cmd: Command): Effect {
         apply: (m) => {
           const r1 = addThing(m, cmd.thing);
           if (!isOk(r1)) return r1;
+          const targetOpd = r1.value.opds.get(cmd.opdId);
+          const isRefinementOpd = targetOpd?.refines != null;
           return addAppearance(r1.value, {
             thing: cmd.thing.id,
             opd: cmd.opdId,
@@ -101,6 +105,7 @@ export function interpret(cmd: Command): Effect {
             y: cmd.y,
             w: cmd.w,
             h: cmd.h,
+            ...(isRefinementOpd ? { internal: true } : {}),
           });
         },
       };
@@ -151,6 +156,12 @@ export function interpret(cmd: Command): Effect {
       return {
         type: "modelMutation",
         apply: (m) => updateState(m, cmd.stateId, cmd.patch),
+      };
+
+    case "refineThing":
+      return {
+        type: "modelMutation",
+        apply: (m) => refineThing(m, cmd.thingId, cmd.opdId, cmd.refinementType, cmd.childOpdId, cmd.childOpdName),
       };
 
     case "setMode":
