@@ -22,3 +22,10 @@ export {
   type History,
   createHistory, pushHistory, undo, redo,
 } from "./history";
+export {
+  expose, applyOplEdit, render, oplSlug, editsFrom,
+} from "./opl";
+export type {
+  OplSentence, OplThingDeclaration, OplStateEnumeration, OplDuration,
+  OplLinkSentence, OplModifierSentence, OplDocument, OplEdit, OplRenderSettings,
+} from "./opl-types";
