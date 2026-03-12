@@ -8,7 +8,7 @@
    Dispatch interprets Commands via η into Effects.
    ═══════════════════════════════════════════════════ */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import {
   type Model,
   type History,
@@ -20,13 +20,16 @@ import {
   saveModel,
 } from "@opmodel/core";
 import { type Command, interpret } from "../lib/commands";
-import type { EditorMode } from "../lib/commands";
+import type { EditorMode, LinkTypeChoice } from "../lib/commands";
+
+const STORAGE_KEY = "opmodel:current";
 
 export interface UIState {
   currentOpd: string;
   selectedThing: string | null;
   mode: EditorMode;
   linkSource: string | null;
+  linkType: LinkTypeChoice;
 }
 
 export interface ModelStore {
@@ -59,8 +62,23 @@ export function useModelStore(initialModel: Model): ModelStore {
     selectedThing: null,
     mode: "select",
     linkSource: null,
+    linkType: "auto" as LinkTypeChoice,
   });
   const [lastError, setLastError] = useState<string | null>(null);
+
+  // Auto-save to localStorage on model changes (debounced)
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => {
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      try {
+        localStorage.setItem(STORAGE_KEY, saveModel(history.present));
+      } catch {
+        // Storage full or unavailable — silently ignore
+      }
+    }, 300);
+    return () => clearTimeout(saveTimer.current);
+  }, [history.present]);
 
   const dispatch = useCallback((cmd: Command) => {
     const effect = interpret(cmd);

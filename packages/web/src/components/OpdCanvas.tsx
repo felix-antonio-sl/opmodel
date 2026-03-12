@@ -1,6 +1,6 @@
 import { useRef, useState, useCallback, useMemo, useEffect } from "react";
 import type { Model, Thing, State, Link, Appearance, Modifier } from "@opmodel/core";
-import type { Command, EditorMode } from "../lib/commands";
+import type { Command, EditorMode, LinkTypeChoice } from "../lib/commands";
 import { genId } from "../lib/ids";
 import {
   center,
@@ -18,6 +18,7 @@ interface Props {
   opdId: string;
   selectedThing: string | null;
   mode: EditorMode;
+  linkType: LinkTypeChoice;
   dispatch: (cmd: Command) => void;
 }
 
@@ -358,7 +359,7 @@ function LinkLine({
 
 /* ─── Main Canvas Component ─── */
 
-export function OpdCanvas({ model, opdId, selectedThing, mode, dispatch }: Props) {
+export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatch }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [pan, setPan] = useState({ x: 40, y: 20 });
   const [zoom, setZoom] = useState(1);
@@ -642,17 +643,22 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, dispatch }: Props
                       setLinkSource(thingId);
                       dispatch({ tag: "selectThing", thingId });
                     } else if (linkSource !== thingId) {
-                      const srcThing = model.things.get(linkSource);
-                      const tgtThing = model.things.get(thingId);
-                      let linkType: string = "agent";
-                      if (srcThing?.kind === "process") linkType = "effect";
-                      if (srcThing?.kind === "object" && tgtThing?.kind === "object") linkType = "aggregation";
+                      let resolvedType: string;
+                      if (linkType === "auto") {
+                        const srcThing = model.things.get(linkSource);
+                        const tgtThing = model.things.get(thingId);
+                        resolvedType = "agent";
+                        if (srcThing?.kind === "process") resolvedType = "effect";
+                        if (srcThing?.kind === "object" && tgtThing?.kind === "object") resolvedType = "aggregation";
+                      } else {
+                        resolvedType = linkType;
+                      }
 
                       dispatch({
                         tag: "addLink",
                         link: {
                           id: genId("lnk"),
-                          type: linkType as any,
+                          type: resolvedType as any,
                           source: linkSource,
                           target: thingId,
                         },

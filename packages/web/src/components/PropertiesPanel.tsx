@@ -20,6 +20,56 @@ function linksOf(model: Model, thingId: string): Link[] {
     .filter((l) => l.source === thingId || l.target === thingId);
 }
 
+function StateRow({ state, dispatch }: { state: State; dispatch: (cmd: Command) => void }) {
+  return (
+    <div className="props-panel__state-row">
+      <input
+        className="props-panel__state-input"
+        value={state.name}
+        onChange={(e) =>
+          dispatch({ tag: "updateState", stateId: state.id, patch: { name: e.target.value } })
+        }
+      />
+      <label className="props-panel__state-flag" title="Initial">
+        <input
+          type="checkbox"
+          checked={state.initial}
+          onChange={(e) =>
+            dispatch({ tag: "updateState", stateId: state.id, patch: { initial: e.target.checked } })
+          }
+        />
+        I
+      </label>
+      <label className="props-panel__state-flag" title="Final">
+        <input
+          type="checkbox"
+          checked={state.final}
+          onChange={(e) =>
+            dispatch({ tag: "updateState", stateId: state.id, patch: { final: e.target.checked } })
+          }
+        />
+        F
+      </label>
+      <label className="props-panel__state-flag" title="Default">
+        <input
+          type="checkbox"
+          checked={state.default}
+          onChange={(e) =>
+            dispatch({ tag: "updateState", stateId: state.id, patch: { default: e.target.checked } })
+          }
+        />
+        D
+      </label>
+      <button
+        className="props-panel__remove-btn"
+        onClick={() => dispatch({ tag: "removeState", stateId: state.id })}
+      >
+        ×
+      </button>
+    </div>
+  );
+}
+
 export function PropertiesPanel({ model, thingId, opdId, dispatch }: Props) {
   const thing = model.things.get(thingId);
   if (!thing) return null;
@@ -109,20 +159,7 @@ export function PropertiesPanel({ model, thingId, opdId, dispatch }: Props) {
             </button>
           </div>
           {states.map((s) => (
-            <div key={s.id} className="props-panel__state-row">
-              <span className="props-panel__state-name">{s.name}</span>
-              <span className="props-panel__state-flags">
-                {s.initial && "I"}
-                {s.default && "D"}
-                {s.current && "●"}
-              </span>
-              <button
-                className="props-panel__remove-btn"
-                onClick={() => dispatch({ tag: "removeState", stateId: s.id })}
-              >
-                ×
-              </button>
-            </div>
+            <StateRow key={s.id} state={s} dispatch={dispatch} />
           ))}
         </div>
       )}

@@ -6,7 +6,7 @@
    into Model mutations or UI state transitions.
    ═══════════════════════════════════════════════════ */
 
-import type { Model, Thing, Link, InvariantError } from "@opmodel/core";
+import type { Model, Thing, Link, State, InvariantError } from "@opmodel/core";
 import {
   updateAppearance,
   updateThing,
@@ -30,6 +30,8 @@ export type EditorMode = "select" | "addObject" | "addProcess" | "addLink";
 
 /* ─── Command Sum Type ─── */
 
+export type LinkTypeChoice = "auto" | Link["type"];
+
 export type Command =
   | { tag: "moveThing"; thingId: string; opdId: string; x: number; y: number }
   | { tag: "resizeThing"; thingId: string; opdId: string; w: number; h: number }
@@ -44,7 +46,9 @@ export type Command =
   | { tag: "addState"; state: { id: string; parent: string; name: string; initial: boolean; final: boolean; default: boolean } }
   | { tag: "removeState"; stateId: string }
   | { tag: "updateLink"; linkId: string; patch: Partial<Omit<Link, "id">> }
-  | { tag: "setMode"; mode: EditorMode };
+  | { tag: "updateState"; stateId: string; patch: Partial<Omit<State, "id" | "parent">> }
+  | { tag: "setMode"; mode: EditorMode }
+  | { tag: "setLinkType"; linkType: LinkTypeChoice };
 
 /* ─── Effect Coproduct ─── */
 
@@ -53,7 +57,8 @@ export type Effect =
   | { type: "uiTransition"; field: "selectedThing"; value: string | null }
   | { type: "uiTransition"; field: "currentOpd"; value: string }
   | { type: "uiTransition"; field: "mode"; value: EditorMode }
-  | { type: "uiTransition"; field: "linkSource"; value: string | null };
+  | { type: "uiTransition"; field: "linkSource"; value: string | null }
+  | { type: "uiTransition"; field: "linkType"; value: LinkTypeChoice };
 
 /* ─── Interpret: Natural Transformation η ─── */
 
@@ -142,7 +147,16 @@ export function interpret(cmd: Command): Effect {
         apply: (m) => updateLink(m, cmd.linkId, cmd.patch),
       };
 
+    case "updateState":
+      return {
+        type: "modelMutation",
+        apply: (m) => updateState(m, cmd.stateId, cmd.patch),
+      };
+
     case "setMode":
       return { type: "uiTransition", field: "mode", value: cmd.mode };
+
+    case "setLinkType":
+      return { type: "uiTransition", field: "linkType", value: cmd.linkType };
   }
 }

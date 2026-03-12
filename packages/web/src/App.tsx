@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { loadModel, isOk, validate, type Model } from "@opmodel/core";
+import { loadModel, createModel, isOk, validate, type Model } from "@opmodel/core";
 import { useModelStore } from "./hooks/useModelStore";
 import { OpdTree } from "./components/OpdTree";
 import { OpdCanvas } from "./components/OpdCanvas";
@@ -7,7 +7,9 @@ import { OplPanel } from "./components/OplPanel";
 import { PropertiesPanel } from "./components/PropertiesPanel";
 import { Toolbar } from "./components/Toolbar";
 
-function Editor({ initialModel }: { initialModel: Model }) {
+const STORAGE_KEY = "opmodel:current";
+
+function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel: Model; onNew: () => void; onLoadExample: () => void; onImport: (model: Model) => void }) {
   const store = useModelStore(initialModel);
   const { model, ui, dispatch, doUndo, doRedo, canUndo, canRedo, lastError, save } = store;
 
@@ -85,7 +87,34 @@ function Editor({ initialModel }: { initialModel: Model }) {
         </div>
         <div className="header__sep" />
         <div className="header__actions">
-          <button className="header__action" onClick={save} title="Save (Ctrl+S)">
+          <button className="header__action" onClick={onNew} title="New Model">
+            +
+          </button>
+          <button className="header__action" onClick={onLoadExample} title="Load Example">
+            ☰
+          </button>
+          <label className="header__action" title="Import .opmodel" style={{ cursor: "pointer" }}>
+            ⇧
+            <input
+              type="file"
+              accept=".opmodel,.json"
+              style={{ display: "none" }}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                file.text().then((json) => {
+                  const result = loadModel(json);
+                  if (isOk(result)) {
+                    onImport(result.value);
+                  } else {
+                    alert(`Import failed: ${result.error.message}`);
+                  }
+                });
+                e.target.value = "";
+              }}
+            />
+          </label>
+          <button className="header__action" onClick={save} title="Export .opmodel (Ctrl+S)">
             ⤓
           </button>
         </div>
@@ -94,7 +123,7 @@ function Editor({ initialModel }: { initialModel: Model }) {
       </header>
 
       {/* Toolbar */}
-      <Toolbar mode={ui.mode} dispatch={dispatch} />
+      <Toolbar mode={ui.mode} linkType={ui.linkType} dispatch={dispatch} />
 
       {/* Panels */}
       <OpdTree
@@ -109,6 +138,7 @@ function Editor({ initialModel }: { initialModel: Model }) {
         opdId={ui.currentOpd}
         selectedThing={ui.selectedThing}
         mode={ui.mode}
+        linkType={ui.linkType}
         dispatch={dispatch}
       />
       <aside className="right-panel">
@@ -161,25 +191,67 @@ function Editor({ initialModel }: { initialModel: Model }) {
   );
 }
 
+function loadFromStorage(): Model | null {
+  try {
+    const json = localStorage.getItem(STORAGE_KEY);
+    if (!json) return null;
+    const result = loadModel(json);
+    return isOk(result) ? result.value : null;
+  } catch {
+    return null;
+  }
+}
+
+function loadExample(): Promise<Model> {
+  return fetch("/coffee-making.opmodel")
+    .then((r) => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.text();
+    })
+    .then((json) => {
+      const result = loadModel(json);
+      if (isOk(result)) return result.value;
+      throw new Error(`Load error: ${result.error.message}`);
+    });
+}
+
 export function App() {
   const [initialModel, setInitialModel] = useState<Model | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Increment key to force Editor remount when switching models
+  const [editorKey, setEditorKey] = useState(0);
 
   useEffect(() => {
-    fetch("/coffee-making.opmodel")
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.text();
-      })
-      .then((json) => {
-        const result = loadModel(json);
-        if (isOk(result)) {
-          setInitialModel(result.value);
-        } else {
-          setError(`Load error: ${result.error.message}`);
-        }
+    // Try localStorage first, fallback to example
+    const stored = loadFromStorage();
+    if (stored) {
+      setInitialModel(stored);
+      return;
+    }
+    loadExample()
+      .then(setInitialModel)
+      .catch((e) => setError(e.message));
+  }, []);
+
+  const handleNew = useCallback(() => {
+    const m = createModel("New Model");
+    localStorage.setItem(STORAGE_KEY, "");
+    setInitialModel(m);
+    setEditorKey((k) => k + 1);
+  }, []);
+
+  const handleLoadExample = useCallback(() => {
+    loadExample()
+      .then((m) => {
+        setInitialModel(m);
+        setEditorKey((k) => k + 1);
       })
       .catch((e) => setError(e.message));
+  }, []);
+
+  const handleImport = useCallback((m: Model) => {
+    setInitialModel(m);
+    setEditorKey((k) => k + 1);
   }, []);
 
   if (error) {
@@ -198,5 +270,5 @@ export function App() {
     );
   }
 
-  return <Editor initialModel={initialModel} />;
+  return <Editor key={editorKey} initialModel={initialModel} onNew={handleNew} onLoadExample={handleLoadExample} onImport={handleImport} />;
 }
