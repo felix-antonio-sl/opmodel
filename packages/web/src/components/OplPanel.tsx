@@ -1,5 +1,5 @@
 import type { Model } from "@opmodel/core";
-import { generateOpl, type OplBlock } from "../lib/opl";
+import { expose, render, type OplSentence, type OplDocument } from "@opmodel/core";
 
 interface Props {
   model: Model;
@@ -7,20 +7,60 @@ interface Props {
   selectedThing: string | null;
 }
 
-function blockClass(block: OplBlock, selectedThing: string | null): string {
-  const base = `opl-sentence opl-sentence--${block.category}`;
-  if (selectedThing && block.entityId === selectedThing) {
+function getEntityIds(sentence: OplSentence): string[] {
+  switch (sentence.kind) {
+    case "thing-declaration":
+      return [sentence.thingId];
+    case "state-enumeration":
+      return [sentence.thingId];
+    case "duration":
+      return [sentence.thingId];
+    case "link":
+      return [sentence.linkId, sentence.sourceId, sentence.targetId];
+    case "modifier":
+      return [sentence.modifierId, sentence.linkId];
+  }
+}
+
+function sentenceCategory(sentence: OplSentence): "thing" | "link" | "modifier" {
+  switch (sentence.kind) {
+    case "thing-declaration":
+    case "state-enumeration":
+    case "duration":
+      return "thing";
+    case "link":
+      return "link";
+    case "modifier":
+      return "modifier";
+  }
+}
+
+function renderSentence(sentence: OplSentence, doc: OplDocument): string {
+  return render({ ...doc, sentences: [sentence] });
+}
+
+function sentenceClass(sentence: OplSentence, selectedThing: string | null): string {
+  const ids = getEntityIds(sentence);
+  const category = sentenceCategory(sentence);
+  const base = `opl-sentence opl-sentence--${category}`;
+  if (selectedThing && ids.includes(selectedThing)) {
     return `${base} opl-sentence--highlighted`;
   }
   return base;
 }
 
 export function OplPanel({ model, opdId, selectedThing }: Props) {
-  const blocks = generateOpl(model, opdId);
+  const doc = expose(model, opdId);
 
-  // Group: things+states first, then divider, then links+modifiers
-  const thingBlocks = blocks.filter((b) => b.category === "thing" || b.category === "state");
-  const linkBlocks = blocks.filter((b) => b.category === "link" || b.category === "modifier");
+  const thingSentences = doc.sentences.filter(
+    (s): s is OplSentence =>
+      s.kind === "thing-declaration" ||
+      s.kind === "state-enumeration" ||
+      s.kind === "duration"
+  );
+  const linkSentences = doc.sentences.filter(
+    (s): s is OplSentence => s.kind === "link" || s.kind === "modifier"
+  );
 
   const opd = model.opds.get(opdId);
 
@@ -30,15 +70,15 @@ export function OplPanel({ model, opdId, selectedThing }: Props) {
         OPL — {opd?.name ?? opdId}
       </div>
       <div className="opl-panel__content">
-        {thingBlocks.map((block, i) => (
-          <div key={`t-${i}`} className={blockClass(block, selectedThing)}>
-            {block.text}
+        {thingSentences.map((sentence, i) => (
+          <div key={`t-${i}`} className={sentenceClass(sentence, selectedThing)}>
+            {renderSentence(sentence, doc)}
           </div>
         ))}
-        {thingBlocks.length > 0 && linkBlocks.length > 0 && <div className="opl-divider" />}
-        {linkBlocks.map((block, i) => (
-          <div key={`l-${i}`} className={blockClass(block, selectedThing)}>
-            {block.text}
+        {thingSentences.length > 0 && linkSentences.length > 0 && <div className="opl-divider" />}
+        {linkSentences.map((sentence, i) => (
+          <div key={`l-${i}`} className={sentenceClass(sentence, selectedThing)}>
+            {renderSentence(sentence, doc)}
           </div>
         ))}
       </div>
