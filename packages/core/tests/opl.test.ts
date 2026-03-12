@@ -5,8 +5,9 @@ import {
   addThing, addState, addLink, addAppearance, addModifier,
   updateSettings,
 } from "../src/api";
-import { isOk } from "../src/result";
-import { expose, render } from "../src/opl";
+import { isOk, isErr } from "../src/result";
+import { expose, render, applyOplEdit, oplSlug, editsFrom } from "../src/opl";
+import type { OplEdit, OplDocument } from "../src/opl-types";
 import type { Thing, State, Appearance } from "../src/types";
 
 // === Test fixtures ===
@@ -237,5 +238,271 @@ describe("render", () => {
     const text = render(doc);
     expect(text).toContain("Water is an object, systemic.");
     expect(text).toContain("Cup is an object, environmental.");
+  });
+});
+
+// === oplSlug tests ===
+
+describe("oplSlug", () => {
+  it("converts names to kebab-case", () => {
+    expect(oplSlug("Hot Water")).toBe("hot-water");
+    expect(oplSlug("Café Latte")).toBe("caf-latte");
+    expect(oplSlug("  spaces  ")).toBe("spaces");
+  });
+});
+
+// === applyOplEdit tests ===
+
+describe("applyOplEdit", () => {
+  it("add-thing creates thing + appearance", () => {
+    const m = createModel("Test");
+    const edit: OplEdit = {
+      kind: "add-thing",
+      opdId: "opd-sd",
+      thing: { kind: "object", name: "Milk", essence: "physical", affiliation: "systemic" },
+      position: { x: 50, y: 50 },
+    };
+    const r = applyOplEdit(m, edit);
+    expect(isOk(r)).toBe(true);
+    if (!isOk(r)) return;
+    expect(r.value.things.size).toBe(1);
+    const thing = [...r.value.things.values()][0]!;
+    expect(thing.name).toBe("Milk");
+    expect(thing.kind).toBe("object");
+    expect(thing.id).toMatch(/^obj-/);
+    // Appearance created
+    expect(r.value.appearances.size).toBe(1);
+    const app = [...r.value.appearances.values()][0]!;
+    expect(app.opd).toBe("opd-sd");
+    expect(app.w).toBe(120);
+    expect(app.h).toBe(60);
+  });
+
+  it("add-states creates states with auto-generated IDs", () => {
+    let m = createModel("Test");
+    let r = addThing(m, waterObj); if (!isOk(r)) throw r.error; m = r.value;
+    const edit: OplEdit = {
+      kind: "add-states",
+      thingId: "obj-water",
+      states: [
+        { name: "cold", initial: true, final: false, default: true },
+        { name: "hot", initial: false, final: false, default: false },
+      ],
+    };
+    const r2 = applyOplEdit(m, edit);
+    expect(isOk(r2)).toBe(true);
+    if (!isOk(r2)) return;
+    expect(r2.value.states.size).toBe(2);
+    const stateIds = [...r2.value.states.keys()];
+    expect(stateIds.every(id => id.startsWith("state-"))).toBe(true);
+  });
+
+  it("add-link creates link with auto-generated ID", () => {
+    const m = buildModel();
+    const edit: OplEdit = {
+      kind: "add-link",
+      link: { type: "agent", source: "obj-water", target: "proc-boiling" },
+    };
+    const r = applyOplEdit(m, edit);
+    expect(isOk(r)).toBe(true);
+    if (!isOk(r)) return;
+    expect(r.value.links.size).toBe(4); // 3 existing + 1 new
+  });
+
+  it("remove-thing cascades correctly", () => {
+    const m = buildModel();
+    const edit: OplEdit = { kind: "remove-thing", thingId: "obj-water" };
+    const r = applyOplEdit(m, edit);
+    expect(isOk(r)).toBe(true);
+    if (!isOk(r)) return;
+    expect(r.value.things.has("obj-water")).toBe(false);
+    expect(r.value.states.size).toBe(0);
+    // Links referencing Water are removed
+    expect(r.value.links.size).toBe(0);
+  });
+
+  it("handles ID collision with numeric suffix", () => {
+    let m = createModel("Test");
+    const edit1: OplEdit = {
+      kind: "add-thing", opdId: "opd-sd",
+      thing: { kind: "object", name: "Water", essence: "physical", affiliation: "systemic" },
+      position: { x: 0, y: 0 },
+    };
+    let r = applyOplEdit(m, edit1);
+    if (!isOk(r)) throw r.error; m = r.value;
+    // Add another "Water" — should get obj-water-2
+    r = applyOplEdit(m, edit1);
+    expect(isOk(r)).toBe(true);
+    if (!isOk(r)) return;
+    expect(r.value.things.size).toBe(2);
+    expect(r.value.things.has("obj-water")).toBe(true);
+    expect(r.value.things.has("obj-water-2")).toBe(true);
+  });
+
+  it("add-modifier creates modifier with auto-generated ID", () => {
+    let m = buildModel();
+    const edit: OplEdit = {
+      kind: "add-modifier",
+      modifier: { over: "lnk-boiling-consumption-water", type: "event" },
+    };
+    const r = applyOplEdit(m, edit);
+    expect(isOk(r)).toBe(true);
+    if (!isOk(r)) return;
+    expect(r.value.modifiers.size).toBe(1);
+    const mod = [...r.value.modifiers.values()][0]!;
+    expect(mod.type).toBe("event");
+    expect(mod.over).toBe("lnk-boiling-consumption-water");
+  });
+
+  it("remove-state removes a state", () => {
+    const m = buildModel();
+    const edit: OplEdit = { kind: "remove-state", stateId: "state-liquid" };
+    const r = applyOplEdit(m, edit);
+    expect(isOk(r)).toBe(true);
+    if (!isOk(r)) return;
+    expect(r.value.states.has("state-liquid")).toBe(false);
+    expect(r.value.states.size).toBe(1); // state-gas remains
+  });
+
+  it("fails when adding thing to non-existent OPD", () => {
+    const m = createModel("Test");
+    const edit: OplEdit = {
+      kind: "add-thing", opdId: "opd-nonexistent",
+      thing: { kind: "object", name: "X", essence: "physical", affiliation: "systemic" },
+      position: { x: 0, y: 0 },
+    };
+    const r = applyOplEdit(m, edit);
+    expect(isErr(r)).toBe(true);
+  });
+
+  it("fails when adding link with non-existent source", () => {
+    const m = createModel("Test");
+    const edit: OplEdit = {
+      kind: "add-link",
+      link: { type: "agent", source: "obj-ghost", target: "proc-x" },
+    };
+    const r = applyOplEdit(m, edit);
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-05");
+  });
+
+  it("fails when removing non-existent thing", () => {
+    const m = createModel("Test");
+    const edit: OplEdit = { kind: "remove-thing", thingId: "obj-ghost" };
+    const r = applyOplEdit(m, edit);
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("NOT_FOUND");
+  });
+});
+
+// === Lens Laws ===
+
+describe("PutGet", () => {
+  it("add-thing → expose contains the new declaration", () => {
+    const m = createModel("Test");
+    const edit: OplEdit = {
+      kind: "add-thing", opdId: "opd-sd",
+      thing: { kind: "object", name: "Sugar", essence: "physical", affiliation: "systemic" },
+      position: { x: 0, y: 0 },
+    };
+    const r = applyOplEdit(m, edit);
+    if (!isOk(r)) throw r.error;
+    const doc = expose(r.value, "opd-sd");
+    const decl = doc.sentences.find(s => s.kind === "thing-declaration" && s.name === "Sugar");
+    expect(decl).toBeDefined();
+  });
+
+  it("add-states → expose contains state enumeration", () => {
+    let m = createModel("Test");
+    let r = addThing(m, waterObj); if (!isOk(r)) throw r.error; m = r.value;
+    r = addAppearance(m, waterApp); if (!isOk(r)) throw r.error; m = r.value;
+    const edit: OplEdit = {
+      kind: "add-states", thingId: "obj-water",
+      states: [{ name: "frozen", initial: false, final: false, default: false }],
+    };
+    const r2 = applyOplEdit(m, edit);
+    if (!isOk(r2)) throw r2.error;
+    const doc = expose(r2.value, "opd-sd");
+    const stateEnum = doc.sentences.find(s => s.kind === "state-enumeration");
+    expect(stateEnum).toBeDefined();
+    expect((stateEnum as any).stateNames).toContain("frozen");
+  });
+
+  it("add-link → expose contains link sentence", () => {
+    const m = buildModel();
+    const edit: OplEdit = {
+      kind: "add-link",
+      link: { type: "agent", source: "obj-water", target: "proc-boiling" },
+    };
+    const r = applyOplEdit(m, edit);
+    if (!isOk(r)) throw r.error;
+    const doc = expose(r.value, "opd-sd");
+    const agentLink = doc.sentences.find(
+      s => s.kind === "link" && s.linkType === "agent"
+    );
+    expect(agentLink).toBeDefined();
+  });
+
+  it("remove-thing → expose no longer contains it", () => {
+    const m = buildModel();
+    const edit: OplEdit = { kind: "remove-thing", thingId: "obj-water" };
+    const r = applyOplEdit(m, edit);
+    if (!isOk(r)) throw r.error;
+    const doc = expose(r.value, "opd-sd");
+    const waterDecl = doc.sentences.find(
+      s => s.kind === "thing-declaration" && s.name === "Water"
+    );
+    expect(waterDecl).toBeUndefined();
+  });
+
+  it("remove-link → expose no longer contains it", () => {
+    const m = buildModel();
+    const edit: OplEdit = { kind: "remove-link", linkId: "lnk-boiling-consumption-water" };
+    const r = applyOplEdit(m, edit);
+    if (!isOk(r)) throw r.error;
+    const doc = expose(r.value, "opd-sd");
+    const consumptionLink = doc.sentences.find(
+      s => s.kind === "link" && s.linkId === "lnk-boiling-consumption-water"
+    );
+    expect(consumptionLink).toBeUndefined();
+  });
+});
+
+describe("GetPut", () => {
+  function sentencesWithoutIds(doc: OplDocument) {
+    return doc.sentences.map(s => {
+      switch (s.kind) {
+        case "thing-declaration": return { kind: s.kind, name: s.name, thingKind: s.thingKind, essence: s.essence, affiliation: s.affiliation };
+        case "state-enumeration": return { kind: s.kind, thingName: s.thingName, stateNames: s.stateNames };
+        case "duration": return { kind: s.kind, thingName: s.thingName, nominal: s.nominal, unit: s.unit };
+        case "link": return { kind: s.kind, linkType: s.linkType, sourceName: s.sourceName, targetName: s.targetName, sourceStateName: s.sourceStateName, targetStateName: s.targetStateName, tag: s.tag };
+        case "modifier": return { kind: s.kind, linkType: s.linkType, sourceName: s.sourceName, targetName: s.targetName, modifierType: s.modifierType, negated: s.negated };
+      }
+    });
+  }
+
+  it("round-trip on model with things and links", () => {
+    const m = buildModel();
+    const doc1 = expose(m, "opd-sd");
+
+    // Reconstruct from empty model
+    let fresh = createModel("Test-RT");
+    const edits = editsFrom(doc1);
+    for (const edit of edits) {
+      const r = applyOplEdit(fresh, edit);
+      if (!isOk(r)) throw new Error(`Edit failed: ${JSON.stringify(r.error)}`);
+      fresh = r.value;
+    }
+
+    const doc2 = expose(fresh, "opd-sd");
+    expect(sentencesWithoutIds(doc2)).toEqual(sentencesWithoutIds(doc1));
+  });
+
+  it("round-trip on empty model", () => {
+    const m = createModel("Test");
+    const doc1 = expose(m, "opd-sd");
+    const edits = editsFrom(doc1);
+    expect(edits).toHaveLength(0);
+    expect(doc1.sentences).toHaveLength(0);
   });
 });

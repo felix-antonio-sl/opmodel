@@ -1,12 +1,17 @@
 // packages/core/src/opl.ts
-import type { Model, ComputationalObject } from "./types";
-import type { InvariantError } from "./result";
-import type { Result } from "./result";
+import type { Model, ComputationalObject, Thing, State, Link, Modifier, Appearance } from "./types";
+import type { InvariantError, Result } from "./result";
 import type {
   OplDocument, OplEdit, OplSentence,
   OplThingDeclaration, OplLinkSentence, OplRenderSettings,
 } from "./opl-types";
-import { ok } from "./result";
+import { ok, err, isOk } from "./result";
+import { collectAllIds } from "./helpers";
+import {
+  addThing, removeThing, addState, removeState,
+  addLink, removeLink, addModifier, removeModifier,
+  addAppearance,
+} from "./api";
 
 export function expose(model: Model, opdId: string): OplDocument {
   const opd = model.opds.get(opdId);
@@ -204,16 +209,175 @@ export function render(doc: OplDocument): string {
     .join("\n");
 }
 
-// === stubs for Task 3 ===
+// === OPL Slug & ID generation ===
 
-export function applyOplEdit(_model: Model, _edit: OplEdit): Result<Model, InvariantError> {
-  throw new Error("Not implemented");
+export function oplSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
 }
 
-export function oplSlug(_name: string): string {
-  throw new Error("Not implemented");
+function uniqueId(base: string, model: Model): string {
+  const allIds = collectAllIds(model);
+  if (!allIds.has(base)) return base;
+  let i = 2;
+  while (allIds.has(`${base}-${i}`)) i++;
+  return `${base}-${i}`;
 }
 
-export function editsFrom(_doc: OplDocument): OplEdit[] {
-  throw new Error("Not implemented");
+// === applyOplEdit ===
+
+export function applyOplEdit(model: Model, edit: OplEdit): Result<Model, InvariantError> {
+  switch (edit.kind) {
+    case "add-thing": {
+      if (!model.opds.has(edit.opdId)) {
+        return err({ code: "NOT_FOUND", message: `OPD not found: ${edit.opdId}`, entity: edit.opdId });
+      }
+      const prefix = edit.thing.kind === "object" ? "obj" : "proc";
+      const id = uniqueId(`${prefix}-${oplSlug(edit.thing.name)}`, model);
+      const thing: Thing = { id, ...edit.thing };
+      const r1 = addThing(model, thing);
+      if (!isOk(r1)) return r1;
+      const appearance: Appearance = {
+        thing: id, opd: edit.opdId,
+        x: edit.position.x, y: edit.position.y,
+        w: 120, h: 60,
+      };
+      return addAppearance(r1.value, appearance);
+    }
+    case "remove-thing":
+      return removeThing(model, edit.thingId);
+    case "add-states": {
+      let current = model;
+      for (const stateData of edit.states) {
+        const id = uniqueId(`state-${oplSlug(stateData.name)}`, current);
+        const state: State = { id, parent: edit.thingId, ...stateData };
+        const r = addState(current, state);
+        if (!isOk(r)) return r;
+        current = r.value;
+      }
+      return ok(current);
+    }
+    case "remove-state":
+      return removeState(model, edit.stateId);
+    case "add-link": {
+      const sourceName = model.things.get(edit.link.source)?.name ?? edit.link.source;
+      const targetName = model.things.get(edit.link.target)?.name ?? edit.link.target;
+      const id = uniqueId(`lnk-${oplSlug(sourceName)}-${edit.link.type}-${oplSlug(targetName)}`, model);
+      const link: Link = { id, ...edit.link };
+      return addLink(model, link);
+    }
+    case "remove-link":
+      return removeLink(model, edit.linkId);
+    case "add-modifier": {
+      const id = uniqueId(`mod-${oplSlug(edit.modifier.over)}-${edit.modifier.type}`, model);
+      const mod: Modifier = { id, ...edit.modifier };
+      return addModifier(model, mod);
+    }
+    case "remove-modifier":
+      return removeModifier(model, edit.modifierId);
+    default: {
+      const _exhaustive: never = edit;
+      return err({ code: "UNKNOWN_EDIT", message: `Unknown edit kind`, entity: "" });
+    }
+  }
+}
+
+// === editsFrom ===
+
+export function editsFrom(doc: OplDocument): OplEdit[] {
+  // Multi-pass: collect things, enrich with duration, build state lookup, then emit edits
+  const thingEdits = new Map<string, OplEdit & { kind: "add-thing" }>();
+  const stateEdits: OplEdit[] = [];
+  const linkEdits: OplEdit[] = [];
+  const modifierEdits: OplEdit[] = [];
+
+  // Build state name -> stateId lookup from state-enumeration sentences
+  // Map key: "thingId::stateName" -> stateId
+  const stateIdByName = new Map<string, string>();
+
+  for (const s of doc.sentences) {
+    if (s.kind === "state-enumeration") {
+      for (let i = 0; i < s.stateNames.length; i++) {
+        stateIdByName.set(`${s.thingId}::${s.stateNames[i]}`, s.stateIds[i]!);
+      }
+    }
+  }
+
+  for (const s of doc.sentences) {
+    switch (s.kind) {
+      case "thing-declaration": {
+        const edit = {
+          kind: "add-thing" as const,
+          opdId: doc.opdId,
+          thing: {
+            kind: s.thingKind,
+            name: s.name,
+            essence: s.essence,
+            affiliation: s.affiliation,
+          } as Omit<Thing, "id">,
+          position: { x: 0, y: 0 },
+        };
+        thingEdits.set(s.thingId, edit);
+        break;
+      }
+      case "duration": {
+        // Enrich the corresponding add-thing edit with duration
+        const thingEdit = thingEdits.get(s.thingId);
+        if (thingEdit) {
+          thingEdit.thing = { ...thingEdit.thing, duration: { nominal: s.nominal, unit: s.unit } };
+        }
+        break;
+      }
+      case "state-enumeration":
+        stateEdits.push({
+          kind: "add-states",
+          thingId: s.thingId,
+          states: s.stateNames.map(name => ({
+            name,
+            initial: false,
+            final: false,
+            default: false,
+          })),
+        });
+        break;
+      case "link": {
+        const linkData: Omit<Link, "id"> = {
+          type: s.linkType,
+          source: s.sourceId,
+          target: s.targetId,
+        };
+        if (s.sourceStateName) {
+          // State may belong to source or target thing (e.g. effect links reference target's states)
+          const stateId = stateIdByName.get(`${s.sourceId}::${s.sourceStateName}`)
+            ?? stateIdByName.get(`${s.targetId}::${s.sourceStateName}`);
+          if (stateId) linkData.source_state = stateId;
+        }
+        if (s.targetStateName) {
+          const stateId = stateIdByName.get(`${s.targetId}::${s.targetStateName}`)
+            ?? stateIdByName.get(`${s.sourceId}::${s.targetStateName}`);
+          if (stateId) linkData.target_state = stateId;
+        }
+        if (s.tag) linkData.tag = s.tag;
+        linkEdits.push({ kind: "add-link", link: linkData });
+        break;
+      }
+      case "modifier":
+        modifierEdits.push({
+          kind: "add-modifier",
+          modifier: {
+            over: s.linkId,
+            type: s.modifierType,
+            negated: s.negated,
+          },
+        });
+        break;
+    }
+  }
+
+  // Things first, then states, then links, then modifiers (order matters for ID references)
+  return [...thingEdits.values(), ...stateEdits, ...linkEdits, ...modifierEdits];
 }
