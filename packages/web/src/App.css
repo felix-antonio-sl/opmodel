@@ -941,6 +941,37 @@ body,
   flex-shrink: 0;
 }
 
+.opl-tabs {
+  display: flex;
+  gap: 0;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.opl-tab {
+  padding: 6px 12px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.opl-tab:hover {
+  color: var(--text-secondary);
+}
+
+.opl-tab--active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
 .opl-panel__content {
   padding: 0 16px 16px;
   flex: 1;

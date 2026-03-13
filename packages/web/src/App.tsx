@@ -150,7 +150,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
             dispatch={dispatch}
           />
         )}
-        <OplPanel model={model} opdId={ui.currentOpd} selectedThing={ui.selectedThing} />
+        <OplPanel model={model} opdId={ui.currentOpd} selectedThing={ui.selectedThing} dispatch={dispatch} />
       </aside>
 
       {/* Status Bar */}
