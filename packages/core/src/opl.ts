@@ -476,6 +476,7 @@ export function editsFrom(doc: OplDocument): OplEdit[] {
             over: s.linkId,
             type: s.modifierType,
             negated: s.negated,
+            ...(s.conditionMode ? { condition_mode: s.conditionMode } : {}),
           },
         });
         break;
