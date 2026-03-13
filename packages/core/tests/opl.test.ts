@@ -476,7 +476,7 @@ describe("GetPut", () => {
         case "state-enumeration": return { kind: s.kind, thingName: s.thingName, stateNames: s.stateNames };
         case "duration": return { kind: s.kind, thingName: s.thingName, nominal: s.nominal, unit: s.unit };
         case "link": return { kind: s.kind, linkType: s.linkType, sourceName: s.sourceName, targetName: s.targetName, sourceStateName: s.sourceStateName, targetStateName: s.targetStateName, tag: s.tag };
-        case "modifier": return { kind: s.kind, linkType: s.linkType, sourceName: s.sourceName, targetName: s.targetName, modifierType: s.modifierType, negated: s.negated };
+        case "modifier": return { kind: s.kind, linkType: s.linkType, sourceName: s.sourceName, targetName: s.targetName, modifierType: s.modifierType, negated: s.negated, conditionMode: s.conditionMode };
       }
     });
   }
@@ -504,5 +504,88 @@ describe("GetPut", () => {
     const edits = editsFrom(doc1);
     expect(edits).toHaveLength(0);
     expect(doc1.sentences).toHaveLength(0);
+  });
+});
+
+// === render — modifier sentences (C2) ===
+
+describe("render — modifier sentences (C2)", () => {
+  function buildModelWithModifier(modType: "event" | "condition", condMode?: "skip" | "wait", negated = false) {
+    let m = createModel("Test");
+    let r = addThing(m, waterObj); if (!isOk(r)) throw r.error; m = r.value;
+    r = addThing(m, boilingProc); if (!isOk(r)) throw r.error; m = r.value;
+    r = addAppearance(m, waterApp); if (!isOk(r)) throw r.error; m = r.value;
+    r = addAppearance(m, boilingApp); if (!isOk(r)) throw r.error; m = r.value;
+    r = addState(m, { id: "state-liquid", parent: "obj-water", name: "liquid", initial: true, final: false, default: true });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addState(m, { id: "state-gas", parent: "obj-water", name: "gas", initial: false, final: false, default: false });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addLink(m, { id: "lnk-agent", type: "agent", source: "obj-water", target: "proc-boiling", source_state: "state-liquid" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    const mod: any = { id: "mod-1", over: "lnk-agent", type: modType, negated };
+    if (condMode) mod.condition_mode = condMode;
+    r = addModifier(m, mod); if (!isOk(r)) throw r.error; m = r.value;
+    return m;
+  }
+
+  it("renders condition(wait) as 'Process requires Object'", () => {
+    const m = buildModelWithModifier("condition", "wait");
+    const doc = expose(m, "opd-sd");
+    const text = render(doc);
+    expect(text).toContain("Boiling requires Water");
+  });
+
+  it("renders condition(skip) as 'Process occurs if Object exists, otherwise Process is skipped'", () => {
+    const m = buildModelWithModifier("condition", "skip");
+    const doc = expose(m, "opd-sd");
+    const text = render(doc);
+    expect(text).toContain("Boiling occurs if Water exists, otherwise Boiling is skipped");
+  });
+
+  it("renders condition(wait)+negated as 'Process requires Object not to be State'", () => {
+    const m = buildModelWithModifier("condition", "wait", true);
+    const doc = expose(m, "opd-sd");
+    const text = render(doc);
+    expect(text).toContain("Boiling requires Water not to be liquid");
+  });
+
+  it("renders condition(skip)+negated as 'Process occurs if Object is not State, otherwise Process is skipped'", () => {
+    const m = buildModelWithModifier("condition", "skip", true);
+    const doc = expose(m, "opd-sd");
+    const text = render(doc);
+    expect(text).toContain("Boiling occurs if Water is not liquid, otherwise Boiling is skipped");
+  });
+
+  it("renders event+state-specified as 'State Object triggers Process'", () => {
+    const m = buildModelWithModifier("event");
+    const doc = expose(m, "opd-sd");
+    const text = render(doc);
+    expect(text).toContain("liquid Water triggers Boiling");
+  });
+});
+
+// === editsFrom — condition_mode propagation (GetPut) ===
+
+describe("editsFrom — condition_mode propagation (GetPut)", () => {
+  it("preserves condition_mode in round-trip expose → editsFrom", () => {
+    let m = createModel("Test");
+    let r = addThing(m, waterObj); if (!isOk(r)) throw r.error; m = r.value;
+    r = addThing(m, boilingProc); if (!isOk(r)) throw r.error; m = r.value;
+    r = addAppearance(m, waterApp); if (!isOk(r)) throw r.error; m = r.value;
+    r = addAppearance(m, boilingApp); if (!isOk(r)) throw r.error; m = r.value;
+    r = addLink(m, { id: "lnk-agent", type: "agent", source: "obj-water", target: "proc-boiling" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addModifier(m, { id: "mod-1", over: "lnk-agent", type: "condition", condition_mode: "skip" });
+    if (!isOk(r)) throw r.error; m = r.value;
+
+    const doc = expose(m, "opd-sd");
+    const edits = editsFrom(doc);
+
+    // Find the add-modifier edit
+    const modEdit = edits.find(e => e.kind === "add-modifier");
+    expect(modEdit).toBeDefined();
+    if (modEdit && modEdit.kind === "add-modifier") {
+      expect(modEdit.modifier.condition_mode).toBe("skip");
+    }
   });
 });

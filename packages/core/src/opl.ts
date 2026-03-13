@@ -3,7 +3,7 @@ import type { Model, ComputationalObject, Thing, State, Link, Modifier, Appearan
 import type { InvariantError, Result } from "./result";
 import type {
   OplDocument, OplEdit, OplSentence,
-  OplThingDeclaration, OplLinkSentence, OplRenderSettings,
+  OplThingDeclaration, OplLinkSentence, OplModifierSentence, OplRenderSettings,
 } from "./opl-types";
 import { ok, err, isOk } from "./result";
 import { collectAllIds } from "./helpers";
@@ -120,6 +120,8 @@ export function expose(model: Model, opdId: string): OplDocument {
   for (const mod of sortedModifiers) {
     const link = model.links.get(mod.over);
     if (!link || !visibleThings.has(link.source) || !visibleThings.has(link.target)) continue;
+    const sourceState = link.source_state ? model.states.get(link.source_state) : undefined;
+    const targetState = link.target_state ? model.states.get(link.target_state) : undefined;
     sentences.push({
       kind: "modifier",
       modifierId: mod.id,
@@ -129,6 +131,9 @@ export function expose(model: Model, opdId: string): OplDocument {
       targetName: model.things.get(link.target)?.name ?? link.target,
       modifierType: mod.type,
       negated: mod.negated ?? false,
+      conditionMode: mod.type === "condition" ? (mod.condition_mode ?? "wait") : undefined,
+      sourceStateName: sourceState?.name,
+      targetStateName: targetState?.name,
     });
   }
 
@@ -222,6 +227,49 @@ function renderLinkSentence(s: OplLinkSentence): string {
   }
 }
 
+function renderModifierSentence(s: OplModifierSentence): string {
+  // Determine process/object names based on link direction convention:
+  // Enabling links (agent, instrument): source=object, target=process
+  // Transforming links (consumption, effect, etc.): source=process, target=object
+  const isEnabling = ["agent", "instrument"].includes(s.linkType);
+  const processName = isEnabling ? s.targetName : s.sourceName;
+  const objectName = isEnabling ? s.sourceName : s.targetName;
+  // State name: for enabling links it's on source (object); for transforming on target (object)
+  const stateName = isEnabling ? s.sourceStateName : s.targetStateName;
+
+  if (s.modifierType === "event") {
+    if (s.negated && stateName) {
+      return `non-${stateName} ${objectName} triggers ${processName}.`;
+    }
+    if (stateName) {
+      return `${stateName} ${objectName} triggers ${processName}.`;
+    }
+    return `${objectName} triggers ${processName}.`;
+  }
+
+  if (s.modifierType === "condition") {
+    const mode = s.conditionMode ?? "wait";
+
+    if (mode === "wait") {
+      if (s.negated && stateName) {
+        return `${processName} requires ${objectName} not to be ${stateName}.`;
+      }
+      return `${processName} requires ${objectName}.`;
+    }
+
+    if (mode === "skip") {
+      if (s.negated && stateName) {
+        return `${processName} occurs if ${objectName} is not ${stateName}, otherwise ${processName} is skipped.`;
+      }
+      return `${processName} occurs if ${objectName} exists, otherwise ${processName} is skipped.`;
+    }
+  }
+
+  // Fallback
+  const neg = s.negated ? "negated " : "";
+  return `${s.linkType} link from ${s.sourceName} to ${s.targetName} has ${neg}${s.modifierType} modifier.`;
+}
+
 function renderSentence(s: OplSentence, settings: OplRenderSettings): string {
   switch (s.kind) {
     case "thing-declaration": {
@@ -252,8 +300,7 @@ function renderSentence(s: OplSentence, settings: OplRenderSettings): string {
     case "link":
       return renderLinkSentence(s);
     case "modifier": {
-      const neg = s.negated ? "negated " : "";
-      return `${s.linkType} link from ${s.sourceName} to ${s.targetName} has ${neg}${s.modifierType} modifier.`;
+      return renderModifierSentence(s);
     }
   }
 }
