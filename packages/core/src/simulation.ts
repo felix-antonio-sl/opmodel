@@ -288,12 +288,14 @@ export function getPreprocessSet(
   const result: Array<{ objectId: string; objectType: "consumee" | "affectee" | "agent" | "instrument" }> = [];
   
   for (const link of model.links.values()) {
-    if (link.target === processId && link.type === "consumption") {
+    // Transforming links: source=process, target=object
+    if (link.source === processId && link.type === "consumption") {
       result.push({ objectId: link.target, objectType: "consumee" });
     }
-    if (link.target === processId && link.type === "effect") {
+    if (link.source === processId && link.type === "effect") {
       result.push({ objectId: link.target, objectType: "affectee" });
     }
+    // Enabling links: source=object, target=process
     if (link.target === processId && link.type === "agent") {
       result.push({ objectId: link.source, objectType: "agent" });
     }
@@ -315,10 +317,12 @@ export function getPostprocessSet(
   const result: Array<{ objectId: string; objectType: "resultee" | "affectee" }> = [];
   
   for (const link of model.links.values()) {
+    // Result: source=process, target=object
     if (link.source === processId && link.type === "result") {
       result.push({ objectId: link.target, objectType: "resultee" });
     }
-    if (link.target === processId && link.type === "effect") {
+    // Effect: source=process, target=object (affectee appears in both pre and post)
+    if (link.source === processId && link.type === "effect") {
       result.push({ objectId: link.target, objectType: "affectee" });
     }
   }
