@@ -285,12 +285,32 @@ if (thing.stateful === false) {
 ```
 
 ### addLink
-Agregar guard para effect links:
+Agregar guards para las 3 reglas de I-STATELESS-EFFECT:
 ```typescript
+// Regla 1: effect links no pueden apuntar a stateless objects
 if (link.type === "effect") {
   const target = model.things.get(link.target);
   if (target?.stateful === false) {
-    return err({ code: "I-STATELESS-EFFECT", message: "..." });
+    return err({ code: "I-STATELESS-EFFECT", message: "Stateless objects cannot be affected — use consumption or result links" });
+  }
+}
+// Reglas 2 y 3: state-specified links no pueden referenciar stateless objects
+if (link.source_state) {
+  const sourceState = model.states.get(link.source_state);
+  if (sourceState) {
+    const parent = model.things.get(sourceState.parent);
+    if (parent?.stateful === false) {
+      return err({ code: "I-STATELESS-EFFECT", message: "State-specified links cannot reference stateless objects" });
+    }
+  }
+}
+if (link.target_state) {
+  const targetState = model.states.get(link.target_state);
+  if (targetState) {
+    const parent = model.things.get(targetState.parent);
+    if (parent?.stateful === false) {
+      return err({ code: "I-STATELESS-EFFECT", message: "State-specified links cannot reference stateless objects" });
+    }
   }
 }
 ```
@@ -374,32 +394,34 @@ Sin cambios — ambos campos son opcionales y el serializer ya maneja campos opc
 4. I-STATELESS-EFFECT: addLink(effect) a stateless object → error
 5. I-STATELESS-EFFECT: addLink(consumption) a stateless object → ok
 6. I-STATELESS-EFFECT: addLink(result) a stateless object → ok
-7. I-STATELESS-DOWNGRADE: updateThing(stateful=false) con estados → error
-8. I-STATELESS-DOWNGRADE: updateThing(stateful=false) sin estados → ok
-9. I-CONDITION-MODE: addModifier(condition_mode="skip", type="event") → error
-10. I-CONDITION-MODE: addModifier(condition_mode="skip", type="condition") → ok
-11. validate detecta stateless object con estados pre-existentes
-12. validate detecta condition_mode en event modifier
+7. I-STATELESS-EFFECT: addLink(input, source_state referencia stateless object) → error
+8. I-STATELESS-EFFECT: addLink(effect, target_state referencia stateless object) → error
+9. I-STATELESS-DOWNGRADE: updateThing(stateful=false) con estados → error
+10. I-STATELESS-DOWNGRADE: updateThing(stateful=false) sin estados → ok
+11. I-CONDITION-MODE: addModifier(condition_mode="skip", type="event") → error
+12. I-CONDITION-MODE: addModifier(condition_mode="skip", type="condition") → ok
+13. validate detecta stateless object con estados pre-existentes
+14. validate detecta condition_mode en event modifier
 
 ### Simulación (simulation.test.ts)
-13. evaluatePrecondition con condition(wait) fallida → response: "wait"
-14. evaluatePrecondition con condition(skip) fallida → response: "skip"
-15. evaluatePrecondition con event fallida → response: "lost"
-16. evaluatePrecondition sin modifier → response: "lost"
-17. simulationStep con response "wait" → proceso en waitingProcesses
-18. simulationStep con response "skip" → proceso skipped
-19. runSimulation re-evalúa waiting processes cuando estado cambia
+15. evaluatePrecondition con condition(wait) fallida → response: "wait"
+16. evaluatePrecondition con condition(skip) fallida → response: "skip"
+17. evaluatePrecondition con event fallida → response: "lost"
+18. evaluatePrecondition sin modifier → response: "lost"
+19. simulationStep con response "wait" → proceso en waitingProcesses
+20. simulationStep con response "skip" → proceso skipped
+21. runSimulation re-evalúa waiting processes cuando estado cambia
 
 ### Simulación — deadlock (simulation.test.ts)
-20. runSimulation con condition(wait) nunca satisfecha → deadlocked: true
-21. runSimulation con condition(wait) satisfecha tras state change → proceso ejecuta
+22. runSimulation con condition(wait) nunca satisfecha → deadlocked: true
+23. runSimulation con condition(wait) satisfecha tras state change → proceso ejecuta
 
 ### OPL (opl.test.ts)
-22. render condition(wait) → "Process requires Object"
-23. render condition(skip) → "Process occurs if Object exists, otherwise Process is skipped"
-24. render condition(wait)+negated
-25. render condition(skip)+negated
-26. render event+state-specified → "State Object triggers Process"
+24. render condition(wait) → "Process requires Object"
+25. render condition(skip) → "Process occurs if Object exists, otherwise Process is skipped"
+26. render condition(wait)+negated
+27. render condition(skip)+negated
+28. render event+state-specified → "State Object triggers Process"
 
 ### OPL lens law (opl.test.ts)
-27. GetPut round-trip con condition(skip) modifier preserva condition_mode
+29. GetPut round-trip con condition(skip) modifier preserva condition_mode
