@@ -241,6 +241,7 @@
           "items": { "type": "string" }
         },
         "user_input_enabled": { "type": "boolean" },
+        "stateful": { "type": "boolean" },
         "computational": {
           "oneOf": [
             { "$ref": "#/$defs/ComputationalObject" },
@@ -454,7 +455,17 @@
           "type": "string",
           "enum": ["event", "condition"]
         },
-        "negated": { "type": "boolean" }
+        "negated": { "type": "boolean" },
+        "condition_mode": { "enum": ["skip", "wait"] }
+      },
+      "if": {
+        "properties": { "type": { "const": "condition" } }
+      },
+      "then": {
+        "properties": { "condition_mode": { "enum": ["skip", "wait"] } }
+      },
+      "else": {
+        "not": { "required": ["condition_mode"] }
       }
     },
 
