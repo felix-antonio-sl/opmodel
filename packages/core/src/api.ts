@@ -137,6 +137,10 @@ export function addState(
   if (parent.kind !== "object") {
     return err({ code: "I-01", message: `State parent must be object, got process: ${state.parent}`, entity: state.id });
   }
+  // I-STATELESS-STATES: stateless objects cannot have states (ISO §3.67)
+  if (parent.stateful === false) {
+    return err({ code: "I-STATELESS-STATES", message: "Stateless objects cannot have states (ISO §3.67)", entity: state.id });
+  }
   // I-21: exclusive current state — auto-unset siblings (radio button coercion)
   const states = new Map(model.states).set(state.id, state);
   if (state.current) {
