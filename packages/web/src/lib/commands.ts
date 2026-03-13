@@ -6,7 +6,7 @@
    into Model mutations or UI state transitions.
    ═══════════════════════════════════════════════════ */
 
-import type { Model, Thing, Link, State, InvariantError, RefinementType } from "@opmodel/core";
+import type { Model, Thing, Link, State, InvariantError, RefinementType, OplEdit } from "@opmodel/core";
 import {
   updateAppearance,
   updateThing,
@@ -21,6 +21,7 @@ import {
   removeState,
   removeLink,
   refineThing,
+  applyOplEdit,
   isOk,
   type Result,
 } from "@opmodel/core";
@@ -49,6 +50,7 @@ export type Command =
   | { tag: "updateLink"; linkId: string; patch: Partial<Omit<Link, "id">> }
   | { tag: "updateState"; stateId: string; patch: Partial<Omit<State, "id" | "parent">> }
   | { tag: "refineThing"; thingId: string; opdId: string; refinementType: RefinementType; childOpdId: string; childOpdName: string }
+  | { tag: "applyOplEdit"; edit: OplEdit }
   | { tag: "setMode"; mode: EditorMode }
   | { tag: "setLinkType"; linkType: LinkTypeChoice };
 
@@ -162,6 +164,12 @@ export function interpret(cmd: Command): Effect {
       return {
         type: "modelMutation",
         apply: (m) => refineThing(m, cmd.thingId, cmd.opdId, cmd.refinementType, cmd.childOpdId, cmd.childOpdName),
+      };
+
+    case "applyOplEdit":
+      return {
+        type: "modelMutation",
+        apply: (m) => applyOplEdit(m, cmd.edit),
       };
 
     case "setMode":
