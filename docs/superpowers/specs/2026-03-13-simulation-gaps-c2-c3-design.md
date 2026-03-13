@@ -1,0 +1,304 @@
+# Gaps Bloqueantes para Simulación: Stateful/Stateless (C3) + Skip/Wait (C2) — Design Spec
+
+**Fecha:** 2026-03-13
+**Estado:** Aprobado
+**Autor:** fxsl/arquitecto-categorico
+
+---
+
+## Resumen
+
+Resolver los dos gaps ISO 19450 bloqueantes para simulación correcta:
+
+- **C3 (§3.66, §3.67):** Clasificación de objetos como stateful vs stateless. Objetos stateless no pueden tener estados ni ser afectados por effect links.
+- **C2 (§8.2.3):** Semántica skip vs wait en condition links. Si la condición es falsa: skip salta el proceso, wait lo bloquea hasta que se cumpla.
+
+Ambos cambios son Pre-P1 en el roadmap de compliance ISO.
+
+---
+
+## Justificación categórica
+
+### C3: Stateful como clasificador fibrado del 0-cell
+
+En la bicategoría OPM:
+- Things son 0-cells
+- States son subobjetos: monos en el reticulado Sub(O)
+- Un objeto stateless tiene Sub(O) = ∅ por definición
+
+`Thing.stateful` es un **clasificador fibrado** sobre la categoría discreta `{stateful, stateless}`. No es un derivado de `|Sub(O)|` porque su rol es *prescriptivo* (prevenir adición de estados), no *descriptivo* (observar si existen). El clasificador permite enforcement a priori en `addState` y `addLink`.
+
+### C2: condition_mode como enrichment del 2-cell
+
+En la bicategoría OPM:
+- Links son 1-cells (morfismos entre Things)
+- Modifiers son 2-cells (transformaciones naturales sobre Links)
+
+El coproducto de Modifier se factoriza como:
+```
+Modifier = Event(over, negated)
+         | Condition(over, negated, mode: skip | wait)
+```
+
+`condition_mode` es propiedad intrínseca del 2-cell, no del 1-cell, porque:
+1. El Link existe independientemente del Modifier
+2. Un Link puede tener múltiples Modifiers — el modo pertenece al Modifier específico
+3. Aplanar a `ModifierType = "event" | "condition-skip" | "condition-wait"` pierde la estructura de producto `type × mode`
+
+### Alternativas descartadas
+
+| Alternativa | Razón de descarte |
+|---|---|
+| `stateful` derivado de `|Sub(O)| > 0` | No puede prevenir adición de estados. Solo describe, no prescribe |
+| `condition_mode` en Link | Viola separación 1-cell/2-cell. ¿Cuál mode si hay múltiples modifiers? |
+| `ModifierType = "condition-skip" \| "condition-wait"` | Pierde factorización `type × mode`. Explota combinatoria con `negated` |
+
+---
+
+## Cambios en tipos
+
+### Thing
+
+```typescript
+export interface Thing {
+  // ... campos existentes ...
+  stateful?: boolean; // ISO 19450 §3.66/§3.67. undefined ≡ true (backwards-compatible)
+}
+```
+
+**Semántica:** `undefined` o `true` = stateful (puede tener estados, puede ser afectado). `false` = stateless (solo consumible/producible).
+
+**Backwards-compatibility:** Todos los modelos existentes no tienen este campo → se tratan como stateful por defecto. Zero migration.
+
+### Modifier
+
+```typescript
+export interface Modifier {
+  id: string;
+  over: string;
+  type: ModifierType;
+  negated?: boolean;
+  condition_mode?: "skip" | "wait"; // Solo cuando type === "condition". Default: "wait" (ISO §8.2.3)
+}
+```
+
+**Default:** `"wait"` per ISO §8.2.3. Modifiers existentes sin `condition_mode` se interpretan como wait.
+
+### PreconditionResult (simulation.ts)
+
+```typescript
+export type PreconditionResult =
+  | { satisfied: true }
+  | { satisfied: false; reason: string; response: "lost" | "skip" | "wait" }
+```
+
+Donde:
+- `"lost"` — Event modifier: evento descartado irrecuperablemente (semántica actual)
+- `"skip"` — Condition(skip): proceso se salta, simulación continúa por paths alternativos
+- `"wait"` — Condition(wait): proceso se bloquea, re-evaluar en siguiente step
+
+---
+
+## Invariantes nuevos
+
+### I-STATELESS-STATES
+**Guard:** `addState` + `validate`
+**Regla:** Si `thing.stateful === false`, no se pueden agregar estados.
+```
+∀ state ∈ States: thing(state.parent).stateful ≠ false
+```
+**Error:** `"Stateless objects cannot have states (ISO §3.67)"`
+
+### I-STATELESS-EFFECT
+**Guard:** `addLink` + `validate`
+**Regla:** Si el target de un effect link es un objeto stateless, rechazar.
+```
+∀ link ∈ Links: link.type = "effect" ⟹ thing(link.target).stateful ≠ false
+```
+**Error:** `"Stateless objects cannot be affected — use consumption or result links"`
+
+### I-CONDITION-MODE
+**Guard:** `addModifier` + `validate`
+**Regla:** `condition_mode` solo es válido cuando `type === "condition"`.
+```
+∀ mod ∈ Modifiers: mod.condition_mode ≠ undefined ⟹ mod.type = "condition"
+```
+**Error:** `"condition_mode is only valid on condition modifiers"`
+
+### I-STATELESS-DOWNGRADE
+**Guard:** `updateThing` (via validate)
+**Regla:** No se puede marcar como stateless un objeto que tiene estados existentes.
+```
+∀ thing ∈ Things: thing.stateful = false ⟹ |{s ∈ States : s.parent = thing.id}| = 0
+```
+**Error:** `"Remove all states before marking as stateless"`
+
+---
+
+## Cambios en simulación (DA-5)
+
+### evaluatePrecondition
+
+Actualmente retorna binario. Nuevo comportamiento:
+
+1. Recopilar todos los modifiers de los links conectados al proceso
+2. Para cada link con precondición fallida:
+   - Si el link tiene modifier `type: "event"` → `response: "lost"`
+   - Si el link tiene modifier `type: "condition"`, `condition_mode: "skip"` → `response: "skip"`
+   - Si el link tiene modifier `type: "condition"`, `condition_mode: "wait"` o undefined → `response: "wait"`
+   - Si el link no tiene modifier → `response: "lost"` (default: no retry)
+
+### simulationStep
+
+Nuevo handling basado en `response`:
+- `"lost"`: evento descartado, `skipped: true` (comportamiento actual)
+- `"skip"`: proceso saltado, `skipped: true`, la simulación continúa evaluando otros procesos
+- `"wait"`: proceso bloqueado, NO se descarta, se agrega a cola de espera para re-evaluación
+
+### ModelState extension
+
+```typescript
+export interface ModelState {
+  objects: Map<string, ObjectState>;
+  step: number;
+  timestamp: number;
+  waitingProcesses: Set<string>; // Procesos bloqueados por condition(wait)
+}
+```
+
+### runSimulation
+
+El loop de simulación ahora:
+1. Evalúa procesos en cola de espera primero (re-check precondiciones)
+2. Si un waiting process ahora satisface precondición → ejecutar
+3. Luego evalúa procesos normales
+4. Termina cuando no hay más procesos ejecutables NI esperando
+
+---
+
+## Cambios en OPL (DA-6)
+
+### Modifier rendering
+
+| Modifier | mode | OPL output |
+|----------|------|------------|
+| condition | wait (default) | `"Process requires Object"` o `"Process requires State Object"` |
+| condition | skip | `"Process occurs if Object exists, otherwise Process is skipped"` o `"Process occurs if Object is State, otherwise Process is skipped"` |
+| event | — | `"Object triggers Process"` (sin cambio) |
+| condition+negated | wait | `"Process requires Object not to be State"` |
+| condition+negated | skip | `"Process occurs if Object is not State, otherwise Process is skipped"` |
+
+### OplModifierSentence extension
+
+```typescript
+export interface OplModifierSentence {
+  kind: "modifier";
+  modifierId: string;
+  linkId: string;
+  linkType: LinkType;
+  sourceName: string;
+  targetName: string;
+  modifierType: ModifierType;
+  negated: boolean;
+  conditionMode?: "skip" | "wait"; // Nuevo
+}
+```
+
+---
+
+## Cambios en API
+
+### addState
+Agregar guard antes de insertar:
+```typescript
+if (thing.stateful === false) {
+  return err({ code: "I-STATELESS-STATES", message: "..." });
+}
+```
+
+### addLink
+Agregar guard para effect links:
+```typescript
+if (link.type === "effect") {
+  const target = model.things.get(link.target);
+  if (target?.stateful === false) {
+    return err({ code: "I-STATELESS-EFFECT", message: "..." });
+  }
+}
+```
+
+### addModifier
+Agregar guard para condition_mode:
+```typescript
+if (modifier.condition_mode && modifier.type !== "condition") {
+  return err({ code: "I-CONDITION-MODE", message: "..." });
+}
+```
+
+### updateThing
+Fibered re-validation: si el patch cambia `stateful` a `false`, verificar que no existan estados.
+
+### validate
+Agregar los 4 invariantes a la función global de validación.
+
+---
+
+## Cambios en serialización
+
+### JSON Schema (opm-json-schema.json)
+
+1. `Thing.$defs`: agregar `"stateful": { "type": "boolean" }` en properties opcionales
+2. `Modifier.$defs`: agregar `"condition_mode": { "enum": ["skip", "wait"] }` en properties opcionales
+3. Agregar `if/then` en Modifier: `condition_mode` solo cuando `type === "condition"`
+
+### serialize/deserialize (serialization.ts)
+
+Sin cambios — ambos campos son opcionales y el serializer ya maneja campos opcionales por omisión de nulls (§7.2 conv. 4).
+
+---
+
+## Archivos involucrados
+
+| Archivo | Acción | Cambios |
+|---------|--------|---------|
+| `packages/core/src/types.ts` | Modificar | `Thing.stateful?`, `Modifier.condition_mode?` |
+| `packages/core/src/api.ts` | Modificar | Guards en addState, addLink, addModifier, updateThing + validate |
+| `packages/core/src/simulation.ts` | Modificar | PreconditionResult.response, waitingProcesses, evaluatePrecondition, simulationStep, runSimulation |
+| `packages/core/src/opl.ts` | Modificar | renderModifierSentence con condition_mode |
+| `packages/core/src/opl-types.ts` | Modificar | OplModifierSentence.conditionMode? |
+| `packages/core/src/index.ts` | Sin cambio | Exports ya cubren los tipos |
+| `packages/core/tests/` | Crear/Modificar | Tests para invariantes + simulación + OPL |
+| `docs/superpowers/specs/2026-03-10-opm-json-schema.json` | Modificar | Thing.stateful, Modifier.condition_mode |
+
+---
+
+## Tests requeridos
+
+### Invariantes (api-invariants-new.test.ts o nuevo archivo)
+1. I-STATELESS-STATES: addState a stateless object → error
+2. I-STATELESS-STATES: addState a stateful object → ok
+3. I-STATELESS-STATES: addState a objeto sin campo stateful (undefined) → ok
+4. I-STATELESS-EFFECT: addLink(effect) a stateless object → error
+5. I-STATELESS-EFFECT: addLink(consumption) a stateless object → ok
+6. I-STATELESS-EFFECT: addLink(result) a stateless object → ok
+7. I-STATELESS-DOWNGRADE: updateThing(stateful=false) con estados → error
+8. I-STATELESS-DOWNGRADE: updateThing(stateful=false) sin estados → ok
+9. I-CONDITION-MODE: addModifier(condition_mode="skip", type="event") → error
+10. I-CONDITION-MODE: addModifier(condition_mode="skip", type="condition") → ok
+11. validate detecta stateless object con estados pre-existentes
+12. validate detecta condition_mode en event modifier
+
+### Simulación (simulation.test.ts)
+13. evaluatePrecondition con condition(wait) fallida → response: "wait"
+14. evaluatePrecondition con condition(skip) fallida → response: "skip"
+15. evaluatePrecondition con event fallida → response: "lost"
+16. evaluatePrecondition sin modifier → response: "lost"
+17. simulationStep con response "wait" → proceso en waitingProcesses
+18. simulationStep con response "skip" → proceso skipped
+19. runSimulation re-evalúa waiting processes cuando estado cambia
+
+### OPL (opl.test.ts)
+20. render condition(wait) → "Process requires Object"
+21. render condition(skip) → "Process occurs if Object exists, otherwise Process is skipped"
+22. render condition(wait)+negated
+23. render condition(skip)+negated
