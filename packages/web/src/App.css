@@ -1013,6 +1013,133 @@ body,
   color: var(--text-secondary);
 }
 
+/* ─── Editor View ─── */
+
+.opl-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.opl-editor__field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.opl-editor__label {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.opl-editor__select {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  padding: 5px 6px;
+  outline: none;
+  cursor: pointer;
+}
+
+.opl-editor__select:focus {
+  border-color: var(--accent);
+}
+
+.opl-editor__input {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  padding: 5px 8px;
+  outline: none;
+}
+
+.opl-editor__input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(43, 108, 176, 0.1);
+}
+
+.opl-editor__radio-group {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.opl-editor__radio-group label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.opl-editor__checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.opl-editor__preview {
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.opl-editor__preview-text {
+  padding: 8px;
+  background: var(--bg-surface);
+  border-radius: 4px;
+  font-family: var(--font-serif);
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.opl-editor__apply {
+  margin-top: 6px;
+  padding: 7px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.opl-editor__apply:hover:not(:disabled) {
+  background: var(--accent-dim);
+}
+
+.opl-editor__apply:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.opl-editor__error {
+  font-size: 11px;
+  color: var(--danger);
+  padding: 4px 0;
+}
+
+.opl-editor__warning {
+  font-size: 10px;
+  color: var(--warning);
+}
+
 .opl-panel__content {
   padding: 0 16px 16px;
   flex: 1;
