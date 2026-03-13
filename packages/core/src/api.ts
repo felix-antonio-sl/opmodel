@@ -492,6 +492,10 @@ export function removeAppearance(
 export function addModifier(model: Model, mod: Modifier): Result<Model, InvariantError> {
   if (collectAllIds(model).has(mod.id)) return err({ code: "I-08", message: `Duplicate id: ${mod.id}`, entity: mod.id });
   if (!model.links.has(mod.over)) return err({ code: "I-06", message: `Link not found: ${mod.over}`, entity: mod.id });
+  // I-CONDITION-MODE: condition_mode only valid on condition modifiers
+  if (mod.condition_mode && mod.type !== "condition") {
+    return err({ code: "I-CONDITION-MODE", message: "condition_mode is only valid on condition modifiers", entity: mod.id });
+  }
   return ok(touch({ ...model, modifiers: new Map(model.modifiers).set(mod.id, mod) }));
 }
 
@@ -642,6 +646,10 @@ export function updateModifier(
   const updated = { ...existing, ...cleaned } as Modifier;
   if (cleaned.over !== undefined && !model.links.has(updated.over)) {
     return err({ code: "I-06", message: `Link not found: ${updated.over}`, entity: id });
+  }
+  // I-CONDITION-MODE: merged state must not have condition_mode on non-condition type
+  if (updated.condition_mode && updated.type !== "condition") {
+    return err({ code: "I-CONDITION-MODE", message: "condition_mode is only valid on condition modifiers", entity: id });
   }
   return ok(touch({ ...model, modifiers: new Map(model.modifiers).set(id, updated) }));
 }
