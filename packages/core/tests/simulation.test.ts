@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { createModel } from "../src/model";
-import { addThing, addLink, addState } from "../src/api";
+import { addThing, addLink, addState, addModifier } from "../src/api";
 import type { Thing, Link, State, Modifier } from "../src/types";
 import type { Model } from "../src/types";
 import {
@@ -272,5 +272,145 @@ describe("runSimulation", () => {
     const m = buildBoilingModel();
     const trace = runSimulation(m, undefined, 5);
     expect(trace.steps.length).toBeLessThanOrEqual(5);
+  });
+});
+
+// === evaluatePrecondition — trivalent response (C2) ===
+
+describe("evaluatePrecondition — trivalent response (C2)", () => {
+  it("returns response 'wait' for condition(wait) with unsatisfied precondition", () => {
+    let m = createModel("Test");
+    m = (addThing(m, obj("obj-w", "Water")) as any).value;
+    m = (addThing(m, proc("proc-b", "Boiling")) as any).value;
+    m = (addState(m, { id: "state-liquid", parent: "obj-w", name: "liquid", initial: true, final: false, default: true }) as any).value;
+    m = (addState(m, { id: "state-gas", parent: "obj-w", name: "gas", initial: false, final: false, default: false }) as any).value;
+    m = (addLink(m, { id: "lnk-agent", type: "agent", source: "obj-w", target: "proc-b" }) as any).value;
+    m = (addModifier(m, { id: "mod-cond", over: "lnk-agent", type: "condition", condition_mode: "wait" }) as any).value;
+
+    const state = createInitialState(m);
+    state.objects.get("obj-w")!.exists = false;
+    const result = evaluatePrecondition(m, state, "proc-b");
+    expect(result.satisfied).toBe(false);
+    if (!result.satisfied) {
+      expect(result.response).toBe("wait");
+    }
+  });
+
+  it("returns response 'skip' for condition(skip) with unsatisfied precondition", () => {
+    let m = createModel("Test");
+    m = (addThing(m, obj("obj-w", "Water")) as any).value;
+    m = (addThing(m, proc("proc-b", "Boiling")) as any).value;
+    m = (addLink(m, { id: "lnk-agent", type: "agent", source: "obj-w", target: "proc-b" }) as any).value;
+    m = (addModifier(m, { id: "mod-cond", over: "lnk-agent", type: "condition", condition_mode: "skip" }) as any).value;
+
+    const state = createInitialState(m);
+    state.objects.get("obj-w")!.exists = false;
+    const result = evaluatePrecondition(m, state, "proc-b");
+    expect(result.satisfied).toBe(false);
+    if (!result.satisfied) {
+      expect(result.response).toBe("skip");
+    }
+  });
+
+  it("returns response 'lost' for event modifier with unsatisfied precondition", () => {
+    let m = createModel("Test");
+    m = (addThing(m, obj("obj-w", "Water")) as any).value;
+    m = (addThing(m, proc("proc-b", "Boiling")) as any).value;
+    m = (addLink(m, { id: "lnk-agent", type: "agent", source: "obj-w", target: "proc-b" }) as any).value;
+    m = (addModifier(m, { id: "mod-ev", over: "lnk-agent", type: "event" }) as any).value;
+
+    const state = createInitialState(m);
+    state.objects.get("obj-w")!.exists = false;
+    const result = evaluatePrecondition(m, state, "proc-b");
+    expect(result.satisfied).toBe(false);
+    if (!result.satisfied) {
+      expect(result.response).toBe("lost");
+    }
+  });
+
+  it("returns response 'lost' for link without modifier", () => {
+    let m = createModel("Test");
+    m = (addThing(m, obj("obj-w", "Water")) as any).value;
+    m = (addThing(m, proc("proc-b", "Boiling")) as any).value;
+    m = (addLink(m, { id: "lnk-agent", type: "agent", source: "obj-w", target: "proc-b" }) as any).value;
+
+    const state = createInitialState(m);
+    state.objects.get("obj-w")!.exists = false;
+    const result = evaluatePrecondition(m, state, "proc-b");
+    expect(result.satisfied).toBe(false);
+    if (!result.satisfied) {
+      expect(result.response).toBe("lost");
+    }
+  });
+});
+
+// === simulationStep — wait/skip response handling ===
+
+describe("simulationStep — wait/skip response handling", () => {
+  it("adds process to waitingProcesses when response is 'wait'", () => {
+    let m = createModel("Test");
+    m = (addThing(m, obj("obj-w", "Water")) as any).value;
+    m = (addThing(m, proc("proc-b", "Boiling")) as any).value;
+    m = (addLink(m, { id: "lnk-agent", type: "agent", source: "obj-w", target: "proc-b" }) as any).value;
+    m = (addModifier(m, { id: "mod-cond", over: "lnk-agent", type: "condition", condition_mode: "wait" }) as any).value;
+
+    const state = createInitialState(m);
+    state.objects.get("obj-w")!.exists = false;
+    const event = { kind: "manual" as const, targetId: "proc-b" };
+    const step = simulationStep(m, state, event);
+    expect(step.skipped).toBe(true);
+    expect(step.newState.waitingProcesses.has("proc-b")).toBe(true);
+  });
+
+  it("skips process without adding to waitingProcesses when response is 'skip'", () => {
+    let m = createModel("Test");
+    m = (addThing(m, obj("obj-w", "Water")) as any).value;
+    m = (addThing(m, proc("proc-b", "Boiling")) as any).value;
+    m = (addLink(m, { id: "lnk-agent", type: "agent", source: "obj-w", target: "proc-b" }) as any).value;
+    m = (addModifier(m, { id: "mod-cond", over: "lnk-agent", type: "condition", condition_mode: "skip" }) as any).value;
+
+    const state = createInitialState(m);
+    state.objects.get("obj-w")!.exists = false;
+    const event = { kind: "manual" as const, targetId: "proc-b" };
+    const step = simulationStep(m, state, event);
+    expect(step.skipped).toBe(true);
+    expect(step.newState.waitingProcesses.has("proc-b")).toBe(false);
+  });
+});
+
+// === runSimulation — deadlock detection ===
+
+describe("runSimulation — deadlock detection", () => {
+  it("detects deadlock when condition(wait) is never satisfied", () => {
+    let m = createModel("Test");
+    m = (addThing(m, obj("obj-fuel", "Fuel")) as any).value;
+    m = (addThing(m, proc("proc-burn", "Burning")) as any).value;
+    m = (addLink(m, { id: "lnk-agent", type: "agent", source: "obj-fuel", target: "proc-burn" }) as any).value;
+    m = (addModifier(m, { id: "mod-cond", over: "lnk-agent", type: "condition", condition_mode: "wait" }) as any).value;
+
+    const initState = createInitialState(m);
+    initState.objects.get("obj-fuel")!.exists = false;
+    const trace = runSimulation(m, initState, 10);
+    expect(trace.deadlocked).toBe(true);
+    expect(trace.completed).toBe(false);
+  });
+
+  it("unblocks waiting process when state changes satisfy condition", () => {
+    let m = createModel("Test");
+    m = (addThing(m, obj("obj-fuel", "Fuel")) as any).value;
+    m = (addThing(m, obj("obj-raw", "Raw")) as any).value;
+    m = (addThing(m, proc("proc-produce", "Producing")) as any).value;
+    m = (addThing(m, proc("proc-burn", "Burning")) as any).value;
+    m = (addLink(m, { id: "lnk-con", type: "consumption", source: "proc-produce", target: "obj-raw" }) as any).value;
+    m = (addLink(m, { id: "lnk-res", type: "result", source: "proc-produce", target: "obj-fuel" }) as any).value;
+    m = (addLink(m, { id: "lnk-con2", type: "consumption", source: "proc-burn", target: "obj-fuel" }) as any).value;
+    m = (addModifier(m, { id: "mod-cond", over: "lnk-con2", type: "condition", condition_mode: "wait" }) as any).value;
+
+    const initState = createInitialState(m);
+    initState.objects.get("obj-fuel")!.exists = false;
+    const trace = runSimulation(m, initState, 20);
+    expect(trace.deadlocked).toBe(false);
+    expect(trace.steps.length).toBeGreaterThanOrEqual(2);
+    expect(trace.steps.some(s => s.processId === "proc-burn")).toBe(true);
   });
 });
