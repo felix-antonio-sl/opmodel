@@ -29,3 +29,17 @@ export type {
   OplSentence, OplThingDeclaration, OplStateEnumeration, OplDuration,
   OplLinkSentence, OplModifierSentence, OplDocument, OplEdit, OplRenderSettings,
 } from "./opl-types";
+export {
+  createInitialState,
+  evaluatePrecondition,
+  simulationStep,
+  runSimulation,
+  getPreprocessSet,
+  getPostprocessSet,
+  type ModelState,
+  type ObjectState,
+  type SimulationEvent,
+  type SimulationStep,
+  type SimulationTrace,
+  type PreconditionResult,
+} from "./simulation";
