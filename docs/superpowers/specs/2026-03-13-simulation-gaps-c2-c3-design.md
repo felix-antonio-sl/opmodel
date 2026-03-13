@@ -200,7 +200,7 @@ El loop de simulación ahora:
 4. Termina cuando:
    - No hay más procesos ejecutables NI esperando (completed: true), o
    - Se alcanza maxSteps (completed: false), o
-   - **Deadlock**: `waitingProcesses.size > 0` pero ningún proceso ejecutó en el step actual Y ningún estado cambió — la simulación está bloqueada (completed: false, deadlock: true)
+   - **Deadlock**: `waitingProcesses.size > 0` pero ningún proceso ejecutó en el step actual Y ningún estado cambió — la simulación está bloqueada (completed: false, deadlocked: true)
 
 ### SimulationTrace extension
 
@@ -231,6 +231,29 @@ export interface SimulationTrace {
 | event | — | yes | `"State Object triggers Process"` |
 | event+negated | — | yes | `"non-State Object triggers Process"` |
 
+### expose (opl.ts) — propagación de conditionMode y state names
+
+La función `expose` debe poblar los campos nuevos de `OplModifierSentence` al construir el documento OPL:
+
+```typescript
+// En el bloque que construye OplModifierSentence dentro de expose:
+const link = model.links.get(mod.over);
+const sourceState = link?.source_state ? model.states.get(link.source_state) : undefined;
+const targetState = link?.target_state ? model.states.get(link.target_state) : undefined;
+
+{
+  kind: "modifier",
+  modifierId: mod.id,
+  linkId: mod.over,
+  // ... campos existentes ...
+  conditionMode: mod.type === "condition" ? (mod.condition_mode ?? "wait") : undefined,
+  sourceStateName: sourceState?.name,
+  targetStateName: targetState?.name,
+}
+```
+
+Sin esto, `renderModifierSentence` no puede generar las formas state-specified de la tabla, y `editsFrom` no puede reconstruir `condition_mode` para el round-trip GetPut.
+
 ### OplModifierSentence extension
 
 ```typescript
@@ -243,7 +266,9 @@ export interface OplModifierSentence {
   targetName: string;
   modifierType: ModifierType;
   negated: boolean;
-  conditionMode?: "skip" | "wait"; // Nuevo
+  conditionMode?: "skip" | "wait";       // Nuevo: modo de la condición
+  sourceStateName?: string;              // Nuevo: nombre del estado fuente (para rendering state-specified)
+  targetStateName?: string;              // Nuevo: nombre del estado target (para rendering state-specified)
 }
 ```
 
@@ -280,6 +305,15 @@ if (modifier.condition_mode && modifier.type !== "condition") {
 
 ### updateThing
 Guard eager (no pasivo): si el patch cambia `stateful` a `false`, verificar que no existan estados antes de aplicar el cambio (ver I-STATELESS-DOWNGRADE arriba para implementación).
+
+### updateModifier
+Guard eager para I-CONDITION-MODE: si el patch merged resulta en `type !== "condition"` con `condition_mode` definido, rechazar. Esto previene que un `updateModifier({ type: "event" })` sobre un modifier existente con `condition_mode: "skip"` cree estado inválido:
+```typescript
+const merged = { ...existing, ...cleanPatch(patch) };
+if (merged.condition_mode && merged.type !== "condition") {
+  return err({ code: "I-CONDITION-MODE", message: "condition_mode is only valid on condition modifiers", entity: id });
+}
+```
 
 ### validate
 Agregar los 4 invariantes a la función global de validación.
@@ -321,7 +355,7 @@ Sin cambios — ambos campos son opcionales y el serializer ya maneja campos opc
 | Archivo | Acción | Cambios |
 |---------|--------|---------|
 | `packages/core/src/types.ts` | Modificar | `Thing.stateful?`, `Modifier.condition_mode?` |
-| `packages/core/src/api.ts` | Modificar | Guards en addState, addLink, addModifier, updateThing + validate |
+| `packages/core/src/api.ts` | Modificar | Guards en addState, addLink, addModifier, updateThing, updateModifier + validate |
 | `packages/core/src/simulation.ts` | Modificar | PreconditionResult.response, waitingProcesses, evaluatePrecondition, simulationStep, runSimulation |
 | `packages/core/src/opl.ts` | Modificar | renderModifierSentence con condition_mode |
 | `packages/core/src/opl-types.ts` | Modificar | OplModifierSentence.conditionMode? |
