@@ -953,6 +953,33 @@ export function updateLink(
     }
   }
 
+  // I-STATELESS-EFFECT: effect links cannot target stateless objects
+  if (updated.type === "effect") {
+    const target = model.things.get(updated.target);
+    if (target?.stateful === false) {
+      return err({ code: "I-STATELESS-EFFECT", message: "Stateless objects cannot be affected — use consumption or result links", entity: id });
+    }
+  }
+  // I-STATELESS-EFFECT: state-specified links cannot reference stateless objects
+  if (updated.source_state) {
+    const sourceState = model.states.get(updated.source_state);
+    if (sourceState) {
+      const parent = model.things.get(sourceState.parent);
+      if (parent?.stateful === false) {
+        return err({ code: "I-STATELESS-EFFECT", message: "State-specified links cannot reference stateless objects", entity: id });
+      }
+    }
+  }
+  if (updated.target_state) {
+    const targetState = model.states.get(updated.target_state);
+    if (targetState) {
+      const parent = model.things.get(targetState.parent);
+      if (parent?.stateful === false) {
+        return err({ code: "I-STATELESS-EFFECT", message: "State-specified links cannot reference stateless objects", entity: id });
+      }
+    }
+  }
+
   return ok(touch({ ...model, things, links: new Map(model.links).set(id, updated) }));
 }
 
