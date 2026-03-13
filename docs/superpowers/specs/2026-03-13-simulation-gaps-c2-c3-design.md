@@ -111,11 +111,15 @@ Donde:
 
 ### I-STATELESS-EFFECT
 **Guard:** `addLink` + `validate`
-**Regla:** Si el target de un effect link es un objeto stateless, rechazar.
+**Regla:** Si el target de un effect link es un objeto stateless, rechazar. También rechazar links con `source_state` o `target_state` cuando el objeto referido es stateless (un objeto stateless no puede tener estados, por lo tanto state-specified links son contradictorios).
 ```
 ∀ link ∈ Links: link.type = "effect" ⟹ thing(link.target).stateful ≠ false
+∀ link ∈ Links: link.source_state ≠ undefined ⟹ thing(stateParent(link.source_state)).stateful ≠ false
+∀ link ∈ Links: link.target_state ≠ undefined ⟹ thing(stateParent(link.target_state)).stateful ≠ false
 ```
-**Error:** `"Stateless objects cannot be affected — use consumption or result links"`
+**Error:** `"Stateless objects cannot be affected — use consumption or result links"` (effect) o `"State-specified links cannot reference stateless objects"` (source_state/target_state)
+
+**Nota:** Los links `input` con `source_state` hacia un stateless object son atrapados por la regla de state-specification, no necesitan guard adicional por tipo.
 
 ### I-CONDITION-MODE
 **Guard:** `addModifier` + `validate`
@@ -126,12 +130,22 @@ Donde:
 **Error:** `"condition_mode is only valid on condition modifiers"`
 
 ### I-STATELESS-DOWNGRADE
-**Guard:** `updateThing` (via validate)
+**Guard:** `updateThing` (eager guard, no pasivo via validate)
 **Regla:** No se puede marcar como stateless un objeto que tiene estados existentes.
 ```
 ∀ thing ∈ Things: thing.stateful = false ⟹ |{s ∈ States : s.parent = thing.id}| = 0
 ```
 **Error:** `"Remove all states before marking as stateless"`
+
+**Implementación:** Guard explícito en `updateThing`, keyed en `cleaned.stateful === false`, consistente con el patrón reject-not-cascade del codebase:
+```typescript
+if (cleaned.stateful === false) {
+  const hasStates = [...model.states.values()].some(s => s.parent === id);
+  if (hasStates) {
+    return err({ code: "I-STATELESS-DOWNGRADE", message: "Remove all states before marking as stateless", entity: id });
+  }
+}
+```
 
 ---
 
@@ -141,8 +155,9 @@ Donde:
 
 Actualmente retorna binario. Nuevo comportamiento:
 
-1. Recopilar todos los modifiers de los links conectados al proceso
-2. Para cada link con precondición fallida:
+1. El filtro de links ya obtiene ambas direcciones: `l.target === processId || l.source === processId`
+2. Para transforming links (consumption/effect), `link.source === processId` matchea y `link.target` es el objeto (convención: source=process, target=object). Para enabling links (agent/instrument), `link.target === processId` matchea y `link.source` es el objeto. Esta lógica direccional ya está correcta en el código actual.
+3. Para cada link con precondición fallida, buscar modifier via `model.modifiers` donde `mod.over === link.id`:
    - Si el link tiene modifier `type: "event"` → `response: "lost"`
    - Si el link tiene modifier `type: "condition"`, `condition_mode: "skip"` → `response: "skip"`
    - Si el link tiene modifier `type: "condition"`, `condition_mode: "wait"` o undefined → `response: "wait"`
@@ -166,13 +181,37 @@ export interface ModelState {
 }
 ```
 
+**Inmutabilidad:** `simulationStep` debe hacer deep-copy del Set en cada paso para mantener el design invariant de structural sharing:
+```typescript
+newState: {
+  ...state,
+  objects: new Map(state.objects),
+  waitingProcesses: new Set(state.waitingProcesses),
+  step: state.step + 1,
+}
+```
+
 ### runSimulation
 
 El loop de simulación ahora:
 1. Evalúa procesos en cola de espera primero (re-check precondiciones)
-2. Si un waiting process ahora satisface precondición → ejecutar
+2. Si un waiting process ahora satisface precondición → ejecutar y remover de waitingProcesses
 3. Luego evalúa procesos normales
-4. Termina cuando no hay más procesos ejecutables NI esperando
+4. Termina cuando:
+   - No hay más procesos ejecutables NI esperando (completed: true), o
+   - Se alcanza maxSteps (completed: false), o
+   - **Deadlock**: `waitingProcesses.size > 0` pero ningún proceso ejecutó en el step actual Y ningún estado cambió — la simulación está bloqueada (completed: false, deadlock: true)
+
+### SimulationTrace extension
+
+```typescript
+export interface SimulationTrace {
+  steps: SimulationStep[];
+  finalState: ModelState;
+  completed: boolean;
+  deadlocked: boolean; // true si terminó por deadlock de condition(wait)
+}
+```
 
 ---
 
@@ -180,13 +219,17 @@ El loop de simulación ahora:
 
 ### Modifier rendering
 
-| Modifier | mode | OPL output |
-|----------|------|------------|
-| condition | wait (default) | `"Process requires Object"` o `"Process requires State Object"` |
-| condition | skip | `"Process occurs if Object exists, otherwise Process is skipped"` o `"Process occurs if Object is State, otherwise Process is skipped"` |
-| event | — | `"Object triggers Process"` (sin cambio) |
-| condition+negated | wait | `"Process requires Object not to be State"` |
-| condition+negated | skip | `"Process occurs if Object is not State, otherwise Process is skipped"` |
+| Modifier | mode | state-specified | OPL output |
+|----------|------|-----------------|------------|
+| condition | wait (default) | no | `"Process requires Object"` |
+| condition | wait | yes | `"Process requires State Object"` |
+| condition | skip | no | `"Process occurs if Object exists, otherwise Process is skipped"` |
+| condition | skip | yes | `"Process occurs if Object is State, otherwise Process is skipped"` |
+| condition+negated | wait | yes | `"Process requires Object not to be State"` |
+| condition+negated | skip | yes | `"Process occurs if Object is not State, otherwise Process is skipped"` |
+| event | — | no | `"Object triggers Process"` |
+| event | — | yes | `"State Object triggers Process"` |
+| event+negated | — | yes | `"non-State Object triggers Process"` |
 
 ### OplModifierSentence extension
 
@@ -236,10 +279,26 @@ if (modifier.condition_mode && modifier.type !== "condition") {
 ```
 
 ### updateThing
-Fibered re-validation: si el patch cambia `stateful` a `false`, verificar que no existan estados.
+Guard eager (no pasivo): si el patch cambia `stateful` a `false`, verificar que no existan estados antes de aplicar el cambio (ver I-STATELESS-DOWNGRADE arriba para implementación).
 
 ### validate
 Agregar los 4 invariantes a la función global de validación.
+
+### editsFrom (opl.ts)
+La reconstrucción de modifiers en `editsFrom` debe propagar `condition_mode` al edit `add-modifier` para mantener la ley GetPut del lens:
+```typescript
+case "modifier":
+  modifierEdits.push({
+    kind: "add-modifier",
+    modifier: {
+      over: s.linkId,
+      type: s.modifierType,
+      negated: s.negated,
+      ...(s.conditionMode ? { condition_mode: s.conditionMode } : {}),
+    },
+  });
+```
+Sin esto, un round-trip `expose → editsFrom → applyOplEdit` perdería `condition_mode`, rompiendo GetPut.
 
 ---
 
@@ -297,8 +356,16 @@ Sin cambios — ambos campos son opcionales y el serializer ya maneja campos opc
 18. simulationStep con response "skip" → proceso skipped
 19. runSimulation re-evalúa waiting processes cuando estado cambia
 
+### Simulación — deadlock (simulation.test.ts)
+20. runSimulation con condition(wait) nunca satisfecha → deadlocked: true
+21. runSimulation con condition(wait) satisfecha tras state change → proceso ejecuta
+
 ### OPL (opl.test.ts)
-20. render condition(wait) → "Process requires Object"
-21. render condition(skip) → "Process occurs if Object exists, otherwise Process is skipped"
-22. render condition(wait)+negated
-23. render condition(skip)+negated
+22. render condition(wait) → "Process requires Object"
+23. render condition(skip) → "Process occurs if Object exists, otherwise Process is skipped"
+24. render condition(wait)+negated
+25. render condition(skip)+negated
+26. render event+state-specified → "State Object triggers Process"
+
+### OPL lens law (opl.test.ts)
+27. GetPut round-trip con condition(skip) modifier preserva condition_mode
