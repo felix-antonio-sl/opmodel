@@ -1,7 +1,7 @@
 # Handoff: Consolidación Tests + OPL Panel Enhancement
 
 **Fecha:** 2026-03-13
-**Estado:** Completado y commiteado a `master`
+**Estado:** Completado, reviewed, pushed a `origin/master`
 
 ---
 
@@ -62,6 +62,18 @@
 | `d7f6fe9` | test(core): add 48 tests for invariants I-17..I-30 and simulation engine, fix 3 bugs |
 | `54a83af` | feat(web): add OplEditorView with 8 OplEdit types, preview, and validation |
 | `eddad6b` | docs: add OPL panel enhancement design spec and implementation plan |
+| `a166caa` | docs: add consolidation + OPL panel enhancement handoff |
+| `76ae07d` | fix(web): address code review findings in OPL panel components |
+
+---
+
+## Code review final
+
+**Resultado:** Aprobado con 4 issues corregidos en `76ae07d`:
+1. **3× `as any` eliminados** en `buildEdit()` — reemplazados por tipos propios (`Omit<Thing,"id">`, `Omit<Link,"id">`, `Omit<Modifier,"id">`)
+2. **Radio `name` attribute** — agregado `name="thingKind"` para accesibilidad
+3. **Clipboard `.catch()`** — error handler para `navigator.clipboard.writeText`
+4. **Memoización `expose()`** — `useMemo` evita recálculo en cada keystroke del editor
 
 ---
 
