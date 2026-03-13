@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { Model } from "@opmodel/core";
 import type { Command } from "../lib/commands";
 import { OplSentencesView } from "./OplSentencesView";
+import { OplTextView } from "./OplTextView";
 
 type OplTab = "sentences" | "text" | "editor";
 
@@ -36,9 +37,7 @@ export function OplPanel({ model, opdId, selectedThing, dispatch }: Props) {
         <OplSentencesView model={model} opdId={opdId} selectedThing={selectedThing} />
       )}
       {activeTab === "text" && (
-        <div className="opl-panel__content">
-          <p style={{ color: "var(--text-muted)", fontSize: 12 }}>Text view — coming next</p>
-        </div>
+        <OplTextView model={model} opdId={opdId} />
       )}
       {activeTab === "editor" && (
         <div className="opl-panel__content">

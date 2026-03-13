@@ -972,6 +972,47 @@ body,
   border-bottom-color: var(--accent);
 }
 
+.opl-text__header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
+
+.opl-text__copy {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 10px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--accent);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.opl-text__copy:hover {
+  border-color: var(--accent);
+  background: var(--accent-glow);
+}
+
+.opl-text__copy--copied {
+  color: var(--success);
+  border-color: var(--success);
+}
+
+.opl-text__pre {
+  margin: 0;
+  padding: 10px;
+  background: var(--bg-surface);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text-secondary);
+}
+
 .opl-panel__content {
   padding: 0 16px 16px;
   flex: 1;
