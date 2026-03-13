@@ -101,6 +101,7 @@ export interface Thing {
   hyperlinks?: string[];
   user_input_enabled?: boolean;
   computational?: ComputationalObject | ComputationalProcess;
+  stateful?: boolean; // ISO 19450 §3.66/§3.67. undefined ≡ true (backwards-compatible)
 }
 
 export interface State {
@@ -153,6 +154,7 @@ export interface Modifier {
   over: string;
   type: ModifierType;
   negated?: boolean;
+  condition_mode?: "skip" | "wait"; // ISO §8.2.3. Only when type === "condition". Default: "wait"
 }
 
 export interface Appearance {
