@@ -156,7 +156,7 @@ if (cleaned.stateful === false) {
 Actualmente retorna binario. Nuevo comportamiento:
 
 1. El filtro de links ya obtiene ambas direcciones: `l.target === processId || l.source === processId`
-2. Para transforming links (consumption/effect), `link.source === processId` matchea y `link.target` es el objeto (convención: source=process, target=object). Para enabling links (agent/instrument), `link.target === processId` matchea y `link.source` es el objeto. Esta lógica direccional ya está correcta en el código actual.
+2. Para transforming links (consumption/effect), `link.source === processId` matchea y `link.target` es el objeto (convención: source=process, target=object). Para enabling links (agent/instrument), `link.target === processId` matchea y `link.source` es el objeto. **Nota:** la implementación actual filtra links por ambos extremos pero asume la convención OPM de dirección al resolver el objeto. Esto es correcto bajo la convención pero se recomienda agregar chequeo explícito de dirección (`link.source === processId` para transforming, `link.target === processId` para enabling) durante la refactorización.
 3. Para cada link con precondición fallida, buscar modifier via `model.modifiers` donde `mod.over === link.id`:
    - Si el link tiene modifier `type: "event"` → `response: "lost"`
    - Si el link tiene modifier `type: "condition"`, `condition_mode: "skip"` → `response: "skip"`
@@ -335,6 +335,9 @@ if (merged.condition_mode && merged.type !== "condition") {
 }
 ```
 
+### updateLink
+Guard eager para I-STATELESS-EFFECT: si el link merged resulta en `type === "effect"` con target stateless, o si `source_state`/`target_state` referencian un objeto stateless, rechazar. Mismo patrón de merged-state que `updateModifier`.
+
 ### validate
 Agregar los 4 invariantes a la función global de validación.
 
@@ -423,5 +426,13 @@ Sin cambios — ambos campos son opcionales y el serializer ya maneja campos opc
 27. render condition(skip)+negated
 28. render event+state-specified → "State Object triggers Process"
 
+### Guards en update (api-invariants-new.test.ts)
+29. updateModifier(type: "event") sobre modifier con condition_mode: "skip" → error I-CONDITION-MODE
+30. updateLink(type: "effect") sobre link cuyo target es stateless → error I-STATELESS-EFFECT
+
+### validate adicionales (api-invariants-new.test.ts)
+31. validate detecta effect link apuntando a stateless object (I-STATELESS-EFFECT)
+32. validate detecta stateful=false con estados existentes (I-STATELESS-DOWNGRADE)
+
 ### OPL lens law (opl.test.ts)
-29. GetPut round-trip con condition(skip) modifier preserva condition_mode
+33. GetPut round-trip con condition(skip) modifier preserva condition_mode
