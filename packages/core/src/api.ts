@@ -1152,5 +1152,159 @@ export function validate(model: Model): InvariantError[] {
     }
   }
 
+  // I-17: Process must have at least one transformation link (no orphan processes)
+  for (const [id, thing] of model.things) {
+    if (thing.kind === "process") {
+      const hasTransformLink = [...model.links.values()].some(
+        l => (l.source === id || l.target === id) &&
+        ["effect", "consumption", "result", "input", "output"].includes(l.type)
+      );
+      if (!hasTransformLink) {
+        errors.push({ code: "I-17", message: `Process ${id} has no transformation link`, entity: id });
+      }
+    }
+  }
+
+  // I-20: Object with states must have at least 2 states defined
+  for (const [id, thing] of model.things) {
+    if (thing.kind === "object") {
+      const stateCount = [...model.states.values()].filter(s => s.parent === id).length;
+      if (stateCount === 1) {
+        errors.push({ code: "I-20", message: `Object ${id} has only 1 state (minimum 2 required)`, entity: id });
+      }
+    }
+  }
+
+  // I-22: Generalization - specialization consistency (same perseverance)
+  for (const [id, link] of model.links) {
+    if (link.type === "generalization") {
+      const general = model.things.get(link.target);
+      const spec = model.things.get(link.source);
+      if (general && spec && general.kind !== spec.kind) {
+        errors.push({ code: "I-22", message: `Generalization ${id}: general and specialization must have same perseverance`, entity: id });
+      }
+    }
+  }
+
+  // I-23: Classification - instances must match class perseverance
+  for (const [id, link] of model.links) {
+    if (link.type === "classification") {
+      const classThing = model.things.get(link.target);
+      const instance = model.things.get(link.source);
+      if (classThing && instance && classThing.kind !== instance.kind) {
+        errors.push({ code: "I-23", message: `Classification ${id}: class and instance must have same perseverance`, entity: id });
+      }
+    }
+  }
+
+  // I-24: Invocation links must connect processes only
+  for (const [id, link] of model.links) {
+    if (link.type === "invocation") {
+      const source = model.things.get(link.source);
+      const target = model.things.get(link.target);
+      if ((source && source.kind !== "process") || (target && target.kind !== "process")) {
+        errors.push({ code: "I-24", message: `Invocation link ${id} must connect processes only`, entity: id });
+      }
+    }
+  }
+
+  // I-25: Exception links must connect processes only
+  for (const [id, link] of model.links) {
+    if (link.type === "exception") {
+      const source = model.things.get(link.source);
+      const target = model.things.get(link.target);
+      if ((source && source.kind !== "process") || (target && target.kind !== "process")) {
+        errors.push({ code: "I-25", message: `Exception link ${id} must connect processes only`, entity: id });
+      }
+    }
+  }
+
+  // I-26: Aggregation - parts must have same perseverance as whole
+  for (const [id, link] of model.links) {
+    if (link.type === "aggregation") {
+      const whole = model.things.get(link.target);
+      const part = model.things.get(link.source);
+      if (whole && part && whole.kind !== part.kind) {
+        errors.push({ code: "I-26", message: `Aggregation ${id}: whole and part must have same perseverance`, entity: id });
+      }
+    }
+  }
+
+  // I-27: Exhibition - features must have same perseverance as exhibitor
+  for (const [id, link] of model.links) {
+    if (link.type === "exhibition") {
+      const exhibitor = model.things.get(link.target);
+      const feature = model.things.get(link.source);
+      if (exhibitor && feature && exhibitor.kind !== feature.kind) {
+        errors.push({ code: "I-27", message: `Exhibition ${id}: exhibitor and feature must have same perseverance`, entity: id });
+      }
+    }
+  }
+
+  // I-28: State-specified links must reference valid states
+  // For transforming links (effect, consumption, result), source_state belongs to the target object
+  // For enabling links (agent, instrument), source_state belongs to the source (agent/instrument)
+  for (const [id, link] of model.links) {
+    const transformingTypes = ["effect", "consumption", "result", "input", "output"];
+    const isTransforming = transformingTypes.includes(link.type);
+    
+    if (link.source_state) {
+      const state = model.states.get(link.source_state);
+      if (!state) {
+        errors.push({ code: "I-28", message: `Link ${id} references non-existent source state ${link.source_state}`, entity: id });
+      } else {
+        // For transforming links, source_state belongs to target object; for enabling links, belongs to source
+        const expectedParent = isTransforming ? link.target : link.source;
+        if (state.parent !== expectedParent) {
+          errors.push({ code: "I-28", message: `Link ${id} source state ${link.source_state} does not belong to ${isTransforming ? 'target' : 'source'} thing`, entity: id });
+        }
+      }
+    }
+    if (link.target_state) {
+      const state = model.states.get(link.target_state);
+      if (!state) {
+        errors.push({ code: "I-28", message: `Link ${id} references non-existent target state ${link.target_state}`, entity: id });
+      } else if (state.parent !== link.target) {
+        errors.push({ code: "I-28", message: `Link ${id} target state ${link.target_state} does not belong to target thing`, entity: id });
+      }
+    }
+  }
+
+  // I-29: Fan members must all be same link type
+  for (const [fanId, fan] of model.fans) {
+    if (fan.members.length > 0) {
+      const firstMemberId = fan.members[0];
+      if (!firstMemberId) continue;
+      const firstLink = model.links.get(firstMemberId);
+      if (firstLink) {
+        for (let i = 1; i < fan.members.length; i++) {
+          const memberId = fan.members[i];
+          if (!memberId) continue;
+          const memberLink = model.links.get(memberId);
+          if (memberLink && memberLink.type !== firstLink.type) {
+            errors.push({ code: "I-29", message: `Fan ${fanId}: all members must be same link type`, entity: fanId });
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  // I-30: OPD refines must be process (for in-zoom) or object (for unfold)
+  for (const [id, opd] of model.opds) {
+    if (opd.refines !== undefined) {
+      const refinesThing = model.things.get(opd.refines);
+      if (refinesThing) {
+        // For hierarchical OPDs, refines must match the OPD type
+        if (opd.opd_type === "hierarchical" && opd.refinement_type === "in-zoom" && refinesThing.kind !== "process") {
+          errors.push({ code: "I-30", message: `OPD ${id} in-zoom refines must be a process`, entity: id });
+        }
+        if (opd.opd_type === "hierarchical" && opd.refinement_type === "unfold" && refinesThing.kind !== "object") {
+          errors.push({ code: "I-30", message: `OPD ${id} unfold refines must be an object`, entity: id });
+        }
+      }
+    }
+  }
+
   return errors;
 }

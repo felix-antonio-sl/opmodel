@@ -16,7 +16,7 @@ export type LinkType =
   | "aggregation" | "exhibition" | "generalization" | "classification" | "tagged"
   | "invocation" | "exception";
 export type ModifierType = "event" | "condition";
-export type FanType = "xor" | "or";
+export type FanType = "xor" | "or" | "and";
 export type AssertionCategory = "safety" | "liveness" | "correctness";
 export type ValidationLevel = "hard" | "soft";
 export type SyncStatus = "synced" | "pending" | "unloaded" | "disconnected";
@@ -143,6 +143,7 @@ export interface Link {
   invocation_interval?: Duration;
   discriminating?: boolean;
   discriminating_values?: string[];
+  incomplete?: boolean; // ISO 19450: partial/incomplete structures
   hyperlinks?: string[];
   vertices?: Position[];
 }

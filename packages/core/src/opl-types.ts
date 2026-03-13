@@ -44,6 +44,7 @@ export interface OplLinkSentence {
   sourceStateName?: string;
   targetStateName?: string;
   tag?: string;
+  incomplete?: boolean;
 }
 
 export interface OplModifierSentence {

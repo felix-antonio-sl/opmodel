@@ -100,6 +100,7 @@ export function expose(model: Model, opdId: string): OplDocument {
       targetId: link.target,
       sourceName: model.things.get(link.source)?.name ?? link.source,
       targetName: model.things.get(link.target)?.name ?? link.target,
+      incomplete: link.incomplete ?? false,
     };
     if (link.source_state) {
       sentence.sourceStateName = model.states.get(link.source_state)?.name;
@@ -141,22 +142,78 @@ function aOrAn(word: string): string {
 }
 
 function renderLinkSentence(s: OplLinkSentence): string {
+  const processName = s.sourceName; // For transforming links, source is process
+  const objectName = s.targetName; // For transforming links, target is object
+  
   switch (s.linkType) {
-    case "agent": return `${s.sourceName} handles ${s.targetName}.`;
-    case "instrument": return `${s.sourceName} is an instrument of ${s.targetName}.`;
-    case "consumption": return `${s.sourceName} consumes ${s.targetName}.`;
-    case "effect": {
-      if (s.sourceStateName && s.targetStateName) {
-        return `${s.sourceName} affects ${s.targetName}, from ${s.sourceStateName} to ${s.targetStateName}.`;
+    case "agent": {
+      // State-specified agent: "S Agent handles Process"
+      if (s.sourceStateName) {
+        return `${s.sourceStateName} ${s.sourceName} handles ${s.targetName}.`;
       }
+      return `${s.sourceName} handles ${s.targetName}.`;
+    }
+    case "instrument": {
+      // State-specified instrument: "Process requires S Instrument"
+      if (s.sourceStateName) {
+        return `${s.targetName} requires ${s.sourceStateName} ${s.sourceName}.`;
+      }
+      return `${s.sourceName} is an instrument of ${s.targetName}.`;
+    }
+    case "consumption": {
+      // State-specified consumption: "Process consumes S Object"
+      if (s.targetStateName) {
+        return `${s.sourceName} consumes ${s.targetStateName} ${s.targetName}.`;
+      }
+      return `${s.sourceName} consumes ${s.targetName}.`;
+    }
+    case "effect": {
+      // State-specified effect (ISO 19450 9.3.3)
+      if (s.sourceStateName && s.targetStateName) {
+        // Input-output-specified: "Process changes Object from input-state to output-state"
+        return `${processName} changes ${objectName} from ${s.sourceStateName} to ${s.targetStateName}.`;
+      }
+      if (s.sourceStateName && !s.targetStateName) {
+        // Input-specified: "Process changes Object from input-state"
+        return `${processName} changes ${objectName} from ${s.sourceStateName}.`;
+      }
+      if (!s.sourceStateName && s.targetStateName) {
+        // Output-specified: "Process changes Object to output-state"
+        return `${processName} changes ${objectName} to ${s.targetStateName}.`;
+      }
+      // Basic effect
       return `${s.sourceName} affects ${s.targetName}.`;
     }
-    case "result": return `${s.sourceName} yields ${s.targetName}.`;
+    case "result": {
+      // State-specified result: "Process yields S Object"
+      if (s.targetStateName) {
+        return `${s.sourceName} yields ${s.targetStateName} ${s.targetName}.`;
+      }
+      return `${s.sourceName} yields ${s.targetName}.`;
+    }
     case "input": return `${s.sourceName} requires ${s.targetName}.`;
     case "output": return `${s.sourceName} outputs ${s.targetName}.`;
-    case "aggregation": return `${s.sourceName} consists of ${s.targetName}.`;
-    case "exhibition": return `${s.sourceName} exhibits ${s.targetName}.`;
-    case "generalization": return `${s.targetName} is a ${s.sourceName}.`;
+    case "aggregation": {
+      // Incomplete aggregation
+      if (s.incomplete) {
+        return `${s.sourceName} consists of ${s.targetName} and at least one other part.`;
+      }
+      return `${s.sourceName} consists of ${s.targetName}.`;
+    }
+    case "exhibition": {
+      // Incomplete exhibition
+      if (s.incomplete) {
+        return `${s.sourceName} exhibits ${s.targetName} and at least one other feature.`;
+      }
+      return `${s.sourceName} exhibits ${s.targetName}.`;
+    }
+    case "generalization": {
+      // Incomplete generalization
+      if (s.incomplete) {
+        return `${s.sourceName}, ${s.targetName} and other specializations are general.`;
+      }
+      return `${s.targetName} is a ${s.sourceName}.`;
+    }
     case "classification": return `${s.targetName} is classified by ${s.sourceName}.`;
     case "invocation": return `${s.sourceName} invokes ${s.targetName}.`;
     case "exception": return `${s.sourceName} handles exception from ${s.targetName}.`;

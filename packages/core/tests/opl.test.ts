@@ -194,7 +194,7 @@ describe("render", () => {
     const m = buildModel();
     const doc = expose(m, "opd-sd");
     const text = render(doc);
-    expect(text).toContain("Boiling affects Water, from liquid to gas.");
+    expect(text).toContain("Boiling changes Water from liquid to gas.");
   });
 
   it("renders duration", () => {
