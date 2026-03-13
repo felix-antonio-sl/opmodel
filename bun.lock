@@ -24,6 +24,16 @@
       "name": "@opmodel/core",
       "version": "0.1.0",
     },
+    "packages/nl": {
+      "name": "@opmodel/nl",
+      "version": "0.1.0",
+      "dependencies": {
+        "@opmodel/core": "workspace:*",
+      },
+      "devDependencies": {
+        "typescript": "^5.8.2",
+      },
+    },
     "packages/web": {
       "name": "@opmodel/web",
       "version": "0.1.0",
@@ -145,6 +155,8 @@
     "@opmodel/cli": ["@opmodel/cli@workspace:packages/cli"],
 
     "@opmodel/core": ["@opmodel/core@workspace:packages/core"],
+
+    "@opmodel/nl": ["@opmodel/nl@workspace:packages/nl"],
 
     "@opmodel/web": ["@opmodel/web@workspace:packages/web"],
 
