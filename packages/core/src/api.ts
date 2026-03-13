@@ -224,6 +224,33 @@ export function addLink(
     }
   }
 
+  // I-STATELESS-EFFECT: effect links cannot target stateless objects
+  if (link.type === "effect") {
+    const target = model.things.get(link.target);
+    if (target?.stateful === false) {
+      return err({ code: "I-STATELESS-EFFECT", message: "Stateless objects cannot be affected — use consumption or result links", entity: link.id });
+    }
+  }
+  // I-STATELESS-EFFECT: state-specified links cannot reference stateless objects
+  if (link.source_state) {
+    const sourceState = model.states.get(link.source_state);
+    if (sourceState) {
+      const parent = model.things.get(sourceState.parent);
+      if (parent?.stateful === false) {
+        return err({ code: "I-STATELESS-EFFECT", message: "State-specified links cannot reference stateless objects", entity: link.id });
+      }
+    }
+  }
+  if (link.target_state) {
+    const targetState = model.states.get(link.target_state);
+    if (targetState) {
+      const parent = model.things.get(targetState.parent);
+      if (parent?.stateful === false) {
+        return err({ code: "I-STATELESS-EFFECT", message: "State-specified links cannot reference stateless objects", entity: link.id });
+      }
+    }
+  }
+
   let things = model.things;
   // I-19 effect: exhibition forces source.essence := informatical
   if (link.type === "exhibition") {
