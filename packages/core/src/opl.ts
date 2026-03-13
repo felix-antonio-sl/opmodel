@@ -254,12 +254,18 @@ function renderModifierSentence(s: OplModifierSentence): string {
       if (s.negated && stateName) {
         return `${processName} requires ${objectName} not to be ${stateName}.`;
       }
+      if (stateName) {
+        return `${processName} requires ${stateName} ${objectName}.`;
+      }
       return `${processName} requires ${objectName}.`;
     }
 
     if (mode === "skip") {
       if (s.negated && stateName) {
         return `${processName} occurs if ${objectName} is not ${stateName}, otherwise ${processName} is skipped.`;
+      }
+      if (stateName) {
+        return `${processName} occurs if ${objectName} is ${stateName}, otherwise ${processName} is skipped.`;
       }
       return `${processName} occurs if ${objectName} exists, otherwise ${processName} is skipped.`;
     }

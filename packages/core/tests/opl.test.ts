@@ -528,18 +528,18 @@ describe("render — modifier sentences (C2)", () => {
     return m;
   }
 
-  it("renders condition(wait) as 'Process requires Object'", () => {
+  it("renders condition(wait)+state-specified as 'Process requires State Object'", () => {
     const m = buildModelWithModifier("condition", "wait");
     const doc = expose(m, "opd-sd");
     const text = render(doc);
-    expect(text).toContain("Boiling requires Water");
+    expect(text).toContain("Boiling requires liquid Water");
   });
 
-  it("renders condition(skip) as 'Process occurs if Object exists, otherwise Process is skipped'", () => {
+  it("renders condition(skip)+state-specified as 'Process occurs if Object is State'", () => {
     const m = buildModelWithModifier("condition", "skip");
     const doc = expose(m, "opd-sd");
     const text = render(doc);
-    expect(text).toContain("Boiling occurs if Water exists, otherwise Boiling is skipped");
+    expect(text).toContain("Boiling occurs if Water is liquid");
   });
 
   it("renders condition(wait)+negated as 'Process requires Object not to be State'", () => {
