@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import type { Model, OplEdit, LinkType, ModifierType, Essence, Affiliation } from "@opmodel/core";
+import type { Model, OplEdit, Link, LinkType, ModifierType, Essence, Affiliation } from "@opmodel/core";
 import { expose, render, type OplDocument } from "@opmodel/core";
 import type { Command } from "../lib/commands";
 
@@ -73,7 +73,7 @@ function buildEdit(form: EditorFormState, opdId: string): OplEdit | null {
           kind: form.thingKind,
           essence: form.essence,
           affiliation: form.affiliation,
-        } as any,
+        },
         position: { x: 100, y: 100 },
       };
     case "remove-thing":
@@ -95,13 +95,13 @@ function buildEdit(form: EditorFormState, opdId: string): OplEdit | null {
     case "add-link": {
       if (!form.linkSource || !form.linkTarget) return null;
       if (form.linkSource === form.linkTarget) return null;
-      const link: any = {
+      const link: Omit<Link, "id"> = {
         source: form.linkSource,
         target: form.linkTarget,
         type: form.linkType,
+        ...(form.linkSourceState ? { source_state: form.linkSourceState } : {}),
+        ...(form.linkTargetState ? { target_state: form.linkTargetState } : {}),
       };
-      if (form.linkSourceState) link.source_state = form.linkSourceState;
-      if (form.linkTargetState) link.target_state = form.linkTargetState;
       return { kind: "add-link", link };
     }
     case "remove-link":
@@ -111,7 +111,7 @@ function buildEdit(form: EditorFormState, opdId: string): OplEdit | null {
       if (!form.selectedLink) return null;
       return {
         kind: "add-modifier",
-        modifier: { over: form.selectedLink, type: form.modifierType, negated: form.negated } as any,
+        modifier: { over: form.selectedLink, type: form.modifierType, negated: form.negated },
       };
     }
     case "remove-modifier":
@@ -120,8 +120,7 @@ function buildEdit(form: EditorFormState, opdId: string): OplEdit | null {
   }
 }
 
-function getPreviewText(form: EditorFormState, model: Model, opdId: string): string {
-  const doc = expose(model, opdId);
+function getPreviewText(form: EditorFormState, model: Model, doc: OplDocument): string {
 
   if (form.action === "remove-thing" && form.selectedThing) {
     const s = doc.sentences.find(s => s.kind === "thing-declaration" && s.thingId === form.selectedThing);
@@ -209,6 +208,7 @@ export function OplEditorView({ model, opdId, dispatch }: Props) {
   const [form, setForm] = useState<EditorFormState>(INITIAL_FORM);
   const [error, setError] = useState<string | null>(null);
 
+  const doc = useMemo(() => expose(model, opdId), [model, opdId]);
   const things = useMemo(() => [...model.things.values()], [model.things]);
   const objects = useMemo(() => things.filter(t => t.kind === "object"), [things]);
   const links = useMemo(() => [...model.links.values()], [model.links]);
@@ -228,7 +228,7 @@ export function OplEditorView({ model, opdId, dispatch }: Props) {
     setError(null);
   };
 
-  const preview = getPreviewText(form, model, opdId);
+  const preview = getPreviewText(form, model, doc);
   const edit = buildEdit(form, opdId);
   const isNameDuplicate = form.action === "add-thing" && form.name.trim() &&
     things.some(t => t.name.toLowerCase() === form.name.trim().toLowerCase());
@@ -267,8 +267,8 @@ export function OplEditorView({ model, opdId, dispatch }: Props) {
           <div className="opl-editor__field">
             <label className="opl-editor__label">Kind</label>
             <div className="opl-editor__radio-group">
-              <label><input type="radio" checked={form.thingKind === "object"} onChange={() => set("thingKind", "object")} /> Object</label>
-              <label><input type="radio" checked={form.thingKind === "process"} onChange={() => set("thingKind", "process")} /> Process</label>
+              <label><input type="radio" name="thingKind" checked={form.thingKind === "object"} onChange={() => set("thingKind", "object")} /> Object</label>
+              <label><input type="radio" name="thingKind" checked={form.thingKind === "process"} onChange={() => set("thingKind", "process")} /> Process</label>
             </div>
           </div>
           <div className="opl-editor__field">

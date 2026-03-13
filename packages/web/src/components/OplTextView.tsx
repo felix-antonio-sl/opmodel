@@ -16,6 +16,8 @@ export function OplTextView({ model, opdId }: Props) {
     navigator.clipboard.writeText(text).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {
+      console.warn("Clipboard write failed");
     });
   };
 
