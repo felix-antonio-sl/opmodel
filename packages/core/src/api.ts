@@ -847,6 +847,14 @@ export function updateThing(
     }
   }
 
+  // I-STATELESS-DOWNGRADE: cannot mark as stateless if states exist
+  if (cleaned.stateful === false) {
+    const hasStates = [...model.states.values()].some(s => s.parent === id);
+    if (hasStates) {
+      return err({ code: "I-STATELESS-DOWNGRADE", message: "Remove all states before marking as stateless", entity: id });
+    }
+  }
+
   // Check links where this thing is source
   if (cleaned.essence !== undefined || cleaned.duration !== undefined) {
     for (const link of model.links.values()) {
