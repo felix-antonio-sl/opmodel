@@ -56,6 +56,9 @@ export interface OplModifierSentence {
   targetName: string;
   modifierType: ModifierType;
   negated: boolean;
+  conditionMode?: "skip" | "wait";
+  sourceStateName?: string;
+  targetStateName?: string;
 }
 
 export type OplSentence =
