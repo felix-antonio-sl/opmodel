@@ -283,9 +283,6 @@ export function runSimulation(
     .filter(t => t.kind === "process")
     .sort((a, b) => a.id.localeCompare(b.id));
 
-  // Rastrear procesos que han ejecutado exitosamente al menos una vez
-  const everExecuted = new Set<string>();
-
   for (let i = 0; i < maxSteps; i++) {
     let executed = false;
 
@@ -304,7 +301,6 @@ export function runSimulation(
         if (!stepResult.skipped) {
           steps.push(stepResult);
           currentState = stepResult.newState;
-          if (stepResult.processId) everExecuted.add(stepResult.processId);
           executed = true;
           break;
         }
@@ -322,7 +318,6 @@ export function runSimulation(
       if (!stepResult.skipped) {
         steps.push(stepResult);
         currentState = stepResult.newState;
-        if (stepResult.processId) everExecuted.add(stepResult.processId);
         executed = true;
         break;
       } else if (stepResult.processId && stepResult.newState.waitingProcesses.has(stepResult.processId)) {
@@ -332,10 +327,8 @@ export function runSimulation(
     }
 
     if (!executed) {
-      // Sin progreso — comprobar si es deadlock real o agotamiento de recursos
-      // Deadlock real: procesos en espera que NUNCA han podido ejecutar
-      const trueDeadlock = [...currentState.waitingProcesses].some(id => !everExecuted.has(id));
-      if (trueDeadlock) {
+      // Deadlock: waiting processes exist but none can execute
+      if (currentState.waitingProcesses.size > 0) {
         return { steps, finalState: currentState, completed: false, deadlocked: true };
       }
       break;
