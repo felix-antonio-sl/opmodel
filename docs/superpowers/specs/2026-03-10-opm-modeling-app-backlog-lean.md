@@ -106,10 +106,10 @@ Correspondencias OPM↔CT que justifican la arquitectura:
 
 | Prioridad | HUs | Descripción                                                   |
 | --------- | --- | ------------------------------------------------------------- |
-| P0        | 13  | Motor base + persistencia + CLI                               |
-| P1        | 19  | OPL bidireccional, NL, navegación inteligente, simulación ECA |
-| P2        | 17  | Simulación avanzada, IA, vistas, sub-modelos                  |
-| P3        | 1   | Headless simulation                                           |
+| P0        | 14  | Motor base + persistencia + CLI + halo básico                               |
+| P1        | 22  | OPL bidireccional, NL, navegación inteligente, simulación ECA, stateful/stateless, agregación, supresión estados |
+| P2        | 20  | Simulación avanzada, IA, vistas, sub-modelos, operaciones, escenarios, consistencia refinamiento |
+| P3        | 3   | Headless simulation, lifespan diagrams, stakeholder annotation |
 
 ### Taxonomía de evidencia
 
@@ -146,25 +146,25 @@ CLI (L-M6-03) ← deps base: L-M1-02, L-M1-03, L-M1-07, L-M2-01, L-M6-01
 
 | Módulo                     | HUs | Scope                                                                                                                                   |
 | -------------------------- | --- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| M1 Motor de Modelo         | 13  | Things, links (todos), estados, in-zoom, unfold, semi-fold, enforcement, sub-modelos                                                    |
+| M1 Motor de Modelo         | 17  | Things, links (todos), estados, in-zoom, unfold, semi-fold, enforcement, sub-modelos, operaciones, stateful/stateless, agregación asimétrica, supresión estados |
 | M2 Motor OPL + NL          | 4   | OPL sync, OPL→OPD bidireccional, NL→OPL→OPD, export OPL                                                                                 |
 | M3 Navegación Inteligente  | 7   | OPD tree, panel things, toolbar+layout, minimap, búsqueda, nav semántica, cobertura                                                     |
-| M4 Verificación y Consulta | 9   | Duplicación de nombres, validación, vistas aspecto, view diagrams, consulta semántica, anti-patrones, impacto, requirements, system map |
-| M5 Ejecución Formal        | 9   | Simulación ECA, condiciones/bucles, computacional, assertions, deadlocks, rangos, estereotipos, user input, headless                    |
+| M4 Verificación y Consulta | 12  | Duplicación de nombres, validación, vistas aspecto, view diagrams, consulta semántica, anti-patrones, impacto, requirements, system map, missing knowledge, consistencia refinamiento, stakeholders |
+| M5 Ejecución Formal        | 11  | Simulación ECA, condiciones/bucles, computacional, assertions, deadlocks, rangos, estereotipos, user input, headless, escenarios, lifespan |
 | M6 Plataforma              | 8   | Save/load graph, undo/redo, CLI `opmod`, config, templates, command palette, diff semántico                                             |
 
 ### Pulsos
 
 | Pulso | HUs                                                                    | Entregable                                   |
 | ----- | ---------------------------------------------------------------------- | -------------------------------------------- |
-| P0    | L-M1-02, L-M1-03, L-M3-01, L-M3-02, L-M3-03, L-M2-01, L-M6-03(base)    | Canvas + CLI base → SD básico con OPL        |
+| P0    | L-M1-02, L-M1-03, L-M3-01, L-M3-02, L-M3-03, L-M2-01, L-M6-03(base), L-M1-11A | Canvas + CLI base → SD básico con OPL        |
 | P1    | L-M1-06, L-M1-07, L-M1-10, L-M1-01, L-M6-01, L-M6-02                   | **MVP: modelo OPM completo, guardable**      |
 | P2    | L-M1-04, L-M1-05, L-M2-02, L-M2-03, L-M2-04                            | OPL bidireccional + NL→OPL→OPD               |
-| P3    | L-M1-08, L-M1-09, L-M1-11, L-M1-12, L-M3-04, L-M3-05, L-M3-06, L-M6-07 | Navegación inteligente + command palette     |
+| P3    | L-M1-08, L-M1-09, L-M1-11B, L-M1-12, L-M1-15, L-M1-16, L-M1-17, L-M3-04, L-M3-05, L-M3-06, L-M6-07 | Navegación inteligente + command palette + stateful/stateless + agregación + supresión estados |
 | P4    | L-M4-01, L-M4-02, L-M3-07, L-M6-04, L-M6-05                            | Validación continua + coverage               |
-| P5    | L-M5-01, L-M5-02, L-M5-03, L-M5-04, L-M5-05                            | Simulación ECA + assertions + deadlocks      |
+| P5    | L-M5-01, L-M5-02, L-M5-03, L-M5-04, L-M5-05, L-M1-14, L-M5-10         | Simulación ECA + assertions + deadlocks + operaciones + escenarios |
 | P6    | L-M5-06, L-M5-07, L-M5-08, L-M1-13                                     | Simulación avanzada + sub-modelos            |
-| P7    | L-M4-03 a L-M4-09, L-M6-06, L-M6-08, L-M5-09                           | IA + vistas + requirements + diff + headless |
+| P7    | L-M4-03 a L-M4-09, L-M4-11, L-M4-12, L-M6-06, L-M6-08, L-M5-09, L-M5-11 | IA + vistas + requirements + diff + headless + consistencia + stakeholders + lifespan |
 
 ---
 
@@ -227,6 +227,7 @@ Como modelador, quiero crear objetos y procesos en el canvas y configurar inmedi
 - Given que el auto-formato está activado y el modelador crea o renombra un ESTADO (no un thing), when el sistema procesa el nombre, then NO aplica capitalización automática al estado porque ISO 19450 establece que los estados se representan sin capitalización ("bold face without capitalization"); el auto-formato solo aplica a objetos y procesos.
 - Given un modelo donde la mayoría de things son informaticos, when el sistema determina la Primary Essence, then la esencia por defecto de nuevos things se establece como informática; si la mayoría son físicos, se establece como física; esta regla de mayoría se recalcula al cambiar la proporción de esencias en el modelo y puede ser overridden manualmente en Settings.
 - Given que el modelador crea un thing y le asigna un nombre que parece ser un verbo (ej. "Heat", "Run"), when confirma el nombre en un OBJETO, then el sistema muestra una sugerencia: "This looks like a verb — should this be a Process instead?" y ofrece convertir; análogamente, si un proceso recibe un nombre que parece sustantivo, sugiere convertir a objeto.
+- Given que el modelador crea un nuevo thing sin especificar esencia, when el sistema aplica defaults, then usa la `primary_essence` configurada en Settings como esencia por defecto (ISO §3.55); el modelador puede cambiarla después.
 
 **Dependencias:** ninguna
 
@@ -262,6 +263,18 @@ Como modelador, quiero crear enlaces entre things mediante arrastre con tabla fi
 - Given un enlace procedural existente, when el modelador hace clic derecho sobre él, then se abre un panel con campos editables de multiplicidad fuente, multiplicidad destino, tag y probabilidad de ruta.
 - Given un objeto stateful y un proceso, when el modelador arrastra desde un estado específico del objeto hacia el proceso y luego arrastra desde el proceso de vuelta al objeto (sin apuntar a un estado específico), then se crea un input-specified effect link y el OPL refleja "Processing changes Object from input-state" (sin especificar estado de salida).
 - Given un objeto stateful y un proceso, when el modelador arrastra desde el objeto (sin apuntar a un estado) hacia el proceso y luego arrastra desde el proceso hacia un estado específico del objeto, then se crea un output-specified effect link y el OPL refleja "Processing changes Object to output-state" (sin especificar estado de entrada, el objeto puede estar en cualquier estado).
+
+**State-specified OPL render completo — Extensión ISO 19450:**
+
+- Given un state-specified agent link desde estado S de objeto A hacia proceso P, when el sistema renderiza OPL, then produce "S A handles P" (ISO 19450 9.4.1).
+- Given un state-specified instrument link desde estado S de objeto I hacia proceso P, when el sistema renderiza OPL, then produce "P requires S I" (ISO 19450 9.4.2).
+- Given un input-specified effect link (efecto sin output), when el sistema renderiza OPL, then produce "P changes O from input-state" (ISO 19450 9.3.3.3).
+- Given un output-specified effect link (efecto sin input), when el sistema renderiza OPL, then produce "P changes O to output-state" (ISO 19450 9.3.3.4).
+- Given un state-specified consumption link desde estado S de objeto C hacia proceso P, when el sistema renderiza OPL, then produce "S C initiates P, which consumes C" (ISO 19450 9.3.1.1).
+- Given un state-specified result link (resultado con estado), when el sistema renderiza OPL, then produce "P yields S O" (ISO 19450 9.3.2).
+- Given un input-output-specified effect link pair (in/out con estados), when el sistema renderiza OPL, then produce "P changes O from input-state to output-state" (ISO 19450 9.3.3.2).
+- Given un state-specified agent link con modifier 'e' (event), when el sistema renderiza OPL, then produce "S A initiates and handles P" (ISO 19450 9.4.1 + 9.4.4).
+- Given un state-specified instrument link con modifier 'c' (condition), when el sistema renderiza OPL, then produce "P requires S I if S I exists, otherwise P is skipped" (ISO 19450 9.4.2 + 9.5).
 
 **Invariantes categóricos de implementación:**
 
@@ -304,6 +317,10 @@ Como modelador, quiero crear enlaces estructurales OPM (composición, caracteriz
 - Given un enlace de auto-invocación, when el modelador activa la opción "Add Waiting Process", then aparece un subproceso "Waiting" explícito en el in-zoom del proceso.
 - Given dos enlaces del mismo tipo en el mismo puerto de un thing, when el modelador superpone un nuevo enlace sobre uno existente, then el sistema crea automáticamente un arco XOR entre ellos y el OPL indica "exactly one of".
 - Given un arco XOR existente, when el modelador hace clic en el ícono del arco, then alterna entre XOR (exactamente uno) y OR (al menos uno), actualizando el OPL.
+- Given un arco XOR u OR existente, when el modelador hace clic nuevamente en el ícono, then alterna a AND (todos los enlaces deben ejecutarse), actualizando el OPL a "all of".
+- Given un link fan AND existente, when el sistema genera OPL, then produce "X requires Y and Z" donde Y y Z son los objetos de los enlaces (ISO 19450 12.1 — AND procedural links).
+- Given un link fan AND donde los enlaces tienen diferentes probabilidades, when el sistema evalúa durante simulación, then todas las ramas se ejecutan y las probabilidades determinan pesos relativos en el resultado agregados.
+- Given un link fan AND cuyos enlaces tienen modifiers 'e' o 'c', when el sistema procesa el fan, then cada rama del AND evalúa su modifier independientemente: las ramas con 'e' se activan por evento, las ramas con 'c' se evalúan por condición, y todas deben completarse para que el proceso principal avance.
 - Given un link fan XOR/OR cuyos enlaces originan desde estados específicos de un objeto, when el sistema evalúa el fan durante modelado o simulación, then la selección se basa en el estado actual del objeto: el enlace cuyo estado calificador coincide con el estado actual es el que se activa; el OPL refleja los estados calificadores de cada rama del fan.
 - Given un proceso con duración máxima configurada y otro proceso en el modelo, when el modelador conecta ambos y selecciona "Overtime Exception" en la tabla de enlaces, then se crea un enlace de excepción y el OPL indica "if [Process] exceeds [max-duration], then [Exception-Process] is activated".
 - Given un proceso sin duración máxima configurada, when el modelador intenta crear un enlace de overtime exception desde ese proceso, then el sistema rechaza la operación con mensaje: "Overtime exception requires max duration — configure Time Duration first".
@@ -314,6 +331,24 @@ Como modelador, quiero crear enlaces estructurales OPM (composición, caracteriz
 - Given un enlace de clasificación-instanciación entre un Class y sus Instances, when el modelador crea una Instance, then los features definidos por el pattern del Class requieren valores explícitos en la Instance; el sistema muestra campos editables para cada feature heredado y el OPL refleja "Instance-thing is an instance of Class-thing" con los valores asignados.
 - Given cualquier enlace procedimental existente (transforming: consumption, effect, result, input/output pair, input-specified, output-specified; enabling: agent, instrument) con o sin state-specification, when el modelador aplica un modifier 'e' (event) o 'c' (condition), then el sistema genera la sentencia OPL compuesta según la gramática ISO 19450 correspondiente, combinando la sentencia base del enlace con la semántica del modifier; ejemplos: "Object triggers Process, which consumes Object" (consumption + event), "Agent handles Process if Agent is qualifying-state, else Process is skipped" (condition + state-specified agent), "Input-state Object triggers Process, which changes Object from input-state to output-state" (input-output-specified effect + event), "Process occurs if Object is input-state, in which case Process changes Object from input-state to output-state, otherwise Process is skipped" (condition + input-output-specified effect).
 - Given un link fan (XOR o OR) cuyos enlaces tienen modifiers de control ('e' o 'c'), when el sistema renderiza el fan, then los modifiers se preservan en cada rama del fan y la OPL de cada rama refleja su combinación específica de tipo de enlace + modifier + state-specification; esto habilita control-modified link fans como tipo diferenciado.
+
+**OPL avanzado (forked sentences, as well as, specialization XOR) — Extensión ISO 19450:**
+
+- Given múltiples partes conectadas a un todo mediante agregación-participación, when el sistema genera OPL, then produce la forma forked: "X consists of Y, Z and W" (ISO 19450 A.4.6.3).
+- Given múltiples partes conectadas a un todo mediante agregación-participación con opción "Ordered" activa, when el sistema genera OPL, then produce la forma forked ordenada: "X consists of Y, Z and W, in that sequence" (ISO 19450 A.4.6.3).
+- Given agregación-participación incompleta (al menos una parte no visible en el OPD), when el sistema genera OPL, then produce "X consists of Y, Z and at least one other part" (ISO 19450 A.4.6.3.1).
+- Given un objeto exhibidor con múltiples attributes y operations, when el sistema genera OPL, then produce "X exhibits attribute1, attribute2 as well as operation1" (ISO 19450 A.4.6.2 — forma AsWellAs).
+- Given un objeto exhibidor con features parciales, when el sistema genera OPL, then produce "X exhibits attribute1, attribute2 and at least one other attribute" (ISO 19450 A.4.6.2 — forma partial).
+- Given un proceso exhibidor con attributes y operations, when el sistema genera OPL, then precede operations antes de attributes: "X exhibits operation1, operation2 as well as attribute1" (ISO 19450 A.4.6.2).
+- Given una especialización XOR entre general G y especializaciones S1, S2, when el sistema genera OPL, then produce "S1 can be either S2 or G" (ISO 19450 A.4.6.5 — basic Xor object specialization sentence).
+- Given múltiples especializaciones parciales de un general, when el sistema genera OPL, then produce "S1, S2 and other specializations are G" (ISO 19450 A.4.6.5 — partial object specialization sentence).
+- Given una instanciación entre clase C e instancias I1, I2, when el sistema genera OPL, then produce "I1 and I2 are instances of C" (ISO 19450 A.4.6.6).
+- Given una clasificación de proceso, when el sistema genera OPL, then produce "I1 is an instance of C" para una instancia única, o "I1, I2 and I3 are instances of C" para múltiples instancias (ISO 19450 A.4.6.6).
+- Given un General con atributo discriminante D que tiene estados {s1, s2, s3}, when el modelador crea Specializations y asigna discriminating_values, then el sistema valida exhaustividad (todos los estados de D deben estar asignados) y disjointness (ningún estado puede estar en dos Specializations); si la validación falla, muestra error descriptivo (ISO §10.3.4, invariante I-32).
+- Given un enlace de exception entre dos procesos, when el modelador configura el tipo de exception, then puede elegir entre "basic" (fallo genérico), "overtime" (excede duración máxima) o "undertime" (completa antes de duración mínima); el sistema requiere que el proceso tenga duration.min definido para undertime (ISO §9.5.4).
+- Given un self-invocation link con invocation_interval definido, when el modelador activa "Add Waiting Process", then el sistema crea automáticamente un subproceso "Waiting" con duración = invocation_interval, enlazado de vuelta al proceso original (ISO §9.5.2.5.2).
+- Given un modifier de tipo "event" en un enlace, when el modelador lo visualiza, then el tooltip explica "Event: triggered once when the source object enters the specified state — instantaneous, one-time trigger" (ISO §9.5.2).
+- Given un modifier de tipo "condition" en un enlace, when el modelador lo visualiza, then el tooltip explica "Condition: must remain true during process execution — persistent gate" (ISO §9.5.3).
 
 **Invariantes categóricos de implementación:**
 
@@ -359,6 +394,28 @@ Como modelador, quiero configurar multiplicidad, probabilidad, tasa de consumo y
 - Given un modelo con sub-modelos, when un thing compartido tiene un enlace procedimental en el modelo principal, then el sub-modelo puede tener un enlace procedimental diferente al mismo thing compartido porque los sub-modelos operan en un nivel de abstracción independiente.
 - Given un objeto que es transformee de un proceso (connected via effect, consume o result link), when el modelador añade un modifier 'e' (event) o 'c' (condition) al mismo enlace, then el sistema lo permite porque OPM permite que un transformee sea simultáneamente trigger de evento o condición; la unicidad aplica al par (objeto, proceso) no al número de modifiers en ese enlace.
 
+**Validación activa de cardinalidad — Extensión ISO 19450:**
+
+- Given un enlace con multiplicidad fuente "0" (cero), when el sistema valida, then emite advertencia: "Zero multiplicity means no participation — consider removing the link".
+- Given un enlace con multiplicidad fuente mayor que la meta (ej. source: 5, target: 2), when el sistema valida, then emite advertencia: "Source multiplicity [5] exceeds target multiplicity [2] — execution may leave unused instances".
+- Given un proceso con consumo (consumption link) con multiplicidad mayor a 1, when la simulación ejecuta, then el motor instancia N objetos según la multiplicidad configurada.
+- Given un enlace con multiplicidad en formato expresión (ej. "2*n+1"), when el sistema parsea, then valida la sintaxis de la expresión y warns si contiene variables no declaradas.
+- Given un enlace de agregación con multiplicidad en la parte, when el sistema valida, then verifica que el rango sea coherente con el tipo de parte (part vs. set).
+- Given un modelo con multiplicidades configuradas, when el modelador ejecuta validación, then el reporte incluye "Multiplicity Coverage Analysis" mostrando: (a) enlaces sin multiplicidad, (b) rangos ambiguos, (c) probabilidades que no suman 1.0.
+
+**Attribute Value Constraints — Extensión ISO 19450:**
+
+- Given un objeto con un atributo definido mediante exhibition-characterization, when el modelador edita las propiedades del atributo, then puede especificar un rango de valores válido usando notación de corchetes: [min,max] (inclusivo), (min,max) (exclusivo), o combinaciones como [min,max) o (min,max].
+- Given un atributo con rango configurado (ej. [0, 100]), when el modelador o la simulación asigna un valor, then el sistema valida: valor dentro del rango = verde, valor fuera = rojo; el tooltip muestra el rango al hacer hover.
+- Given un atributo con múltiples rangos disjuntos (ej. [0, 10] y [90, 100]), when se asigna un valor, then la validación verifica contra todos los rangos y acepta si está en alguno.
+- Given un atributo con rango y un valor por defecto, when el modelo se resetea, then el atributo vuelve al valor por defecto; el valor por defecto debe estar dentro del rango válido.
+- Given un atributo con rango y el modelador intenta asignar un valor fuera del rango en modo "Hard", then el sistema rechaza el valor y muestra error indicando el rango válido.
+- Given un atributo con rango y el modelador intenta asignar un valor fuera del rango en modo "Soft", then el sistema acepta el valor pero muestra indicador de advertencia visual.
+- Given un atributo con rango que es parte de un estereotipo (heredado), when el modelador define un sub-rango más restrictivo, then el sistema valida que el sub-rango esté contenido en el rango del estereotipo; si excede, muestra error.
+- Given un atributo con valor que viola su restricción, when la simulación ejecuta, then el proceso que intenta usar ese valor falla o se marca como "invalid state" y el OPL refleja la violación.
+- Given un enlace con expresión de multiplicidad con variable (ej. "3*n" con constraint "n <= 4"), when el modelador la ingresa, then el sistema valida la sintaxis y almacena la expresión como string evaluable; el OPL refleja la expresión completa.
+- Given dos enlaces transformantes (effect, consumption, result) entre el mismo par (proceso, objeto), when el modelador intenta crear el segundo, then el sistema rechaza con error "Procedural link uniqueness: only one transforming link per (Process, Object) pair is allowed (ISO §8.1.2, I-16)"; enlaces enabling (agent, instrument) son ortogonales y pueden coexistir.
+
 **Dependencias:** L-M1-03, L-M1-04
 
 ---
@@ -388,6 +445,7 @@ Como modelador, quiero agregar estados a los objetos, nombrarlos, marcarlos como
 - Given que un mismo estado está marcado como Initial, when el modelador también lo marca como Final, then el sistema permite la coexistencia de ambas marcas y el OPL refleja ambas propiedades.
 - Given un objeto stateful con un estado marcado como Default, when un proceso con enlace de efecto (sin estado de entrada especificado) afecta a este objeto, then el sistema asume que el objeto está en su estado Default como estado de entrada implícito; si no hay Default configurado, el sistema lo señala como advertencia.
 - Given un objeto stateful sin estado Default configurado, when el modelador ejecuta la validación metodológica, then el validador emite una advertencia: "Object [name] has states but no default state — simulation may produce ambiguous results".
+- Given un objeto con un estado que contiene sub-estados internos, when el modelador hace clic en "Refine State", then el sistema crea un OPD hijo donde el estado refinado es el contexto, y los subprocesos operan dentro de ese estado (state expression, ISO §14.2.1); el OPL genera "within [State]: [sub-sentences]".
 
 **Invariantes categóricos de implementación:**
 
@@ -418,6 +476,7 @@ Como modelador, quiero hacer in-zoom a un proceso para crear un OPD descendiente
 - Given un proceso in-zoomed con múltiples subprocesos en distintos niveles verticales, when el sistema genera el OPL, then el OPL refleja la invocación implícita como secuencia ordenada de subprocesos; esta invocación implícita NO genera un enlace gráfico visible — el orden vertical ES la invocación.
 - Given un OBJETO (no proceso) en el canvas, when el modelador hace clic en "In-zoom", then se crea un OPD descendiente que revela los objetos constituyentes con orden espacial o lógico; a diferencia del in-zoom de procesos (donde el orden vertical es temporal), en el in-zoom de objetos la posición espacial de los objetos internos tiene significado (ej. secciones de un documento: título → resumen → cuerpo) y el OPL refleja el orden unidimensional de las partes.
 - Given el modelador está en un OPD descendiente creado por in-zoom (de proceso u objeto), when hace clic en "Out-zoom" desde el halo del thing refinado o desde la barra secundaria, then el canvas navega al OPD padre y resalta el thing que fue in-zoomed; Out-zoom es la operación inversa de In-zoom y equivale a "Go to Parent" pero con el contexto semántico de colapsar el refinamiento.
+- Given un proceso refinado (in-zoomed), when el modelador desea revertir el refinamiento, then puede hacer clic derecho en el proceso y seleccionar "Out-zoom" para colapsar el OPD hijo de vuelta al nodo de proceso simple en el padre; el OPD hijo se elimina y los enlaces internos se pierden (out-zooming, ISO §3.48).
 
 **Invariantes categóricos de implementación:**
 
@@ -449,6 +508,18 @@ Como modelador, quiero desplegar los componentes de un objeto mediante unfold en
 - Given un objeto en vista semi-fold donde alguna parte ya está expresada externamente en el OPD, when el modelador consulta la lista interna del semi-fold, then esa parte no aparece duplicada en la lista interna.
 - Given un objeto en vista semi-fold con un sub-objeto visible en la lista interna, when el modelador arrastra un enlace desde el triángulo de ese sub-objeto hacia otro thing en el OPD, then el enlace se crea directamente desde la parte interna del semi-fold al thing externo.
 - Given un objeto en vista semi-fold con una parte extraída que tiene enlaces creados hacia ella, when el modelador la reinserta de vuelta al semi-fold, then los enlaces que apuntaban a la parte extraída se redirigen visualmente al contorno del objeto semi-fold.
+
+**Partial/incomplete structures — Extensión ISO 19450:**
+
+- Given una agregación-participación donde al menos una parte no está visible en el OPD actual, when el sistema renderiza el OPD, then muestra una barra horizontal corta cruzando la línea vertical debajo del triángulo de agregación (ISO 19450 10.3.1.3).
+- Given una agregación-participación incompleta visualizada, when el modelador hace hover sobre la barra de incompletitud, then muestra tooltip con el conteo de partes no visibles: "2 parts not shown".
+- Given una agregación-participación incompleta, when el sistema genera OPL, then produce la forma parcial: "X consists of Y, Z and at least one other part" (ISO 19450 A.4.6.3.1).
+- Given una exhibition-characterization donde al menos un feature no está visible, when el sistema renderiza el OPD, then muestra la barra de incompletitud debajo del triángulo de caracterización.
+- Given una exhibition incompleta, when el sistema genera OPL, then produce "X exhibits attribute1, attribute2 and at least one other attribute" o "X exhibits operation1 and at least one other operation" (ISO 19450 A.4.6.2).
+- Given una generalización-specialization donde al menos una especialización no está visible, when el sistema renderiza el OPD, then muestra la barra de incompletitud.
+- Given una especialización parcial, when el sistema genera OPL, then produce "X, Y and other specializations are Z" (ISO 19450 A.4.6.5).
+- Given una estructura incompleta con la barra de incompletitud, when el modelador hace clic en la barra, then el sistema navega o sugiere dónde agregar las partes faltantes.
+- Given una agregación con partes semi-folded, when se visualiza en el OPD, then las partes ocultas se indican con un marcador visual "…" (elipsis) junto al enlace o dentro del whole, siguiendo la convención ISO 19450 para agregaciones incompletas.
 
 **Dependencias:** L-M1-02, L-M1-04, L-M1-07
 
@@ -497,22 +568,39 @@ Como modelador, quiero eliminar things y enlaces con control explícito sobre si
 
 ---
 
-### L-M1-11 — Halo contextual por tipo (+ duración temporal)
+### L-M1-11A — Halo contextual básico (selección, eliminar, editar)
+
+**Prioridad:** P0
+**Módulo:** Motor de Modelo
+**Evidencia:** frame-confirmada
+
+Como modelador, quiero que al seleccionar cualquier thing aparezca un halo básico con acciones de selección y eliminación, para ejecutar operaciones fundamentales sin interrumpir el flujo de construcción.
+
+**Criterios de aceptación:**
+
+- Given un thing seleccionado en el canvas, when el modelador lo selecciona con clic, then aparece el halo adyacente al thing con íconos de acciones rápidas pertinentes al tipo (objeto o proceso).
+- Given el halo de un thing, when el modelador hace clic en los tres puntos (...), then el halo se expande mostrando opciones adicionales.
+- Given el halo de un thing, when el modelador hace clic en "Delete", then se abre el diálogo de eliminación mostrando todas las instancias visuales del thing en el modelo.
+- Given el halo de un thing, when el modelador hace clic en "Select All", then se seleccionan todos los things en el OPD actual.
+- Given el halo de un thing, when el modelador hace clic en "Edit Name", then se activa la edición inline del nombre.
+
+**Dependencias:** L-M1-02
+
+---
+
+### L-M1-11B — Halo avanzado (in-zoom, unfold, duración, computational)
 
 **Prioridad:** P1
 **Módulo:** Motor de Modelo
 **Evidencia:** frame-confirmada
 
-Como modelador, quiero que al seleccionar cualquier thing aparezca un halo con acciones contextuales rápidas adaptadas al tipo de elemento, y poder especificar la duración nominal, mínima y máxima de los procesos, para ejecutar las operaciones más comunes sin interrumpir el flujo de construcción y modelar la dimensión temporal del sistema.
+Como modelador, quiero acceder a operaciones avanzadas desde el halo (in-zoom, unfold, duración temporal, computational), para ejecutar operaciones de refinamiento sin interrumpir el flujo de construcción.
 
 **Criterios de aceptación:**
 
-- Given un thing seleccionado en el canvas, when el modelador lo selecciona con clic, then aparece el halo adyacente al thing con íconos de acciones rápidas pertinentes al tipo (objeto o proceso).
-- Given el halo de un thing, when el modelador hace clic en los tres puntos (...), then el halo se expande mostrando opciones adicionales: unfold, in-zoom, cambiar a proceso computacional, eliminar, duración temporal, estilo y "bring connected elements".
 - Given el halo de un proceso, when el modelador hace clic en "In-zoom", then se ejecuta la acción de in-zoom.
 - Given el halo de un thing, when el modelador hace clic en "Unfold", then se despliegan los componentes del thing con enlaces de agregación-participación en el OPD actual.
 - Given el halo de un proceso, when el modelador hace clic en "Computational Process", then el proceso cambia su representación visual para indicar que es computacional.
-- Given el halo de un thing, when el modelador hace clic en "Delete", then se abre el diálogo de eliminación mostrando todas las instancias visuales del thing en el modelo.
 - Given el halo de un proceso, when el modelador hace clic en "Time Duration", then se abre un campo para ingresar duración nominal, mínima y máxima; los valores aparecen dentro del proceso (nominal al centro, mínima a la izquierda, máxima a la derecha).
 - Given que el modelador ingresa únicamente la duración nominal, when confirma la entrada, then el valor de duración aparece dentro de la elipse del proceso debajo del nombre con la unidad de tiempo especificada.
 - Given un estado de objeto seleccionado, when el modelador hace clic en "Time Duration" en su halo, then se abre un diálogo con campos de unidad de tiempo, duración mínima, nominal y máxima; al confirmar, la duración aparece visualmente junto al estado y el OPL lo refleja.
@@ -540,6 +628,16 @@ Como modelador, quiero controlar el tamaño de los things mediante modos automá
 - Given un thing en modo manual (con ícono GIF visible), when el modelador hace clic nuevamente en "Toggle Auto Sizing", then el ícono GIF desaparece y el thing vuelve al modo automático.
 - Given un thing en modo automático, when el texto crece por renombrado, then OPModeling aplica word-wrapping automático hasta respetar el tamaño mínimo.
 - Given un thing en modo manual, when el modelador reduce el tamaño del contorno, then el texto siempre permanece visible completo (sin recorte ni truncamiento).
+
+**Grid de alineación — Extensión ISO 19450:**
+
+- Given el modelador activa el grid desde la barra secundaria, when el canvas muestra el grid, then aparecen líneas de grid según la configuración de tamaño, color y thickness.
+- Given el grid está activo, when el modelador arrastra un thing, then el thing se mueve en incrementos del tamaño configurado (ej. size=5px → movimiento en múltiplos de 5).
+- Given el grid activo, when el modelador configura tamaño=5, then el thing se mueve en múltiplos de 5px; si configura tamaño=10, entonces se mueve en múltiplos de 10px.
+- Given el modelador cambia el color del grid, then las líneas del grid se muestran en el color seleccionado (hex).
+- Given el modelador cambia el thickness del grid, then las líneas tienen el grosor configurado.
+- Given el modelador cambia el scale factor del grid, then la densidad de líneas cambia: mayor scale factor = menos líneas visibles, menor scale factor = más líneas.
+- Given el grid activo con in-zoom abierto, when el modelador ordena subprocesos, then el grid ayuda a alinear los procesos según su orden de ejecución (el orden vertical determina el orden en OPL).
 
 **Dependencias:** L-M1-02
 
@@ -576,6 +674,91 @@ Como modelador, quiero crear sub-modelos desde el modelo principal, abrirlos en 
 - Given un sub-modelo desconectado, when el modelador intenta reconectarlo al modelo principal, then el sistema no ofrece opción de reconexión.
 
 **Dependencias:** L-M1-07, L-M3-01
+
+---
+
+### L-M1-14 — Definiciones de operaciones e invocación (ISO §3.46, §10.3.3)
+
+**Prioridad:** P2
+**Módulo:** Motor de Modelo
+**Evidencia:** nueva
+**Ref. ISO 19450:** §3.46, §3.21, §10.3.3
+
+Como modelador, quiero definir operaciones (métodos/procedimientos) como features exhibidas por objetos y procesos, con firma de parámetros y tipo de retorno, para expresar contratos de comportamiento además de atributos estructurales.
+
+**Criterios de aceptación:**
+
+- Given un objeto con exhibition link, when el modelador crea una nueva feature, then puede elegir entre "Attribute" (objeto informatical) u "Operation" (procedimiento con firma).
+- Given una operación creada, when el modelador define su firma, then especifica: nombre, parámetros (nombre + tipo), tipo de retorno; el OPL refleja "Object exhibits Operation(param1: Type1, param2: Type2): ReturnType".
+- Given un proceso que invoca una operación, when el modelador crea un invocation link a la operación, then el OPL genera "Process invokes Object.Operation(args)".
+- Given una operación definida en un General, when existe una Specialization vía generalization link, then la operación se hereda automáticamente y aparece como "heredada" (read-only) en la Specialization.
+- Given el modelador intenta crear un effect link sobre una operación (no un objeto), when el sistema valida, then rechaza la operación con mensaje "Operations cannot be affected; use invocation links".
+
+**Dependencias:** L-M1-04, L-M1-03
+
+---
+
+### L-M1-15 — Objetos stateful vs stateless (ISO §3.66, §3.67)
+
+**Prioridad:** P1
+**Módulo:** Motor de Modelo
+**Evidencia:** nueva
+**Ref. ISO 19450:** §3.66, §3.67
+
+Como modelador, quiero distinguir objetos stateful (que pueden tener estados y ser afectados) de stateless (que solo pueden ser consumidos o producidos), para que el sistema aplique las restricciones semánticas correspondientes según ISO 19450.
+
+**Criterios de aceptación:**
+
+- Given un objeto creado, when el modelador abre propiedades, then puede marcar "Stateless" (default: false, es decir stateful por defecto).
+- Given un objeto marcado como stateless, when el modelador intenta agregar un estado, then el sistema rechaza con error "Stateless objects cannot have states (ISO §3.67)".
+- Given un objeto stateless, when el modelador intenta crear un effect link hacia él, then el sistema rechaza con error "Stateless objects cannot be affected — use consumption or result links".
+- Given un objeto stateless existente, when el modelador le agrega estados (tras cambiar a stateful), then los nuevos estados se crean normalmente.
+- Given un objeto con estados existentes, when el modelador intenta marcarlo como stateless, then el sistema rechaza con error "Remove all states before marking as stateless".
+- Given un objeto stateless en el canvas, when se visualiza, then se distingue visualmente (rectángulo sin división interna de estados).
+
+**Dependencias:** L-M1-02, L-M1-06
+
+---
+
+### L-M1-16 — Completeness de agregación y multiplicidad asimétrica (ISO §10.3.2, §11.1)
+
+**Prioridad:** P1
+**Módulo:** Motor de Modelo
+**Evidencia:** nueva
+**Ref. ISO 19450:** §10.3.2, §11.1
+
+Como modelador, quiero definir multiplicidades asimétricas en relaciones de agregación (part-multiplicity vs whole-multiplicity) y marcar si la agregación es completa o incompleta, para que el OPL refleje correctamente la semántica de composición según ISO 19450.
+
+**Criterios de aceptación:**
+
+- Given un aggregation link seleccionado, when el modelador abre propiedades, then puede definir part-multiplicity (cuántas partes puede tener el whole, ej. "4") y whole-multiplicity (a cuántos wholes puede pertenecer la parte, ej. "1" para ownership exclusivo).
+- Given un aggregation link con part-multiplicity definida, when se genera OPL, then refleja "Whole consists of [multiplicity] Parts" (ej. "Car consists of 4 Wheels").
+- Given un aggregation link con whole-multiplicity > 1, when se genera OPL, then refleja la pertenencia múltiple: "Part belongs to [multiplicity] Wholes".
+- Given un conjunto de aggregation links desde un mismo whole, when el modelador marca la agregación como "complete", then el OPL genera "Whole consists of A, B and C" (sin elipsis); si marca "incomplete", genera "Whole consists of A, B and at least one other part".
+- Given un aggregation marcado como incomplete, when se visualiza en el OPD, then se muestra un indicador visual "…" junto al enlace o el whole.
+
+**Dependencias:** L-M1-04, L-M1-05
+
+---
+
+### L-M1-17 — Supresión de estados por OPD (ISO §14.2.1, §3.71)
+
+**Prioridad:** P1
+**Módulo:** Motor de Modelo
+**Evidencia:** nueva
+**Ref. ISO 19450:** §14.2.1, §3.71
+
+Como modelador, quiero suprimir estados específicos de un objeto en un OPD particular sin eliminarlos del modelo, para simplificar vistas de alto nivel mientras los estados detallados permanecen disponibles en OPDs de refinamiento.
+
+**Criterios de aceptación:**
+
+- Given un objeto con estados visible en un OPD, when el modelador hace clic derecho en un estado y selecciona "Suppress in this OPD", then el estado desaparece de la representación visual en ese OPD pero permanece en el modelo.
+- Given un estado suprimido en un OPD, when el modelador genera OPL para ese OPD, then el estado suprimido NO aparece en la enumeración de estados del OPL.
+- Given un estado suprimido en un OPD, when el modelador navega a otro OPD donde el mismo objeto está visible, then el estado aparece normalmente (la supresión es per-OPD).
+- Given un objeto con estados suprimidos, when el modelador hace clic derecho y selecciona "Show Suppressed States", then los estados suprimidos se muestran con indicador visual (gris/transparente) y pueden unsupprimirse.
+- Given un link que referencia un estado suprimido en el OPD actual, when se genera OPL, then el link se renderiza sin referencia al estado (simplificación visual coherente).
+
+**Dependencias:** L-M1-06, L-M1-02
 
 ---
 
@@ -727,6 +910,16 @@ Como modelador, quiero ver y navegar el árbol OPD en el panel izquierdo con sop
 - Given el modelador ha visitado al menos dos OPDs, when hace clic en el ícono Atrás o presiona Ctrl+Backspace, then vuelve al último OPD visitado (toggle entre los dos más recientes).
 - Given el modelador usa el teclado, when presiona Ctrl+Arriba o Ctrl+Abajo, then navega al OPD anterior o siguiente al mismo nivel jerárquico; cuando presiona Ctrl+Izquierda o Ctrl+Derecha, navega en profundidad (padre o primer hijo).
 
+**OPD Object Tree — Extensión ISO 19450:**
+
+- Given el modelo tiene un proceso in-zoomed y un objeto unfolded, when el modelador visualiza el árbol OPD, then el sistema muestra dos secciones distintas: "Process Tree" (OPD Process Tree) con los OPDs derivados de in-zoom de procesos, y "Object Tree" (OPD Object Tree) con los OPDs derivados de unfold de objetos, cada uno con su propio ícono diferenciador.
+- Given el árbol OPD muestra ambas secciones, when el modelador hace clic en "Process Tree", then se expande mostrando la jerarquía de OPDs de procesos: SD → SD1 → SD1.1 → etc., con indicadores visuales que muestran si cada OPD tiene in-zoom completo o incompleto.
+- Given el árbol OPD muestra ambas secciones, when el modelador hace clic en "Object Tree", then se expande mostrando la jerarquía de OPDs de objetos: SD → OD1 → OD1.1 → etc., con indicadores visuales que muestran si cada OPD tiene unfold completo o incompleto.
+- Given un OPD en el Object Tree, when el modelador hace doble clic en él, then el canvas navega al OPD del objeto y muestra los objetos constituyentes con sus enlaces de agregación-participación.
+- Given el modelador filtra el árbol OPD por "All" en el selector, when visualiza el árbol, then ambas secciones (Process Tree y Object Tree) se muestran intercaladas en orden jerárquico original.
+- Given el modelador filtra el árbol OPD por "Processes Only", when visualiza el árbol, then solo la sección Process Tree se muestra; similar para "Objects Only".
+- Given un OPD que es tanto proceso como objeto (proceso con unfold), when el sistema genera el árbol, then el OPD aparece en ambas secciones con un indicador de bifurcación, y al navegar desde cualquier sección se muestra el mismo OPD con ambas perspectivas.
+
 **Dependencias:** L-M1-02
 
 ---
@@ -866,22 +1059,29 @@ Como modelador, quiero navegar entre OPDs por relación semántica (definición,
 **Módulo:** Navegación Inteligente
 **Evidencia:** nueva
 
-Como modelador, quiero un dashboard siempre visible que muestre métricas de cobertura del modelo y sugiera próximos refinamientos con asistencia de IA, para saber qué tan completo está el refinamiento y navegar directamente a los things que requieren trabajo.
+Como modelador, quiero un dashboard siempre visible que muestre métricas de cobertura del modelo, para saber qué tan completo está el refinamiento y navegar directamente a los things que requieren trabajo.
 
-**Criterios de aceptación:**
+**Nota:** Este item se split en dos partes: (A) Métricas de cobertura basadas en el modelo - funciona con el Domain Engine; (B) Sugerencias de IA - depende del LLM adapter.
+
+**Criterios de aceptación — Métricas de cobertura (A):**
 
 - Given un modelo con múltiples OPDs, when el modelador abre el dashboard de cobertura (panel lateral o menú View → Coverage), then se muestran métricas agrupadas por categoría: Refinamiento (X/Y procesos in-zoomed, X/Y objetos unfolded), Estados (X objetos stateful, Y stateless), Transformación (X procesos con enlace de transformación, Y sin enlace), SD (X/5 componentes presentes según ISO 19450).
 - Given el dashboard visible con métricas, when el modelador hace clic en una métrica deficiente (ej. "3 procesos sin transformación"), then se despliega una lista con los things afectados; hacer clic en cualquier thing de la lista navega al OPD donde está definido y lo resalta en el canvas.
 - Given el dashboard visible, when el modelador completa un in-zoom o añade estados a un objeto, then las métricas se actualizan en tiempo real sin necesidad de recargar o refrescar el panel manualmente.
-- Given un modelo nuevo con solo SD, when el dashboard se muestra por primera vez, then la barra de progreso de refinamiento indica "Nivel 0 — solo SD, 0% refinado" y el panel muestra una lista de próximos pasos sugeridos de refinamiento ordenados por impacto.
+- Given un modelo nuevo con solo SD, when el dashboard se muestra por primera vez, then la barra de progreso de refinamiento indica "Nivel 0 — solo SD, 0% refinado" y el panel muestra una lista de próximos pasos sugeridos de refinamiento.
 - Given un modelo con múltiples niveles de refinamiento, when el dashboard muestra la cobertura, then agrupa las métricas por nivel: Nivel 0 (SD), Nivel 1 (SD1s), Nivel 2 (SD1.Xs), etc., con porcentaje de completitud independiente por nivel.
+
+**Criterios de aceptación — Sugerencias de IA (B):**
+
 - Given un proceso no in-zoomed seleccionado, when el modelador hace clic en "Suggest Refinement" desde el halo o menú contextual (o el botón "Suggest" junto al proceso en la lista del dashboard), then el LLM analiza el nombre del proceso, los objetos conectados, y el contexto del SD, y genera una propuesta de in-zoom con N subprocesos nombrados en gerundio, su orden temporal sugerido, y los objetos internos/externos que participarían.
 - Given la propuesta de refinamiento generada, when el modelador la revisa en un panel de preview, then puede aceptar, rechazar o editar cada subproceso individualmente; al aceptar, el in-zoom se crea con los subprocesos aprobados.
 - Given la propuesta de refinamiento, when el LLM genera subprocesos, then cada subproceso incluye el OPL tentativo y la justificación de por qué sugiere ese desglose.
 - Given un proceso ya in-zoomed con subprocesos genéricos ("Sub-Process 1", "Sub-Process 2"), when el modelador selecciona "Suggest Names", then el LLM propone nombres en gerundio basados en el contexto del proceso padre y los objetos conectados.
 - Given un modelo con varios procesos sin refinar visibles en el dashboard de cobertura, when el modelador visualiza la lista, then cada proceso no refinado tiene un botón "Suggest" que invoca directamente la sugerencia de refinamiento con IA.
 
-**Dependencias:** L-M1-07, L-M1-08, L-M3-01
+**Dependencias:** 
+- Parte A (Métricas): L-M1-02, L-M1-03 (modelo con things y links)
+- Parte B (Sugerencias IA): L-M2-03 (LLM adapter)
 
 ---
 
@@ -932,7 +1132,7 @@ Como modelador, quiero ejecutar una validación metodológica completa del model
 - Given el modelador accede a Settings > Methodology Coaching, when desactiva el coaching, then todas las advertencias en tiempo real dejan de aparecer; la validación manual sigue disponible.
 - Given el árbol OPD del modelo, when el sistema lo visualiza, then distingue visualmente entre OPD Object Trees (descendientes de in-zoom/unfold de objetos) y OPD Process Trees (descendientes de in-zoom de procesos) mediante íconos o colores diferenciados en los nodos del árbol, para que el modelador identifique rápidamente qué ramas elaboran estructura y cuáles elaboran comportamiento.
 
-**Dependencias:** L-M1-01, L-M1-07, L-M1-08
+**Dependencias:** L-M1-02, L-M1-03, L-M1-06
 
 ---
 
@@ -1073,7 +1273,90 @@ Como modelador, quiero generar un System Map que muestre visualmente la jerarqu�
 - Given el modelador visualiza el System Map y hace doble clic en un nodo, when el sistema procesa la navegación, then el canvas cambia al OPD representado por ese nodo y la vista del System Map se cierra automáticamente.
 - Given el modelador visualiza el System Map, when observa los nodos del mapa, then cada nodo muestra los things del OPD de forma compacta como iconos miniaturizados; las conexiones entre nodos indican el tipo de relación (in-zoom vs unfolding).
 
+**Model Informativeness Grading — Extensión OPCloud:**
+
+- Given el modelador accede a Model Knowledge analysis (Settings > Analyze Model), when el análisis corre, then muestra puntuación por categoría: Definition (qué son las cosas), Structural (cómo se conectan), Procedural (cómo funcionan los procesos), Meta (información sobre el modelo), Unknown (no clasificado).
+- Given el análisis completo, when se muestra el resultado, then el total informative level se calcula como suma ponderada de las categorías.
+- Given el modelo tiene 0 Definition sentences, when analiza, then muestra advertencia: "Modelo sin definiciones - agregar más cosas".
+- Given el análisis muestra Procedural score bajo, when se muestra, then sugiere: "Procesos sin enlaces de transformación".
+- Given el análisis muestra Structural score bajo, when se muestra, then sugiere: "Faltan enlaces estructurales entre objetos".
+
 **Dependencias:** L-M3-01, L-M3-03
+
+---
+
+### L-M4-10 — Detección de conocimiento faltante (Missing Knowledge)
+
+**Prioridad:** P3
+**Módulo:** Verificación y Consulta
+**Evidencia:** inferida
+
+Como modelador, quiero que el sistema detecte qué elementos, enlaces u relaciones podrían faltar en mi modelo basándose en patrones OPM, para completar modelos incompletos con asistencia de IA.
+
+**Criterios de aceptación:**
+
+- Given el modelador activa Missing Knowledge detection, when corre el análisis, then el sistema examina el modelo contra patrones OPM y sugiere objetos/links que podrían faltar.
+- Given las sugerencias de conocimiento faltante, when el sistema las presenta, then cada sugerencia incluye: tipo de elemento faltante, razón de la sugerencia, y confidence score (0-1).
+- Given las sugerencias tienen confidence score, when el modelador configura threshold=0.7, then filtra y muestra solo sugerencias con confidence >= 0.7.
+- Given el modelador revisa una sugerencia, when hace clic en "Apply", then el sistema agrega el elemento sugerido al modelo automáticamente.
+- Given el modelador revisa una sugerencia, when hace clic en "Dismiss", then la sugerencia se marca como vista y no aparece en análisis futuros.
+- Given el modelo tiene procesos sin agent links, when detecta, then sugiere "Agregar agente humano o sistema que inicie este proceso".
+- Given el modelo tiene objetos sin exhibition-characterization, when detecta, then sugiere "Agregar atributos u operaciones a este objeto".
+- Given el análisis de Missing Knowledge corre en dos versiones del modelo, when compara, then muestra tendencias: qué sugerencias fueron aplicadas, cuáles persisten.
+
+**Detección de gaps específicos — Extensión ISO 19450:**
+
+- Given un proceso sin enlaces de transformación (effect, consumption, result), when el sistema detecta, then sugiere agregar al menos un enlace de transformación.
+- Given un objeto con states pero sin default state, when detecta, then sugiere definir un estado default para simulación correcta.
+- Given un proceso con duración pero sin exception link, when detecta, then sugiere agregar exception link para manejo de timeout.
+- Given un link fan XOR sin probabilidades, when detecta, then sugiere agregar probabilidades para simulación determinista.
+
+**Algoritmos de detección:**
+
+- Given el modelador selecciona algoritmo "Quick" (basado en reglas), when corre, then el análisis es rápido y opera en el browser; puede tener limitaciones en sugerencias complejas.
+- Given el modelador selecciona algoritmo "Deep" (basado en ML/RGCN), when corre, then el análisis es más preciso y detallado pero requiere más tiempo de procesamiento.
+
+**Dependencias:** L-M4-02, L-M2-01
+
+---
+
+### L-M4-11 — Consistencia de hechos y resolución de ambigüedad en refinamiento (ISO §14.2.3, §14.2.4)
+
+**Prioridad:** P2
+**Módulo:** Verificación y Consulta
+**Evidencia:** nueva
+**Ref. ISO 19450:** §14.2.3, §14.2.4
+
+Como modelador, quiero que el sistema verifique la consistencia de hechos entre OPDs padre e hijo en refinamientos (in-zoom/unfold) y me ayude a resolver ambigüedades cuando un enlace del padre se mapea a múltiples subprocesos en el hijo, para mantener la integridad formal del modelo jerárquico.
+
+**Criterios de aceptación:**
+
+- Given un OPD hijo (refinamiento de proceso P), when contiene un enlace a un objeto que NO está en el preprocess/postprocess set de P en el OPD padre, then el sistema marca el enlace como "fact inconsistency" con mensaje descriptivo.
+- Given que el modelador modifica un enlace en el OPD padre, when ese enlace tiene correspondencia en un OPD hijo, then el sistema propaga la modificación o notifica la inconsistencia.
+- Given un enlace "P consumes O" en el OPD padre, when el OPD hijo muestra que tanto P_sub1 como P_sub2 consumen O, then el sistema señala ambigüedad y solicita al modelador indicar cuál subproceso corresponde al enlace del padre (abstraction ambiguity resolution).
+- Given que el modelador resuelve una ambigüedad, when selecciona el subproceso correspondiente, then el sistema registra el mapeo y lo usa para validaciones futuras.
+- Given el modelador ejecuta "Validate Model", when existen inconsistencias de hechos o ambigüedades sin resolver, then aparecen como warnings en el reporte de validación.
+
+**Dependencias:** L-M1-07, L-M4-02
+
+---
+
+### L-M4-12 — Anotación de stakeholder y beneficiario (ISO §3.6, §3.65, §6.1.1)
+
+**Prioridad:** P3
+**Módulo:** Verificación y Consulta
+**Evidencia:** nueva
+**Ref. ISO 19450:** §3.6, §3.65, §6.1.1
+
+Como modelador, quiero anotar elements del modelo con el viewpoint del stakeholder (usuario, propietario, regulador, mantenedor) y filtrar el modelo por stakeholder, para generar vistas específicas por audiencia.
+
+**Criterios de aceptación:**
+
+- Given un thing o proceso seleccionado, when el modelador abre propiedades y agrega un stakeholder tag, then el tag se asocia al elemento y es visible en el panel de propiedades.
+- Given múltiples stakeholders definidos, when el modelador selecciona "Filter by Stakeholder: [nombre]", then el OPD muestra solo los elementos relevantes para ese stakeholder.
+- Given un modelo con stakeholders asignados, when el modelador genera OPL, then las sentencias indican el stakeholder entre paréntesis si el filtro está activo.
+
+**Dependencias:** L-M1-02
 
 ---
 
@@ -1104,11 +1387,35 @@ Como modelador, quiero ejecutar una simulación conceptual del modelo basada en 
 - Given el panel OPL visible durante simulación con motor ECA activo, when un proceso se ejecuta, then el OPL resalta dinámicamente la sentencia correspondiente indicando qué objetos son parte del preprocess set y cuáles del postprocess set.
 - Given un proceso en el modelo, when el modelador selecciona "Show Involved Object Set" desde el menú contextual del proceso, then el sistema muestra la unión del preprocess object set (consumees + affectees antes de ejecución) y el postprocess object set (resultees + affectees después de ejecución) como lista consolidada, identificando el rol de cada objeto; esta es la Involved Object Set definida en ISO 19450.
 - Given una simulación en curso o pausada, when el modelador selecciona "Capture System State" o el sistema lo registra automáticamente en cada paso, then se genera un snapshot del estado actual del modelo: qué objetos existen, en qué estado está cada objeto stateful, qué procesos están activos/completados/esperando; este System State es consultable y comparable con otros snapshots para trazar la evolución del sistema durante la simulación.
+- Given un proceso con result link que produce un objeto con múltiples estados posibles y sin estado específico asignado, when la simulación ejecuta el proceso, then el sistema selecciona el estado según la distribución de probabilidad configurada; si no hay configuración, usa equiprobabilidad.
+- Given un proceso con consumption link que tiene multiplicidad mayor a 1 en el source (ej. 3), when el subproceso de menor nivel consume el objeto, then el contador del objeto decrece en la cantidad especificada; cuando el contador llega a 0, el objeto deja de existir y cualquier proceso que dependa de él mediante event link pierde el evento.
+- Given un proceso con consumption link con tasa de consumo configurada (ej. "60 units/hour"), when la simulación ejecuta el proceso, then el objeto consumible se agota progresivamente según la tasa y el tiempo de ejecución del proceso; si el objeto se agota antes de completar el proceso, el proceso se marca como "incomplete" y el evento de completion no se dispara.
+- Given un proceso con effect link input-output que cambia un objeto de estado, when el proceso inicia pero no completa (por timeout o consumo incompleto), then el objeto queda en estado de transición visual (entre input y output) hasta que se resuelva la situación; el OPL refleja "X is in transition from state-A to state-B".
+- Given un proceso con effect link input-specified pero sin output-specified, when el proceso se ejecuta, then el objeto entra en su estado Default al completar; si no hay Default y hay múltiples estados posibles, aplica la misma lógica de selección probabilística que para result links.
+- Given un proceso con AND fan de enlaces procedimentales, when la simulación ejecuta, then TODOS los enlaces del AND deben completarse para que el proceso se considere completo; si uno falla, el proceso no avanza y puede rollbackear los efectos de los enlaces ya completados según configuración.
+- Given un modelo con múltiples objetos computacionales, when la simulación configura y ejecuta, then los valores de los objetos computacionales se actualizan según las funciones definidas en los procesos computacionales; los resultados se muestran junto a cada objeto.
+- Given una simulación con ciclos de invocación (loops), when el sistema detecta que un proceso se ha invocado más de N veces sin cambios de estado externos, then muestra warning de "potential infinite loop" y permite configurar un máximo de iteraciones para evitar deadlock.
+- Given un proceso con exception link configurado, when el proceso excede su duración máxima, then el sistema activa automáticamente el proceso de excepción definido y la traza de simulación registra el evento de excepción con timestamp.
+- Given la simulación completada, when el modelador revisa la traza, then puede hacer playback hacia adelante y atrás entre cualquier par de snapshots capturados; cada paso muestra los cambios de estado, objetos creados/eliminados, y procesos ejecutados en ese paso.
+- Given el panel OPL durante simulación, when un proceso con preprocess y postprocess object sets se ejecuta, then el OPL destaca en verde los objetos del preprocess set (disponibles antes), en rojo los objetos del postprocess set (resultado después), y en amarillo los objetos en transición.
 
-**Invariantes categóricos de implementación:**
+**Extensión ISO 19450 — Preprocess/Postprocess Object Sets:**
 
-- Given el Domain Engine con el motor de simulación activo, when evalúa un paso de simulación, then ejecuta la coalgebra c: ModelState → Event × (Precond → ModelState + 1) definida en DA-5. Cada paso produce un par (observación, transición) — no es un loop imperativo que recorre tokens por enlaces. El `+1` (Maybe monad) modela eventos perdidos cuando la precondición falla.
-- Given el motor de simulación con múltiples pasos ejecutados, when acumula la traza de ejecución, then la traza es una secuencia coinductiva (no una lista finita predeterminada). Las propiedades de safety ("nunca se alcanza un estado malo") y liveness ("eventualmente se alcanza un estado bueno") se verifican por coinducción sobre la traza, complementando el análisis estático del grafo. Dos model states son bisimilares si producen las mismas observaciones bajo las mismas acciones.
+- Given un proceso con consumption links, when la simulación evalúa si el proceso puede ejecutarse, then el conjunto preprocess incluye todos los objetos consumidos que deben existir y estar en el estado requerido antes de que el proceso comience.
+- Given un proceso con result links, when la simulación completa la ejecución del proceso, then el conjunto postprocess incluye todos los objetos creados o modificados por el proceso; estos objetos quedan disponibles para procesos subsecuentes.
+- Given un proceso con effect links (input-output pair), when la simulación ejecuta, then el objeto afectado aparece en ambos conjuntos: como parte del preprocess (estado inicial) y del postprocess (estado final); durante la ejecución, el objeto está en "transición".
+- Given un proceso con agent links, when la simulación verifica la precondición, then el agente debe existir y (si es state-specified) estar en el estado requerido; el agente se incluye en el preprocess set pero no es modificado por el proceso.
+- Given un proceso con instrument links, when la simulación verifica la precondición, then el instrumento debe existir y (si es state-specified) estar en el estado requerido; el instrumento se incluye en el preprocess set pero no es modificado por el proceso.
+
+**Extensión ISO 19450 — Event-Condition-Action detallado:**
+
+- Given un event link desde objeto A hacia proceso P, when A entra en el estado especificado (o existe si no hay estado), then el evento se dispara y P se encola para ejecución; si la precondición de P se cumple, P ejecuta; si no, el evento se pierde y P no se ejecuta.
+- Given un condition link desde objeto A hacia proceso P, when el sistema evalúa si P puede ejecutarse, then verifica si A está en el estado requerido; si está, P ejecuta normalmente; si no está, P se salta (bypass) y la ejecución continúa con el siguiente proceso.
+- Given un consumption event link (consumption + modifier 'e'), when el objeto entra en el estado requerido Y existe, then el evento se dispara Y el objeto se consume en el mismo paso de simulación; el objeto deja de existir para procesos posteriores.
+- Given un effect event link (effect + modifier 'e'), when el objeto entra en el estado requerido, then el evento se dispara Y el efecto se aplica; el objeto transiciona de su estado de entrada al de salida.
+- Given un agent event link (agent + modifier 'e'), when el agente entra en el estado requerido, then el agente inicia Y maneja el proceso; el agente no es modificado por el proceso pero su participación se registra en la traza.
+- Given un condition link combinado con state-specified enabling link (ej. condition desde objeto A + instrument state-specified desde objeto B), when la simulación evalúa, then AMBAS condiciones deben cumplirse: el condition link verifica el estado de A, y el instrument state-specified verifica el estado de B; si cualquiera falla, el proceso se salta.
+- Given un proceso con duration.max definido, when la simulación detecta que el tiempo de ejecución excede max, then activa el exception link de overtime si existe; análogamente, si duration.min existe y el proceso completa antes de min, activa el exception link de undertime (ISO §D.7).
 
 **Dependencias:** L-M1-06, L-M1-07, L-M2-01
 
@@ -1131,6 +1438,9 @@ Como modelador, quiero modelar ramas condicionales usando condition links basado
 - Given un proceso en el modelo, when el modelador conecta ese proceso a sí mismo o a un proceso anterior con un invocation link, then durante la simulación el proceso se reinvoca al terminar su ejecución, creando un bucle; la condición de salida se modela con los estados del objeto de decisión.
 - Given un proceso computacional con función definida por usuario, when la función retorna el nombre de un estado específico, then el proceso produce exactamente ese estado en cada ejecución, permitiendo controlar programáticamente la salida de una condición de bucle.
 - Given una configuración de condición más invocación que puede crear un bucle infinito, when la simulación está en curso, then el botón "Stop" está siempre disponible; al hacer clic, OPModeling finaliza el ciclo actual y detiene la ejecución.
+- Given un condition link en el modelo, when el modelador configura su semántica, then puede elegir entre "skip" (si la condición es falsa, el proceso salta el enlace y continúa por caminos alternativos) o "wait" (si la condición es falsa, el proceso se bloquea hasta que se cumpla); el default es "wait" (ISO §8.2.3).
+- Given un link fan (AND/XOR/OR) con modifiers individuales en cada rama, when el modelador asigna event 'e' a una rama y condition 'c' a otra, then el simulador evalúa cada rama según su modifier: la rama event espera el evento, la rama condition evalúa persistentemente; el OPL genera "Process requires A and event B and condition C" (ISO §12.5).
+- Given un link fan XOR con probabilidades, when el modelador las define, then el sistema valida que sumen 1.0 exactamente; para link fans OR, las probabilidades son independientes (cada rama se evalúa por separado) y no hay restricción de suma (ISO §12.7).
 
 **Dependencias:** L-M5-01, L-M1-03
 
@@ -1199,6 +1509,7 @@ Como modelador, quiero definir assertions sobre el comportamiento del modelo y v
 - Given los resultados de análisis de reachability, when el modelador hace clic en cualquier problema detectado, then el canvas navega al OPD correspondiente y resalta los things involucrados con indicadores de color (rojo = deadlock, amarillo = warning).
 - Given un modelo con ciclos de invocación y/o condiciones probabilísticas, when el análisis estático de grafo no puede determinar si un deadlock es real (porque depende de valores de runtime), then el sistema complementa con **análisis de trazas por simulación**: ejecuta N iteraciones de la simulación ECA y verifica coinductivamente si las propiedades de safety ("nunca se alcanza estado X") y liveness ("eventualmente se alcanza estado Y") se cumplen en todas las trazas; reporta como "deadlock potencial (detectado en K de N trazas)" en vez de "deadlock confirmado".
 - Given dos versiones de un modelo o dos modelos distintos, when el modelador selecciona "Compare Behavior" (complemento a diff estructural de L-M6-08), then el sistema ejecuta ambas simulaciones con los mismos inputs y compara las trazas de ejecución para determinar si los modelos son **conductualmente equivalentes** (bisimilares): producen las mismas secuencias de observaciones bajo las mismas acciones; si no son bisimilares, muestra las divergencias con el paso de simulación donde el comportamiento difiere.
+- Given una assertion de categoría "safety", when el simulador la evalúa, then verifica coinductivamente sobre la traza que el estado prohibido NUNCA se alcanza; para "liveness", verifica que el estado deseado EVENTUALMENTE se alcanza; para "correctness", verifica inductivamente que cada paso satisface la postcondición (ISO Annex D).
 
 **Dependencias:** L-M5-01, L-M4-02
 
@@ -1242,6 +1553,7 @@ Como modelador, quiero aplicar estereotipos predefinidos a things del modelo, pa
 - Given un estereotipo anclado, when el modelador selecciona "Unlink Stereotype", then la asociación se elimina pero los sub-componentes ya traídos al diagrama permanecen como things regulares.
 - Given un estereotipo anclado, when el modelador selecciona "Unlink and Remove All Components", then el estereotipo y todos sus sub-componentes se eliminan del OPD.
 - Given un estereotipo que contiene otro estereotipo anidado (ej. Sensor contiene Property Set), when el modelador explora el estereotipo padre, then los estereotipos anidados se muestran también en modo solo lectura.
+- Given un estereotipo que inyecta atributos y operaciones en un thing, when el modelador lo aplica, then funciona como un "class pattern" (ISO §3.40, §3.59): define la estructura compartida por todas las instancias del tipo, incluyendo features (atributos + operaciones) y restricciones heredables.
 
 **Dependencias:** L-M1-02
 
@@ -1278,6 +1590,46 @@ Como modelador, quiero ejecutar la simulación en modo asíncrono sin animación
 
 - Given un modelo con parámetros de simulación configurados, when el modelador selecciona el modo asíncrono (async) e inicia la simulación, then todas las iteraciones se ejecutan en background sin mostrar tokens ni animación visual paso a paso.
 - Given una simulación asíncrona en ejecución, when el procesamiento finaliza, then los resultados están disponibles para descarga o revisión sin haber interrumpido el trabajo del modelador con animaciones.
+
+**Dependencias:** L-M5-01
+
+---
+
+### L-M5-10 — Selección y ejecución de escenarios (path labels ISO §13)
+
+**Prioridad:** P2
+**Módulo:** Ejecución Formal
+**Evidencia:** nueva
+**Ref. ISO 19450:** §13
+
+Como modelador, quiero crear escenarios que seleccionen conjuntos de path_labels activos y ejecutar simulaciones bajo escenarios específicos, para explorar diferentes caminos de ejecución del modelo sin modificar el grafo base.
+
+**Criterios de aceptación:**
+
+- Given el panel de simulación, when el modelador hace clic en "New Scenario", then se crea un escenario con nombre editable y un conjunto vacío de path_labels activos.
+- Given un escenario existente, when el modelador selecciona/deselecciona path_labels del modelo, then el conjunto activo se actualiza y se muestra qué enlaces participan visualmente en el OPD.
+- Given un escenario con path_labels seleccionados, when el modelador ejecuta la simulación, then solo se evalúan los enlaces cuyos path_labels están activos; los demás se ignoran.
+- Given múltiples escenarios definidos, when el modelador selecciona "Compare Scenarios", then se ejecutan ambos y se presenta una tabla comparativa de trazas (estados alcanzados, procesos activados, diferencias).
+- Given un escenario activo, when la simulación termina, then el resultado incluye la lista de path_labels evaluados y los que no fueron alcanzados (dead paths).
+
+**Dependencias:** L-M5-01, L-M1-05
+
+---
+
+### L-M5-11 — Diagramas de lifespan (visualización temporal post-simulación, ISO Annex D.6)
+
+**Prioridad:** P3
+**Módulo:** Ejecución Formal
+**Evidencia:** nueva
+**Ref. ISO 19450:** Annex D.6
+
+Como modelador, quiero generar diagramas de lifespan tras una simulación que muestren la existencia y estados de cada objeto a lo largo del tiempo, para analizar visualmente el ciclo de vida de los objetos del sistema.
+
+**Criterios de aceptación:**
+
+- Given una simulación completada, when el modelador hace clic en "View Lifespan", then se abre un diagrama con eje X = tiempo (pasos) y eje Y = objetos, mostrando existencia (barra continua) y estados (colores/bandas).
+- Given un diagrama de lifespan, when el modelador pasa el cursor sobre una celda, then se muestra el detalle: objeto, estado, paso de simulación, proceso que causó el cambio.
+- Given un diagrama de lifespan, when el modelador hace clic en "Export", then se genera un archivo CSV o SVG del diagrama.
 
 **Dependencias:** L-M5-01
 
