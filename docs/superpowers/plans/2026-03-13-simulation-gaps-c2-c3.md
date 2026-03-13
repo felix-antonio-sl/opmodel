@@ -1062,8 +1062,8 @@ export function runSimulation(
         currentState = stepResult.newState;
         executed = true;
         break;
-      } else if (stepResult.processId && currentState.waitingProcesses.has(stepResult.processId)) {
-        // Process was added to waiting by simulationStep
+      } else if (stepResult.processId && stepResult.newState.waitingProcesses.has(stepResult.processId)) {
+        // Process was added to waiting by simulationStep — propagate the new state
         currentState = stepResult.newState;
       }
     }
@@ -1182,9 +1182,12 @@ describe("runSimulation — deadlock detection", () => {
     // Fuel starts non-existent; Raw exists
     initState.objects.get("obj-fuel")!.exists = false;
     const trace = runSimulation(m, initState, 20);
-    // P1 should execute first (produces fuel), then P2 should unblock
+    // P1 should execute first (produces fuel), then P2 should unblock and execute
     expect(trace.deadlocked).toBe(false);
-    expect(trace.steps.length).toBeGreaterThanOrEqual(1);
+    // At least 2 steps: P1 produces Fuel, P2 consumes Fuel
+    expect(trace.steps.length).toBeGreaterThanOrEqual(2);
+    // Verify P2 actually ran (not just P1)
+    expect(trace.steps.some(s => s.processId === "proc-burn")).toBe(true);
   });
 });
 ```
@@ -1524,6 +1527,10 @@ With:
 
 ```typescript
       case "modifier":
+        // Note: expose normalizes undefined condition_mode to "wait" for condition modifiers,
+        // so editsFrom will emit explicit condition_mode: "wait" even if the original was undefined.
+        // This is a semantic no-op (undefined ≡ "wait") but a structural difference. Acceptable
+        // because the lens law GetPut only requires semantic equivalence, not structural identity.
         modifierEdits.push({
           kind: "add-modifier",
           modifier: {
