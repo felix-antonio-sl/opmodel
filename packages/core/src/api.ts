@@ -1380,5 +1380,48 @@ export function validate(model: Model): InvariantError[] {
     }
   }
 
+  // I-STATELESS-STATES: stateless objects cannot have states
+  for (const [id, state] of model.states) {
+    const parent = model.things.get(state.parent);
+    if (parent?.stateful === false) {
+      errors.push({ code: "I-STATELESS-STATES", message: `State ${id} belongs to stateless object ${state.parent}`, entity: id });
+    }
+  }
+
+  // I-STATELESS-EFFECT: effect links cannot target stateless objects + state-specified links
+  for (const [id, link] of model.links) {
+    if (link.type === "effect") {
+      const target = model.things.get(link.target);
+      if (target?.stateful === false) {
+        errors.push({ code: "I-STATELESS-EFFECT", message: `Effect link ${id} targets stateless object ${link.target}`, entity: id });
+      }
+    }
+    if (link.source_state) {
+      const sourceState = model.states.get(link.source_state);
+      if (sourceState) {
+        const parent = model.things.get(sourceState.parent);
+        if (parent?.stateful === false) {
+          errors.push({ code: "I-STATELESS-EFFECT", message: `Link ${id} source_state references stateless object`, entity: id });
+        }
+      }
+    }
+    if (link.target_state) {
+      const targetState = model.states.get(link.target_state);
+      if (targetState) {
+        const parent = model.things.get(targetState.parent);
+        if (parent?.stateful === false) {
+          errors.push({ code: "I-STATELESS-EFFECT", message: `Link ${id} target_state references stateless object`, entity: id });
+        }
+      }
+    }
+  }
+
+  // I-CONDITION-MODE: condition_mode only valid on condition modifiers
+  for (const [id, mod] of model.modifiers) {
+    if (mod.condition_mode && mod.type !== "condition") {
+      errors.push({ code: "I-CONDITION-MODE", message: `Modifier ${id} has condition_mode but type is ${mod.type}`, entity: id });
+    }
+  }
+
   return errors;
 }
