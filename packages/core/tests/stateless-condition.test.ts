@@ -142,6 +142,16 @@ describe("I-STATELESS-DOWNGRADE", () => {
     const r = updateThing(m, "obj-x", { stateful: false });
     expect(isOk(r)).toBe(true);
   });
+
+  it("rejects updateThing(stateful=false) when effect links target the object", () => {
+    let m = createModel("Test");
+    m = (addThing(m, defaultObj("obj-x", "X")) as any).value;
+    m = (addThing(m, proc("proc-p", "P")) as any).value;
+    m = (addLink(m, { id: "lnk-1", type: "effect", source: "proc-p", target: "obj-x" }) as any).value;
+    const r = updateThing(m, "obj-x", { stateful: false });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-STATELESS-EFFECT");
+  });
 });
 
 describe("I-CONDITION-MODE", () => {
@@ -233,7 +243,7 @@ describe("validate — new invariants", () => {
     expect(errors.some(e => e.code === "I-STATELESS-EFFECT")).toBe(true);
   });
 
-  it("detects stateful=false with existing states (I-STATELESS-DOWNGRADE)", () => {
+  it("detects stateful=false with existing states (caught by I-STATELESS-STATES)", () => {
     let m = createModel("Test");
     m = (addThing(m, defaultObj("obj-x", "X")) as any).value;
     m = (addState(m, { id: "state-a", parent: "obj-x", name: "A", initial: true, final: false, default: true }) as any).value;

@@ -863,6 +863,15 @@ export function updateThing(
     }
   }
 
+  // I-STATELESS-EFFECT: cannot mark as stateless if effect links target this object
+  if (cleaned.stateful === false) {
+    for (const link of model.links.values()) {
+      if (link.type === "effect" && link.target === id) {
+        return err({ code: "I-STATELESS-EFFECT", message: "Remove effect links before marking as stateless", entity: id });
+      }
+    }
+  }
+
   // Check links where this thing is source
   if (cleaned.essence !== undefined || cleaned.duration !== undefined) {
     for (const link of model.links.values()) {
