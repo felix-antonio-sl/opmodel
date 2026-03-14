@@ -47,6 +47,8 @@ export interface SimulationStep {
   resultIds: string[];
   stateChanges: Array<{ objectId: string; fromState?: string; toState?: string }>;
   newState: ModelState;
+  parentProcessId?: string;   // Present when executing a subprocess (in-zoom)
+  opdContext?: string;         // OPD ID where subprocess lives
 }
 
 /** Traza coinductiva de simulación */
@@ -384,10 +386,8 @@ export function runSimulation(
   const steps: SimulationStep[] = [];
   let currentState = state;
 
-  // Encontrar procesos a ejecutar (orden por in-zoom)
-  const processes = [...model.things.values()]
-    .filter(t => t.kind === "process")
-    .sort((a, b) => a.id.localeCompare(b.id));
+  // Expand in-zoomed processes into executable leaves (ISO §14.2.1)
+  const executableProcesses = getExecutableProcesses(model);
 
   for (let i = 0; i < maxSteps; i++) {
     let executed = false;
@@ -405,6 +405,12 @@ export function runSimulation(
         const event: SimulationEvent = { kind: "manual", targetId: waitingId };
         const stepResult = simulationStep(model, unblocked, event);
         if (!stepResult.skipped) {
+          // Enrich with in-zoom context from executable list
+          const ep = executableProcesses.find(p => p.id === waitingId);
+          if (ep?.parentProcessId) {
+            stepResult.parentProcessId = ep.parentProcessId;
+            stepResult.opdContext = ep.opdId;
+          }
           steps.push(stepResult);
           currentState = stepResult.newState;
           executed = true;
@@ -415,13 +421,18 @@ export function runSimulation(
 
     if (executed) continue;
 
-    // 2. Evaluar procesos normales
-    for (const proc of processes) {
-      if (currentState.waitingProcesses.has(proc.id)) continue;
-      const event: SimulationEvent = { kind: "manual", targetId: proc.id };
+    // 2. Evaluar procesos ejecutables (con in-zoom expansion)
+    for (const ep of executableProcesses) {
+      if (currentState.waitingProcesses.has(ep.id)) continue;
+      const event: SimulationEvent = { kind: "manual", targetId: ep.id };
       const stepResult = simulationStep(model, currentState, event);
 
       if (!stepResult.skipped) {
+        // Enrich step with in-zoom context
+        if (ep.parentProcessId) {
+          stepResult.parentProcessId = ep.parentProcessId;
+          stepResult.opdContext = ep.opdId;
+        }
         steps.push(stepResult);
         currentState = stepResult.newState;
         executed = true;
