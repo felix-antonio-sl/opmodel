@@ -96,12 +96,12 @@ describe("loadModel", () => {
     if (!isOk(result)) return;
     const model = result.value;
     expect(model.meta.name).toBe("Coffee Making System");
-    expect(model.things.size).toBe(5);
+    expect(model.things.size).toBe(9);
     expect(model.states.size).toBe(4);
     expect(model.opds.size).toBe(2);
-    expect(model.links.size).toBe(4);
+    expect(model.links.size).toBe(12);
     expect(model.modifiers.size).toBe(1);
-    expect(model.appearances.size).toBe(6);
+    expect(model.appearances.size).toBe(14);
     expect(model.assertions.size).toBe(1);
   });
 
