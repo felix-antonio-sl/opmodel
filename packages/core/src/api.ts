@@ -248,6 +248,33 @@ export function addLink(
     return err({ code: "I-26", message: `Aggregation: source and target must have same kind`, entity: link.id });
   }
 
+  // I-28: State-specified link validation — states must exist and belong to correct parent
+  if (link.source_state) {
+    const state = model.states.get(link.source_state);
+    if (!state) {
+      return err({ code: "I-28", message: `source_state not found: ${link.source_state}`, entity: link.id });
+    }
+    // For enabling links: source_state belongs to source (the object enabler)
+    // For transforming links: source_state belongs to the object endpoint
+    const enablingSet = new Set(["agent", "instrument"]);
+    const expectedParent = enablingSet.has(link.type) ? link.source :
+      (source.kind === "object" ? link.source : link.target);
+    if (state.parent !== expectedParent) {
+      return err({ code: "I-28", message: `source_state ${link.source_state} does not belong to ${expectedParent}`, entity: link.id });
+    }
+  }
+  if (link.target_state) {
+    const state = model.states.get(link.target_state);
+    if (!state) {
+      return err({ code: "I-28", message: `target_state not found: ${link.target_state}`, entity: link.id });
+    }
+    // target_state always belongs to the object endpoint
+    const objectId = source.kind === "object" ? link.source : link.target;
+    if (state.parent !== objectId) {
+      return err({ code: "I-28", message: `target_state ${link.target_state} does not belong to object ${objectId}`, entity: link.id });
+    }
+  }
+
   // I-18: agent source must be physical
   if (link.type === "agent") {
     if (source.essence !== "physical") {
@@ -1400,31 +1427,33 @@ export function validate(model: Model): InvariantError[] {
   }
 
 
-  // I-28: State-specified links must reference valid states
-  // For transforming links (effect, consumption, result), source_state belongs to the target object
-  // For enabling links (agent, instrument), source_state belongs to the source (agent/instrument)
+  // I-28: State-specified links reference valid states
   for (const [id, link] of model.links) {
-    const transformingTypes = ["effect", "consumption", "result", "input", "output"];
-    const isTransforming = transformingTypes.includes(link.type);
-    
+    const src = model.things.get(link.source);
+    const tgt = model.things.get(link.target);
+    const enablingSet = new Set(["agent", "instrument"]);
     if (link.source_state) {
       const state = model.states.get(link.source_state);
       if (!state) {
-        errors.push({ code: "I-28", message: `Link ${id} references non-existent source state ${link.source_state}`, entity: id });
+        errors.push({ code: "I-28", message: `Link ${id} source_state references non-existent state`, entity: id });
       } else {
-        // For transforming links, source_state belongs to target object; for enabling links, belongs to source
-        const expectedParent = isTransforming ? link.target : link.source;
+        const expectedParent = enablingSet.has(link.type)
+          ? link.source
+          : (src?.kind === "object" ? link.source : link.target);
         if (state.parent !== expectedParent) {
-          errors.push({ code: "I-28", message: `Link ${id} source state ${link.source_state} does not belong to ${isTransforming ? 'target' : 'source'} thing`, entity: id });
+          errors.push({ code: "I-28", message: `Link ${id} source_state does not belong to expected parent`, entity: id });
         }
       }
     }
     if (link.target_state) {
       const state = model.states.get(link.target_state);
       if (!state) {
-        errors.push({ code: "I-28", message: `Link ${id} references non-existent target state ${link.target_state}`, entity: id });
-      } else if (state.parent !== link.target) {
-        errors.push({ code: "I-28", message: `Link ${id} target state ${link.target_state} does not belong to target thing`, entity: id });
+        errors.push({ code: "I-28", message: `Link ${id} target_state references non-existent state`, entity: id });
+      } else {
+        const objectId = src?.kind === "object" ? link.source : link.target;
+        if (state.parent !== objectId) {
+          errors.push({ code: "I-28", message: `Link ${id} target_state does not belong to object endpoint`, entity: id });
+        }
       }
     }
   }

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { createModel } from "../src/model";
-import { addThing, addLink, removeLink, validate } from "../src/api";
+import { addThing, addLink, removeLink, validate, addState } from "../src/api";
 import { isOk, isErr } from "../src/result";
 import type { Thing, Link } from "../src/types";
 
@@ -231,6 +231,40 @@ describe("addLink", () => {
 
   it("allows generalization between two objects (I-22 valid)", () => {
     const r = addLink(buildModel(), { id: "lnk-gen-ok", type: "generalization", source: "obj-water", target: "obj-barista" });
+    expect(isOk(r)).toBe(true);
+  });
+
+  // --- I-28: State-specified link validation in addLink ---
+
+  it("rejects source_state not belonging to source thing (I-28)", () => {
+    let m = buildModel();
+    m = (addState(m, { id: "st-cold", parent: "obj-water", name: "cold", initial: false, final: false, default: false }) as any).value;
+    // agent link: barista→heating with source_state=st-cold (belongs to water, not barista)
+    const r = addLink(m, { id: "lnk-bad", type: "agent", source: "obj-barista", target: "proc-heating", source_state: "st-cold" });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-28");
+  });
+
+  it("rejects non-existent source_state (I-28)", () => {
+    const r = addLink(buildModel(), { id: "lnk-bad", type: "agent", source: "obj-barista", target: "proc-heating", source_state: "st-nonexistent" });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-28");
+  });
+
+  it("rejects target_state not belonging to object endpoint (I-28)", () => {
+    let m = buildModel();
+    m = (addState(m, { id: "st-cold", parent: "obj-water", name: "cold", initial: false, final: false, default: false }) as any).value;
+    m = (addState(m, { id: "st-ready", parent: "obj-barista", name: "ready", initial: false, final: false, default: false }) as any).value;
+    // consumption: heating→water, target_state=st-ready (belongs to barista, not water)
+    const r = addLink(m, { id: "lnk-bad", type: "consumption", source: "proc-heating", target: "obj-water", target_state: "st-ready" });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-28");
+  });
+
+  it("allows valid source_state on enabling link (I-28 valid)", () => {
+    let m = buildModel();
+    m = (addState(m, { id: "st-awake", parent: "obj-barista", name: "awake", initial: false, final: false, default: false }) as any).value;
+    const r = addLink(m, { id: "lnk-ok", type: "agent", source: "obj-barista", target: "proc-heating", source_state: "st-awake" });
     expect(isOk(r)).toBe(true);
   });
 });
