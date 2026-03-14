@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { createModel } from "../src/model";
-import { addThing, addLink, removeLink } from "../src/api";
+import { addThing, addLink, removeLink, validate } from "../src/api";
 import { isOk, isErr } from "../src/result";
 import type { Thing, Link } from "../src/types";
 
@@ -72,6 +72,20 @@ describe("addLink", () => {
     const r = addLink(m, { id: "lnk-exc", type: "exception", source: "proc-heating", target: "proc-main" });
     expect(isErr(r)).toBe(true);
     if (isErr(r)) expect(r.error.code).toBe("I-14");
+  });
+
+  it("allows exhibition link between object and process — ISO §7.2.2 exception (I-27 fix)", () => {
+    const operation: Thing = { id: "proc-op", kind: "process", name: "GetColor", essence: "informatical", affiliation: "systemic" };
+    let m = buildModel();
+    m = (addThing(m, operation) as any).value;
+    const link: Link = { id: "lnk-exhibit-cross", type: "exhibition", source: "proc-op", target: "obj-water" };
+    const r = addLink(m, link);
+    expect(isOk(r)).toBe(true);
+    if (isOk(r)) {
+      const errors = validate(r.value);
+      const i27 = errors.filter(e => e.code === "I-27");
+      expect(i27).toHaveLength(0);
+    }
   });
 
   it("allows exception link when source has duration.max (I-14)", () => {

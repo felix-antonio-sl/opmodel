@@ -1313,16 +1313,6 @@ export function validate(model: Model): InvariantError[] {
     }
   }
 
-  // I-27: Exhibition - features must have same perseverance as exhibitor
-  for (const [id, link] of model.links) {
-    if (link.type === "exhibition") {
-      const exhibitor = model.things.get(link.target);
-      const feature = model.things.get(link.source);
-      if (exhibitor && feature && exhibitor.kind !== feature.kind) {
-        errors.push({ code: "I-27", message: `Exhibition ${id}: exhibitor and feature must have same perseverance`, entity: id });
-      }
-    }
-  }
 
   // I-28: State-specified links must reference valid states
   // For transforming links (effect, consumption, result), source_state belongs to the target object
