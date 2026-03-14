@@ -161,7 +161,9 @@ export function SimulationPanel({ model, simulation, dispatch }: Props) {
               ref={isCurrent ? currentStepRef : undefined}
             >
               <div>
-                Step {step.step}: {step.processName ?? "—"}
+                Step {step.step}: {step.parentProcessId
+                  ? `${model.things.get(step.parentProcessId)?.name} > ${step.processName}`
+                  : step.processName ?? "—"}
               </div>
               <StepEffects step={step} model={model} />
             </li>
