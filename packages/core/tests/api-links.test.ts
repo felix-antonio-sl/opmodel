@@ -97,6 +97,58 @@ describe("addLink", () => {
     const r = addLink(m, { id: "lnk-exc", type: "exception", source: "proc-timed", target: "proc-handler" });
     expect(isOk(r)).toBe(true);
   });
+
+  // --- I-33: Procedural link endpoint type validation ---
+
+  it("rejects consumption link between two processes (I-33)", () => {
+    const proc2: Thing = { id: "proc-2", kind: "process", name: "P2", essence: "physical", affiliation: "systemic" };
+    let m = buildModel();
+    m = (addThing(m, proc2) as any).value;
+    const r = addLink(m, { id: "lnk-bad", type: "consumption", source: "proc-heating", target: "proc-2" });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-33");
+  });
+
+  it("rejects consumption link between two objects (I-33)", () => {
+    const r = addLink(buildModel(), { id: "lnk-bad", type: "consumption", source: "obj-barista", target: "obj-water" });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-33");
+  });
+
+  it("rejects effect link between two objects (I-33)", () => {
+    const r = addLink(buildModel(), { id: "lnk-bad", type: "effect", source: "obj-barista", target: "obj-water" });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-33");
+  });
+
+  it("rejects instrument link between two processes (I-33)", () => {
+    const proc2: Thing = { id: "proc-2", kind: "process", name: "P2", essence: "physical", affiliation: "systemic" };
+    let m = buildModel();
+    m = (addThing(m, proc2) as any).value;
+    const r = addLink(m, { id: "lnk-bad", type: "instrument", source: "proc-heating", target: "proc-2" });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-33");
+  });
+
+  it("allows consumption link from process to object (I-33 valid — codebase convention)", () => {
+    const r = addLink(buildModel(), { id: "lnk-ok", type: "consumption", source: "proc-heating", target: "obj-water" });
+    expect(isOk(r)).toBe(true);
+  });
+
+  it("allows effect link from process to object (I-33 valid)", () => {
+    const r = addLink(buildModel(), { id: "lnk-ok", type: "effect", source: "proc-heating", target: "obj-water" });
+    expect(isOk(r)).toBe(true);
+  });
+
+  it("allows result link from process to object (I-33 valid)", () => {
+    const r = addLink(buildModel(), { id: "lnk-ok", type: "result", source: "proc-heating", target: "obj-water" });
+    expect(isOk(r)).toBe(true);
+  });
+
+  it("does not apply I-33 to structural links (tagged between two objects is valid)", () => {
+    const r = addLink(buildModel(), { id: "lnk-tagged", type: "tagged", source: "obj-barista", target: "obj-water", tag: "knows" });
+    expect(isOk(r)).toBe(true);
+  });
 });
 
 describe("removeLink", () => {

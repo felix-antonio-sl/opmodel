@@ -200,16 +200,26 @@ export function addLink(
   if (!model.things.has(link.target)) {
     return err({ code: "I-05", message: `Target thing not found: ${link.target}`, entity: link.id });
   }
+
+  const source = model.things.get(link.source)!;
+  const target = model.things.get(link.target)!;
+
+  // I-33: Procedural links must connect object↔process (ISO §6.1-§6.3)
+  const PROCEDURAL_TYPES = new Set([
+    "consumption", "result", "effect", "input", "output", "agent", "instrument",
+  ]);
+  if (PROCEDURAL_TYPES.has(link.type) && source.kind === target.kind) {
+    return err({ code: "I-33", message: `${link.type} link must connect object↔process, not ${source.kind}↔${source.kind}`, entity: link.id });
+  }
+
   // I-18: agent source must be physical
   if (link.type === "agent") {
-    const source = model.things.get(link.source)!;
     if (source.essence !== "physical") {
       return err({ code: "I-18", message: `Agent source must be physical: ${link.source}`, entity: link.id });
     }
   }
   // I-14: exception link requires source process to have duration.max
   if (link.type === "exception") {
-    const source = model.things.get(link.source)!;
     if (!source.duration?.max) {
       return err({ code: "I-14", message: `Exception source must have duration.max: ${link.source}`, entity: link.id });
     }
@@ -254,9 +264,9 @@ export function addLink(
   let things = model.things;
   // I-19 effect: exhibition forces source.essence := informatical
   if (link.type === "exhibition") {
-    const source = things.get(link.source)!;
-    if (source.essence !== "informatical") {
-      things = new Map(things).set(source.id, { ...source, essence: "informatical" });
+    const exhibitSource = things.get(link.source)!;
+    if (exhibitSource.essence !== "informatical") {
+      things = new Map(things).set(exhibitSource.id, { ...exhibitSource, essence: "informatical" });
     }
   }
 
@@ -1135,6 +1145,20 @@ export function validate(model: Model): InvariantError[] {
     if (link.type === "exhibition") {
       const source = model.things.get(link.source);
       if (source && source.essence !== "informatical") errors.push({ code: "I-19", message: `Exhibition link ${id} source must be informatical`, entity: id });
+    }
+  }
+
+  // I-33: Procedural links must connect object↔process (ISO §6.1-§6.3)
+  const PROCEDURAL_TYPES = new Set([
+    "consumption", "result", "effect", "input", "output", "agent", "instrument",
+  ]);
+  for (const [id, link] of model.links) {
+    if (PROCEDURAL_TYPES.has(link.type)) {
+      const src = model.things.get(link.source);
+      const tgt = model.things.get(link.target);
+      if (src && tgt && src.kind === tgt.kind) {
+        errors.push({ code: "I-33", message: `${link.type} link ${id} must connect object↔process`, entity: id });
+      }
     }
   }
 
