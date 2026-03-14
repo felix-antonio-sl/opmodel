@@ -201,6 +201,11 @@ export function addLink(
     return err({ code: "I-05", message: `Target thing not found: ${link.target}`, entity: link.id });
   }
 
+  // I-34: No self-loops except invocation (ISO §8.5)
+  if (link.source === link.target && link.type !== "invocation") {
+    return err({ code: "I-34", message: `Self-loop not allowed for ${link.type} links`, entity: link.id });
+  }
+
   const source = model.things.get(link.source)!;
   const target = model.things.get(link.target)!;
 
@@ -1159,6 +1164,13 @@ export function validate(model: Model): InvariantError[] {
       if (src && tgt && src.kind === tgt.kind) {
         errors.push({ code: "I-33", message: `${link.type} link ${id} must connect object↔process`, entity: id });
       }
+    }
+  }
+
+  // I-34: No self-loops except invocation (ISO §8.5)
+  for (const [id, link] of model.links) {
+    if (link.source === link.target && link.type !== "invocation") {
+      errors.push({ code: "I-34", message: `Self-loop not allowed for ${link.type} link ${id}`, entity: id });
     }
   }
 

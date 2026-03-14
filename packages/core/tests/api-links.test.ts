@@ -149,6 +149,25 @@ describe("addLink", () => {
     const r = addLink(buildModel(), { id: "lnk-tagged", type: "tagged", source: "obj-barista", target: "obj-water", tag: "knows" });
     expect(isOk(r)).toBe(true);
   });
+
+  // --- I-34: Self-loop prevention (except invocation) ---
+
+  it("rejects self-loop aggregation link (I-34)", () => {
+    const r = addLink(buildModel(), { id: "lnk-self", type: "aggregation", source: "obj-water", target: "obj-water" });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-34");
+  });
+
+  it("rejects self-loop tagged link (I-34)", () => {
+    const r = addLink(buildModel(), { id: "lnk-self-tag", type: "tagged", source: "obj-water", target: "obj-water", tag: "self" });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-34");
+  });
+
+  it("allows self-invocation link (I-34 exception, ISO §8.5)", () => {
+    const r = addLink(buildModel(), { id: "lnk-self-invoke", type: "invocation", source: "proc-heating", target: "proc-heating" });
+    expect(isOk(r)).toBe(true);
+  });
 });
 
 describe("removeLink", () => {
