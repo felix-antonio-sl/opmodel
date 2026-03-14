@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "fs";
+import { resolve } from "path";
 import { createModel } from "../src/model";
-import { addThing, addLink, addState, addModifier } from "../src/api";
+import { loadModel } from "../src/serialization";
+import { addThing, addLink, addState, addModifier, addOPD, addAppearance } from "../src/api";
 import type { Thing, Link, State, Modifier } from "../src/types";
 import type { Model } from "../src/types";
 import {
@@ -12,7 +15,6 @@ import {
   getPostprocessSet,
   getExecutableProcesses,
 } from "../src/simulation";
-import { addOPD, addAppearance } from "../src/api";
 
 // === Helpers ===
 
@@ -483,5 +485,82 @@ describe("getExecutableProcesses", () => {
     const procs = getExecutableProcesses(m);
     expect(procs).toHaveLength(1);
     expect(procs[0].id).toBe("proc-main");
+  });
+});
+
+// === runSimulation — in-zoom expansion ===
+
+function loadCoffeeMakingModel(): Model {
+  const json = readFileSync(resolve(__dirname, "../../../tests/coffee-making.opmodel"), "utf-8");
+  const result = loadModel(json);
+  if (!("value" in result)) throw new Error("Failed to load fixture");
+  return result.value;
+}
+
+describe("runSimulation — in-zoom expansion", () => {
+  it("expands Coffee Making into 3 subprocess steps", () => {
+    const model = loadCoffeeMakingModel();
+    const trace = runSimulation(model);
+
+    // Should produce 3 steps (Grinding, Boiling, Brewing), not 1
+    expect(trace.steps.length).toBeGreaterThanOrEqual(3);
+    expect(trace.completed).toBe(true);
+    expect(trace.deadlocked).toBe(false);
+
+    // Parent process should NOT appear as an executed step
+    const parentSteps = trace.steps.filter(s => s.processId === "proc-coffee-making");
+    expect(parentSteps).toHaveLength(0);
+  });
+
+  it("executes subprocesses in Y-order", () => {
+    const model = loadCoffeeMakingModel();
+    const trace = runSimulation(model);
+
+    const processIds = trace.steps.map(s => s.processId);
+    const grindingIdx = processIds.indexOf("proc-grinding");
+    const boilingIdx = processIds.indexOf("proc-boiling");
+    const brewingIdx = processIds.indexOf("proc-brewing");
+
+    // Grinding (Y=80) before Boiling (Y=180) before Brewing (Y=280)
+    expect(grindingIdx).toBeGreaterThanOrEqual(0);
+    expect(boilingIdx).toBeGreaterThanOrEqual(0);
+    expect(brewingIdx).toBeGreaterThanOrEqual(0);
+    expect(grindingIdx).toBeLessThan(boilingIdx);
+    expect(boilingIdx).toBeLessThan(brewingIdx);
+  });
+
+  it("subprocess steps carry parentProcessId", () => {
+    const model = loadCoffeeMakingModel();
+    const trace = runSimulation(model);
+
+    const subprocessSteps = trace.steps.filter(s =>
+      s.processId === "proc-grinding" ||
+      s.processId === "proc-boiling" ||
+      s.processId === "proc-brewing"
+    );
+
+    expect(subprocessSteps.length).toBeGreaterThanOrEqual(3);
+    for (const step of subprocessSteps) {
+      expect(step.parentProcessId).toBe("proc-coffee-making");
+      expect(step.opdContext).toBe("opd-sd1");
+    }
+  });
+
+  it("Grinding consumes Coffee Beans and yields Ground Coffee", () => {
+    const model = loadCoffeeMakingModel();
+    const trace = runSimulation(model);
+
+    const grindingStep = trace.steps.find(s => s.processId === "proc-grinding");
+    expect(grindingStep).toBeDefined();
+    expect(grindingStep!.consumptionIds).toContain("obj-coffee-beans");
+    expect(grindingStep!.resultIds).toContain("obj-ground-coffee");
+  });
+
+  it("backward compatibility — flat model still works", () => {
+    const m = buildBoilingModel();
+    const trace = runSimulation(m);
+    expect(trace.steps.length).toBe(1);
+    expect(trace.steps[0].processId).toBe("proc-boil");
+    expect(trace.steps[0].parentProcessId).toBeUndefined();
   });
 });
