@@ -2,7 +2,7 @@
 // Motor de Simulación ECA (Event-Condition-Action) como Coalgebra
 // Según DA-5: c: ModelState → Event × (Precond → ModelState + 1)
 
-import type { Model, Thing, State, Link, Modifier } from "./types";
+import type { Model, Thing, State, Link, Modifier, OPD } from "./types";
 import type { InvariantError, Result } from "./result";
 import { ok, err } from "./result";
 
@@ -55,6 +55,112 @@ export interface SimulationTrace {
   finalState: ModelState;
   completed: boolean;
   deadlocked: boolean;
+}
+
+/** Proceso ejecutable con orden y contexto OPD */
+export interface ExecutableProcess {
+  id: string;
+  name: string;
+  order: number;              // Y-coordinate para sorting (0 para top-level)
+  parentProcessId?: string;   // Si es subprocess, ID del padre
+  opdId?: string;             // OPD donde vive el subprocess
+}
+
+/**
+ * Expand in-zoomed processes into their subprocesses (leaf expansion).
+ * Returns leaf processes sorted by execution order (Y-based within in-zoom).
+ * ISO 19450 §14.2.1: recursively transfer execution to top-most subprocess(es).
+ * ISO §D.4: top-to-bottom ordering by graphical Y-coordinate.
+ */
+export function getExecutableProcesses(model: Model, maxDepth: number = 10): ExecutableProcess[] {
+  const result: ExecutableProcess[] = [];
+
+  // Build lookup: processId → in-zoom OPD (if any)
+  const inZoomOpds = new Map<string, OPD>();
+  for (const opd of model.opds.values()) {
+    if (opd.refines && opd.refinement_type === "in-zoom") {
+      inZoomOpds.set(opd.refines, opd);
+    }
+  }
+
+  function expand(processId: string, parentId: string | undefined, depth: number): void {
+    if (depth > maxDepth) return;
+    const childOpd = inZoomOpds.get(processId);
+    if (!childOpd) {
+      // Leaf process — directly executable
+      const thing = model.things.get(processId);
+      if (!thing) return;
+      result.push({
+        id: processId,
+        name: thing.name,
+        order: 0,
+        parentProcessId: parentId,
+        opdId: parentId ? inZoomOpds.get(parentId)?.id : undefined,
+      });
+      return;
+    }
+
+    // Find subprocesses: processes with appearances in child OPD, excluding the container
+    const subprocesses: Array<{ id: string; name: string; y: number }> = [];
+    for (const app of model.appearances.values()) {
+      if (app.opd !== childOpd.id) continue;
+      if (app.thing === processId) continue; // Skip the container (refined thing)
+      const thing = model.things.get(app.thing);
+      if (thing?.kind === "process") {
+        subprocesses.push({ id: thing.id, name: thing.name, y: app.y });
+      }
+    }
+
+    // Sort by Y (ISO §D.4: top-to-bottom)
+    subprocesses.sort((a, b) => a.y - b.y || a.id.localeCompare(b.id));
+
+    if (subprocesses.length === 0) {
+      // In-zoom exists but has no subprocesses — execute parent directly
+      const thing = model.things.get(processId);
+      if (!thing) return;
+      result.push({ id: processId, name: thing.name, order: 0, parentProcessId: parentId });
+      return;
+    }
+
+    // Recursively expand subprocesses
+    for (const sp of subprocesses) {
+      expand(sp.id, processId, depth + 1);
+      // Set order from Y and OPD context for last pushed result(s)
+      const last = result[result.length - 1];
+      if (last && last.id === sp.id) {
+        last.order = sp.y;
+        last.opdId = childOpd.id;
+      }
+    }
+  }
+
+  // Build set of subprocess IDs (processes that appear inside an in-zoom OPD)
+  // to exclude them from top-level iteration (they'll be reached via expansion)
+  const subprocessIds = new Set<string>();
+  for (const opd of inZoomOpds.values()) {
+    for (const app of model.appearances.values()) {
+      if (app.opd !== opd.id) continue;
+      if (app.thing === opd.refines) continue; // Skip the container
+      const thing = model.things.get(app.thing);
+      if (thing?.kind === "process") {
+        subprocessIds.add(thing.id);
+      }
+    }
+  }
+
+  // Start with top-level processes only (exclude subprocesses)
+  const topLevelProcesses = [...model.things.values()]
+    .filter(t => t.kind === "process" && !subprocessIds.has(t.id))
+    .sort((a, b) => a.id.localeCompare(b.id));
+
+  for (const thing of topLevelProcesses) {
+    expand(thing.id, undefined, 0);
+  }
+
+  // Sort: by order (Y), then by ID for stability
+  result.sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
+
+  return result;
 }
 
 // === Coalgebra: c: ModelState → Event × (Precond → ModelState + 1) ===

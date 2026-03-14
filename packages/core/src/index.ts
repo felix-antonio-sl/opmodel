@@ -36,10 +36,12 @@ export {
   runSimulation,
   getPreprocessSet,
   getPostprocessSet,
+  getExecutableProcesses,
   type ModelState,
   type ObjectState,
   type SimulationEvent,
   type SimulationStep,
   type SimulationTrace,
   type PreconditionResult,
+  type ExecutableProcess,
 } from "./simulation";

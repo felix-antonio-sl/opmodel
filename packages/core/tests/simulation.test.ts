@@ -10,7 +10,9 @@ import {
   runSimulation,
   getPreprocessSet,
   getPostprocessSet,
+  getExecutableProcesses,
 } from "../src/simulation";
+import { addOPD, addAppearance } from "../src/api";
 
 // === Helpers ===
 
@@ -414,5 +416,72 @@ describe("runSimulation — deadlock detection", () => {
     // which the simpler deadlock check correctly identifies as deadlock.
     expect(trace.steps.length).toBeGreaterThanOrEqual(2);
     expect(trace.steps.some(s => s.processId === "proc-burn")).toBe(true);
+  });
+});
+
+// === getExecutableProcesses ===
+
+/**
+ * Build an in-zoom model: proc-main has an in-zoom OPD with proc-sub-a (Y=200) and proc-sub-b (Y=100).
+ */
+function buildInZoomModel(): Model {
+  let m = createModel("InZoom Test");
+  m = (addThing(m, proc("proc-main", "Main Process")) as any).value;
+  m = (addThing(m, proc("proc-sub-a", "Sub A")) as any).value;
+  m = (addThing(m, proc("proc-sub-b", "Sub B")) as any).value;
+  // Add in-zoom OPD refining proc-main
+  m = (addOPD(m, { id: "opd-iz", name: "IZ", opd_type: "hierarchical", parent_opd: "opd-sd", refines: "proc-main", refinement_type: "in-zoom" }) as any).value;
+  // Add appearances in the in-zoom OPD
+  m = (addAppearance(m, { thing: "proc-main", opd: "opd-iz", x: 100, y: 0, w: 300, h: 400, internal: true }) as any).value;
+  m = (addAppearance(m, { thing: "proc-sub-a", opd: "opd-iz", x: 150, y: 200, w: 140, h: 60, internal: true }) as any).value;
+  m = (addAppearance(m, { thing: "proc-sub-b", opd: "opd-iz", x: 150, y: 100, w: 140, h: 60, internal: true }) as any).value;
+  return m;
+}
+
+/**
+ * Build a model with in-zoom OPD but no subprocesses in it.
+ */
+function buildEmptyInZoomModel(): Model {
+  let m = createModel("Empty InZoom");
+  m = (addThing(m, proc("proc-main", "Main Process")) as any).value;
+  // Add in-zoom OPD but no subprocess appearances
+  m = (addOPD(m, { id: "opd-iz", name: "IZ", opd_type: "hierarchical", parent_opd: "opd-sd", refines: "proc-main", refinement_type: "in-zoom" }) as any).value;
+  return m;
+}
+
+describe("getExecutableProcesses", () => {
+  it("returns all processes for flat model (no in-zoom)", () => {
+    const m = buildBoilingModel();
+    const procs = getExecutableProcesses(m);
+    expect(procs).toHaveLength(1);
+    expect(procs[0].id).toBe("proc-boil");
+    expect(procs[0].parentProcessId).toBeUndefined();
+  });
+
+  it("expands in-zoomed process into subprocesses", () => {
+    const m = buildInZoomModel();
+    const procs = getExecutableProcesses(m);
+    // Parent (proc-main) should NOT appear — replaced by its children
+    expect(procs.find(p => p.id === "proc-main")).toBeUndefined();
+    // Both subprocesses appear
+    expect(procs).toHaveLength(2);
+    expect(procs.map(p => p.id)).toContain("proc-sub-a");
+    expect(procs.map(p => p.id)).toContain("proc-sub-b");
+    expect(procs[0].parentProcessId).toBe("proc-main");
+  });
+
+  it("sorts subprocesses by Y coordinate (ISO §D.4)", () => {
+    const m = buildInZoomModel();
+    const procs = getExecutableProcesses(m);
+    // proc-sub-b at Y=100 should come before proc-sub-a at Y=200
+    expect(procs[0].id).toBe("proc-sub-b");
+    expect(procs[1].id).toBe("proc-sub-a");
+  });
+
+  it("handles empty in-zoom (executes parent directly)", () => {
+    const m = buildEmptyInZoomModel();
+    const procs = getExecutableProcesses(m);
+    expect(procs).toHaveLength(1);
+    expect(procs[0].id).toBe("proc-main");
   });
 });
