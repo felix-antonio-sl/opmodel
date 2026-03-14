@@ -39,6 +39,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@opmodel/core": "workspace:*",
+        "@opmodel/nl": "workspace:*",
         "react": "^19.1.0",
         "react-dom": "^19.1.0",
       },
