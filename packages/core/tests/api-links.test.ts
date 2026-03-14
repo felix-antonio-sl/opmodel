@@ -168,6 +168,71 @@ describe("addLink", () => {
     const r = addLink(buildModel(), { id: "lnk-self-invoke", type: "invocation", source: "proc-heating", target: "proc-heating" });
     expect(isOk(r)).toBe(true);
   });
+
+  // --- I-16-EXT: Enabling link uniqueness ---
+
+  it("rejects duplicate enabling role for same (object, process) pair (I-16-EXT)", () => {
+    let m = buildModel();
+    m = (addLink(m, { id: "lnk-agent", type: "agent", source: "obj-barista", target: "proc-heating" }) as any).value;
+    const r = addLink(m, { id: "lnk-instrument", type: "instrument", source: "obj-barista", target: "proc-heating" });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-16");
+  });
+
+  it("rejects duplicate enabling — instrument then agent (I-16-EXT)", () => {
+    let m = buildModel();
+    m = (addLink(m, { id: "lnk-inst", type: "instrument", source: "obj-water", target: "proc-heating" }) as any).value;
+    const r = addLink(m, { id: "lnk-agent2", type: "agent", source: "obj-water", target: "proc-heating" });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-16");
+  });
+
+  it("allows different objects as enablers of same process (I-16-EXT valid)", () => {
+    let m = buildModel();
+    m = (addLink(m, { id: "lnk-agent", type: "agent", source: "obj-barista", target: "proc-heating" }) as any).value;
+    const r = addLink(m, { id: "lnk-inst", type: "instrument", source: "obj-water", target: "proc-heating" });
+    expect(isOk(r)).toBe(true);
+  });
+
+  // --- I-22..I-26: Structural invariants in addLink ---
+
+  it("rejects generalization between object and process (I-22)", () => {
+    const r = addLink(buildModel(), { id: "lnk-gen", type: "generalization", source: "obj-water", target: "proc-heating" });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-22");
+  });
+
+  it("rejects classification between object and process (I-23)", () => {
+    const r = addLink(buildModel(), { id: "lnk-cls", type: "classification", source: "obj-water", target: "proc-heating" });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-23");
+  });
+
+  it("rejects invocation from object to process (I-24)", () => {
+    const r = addLink(buildModel(), { id: "lnk-inv", type: "invocation", source: "obj-water", target: "proc-heating" });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-24");
+  });
+
+  it("rejects exception between process and object (I-25)", () => {
+    const procTimed: Thing = { id: "proc-timed", kind: "process", name: "Timed", essence: "physical", affiliation: "systemic", duration: { nominal: 60, max: 120, unit: "s" } };
+    let m = buildModel();
+    m = (addThing(m, procTimed) as any).value;
+    const r = addLink(m, { id: "lnk-exc", type: "exception", source: "proc-timed", target: "obj-water" });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-25");
+  });
+
+  it("rejects aggregation between object and process (I-26)", () => {
+    const r = addLink(buildModel(), { id: "lnk-agg", type: "aggregation", source: "obj-water", target: "proc-heating" });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-26");
+  });
+
+  it("allows generalization between two objects (I-22 valid)", () => {
+    const r = addLink(buildModel(), { id: "lnk-gen-ok", type: "generalization", source: "obj-water", target: "obj-barista" });
+    expect(isOk(r)).toBe(true);
+  });
 });
 
 describe("removeLink", () => {

@@ -217,6 +217,37 @@ export function addLink(
     return err({ code: "I-33", message: `${link.type} link must connect object↔process, not ${source.kind}↔${source.kind}`, entity: link.id });
   }
 
+  // I-16-EXT: Enabling link uniqueness — max 1 enabling link per (object, process) pair (ISO §8.1.2)
+  if (link.type === "agent" || link.type === "instrument") {
+    for (const existing of model.links.values()) {
+      if ((existing.type === "agent" || existing.type === "instrument") &&
+          existing.source === link.source && existing.target === link.target) {
+        return err({ code: "I-16", message: `Multiple enabling links between ${link.source} and ${link.target}`, entity: link.id });
+      }
+    }
+  }
+
+  // I-22: Generalization requires same perseverance
+  if (link.type === "generalization" && source.kind !== target.kind) {
+    return err({ code: "I-22", message: `Generalization: source and target must have same kind`, entity: link.id });
+  }
+  // I-23: Classification requires same perseverance
+  if (link.type === "classification" && source.kind !== target.kind) {
+    return err({ code: "I-23", message: `Classification: source and target must have same kind`, entity: link.id });
+  }
+  // I-24: Invocation requires both processes
+  if (link.type === "invocation" && (source.kind !== "process" || target.kind !== "process")) {
+    return err({ code: "I-24", message: `Invocation link must connect processes only`, entity: link.id });
+  }
+  // I-25: Exception requires both processes
+  if (link.type === "exception" && (source.kind !== "process" || target.kind !== "process")) {
+    return err({ code: "I-25", message: `Exception link must connect processes only`, entity: link.id });
+  }
+  // I-26: Aggregation requires same perseverance
+  if (link.type === "aggregation" && source.kind !== target.kind) {
+    return err({ code: "I-26", message: `Aggregation: source and target must have same kind`, entity: link.id });
+  }
+
   // I-18: agent source must be physical
   if (link.type === "agent") {
     if (source.essence !== "physical") {
@@ -1191,6 +1222,25 @@ export function validate(model: Model): InvariantError[] {
           errors.push({ code: "I-16", message: `Multiple procedural links between process ${procId} and object ${objId}`, entity: id });
         } else {
           proceduralPairs.set(pairKey, id);
+        }
+      }
+    }
+  }
+
+  // I-16-EXT: Enabling link uniqueness (ISO §8.1.2)
+  const enablingPairs = new Map<string, string>();
+  for (const [id, link] of model.links) {
+    if (link.type === "agent" || link.type === "instrument") {
+      const src = model.things.get(link.source);
+      const tgt = model.things.get(link.target);
+      if (src && tgt) {
+        const objId = src.kind === "object" ? link.source : link.target;
+        const procId = src.kind === "process" ? link.source : link.target;
+        const pairKey = `${procId}::${objId}`;
+        if (enablingPairs.has(pairKey)) {
+          errors.push({ code: "I-16", message: `Multiple enabling links between process ${procId} and object ${objId}`, entity: id });
+        } else {
+          enablingPairs.set(pairKey, id);
         }
       }
     }
