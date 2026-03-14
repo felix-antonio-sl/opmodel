@@ -370,6 +370,11 @@
           "type": "array",
           "items": { "type": "string" }
         },
+        "incomplete": { "type": "boolean" },
+        "exception_type": {
+          "type": "string",
+          "enum": ["overtime", "undertime"]
+        },
         "hyperlinks": {
           "type": "array",
           "items": { "type": "string" }
@@ -438,6 +443,17 @@
           },
           "then": {
             "not": { "required": ["discriminating_values"] }
+          }
+        },
+        {
+          "if": {
+            "not": {
+              "properties": { "type": { "const": "exception" } },
+              "required": ["type"]
+            }
+          },
+          "then": {
+            "properties": { "exception_type": false }
           }
         }
       ]

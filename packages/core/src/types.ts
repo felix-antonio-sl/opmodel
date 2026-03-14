@@ -145,6 +145,7 @@ export interface Link {
   discriminating?: boolean;
   discriminating_values?: string[];
   incomplete?: boolean; // ISO 19450: partial/incomplete structures
+  exception_type?: "overtime" | "undertime"; // ISO §9.5.4. Only when type === "exception"
   hyperlinks?: string[];
   vertices?: Position[];
 }
