@@ -6,15 +6,15 @@ import type { Model } from "@opmodel/core";
 function buildTestModel(): { model: Model; opdId: string } {
   let m = createModel("test");
   const opdId = "opd-main";
-  let r = addOPD(m, { id: opdId, name: "Main", parentId: null });
+  let r = addOPD(m, { id: opdId, name: "Main", opd_type: "hierarchical", parent_opd: null });
   m = r.ok ? r.value : m;
   r = addThing(m, { id: "obj-water", kind: "object", name: "Water", essence: "physical", affiliation: "systemic" });
   m = r.ok ? r.value : m;
   r = addAppearance(m, { thing: "obj-water", opd: opdId, x: 50, y: 50, w: 120, h: 60 });
   m = r.ok ? r.value : m;
-  r = addState(m, { id: "s1", parent: "obj-water", name: "cold" });
+  r = addState(m, { id: "s1", parent: "obj-water", name: "cold", initial: false, final: false, default: false });
   m = r.ok ? r.value : m;
-  r = addState(m, { id: "s2", parent: "obj-water", name: "hot" });
+  r = addState(m, { id: "s2", parent: "obj-water", name: "hot", initial: false, final: false, default: false });
   m = r.ok ? r.value : m;
   return { model: m, opdId };
 }
@@ -53,7 +53,7 @@ describe("prompt", () => {
 
   test("buildContextMessage handles empty model", () => {
     const m = createModel("empty");
-    let r = addOPD(m, { id: "opd-x", name: "X", parentId: null });
+    let r = addOPD(m, { id: "opd-x", name: "X", opd_type: "hierarchical", parent_opd: null });
     const model = r.ok ? r.value : m;
     const ctx = buildContextMessage(model, "opd-x");
     expect(ctx).toContain("(none)");

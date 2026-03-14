@@ -8,7 +8,7 @@ function buildTestModel(): { model: Model; opdId: string } {
   let m = createModel("test");
   const opdId = "opd-main";
 
-  let r = addOPD(m, { id: opdId, name: "Main", parentId: null });
+  let r = addOPD(m, { id: opdId, name: "Main", opd_type: "hierarchical", parent_opd: null });
   if (!r.ok) throw new Error("setup failed");
   m = r.value;
 
@@ -28,11 +28,11 @@ function buildTestModel(): { model: Model; opdId: string } {
   if (!r.ok) throw new Error("setup failed");
   m = r.value;
 
-  r = addState(m, { id: "state-cold", parent: "obj-water", name: "cold" });
+  r = addState(m, { id: "state-cold", parent: "obj-water", name: "cold", initial: false, final: false, default: false });
   if (!r.ok) throw new Error("setup failed");
   m = r.value;
 
-  r = addState(m, { id: "state-hot", parent: "obj-water", name: "hot" });
+  r = addState(m, { id: "state-hot", parent: "obj-water", name: "hot", initial: false, final: false, default: false });
   if (!r.ok) throw new Error("setup failed");
   m = r.value;
 
@@ -60,7 +60,7 @@ describe("resolve", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.value).toHaveLength(1);
-    const edit = result.value[0];
+    const edit = result.value[0]!;
     expect(edit.kind).toBe("add-thing");
     if (edit.kind !== "add-thing") return;
     expect(edit.thing.name).toBe("Steam");
@@ -122,7 +122,7 @@ describe("resolve", () => {
     );
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    const edit = result.value[0];
+    const edit = result.value[0]!;
     expect(edit.kind).toBe("add-states");
     if (edit.kind !== "add-states") return;
     expect(edit.thingId).toBe("obj-water");
@@ -150,7 +150,7 @@ describe("resolve", () => {
     );
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    const edit = result.value[0];
+    const edit = result.value[0]!;
     expect(edit.kind).toBe("add-link");
     if (edit.kind !== "add-link") return;
     expect(edit.link.source).toBe("proc-boiling");
@@ -201,7 +201,7 @@ describe("resolve", () => {
     );
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    const edit = result.value[0];
+    const edit = result.value[0]!;
     expect(edit.kind).toBe("add-modifier");
     if (edit.kind !== "add-modifier") return;
     expect(edit.modifier.over).toBe("lnk-consumption");
@@ -229,7 +229,7 @@ describe("resolve", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.value).toHaveLength(2);
-    expect(result.value[1].kind).toBe("add-link");
+    expect(result.value[1]!.kind).toBe("add-link");
   });
 
   test("batch: states added in edit 1 available for link in edit 2", () => {
