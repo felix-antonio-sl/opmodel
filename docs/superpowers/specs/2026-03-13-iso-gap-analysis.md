@@ -9,7 +9,7 @@
 
 | Categoria | Count | Descripcion |
 |-----------|-------|-------------|
-| CRITICAL gaps | 6 | Conceptos core OPM ausentes del backlog |
+| CRITICAL gaps | 8 (4 cerrados) | Conceptos core OPM ausentes del backlog |
 | IMPORTANT gaps | 14 | Features estandar faltantes o incompletas |
 | MINOR gaps | 12 | Edge cases, terminologia |
 | Underspecifications | 10 | Conceptos presentes pero insuficientemente definidos |
@@ -33,14 +33,14 @@
 - **Problema:** ISO define DOS modos para condition links: skip (si falso, saltar) vs wait (si falso, bloquear). El backlog (L-M5-02) menciona condiciones pero NO distingue estos modos.
 - **Faltante:** Propiedad `condition_mode: "skip" | "wait"` en links de condicion. OPL distinto: "Process is triggered by..." (event) vs "Process requires..." (condition/wait).
 - **Impacto:** Semantica de simulacion ambigua — no se puede generar codigo correcto.
-- **Recomendacion:** Pre-P1 — BLOQUEANTE para simulacion.
+- **Status:** ✅ CERRADO — condition_mode implementado en Modifier
 
 ### Gap-C3: Stateful vs Stateless Objects
 - **ISO:** 3.66, 3.67
 - **Problema:** ISO clasifica objetos como stateful (pueden tener estados, ser afectados) o stateless (solo consumidos/producidos). El backlog no distingue esto a nivel de tipo.
 - **Faltante:** Propiedad `stateful: boolean` en Thing. Invariantes: stateless no puede tener estados ni effect links.
 - **Impacto:** Afecta 5+ invariantes (I-01, I-16, effect link validation).
-- **Recomendacion:** Pre-P1 — BLOQUEANTE para compliance ISO.
+- **Status:** ✅ CERRADO — Thing.stateful + 4 invariantes implementados
 
 ### Gap-C4: Whole-Part Ratio en Aggregation
 - **ISO:** 11.1, 10.3.2
@@ -62,6 +62,16 @@
 - **Faltante:** HU para "fact consistency checking on in-zoom refinements" + "ambiguity resolution UI" cuando un link en padre se mapea a multiples subprocesos en hijo.
 - **Impacto:** Refinements no se validan formalmente; consistencia padre-hijo no garantizada.
 - **Recomendacion:** P2 — no bloquea MVP pero esencial para refinement correcto.
+
+### Gap-C7: I-27 Exhibition Perseverance Bug
+- **ISO:** 7.2.2
+- **Problema:** I-27 rechazaba exhibition links cross-type. ISO §7.2.2 explícitamente exime exhibition-characterization de la regla de perseverancia.
+- **Status:** ✅ CERRADO — I-27 eliminado de validate()
+
+### Gap-C8: Procedural Link Endpoint Type Validation
+- **ISO:** 6.1-6.3
+- **Problema:** addLink() no validaba que procedural links conecten object↔process.
+- **Status:** ✅ CERRADO — I-33 implementado en addLink() y validate()
 
 ---
 

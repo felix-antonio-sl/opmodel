@@ -200,16 +200,89 @@ export function addLink(
   if (!model.things.has(link.target)) {
     return err({ code: "I-05", message: `Target thing not found: ${link.target}`, entity: link.id });
   }
+
+  // I-34: No self-loops except invocation (ISO §8.5)
+  if (link.source === link.target && link.type !== "invocation") {
+    return err({ code: "I-34", message: `Self-loop not allowed for ${link.type} links`, entity: link.id });
+  }
+
+  const source = model.things.get(link.source)!;
+  const target = model.things.get(link.target)!;
+
+  // I-33: Procedural links must connect object↔process (ISO §6.1-§6.3)
+  const PROCEDURAL_TYPES = new Set([
+    "consumption", "result", "effect", "input", "output", "agent", "instrument",
+  ]);
+  if (PROCEDURAL_TYPES.has(link.type) && source.kind === target.kind) {
+    return err({ code: "I-33", message: `${link.type} link must connect object↔process, not ${source.kind}↔${source.kind}`, entity: link.id });
+  }
+
+  // I-16-EXT: Enabling link uniqueness — max 1 enabling link per (object, process) pair (ISO §8.1.2)
+  if (link.type === "agent" || link.type === "instrument") {
+    for (const existing of model.links.values()) {
+      if ((existing.type === "agent" || existing.type === "instrument") &&
+          existing.source === link.source && existing.target === link.target) {
+        return err({ code: "I-16", message: `Multiple enabling links between ${link.source} and ${link.target}`, entity: link.id });
+      }
+    }
+  }
+
+  // I-22: Generalization requires same perseverance
+  if (link.type === "generalization" && source.kind !== target.kind) {
+    return err({ code: "I-22", message: `Generalization: source and target must have same kind`, entity: link.id });
+  }
+  // I-23: Classification requires same perseverance
+  if (link.type === "classification" && source.kind !== target.kind) {
+    return err({ code: "I-23", message: `Classification: source and target must have same kind`, entity: link.id });
+  }
+  // I-24: Invocation requires both processes
+  if (link.type === "invocation" && (source.kind !== "process" || target.kind !== "process")) {
+    return err({ code: "I-24", message: `Invocation link must connect processes only`, entity: link.id });
+  }
+  // I-25: Exception requires both processes
+  if (link.type === "exception" && (source.kind !== "process" || target.kind !== "process")) {
+    return err({ code: "I-25", message: `Exception link must connect processes only`, entity: link.id });
+  }
+  // I-26: Aggregation requires same perseverance
+  if (link.type === "aggregation" && source.kind !== target.kind) {
+    return err({ code: "I-26", message: `Aggregation: source and target must have same kind`, entity: link.id });
+  }
+
+  // I-28: State-specified link validation — states must exist and belong to correct parent
+  if (link.source_state) {
+    const state = model.states.get(link.source_state);
+    if (!state) {
+      return err({ code: "I-28", message: `source_state not found: ${link.source_state}`, entity: link.id });
+    }
+    // For enabling links: source_state belongs to source (the object enabler)
+    // For transforming links: source_state belongs to the object endpoint
+    const enablingSet = new Set(["agent", "instrument"]);
+    const expectedParent = enablingSet.has(link.type) ? link.source :
+      (source.kind === "object" ? link.source : link.target);
+    if (state.parent !== expectedParent) {
+      return err({ code: "I-28", message: `source_state ${link.source_state} does not belong to ${expectedParent}`, entity: link.id });
+    }
+  }
+  if (link.target_state) {
+    const state = model.states.get(link.target_state);
+    if (!state) {
+      return err({ code: "I-28", message: `target_state not found: ${link.target_state}`, entity: link.id });
+    }
+    // target_state always belongs to the object endpoint
+    const objectId = source.kind === "object" ? link.source : link.target;
+    if (state.parent !== objectId) {
+      return err({ code: "I-28", message: `target_state ${link.target_state} does not belong to object ${objectId}`, entity: link.id });
+    }
+  }
+
   // I-18: agent source must be physical
   if (link.type === "agent") {
-    const source = model.things.get(link.source)!;
     if (source.essence !== "physical") {
       return err({ code: "I-18", message: `Agent source must be physical: ${link.source}`, entity: link.id });
     }
   }
   // I-14: exception link requires source process to have duration.max
   if (link.type === "exception") {
-    const source = model.things.get(link.source)!;
     if (!source.duration?.max) {
       return err({ code: "I-14", message: `Exception source must have duration.max: ${link.source}`, entity: link.id });
     }
@@ -254,9 +327,9 @@ export function addLink(
   let things = model.things;
   // I-19 effect: exhibition forces source.essence := informatical
   if (link.type === "exhibition") {
-    const source = things.get(link.source)!;
-    if (source.essence !== "informatical") {
-      things = new Map(things).set(source.id, { ...source, essence: "informatical" });
+    const exhibitSource = things.get(link.source)!;
+    if (exhibitSource.essence !== "informatical") {
+      things = new Map(things).set(exhibitSource.id, { ...exhibitSource, essence: "informatical" });
     }
   }
 
@@ -1138,6 +1211,27 @@ export function validate(model: Model): InvariantError[] {
     }
   }
 
+  // I-33: Procedural links must connect object↔process (ISO §6.1-§6.3)
+  const PROCEDURAL_TYPES = new Set([
+    "consumption", "result", "effect", "input", "output", "agent", "instrument",
+  ]);
+  for (const [id, link] of model.links) {
+    if (PROCEDURAL_TYPES.has(link.type)) {
+      const src = model.things.get(link.source);
+      const tgt = model.things.get(link.target);
+      if (src && tgt && src.kind === tgt.kind) {
+        errors.push({ code: "I-33", message: `${link.type} link ${id} must connect object↔process`, entity: id });
+      }
+    }
+  }
+
+  // I-34: No self-loops except invocation (ISO §8.5)
+  for (const [id, link] of model.links) {
+    if (link.source === link.target && link.type !== "invocation") {
+      errors.push({ code: "I-34", message: `Self-loop not allowed for ${link.type} link ${id}`, entity: id });
+    }
+  }
+
   // I-16: unique transforming link per (process, object) pair
   // Transforming links (effect/consumption/result) are mutually exclusive:
   // effect = object persists with state change, consumption = object ceases to exist, result = object comes into existence
@@ -1155,6 +1249,25 @@ export function validate(model: Model): InvariantError[] {
           errors.push({ code: "I-16", message: `Multiple procedural links between process ${procId} and object ${objId}`, entity: id });
         } else {
           proceduralPairs.set(pairKey, id);
+        }
+      }
+    }
+  }
+
+  // I-16-EXT: Enabling link uniqueness (ISO §8.1.2)
+  const enablingPairs = new Map<string, string>();
+  for (const [id, link] of model.links) {
+    if (link.type === "agent" || link.type === "instrument") {
+      const src = model.things.get(link.source);
+      const tgt = model.things.get(link.target);
+      if (src && tgt) {
+        const objId = src.kind === "object" ? link.source : link.target;
+        const procId = src.kind === "process" ? link.source : link.target;
+        const pairKey = `${procId}::${objId}`;
+        if (enablingPairs.has(pairKey)) {
+          errors.push({ code: "I-16", message: `Multiple enabling links between process ${procId} and object ${objId}`, entity: id });
+        } else {
+          enablingPairs.set(pairKey, id);
         }
       }
     }
@@ -1313,42 +1426,34 @@ export function validate(model: Model): InvariantError[] {
     }
   }
 
-  // I-27: Exhibition - features must have same perseverance as exhibitor
-  for (const [id, link] of model.links) {
-    if (link.type === "exhibition") {
-      const exhibitor = model.things.get(link.target);
-      const feature = model.things.get(link.source);
-      if (exhibitor && feature && exhibitor.kind !== feature.kind) {
-        errors.push({ code: "I-27", message: `Exhibition ${id}: exhibitor and feature must have same perseverance`, entity: id });
-      }
-    }
-  }
 
-  // I-28: State-specified links must reference valid states
-  // For transforming links (effect, consumption, result), source_state belongs to the target object
-  // For enabling links (agent, instrument), source_state belongs to the source (agent/instrument)
+  // I-28: State-specified links reference valid states
   for (const [id, link] of model.links) {
-    const transformingTypes = ["effect", "consumption", "result", "input", "output"];
-    const isTransforming = transformingTypes.includes(link.type);
-    
+    const src = model.things.get(link.source);
+    const tgt = model.things.get(link.target);
+    const enablingSet = new Set(["agent", "instrument"]);
     if (link.source_state) {
       const state = model.states.get(link.source_state);
       if (!state) {
-        errors.push({ code: "I-28", message: `Link ${id} references non-existent source state ${link.source_state}`, entity: id });
+        errors.push({ code: "I-28", message: `Link ${id} source_state references non-existent state`, entity: id });
       } else {
-        // For transforming links, source_state belongs to target object; for enabling links, belongs to source
-        const expectedParent = isTransforming ? link.target : link.source;
+        const expectedParent = enablingSet.has(link.type)
+          ? link.source
+          : (src?.kind === "object" ? link.source : link.target);
         if (state.parent !== expectedParent) {
-          errors.push({ code: "I-28", message: `Link ${id} source state ${link.source_state} does not belong to ${isTransforming ? 'target' : 'source'} thing`, entity: id });
+          errors.push({ code: "I-28", message: `Link ${id} source_state does not belong to expected parent`, entity: id });
         }
       }
     }
     if (link.target_state) {
       const state = model.states.get(link.target_state);
       if (!state) {
-        errors.push({ code: "I-28", message: `Link ${id} references non-existent target state ${link.target_state}`, entity: id });
-      } else if (state.parent !== link.target) {
-        errors.push({ code: "I-28", message: `Link ${id} target state ${link.target_state} does not belong to target thing`, entity: id });
+        errors.push({ code: "I-28", message: `Link ${id} target_state references non-existent state`, entity: id });
+      } else {
+        const objectId = src?.kind === "object" ? link.source : link.target;
+        if (state.parent !== objectId) {
+          errors.push({ code: "I-28", message: `Link ${id} target_state does not belong to object endpoint`, entity: id });
+        }
       }
     }
   }

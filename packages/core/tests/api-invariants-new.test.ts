@@ -206,10 +206,12 @@ describe("I-26: aggregation perseverance", () => {
   });
 });
 
-// === I-27: Exhibition same perseverance ===
+// === I-27: Exhibition perseverance — REMOVED per ISO §7.2.2 ===
+// Exhibition-characterization is explicitly exempt from perseverance rule.
+// Objects CAN exhibit process features (operations) and vice versa.
 
-describe("I-27: exhibition perseverance", () => {
-  it("flags exhibition of process by object", () => {
+describe("I-27: exhibition perseverance (removed)", () => {
+  it("allows exhibition of process by object — ISO §7.2.2 exemption", () => {
     let m = createModel("Test");
     m = (addThing(m, obj("obj-exhibitor", "Car")) as any).value;
     m = (addThing(m, proc("proc-feature", "Speed")) as any).value;
@@ -217,7 +219,7 @@ describe("I-27: exhibition perseverance", () => {
       id: "lnk-exh", type: "exhibition", source: "proc-feature", target: "obj-exhibitor",
     }) };
     const errors = errorsOf(m, "I-27");
-    expect(errors.length).toBeGreaterThanOrEqual(1);
+    expect(errors).toHaveLength(0);
   });
 });
 
