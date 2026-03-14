@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { loadModel, createModel, isOk, validate, type Model } from "@opmodel/core";
 import { useModelStore } from "./hooks/useModelStore";
 import { OpdTree } from "./components/OpdTree";
@@ -6,12 +6,33 @@ import { OpdCanvas } from "./components/OpdCanvas";
 import { OplPanel } from "./components/OplPanel";
 import { PropertiesPanel } from "./components/PropertiesPanel";
 import { Toolbar } from "./components/Toolbar";
+import type { NlConfig } from "@opmodel/nl";
+import { createProvider, createPipeline } from "@opmodel/nl";
+import { NlSettingsModal } from "./components/NlSettingsModal";
 
 const STORAGE_KEY = "opmodel:current";
 
 function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel: Model; onNew: () => void; onLoadExample: () => void; onImport: (model: Model) => void }) {
   const store = useModelStore(initialModel);
   const { model, ui, dispatch, doUndo, doRedo, canUndo, canRedo, lastError, save } = store;
+
+  // NL pipeline
+  const [nlConfig, setNlConfig] = useState<NlConfig | null>(() => {
+    const stored = localStorage.getItem("opmodel:nl-config");
+    if (stored) {
+      try { return JSON.parse(stored) as NlConfig; } catch { /* ignore */ }
+    }
+    const key = import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined;
+    if (key) return { provider: "claude" as const, apiKey: key };
+    return null;
+  });
+  const [showNlSettings, setShowNlSettings] = useState(false);
+
+  const nlPipeline = useMemo(() => {
+    if (!nlConfig) return undefined;
+    const provider = createProvider(nlConfig);
+    return createPipeline({ provider });
+  }, [nlConfig]);
 
   // Keyboard shortcuts
   const handleKeyDown = useCallback(
@@ -120,6 +141,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
         </div>
         <div className="header__sep" />
         <div className="header__badge">v{model.opmodel}</div>
+        <button onClick={() => setShowNlSettings(true)} title="NL Settings">⚙</button>
       </header>
 
       {/* Toolbar */}
@@ -150,7 +172,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
             dispatch={dispatch}
           />
         )}
-        <OplPanel model={model} opdId={ui.currentOpd} selectedThing={ui.selectedThing} dispatch={dispatch} />
+        <OplPanel model={model} opdId={ui.currentOpd} selectedThing={ui.selectedThing} dispatch={dispatch} nlPipeline={nlPipeline} />
       </aside>
 
       {/* Status Bar */}
@@ -187,6 +209,13 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
         )}
         <span className="status-bar__version">opmodel {model.opmodel}</span>
       </footer>
+      {showNlSettings && (
+        <NlSettingsModal
+          config={nlConfig}
+          onSave={setNlConfig}
+          onClose={() => setShowNlSettings(false)}
+        />
+      )}
     </div>
   );
 }
