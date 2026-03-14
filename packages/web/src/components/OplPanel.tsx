@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Model } from "@opmodel/core";
+import type { NlPipeline } from "@opmodel/nl";
 import type { Command } from "../lib/commands";
 import { OplSentencesView } from "./OplSentencesView";
 import { OplTextView } from "./OplTextView";
@@ -12,9 +13,10 @@ interface Props {
   opdId: string;
   selectedThing: string | null;
   dispatch: (cmd: Command) => boolean;
+  nlPipeline?: NlPipeline;
 }
 
-export function OplPanel({ model, opdId, selectedThing, dispatch }: Props) {
+export function OplPanel({ model, opdId, selectedThing, dispatch, nlPipeline }: Props) {
   const [activeTab, setActiveTab] = useState<OplTab>("sentences");
   const opd = model.opds.get(opdId);
 
@@ -41,7 +43,7 @@ export function OplPanel({ model, opdId, selectedThing, dispatch }: Props) {
         <OplTextView model={model} opdId={opdId} />
       )}
       {activeTab === "editor" && (
-        <OplEditorView model={model} opdId={opdId} dispatch={dispatch} />
+        <OplEditorView model={model} opdId={opdId} dispatch={dispatch} nlPipeline={nlPipeline} />
       )}
     </aside>
   );
