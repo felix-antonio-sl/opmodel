@@ -18,9 +18,10 @@ import {
   redo,
   isOk,
   saveModel,
+  runSimulation,
 } from "@opmodel/core";
 import { type Command, interpret } from "../lib/commands";
-import type { EditorMode, LinkTypeChoice } from "../lib/commands";
+import type { EditorMode, LinkTypeChoice, SimulationUIState } from "../lib/commands";
 
 const STORAGE_KEY = "opmodel:current";
 
@@ -30,6 +31,7 @@ export interface UIState {
   mode: EditorMode;
   linkSource: string | null;
   linkType: LinkTypeChoice;
+  simulation: SimulationUIState | null;
 }
 
 export interface ModelStore {
@@ -63,8 +65,15 @@ export function useModelStore(initialModel: Model): ModelStore {
     mode: "select",
     linkSource: null,
     linkType: "auto" as LinkTypeChoice,
+    simulation: null,
   });
   const [lastError, setLastError] = useState<string | null>(null);
+
+  // Refs for accessing current state inside useCallback without stale closures
+  const historyRef = useRef(history);
+  historyRef.current = history;
+  const uiRef = useRef(ui);
+  uiRef.current = ui;
 
   // Auto-save to localStorage on model changes (debounced)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -89,6 +98,96 @@ export function useModelStore(initialModel: Model): ModelStore {
       return true;
     }
 
+    // Simulation effect — ephemeral state machine
+    if (effect.type === "simulationEffect") {
+      setUi((prev) => {
+        const sim = prev.simulation;
+        switch (effect.action) {
+          case "start": {
+            // Read current model from history ref
+            const model = historyRef.current.present;
+            const trace = runSimulation(model);
+            if (trace.steps.length === 0) {
+              setLastError("No executable processes found");
+              return prev;
+            }
+            setLastError(null);
+            return {
+              ...prev,
+              mode: "select" as EditorMode,
+              simulation: {
+                trace,
+                currentStepIndex: -1,
+                status: "paused",
+                speed: 800,
+                frozenModel: model,
+              },
+            };
+          }
+          case "step": {
+            if (!sim) return prev;
+            const dir = (effect.payload ?? 1) as number;
+            const maxIdx = sim.trace.steps.length - 1;
+            const newIdx = Math.max(-1, Math.min(maxIdx, sim.currentStepIndex + dir));
+            const atEnd = newIdx >= maxIdx;
+            return {
+              ...prev,
+              simulation: {
+                ...sim,
+                currentStepIndex: newIdx,
+                status: atEnd
+                  ? (sim.trace.deadlocked ? "deadlocked" : "completed")
+                  : sim.status === "running" ? "running" : "paused",
+              },
+            };
+          }
+          case "reset":
+            setLastError(null);
+            return { ...prev, simulation: null };
+          case "setStep": {
+            if (!sim) return prev;
+            const idx = effect.payload as number;
+            const maxIdx = sim.trace.steps.length - 1;
+            const clamped = Math.max(-1, Math.min(maxIdx, idx));
+            return {
+              ...prev,
+              simulation: {
+                ...sim,
+                currentStepIndex: clamped,
+                status: clamped >= maxIdx
+                  ? (sim.trace.deadlocked ? "deadlocked" : "completed")
+                  : "paused",
+              },
+            };
+          }
+          case "setSpeed": {
+            if (!sim) return prev;
+            return { ...prev, simulation: { ...sim, speed: effect.payload as number } };
+          }
+          case "toggleAutoRun": {
+            if (!sim) return prev;
+            if (sim.status === "completed" || sim.status === "deadlocked") return prev;
+            return {
+              ...prev,
+              simulation: {
+                ...sim,
+                status: sim.status === "running" ? "paused" : "running",
+              },
+            };
+          }
+          default:
+            return prev;
+        }
+      });
+      return true;
+    }
+
+    // Guard: block model mutations during simulation
+    if (uiRef.current.simulation) {
+      setLastError("Exit simulation to edit the model");
+      return false;
+    }
+
     // ModelMutation — apply to present, push to History
     let success = false;
     setHistory((h) => {
@@ -106,10 +205,12 @@ export function useModelStore(initialModel: Model): ModelStore {
   }, []);
 
   const doUndo = useCallback(() => {
+    if (uiRef.current.simulation) return;
     setHistory((h) => undo(h) ?? h);
   }, []);
 
   const doRedo = useCallback(() => {
+    if (uiRef.current.simulation) return;
     setHistory((h) => redo(h) ?? h);
   }, []);
 

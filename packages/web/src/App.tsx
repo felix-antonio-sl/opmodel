@@ -6,6 +6,7 @@ import { OpdCanvas } from "./components/OpdCanvas";
 import { OplPanel } from "./components/OplPanel";
 import { PropertiesPanel } from "./components/PropertiesPanel";
 import { Toolbar } from "./components/Toolbar";
+import { SimulationPanel } from "./components/SimulationPanel";
 import type { NlConfig } from "@opmodel/nl";
 import { createProvider, createPipeline } from "@opmodel/nl";
 import { NlSettingsModal } from "./components/NlSettingsModal";
@@ -61,12 +62,23 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
       // Only activate mode shortcuts when not typing in an input
       const target = e.target as HTMLElement;
       if (!e.metaKey && !e.ctrlKey && target.tagName !== "INPUT" && target.tagName !== "SELECT") {
+        // Simulation shortcuts
+        if (e.key === "s") {
+          dispatch({ tag: ui.simulation ? "resetSimulation" : "startSimulation" });
+          return;
+        }
+        if (ui.simulation) {
+          if (e.key === " ") { e.preventDefault(); dispatch({ tag: "toggleSimulationAutoRun" }); }
+          if (e.key === "ArrowRight") { e.preventDefault(); dispatch({ tag: "stepSimulation", direction: 1 }); }
+          if (e.key === "ArrowLeft") { e.preventDefault(); dispatch({ tag: "stepSimulation", direction: -1 }); }
+          return;
+        }
         if (e.key === "o") dispatch({ tag: "setMode", mode: "addObject" });
         if (e.key === "p") dispatch({ tag: "setMode", mode: "addProcess" });
         if (e.key === "l") dispatch({ tag: "setMode", mode: "addLink" });
       }
     },
-    [doUndo, doRedo, save, ui.selectedThing, dispatch],
+    [doUndo, doRedo, save, ui.selectedThing, ui.simulation, dispatch],
   );
 
   useEffect(() => {
@@ -141,6 +153,13 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
         </div>
         <div className="header__sep" />
         <div className="header__badge">v{model.opmodel}</div>
+        <button
+          className={`header__action${ui.simulation ? " header__action--active" : ""}`}
+          onClick={() => dispatch({ tag: ui.simulation ? "resetSimulation" : "startSimulation" })}
+          title="Toggle Simulation (S)"
+        >
+          {ui.simulation ? "Exit Sim" : "Simulate"}
+        </button>
         <button onClick={() => setShowNlSettings(true)} title="NL Settings">⚙</button>
       </header>
 
@@ -156,21 +175,26 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
         onSelectThing={(id) => dispatch({ tag: "selectThing", thingId: id })}
       />
       <OpdCanvas
-        model={model}
+        model={ui.simulation ? ui.simulation.frozenModel : model}
         opdId={ui.currentOpd}
         selectedThing={ui.selectedThing}
         mode={ui.mode}
         linkType={ui.linkType}
         dispatch={dispatch}
+        simulation={ui.simulation}
       />
       <aside className="right-panel">
-        {ui.selectedThing && (
-          <PropertiesPanel
-            model={model}
-            thingId={ui.selectedThing}
-            opdId={ui.currentOpd}
-            dispatch={dispatch}
-          />
+        {ui.simulation ? (
+          <SimulationPanel model={ui.simulation.frozenModel} simulation={ui.simulation} dispatch={dispatch} />
+        ) : (
+          ui.selectedThing && (
+            <PropertiesPanel
+              model={model}
+              thingId={ui.selectedThing}
+              opdId={ui.currentOpd}
+              dispatch={dispatch}
+            />
+          )
         )}
         <OplPanel model={model} opdId={ui.currentOpd} selectedThing={ui.selectedThing} dispatch={dispatch} nlPipeline={nlPipeline} />
       </aside>
@@ -187,6 +211,18 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
         <span className="status-bar__count">{model.links.size} links</span>
         <span className="status-bar__count">{model.opds.size} OPDs</span>
         <div className="status-bar__spacer" />
+        {ui.simulation && (
+          <>
+            <span className="status-bar__mode">
+              Simulation: {ui.simulation.currentStepIndex >= 0
+                ? `Step ${ui.simulation.currentStepIndex + 1}/${ui.simulation.trace.steps.length}`
+                : "Initial"}
+              {ui.simulation.status === "deadlocked" && " — DEADLOCKED"}
+              {ui.simulation.status === "completed" && " — Complete"}
+            </span>
+            <div className="status-bar__sep" />
+          </>
+        )}
         {ui.mode !== "select" && (
           <>
             <span className="status-bar__mode">

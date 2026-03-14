@@ -1,6 +1,7 @@
 import { useRef, useState, useCallback, useMemo, useEffect } from "react";
 import type { Model, Thing, State, Link, Appearance, Modifier, OPD } from "@opmodel/core";
-import type { Command, EditorMode, LinkTypeChoice } from "../lib/commands";
+import { createInitialState, type ModelState } from "@opmodel/core";
+import type { Command, EditorMode, LinkTypeChoice, SimulationUIState } from "../lib/commands";
 import { genId } from "../lib/ids";
 import {
   center,
@@ -20,6 +21,7 @@ interface Props {
   mode: EditorMode;
   linkType: LinkTypeChoice;
   dispatch: (cmd: Command) => boolean;
+  simulation: SimulationUIState | null;
 }
 
 /* ─── Breadcrumb: OPD ancestor chain ─── */
@@ -113,6 +115,26 @@ function SvgDefs() {
           <feMergeNode in="SourceGraphic" />
         </feMerge>
       </filter>
+
+      <filter id="glow-sim-active" x="-20%" y="-20%" width="140%" height="140%">
+        <feGaussianBlur stdDeviation="4" result="blur" />
+        <feFlood floodColor="#16794a" floodOpacity="0.3" />
+        <feComposite in2="blur" operator="in" />
+        <feMerge>
+          <feMergeNode />
+          <feMergeNode in="SourceGraphic" />
+        </feMerge>
+      </filter>
+
+      <filter id="glow-sim-waiting" x="-20%" y="-20%" width="140%" height="140%">
+        <feGaussianBlur stdDeviation="3" result="blur" />
+        <feFlood floodColor="#c05621" floodOpacity="0.25" />
+        <feComposite in2="blur" operator="in" />
+        <feMerge>
+          <feMergeNode />
+          <feMergeNode in="SourceGraphic" />
+        </feMerge>
+      </filter>
     </defs>
   );
 }
@@ -182,6 +204,8 @@ function ThingNode({
   isExternal,
   isContainer,
   dragDelta,
+  simFilter,
+  simStatePillOverride,
   onMouseDown,
   onSelect,
   onDoubleClick,
@@ -195,6 +219,8 @@ function ThingNode({
   isExternal: boolean;
   isContainer: boolean;
   dragDelta: Point;
+  simFilter?: string;
+  simStatePillOverride?: string;
   onMouseDown: (e: React.MouseEvent) => void;
   onSelect: () => void;
   onDoubleClick: () => void;
@@ -224,9 +250,11 @@ function ThingNode({
 
   const filterStr = isDragging
     ? "url(#glow-drag)"
-    : isSelected
-      ? "url(#glow-selected)"
-      : undefined;
+    : simFilter
+      ? simFilter
+      : isSelected
+        ? "url(#glow-selected)"
+        : undefined;
 
   const className = `thing-group${isSelected ? " thing-group--selected" : ""}${isDragging ? " thing-group--dragging" : ""}${isLinkSource ? " thing-group--link-source" : ""}`;
 
@@ -295,12 +323,15 @@ function ThingNode({
             const startX = x + (w - totalPillW) / 2;
             const px = startX + i * (pillW + 4);
             const py = y + h - 4;
-            const isCurrent = state.current === true;
+            const isCurrent = simStatePillOverride
+              ? state.id === simStatePillOverride
+              : state.current === true;
+            const isSimCurrent = simStatePillOverride ? state.id === simStatePillOverride : false;
 
             return (
               <g key={state.id}>
                 <rect
-                  className="state-pill"
+                  className={`state-pill${isSimCurrent ? " state-pill--sim-current" : ""}`}
                   x={px}
                   y={py}
                   width={pillW}
@@ -384,10 +415,25 @@ function LinkLine({
 
 /* ─── Main Canvas Component ─── */
 
-export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatch }: Props) {
+export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatch, simulation }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [pan, setPan] = useState({ x: 40, y: 20 });
   const [zoom, setZoom] = useState(1);
+
+  // Derive simulation ModelState for current step
+  const simModelState = useMemo(() => {
+    if (!simulation) return null;
+    if (simulation.currentStepIndex === -1) return createInitialState(simulation.frozenModel);
+    const step = simulation.trace.steps[simulation.currentStepIndex];
+    return step ? step.newState : null;
+  }, [simulation]);
+
+  // Active process in current step (for highlighting)
+  const simActiveProcessId = useMemo(() => {
+    if (!simulation || simulation.currentStepIndex < 0) return null;
+    const step = simulation.trace.steps[simulation.currentStepIndex];
+    return step?.processId ?? null;
+  }, [simulation]);
 
   // Pan state
   const [panning, setPanning] = useState(false);
@@ -456,6 +502,11 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
   const onThingMouseDown = useCallback(
     (thingId: string, e: React.MouseEvent) => {
       if (e.button !== 0) return;
+      if (simulation) {
+        // During simulation: only allow select, not drag
+        dispatch({ tag: "selectThing", thingId });
+        return;
+      }
       e.stopPropagation();
       const svgRect = svgRef.current?.getBoundingClientRect();
       if (!svgRect) return;
@@ -465,7 +516,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
       setPanning(false);
       dispatch({ tag: "selectThing", thingId });
     },
-    [dispatch],
+    [dispatch, simulation],
   );
 
   const onMouseMove = useCallback(
@@ -515,6 +566,10 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
   const onCanvasClick = useCallback(
     (e: React.MouseEvent) => {
       if (dragTarget) return;
+      if (simulation) {
+        dispatch({ tag: "selectThing", thingId: null });
+        return;
+      }
 
       if (mode === "addObject" || mode === "addProcess") {
         const svgRect = svgRef.current?.getBoundingClientRect();
@@ -553,12 +608,13 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
       dispatch({ tag: "selectThing", thingId: null });
       setRenaming(null);
     },
-    [dragTarget, mode, pan, zoom, opdId, dispatch],
+    [dragTarget, simulation, mode, pan, zoom, opdId, dispatch],
   );
 
   const onThingDoubleClick = useCallback((thingId: string) => {
+    if (simulation) return; // No rename during simulation
     setRenaming(thingId);
-  }, []);
+  }, [simulation]);
 
   const commitRename = useCallback(
     (name: string) => {
@@ -644,16 +700,31 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
             const tgtThing = model.things.get(link.target);
             if (!srcRect || !tgtRect || !srcThing || !tgtThing) return null;
 
+            let linkSimClass = "";
+            if (simModelState) {
+              const isActiveLink = simActiveProcessId && (link.source === simActiveProcessId || link.target === simActiveProcessId);
+              if (isActiveLink) {
+                linkSimClass = " link-line--sim-active";
+              } else {
+                const srcObj = simModelState.objects.get(link.source);
+                const tgtObj = simModelState.objects.get(link.target);
+                if ((srcObj && !srcObj.exists) || (tgtObj && !tgtObj.exists)) {
+                  linkSimClass = " link-line--sim-dimmed";
+                }
+              }
+            }
+
             return (
-              <LinkLine
-                key={link.id}
-                link={link}
-                sourceRect={srcRect}
-                targetRect={tgtRect}
-                sourceKind={srcThing.kind}
-                targetKind={tgtThing.kind}
-                modifier={modifier}
-              />
+              <g key={link.id} className={linkSimClass || undefined}>
+                <LinkLine
+                  link={link}
+                  sourceRect={srcRect}
+                  targetRect={tgtRect}
+                  sourceKind={srcThing.kind}
+                  targetKind={tgtThing.kind}
+                  modifier={modifier}
+                />
+              </g>
             );
           })}
 
@@ -676,54 +747,79 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
             const isAppExternal = app.internal === false;
             const isAppContainer = app.internal === true && opd?.refines === thingId;
 
-            return (
-              <ThingNode
-                key={thingId}
-                thing={thing}
-                appearance={app}
-                states={isAppContainer ? [] : states}
-                isSelected={selectedThing === thingId}
-                isDragging={isDragging}
-                isLinkSource={isLinkSource}
-                isExternal={isAppExternal}
-                isContainer={isAppContainer}
-                dragDelta={isDragging ? dragDelta : { x: 0, y: 0 }}
-                onMouseDown={(e) => onThingMouseDown(thingId, e)}
-                onSelect={() => {
-                  if (mode === "addLink") {
-                    if (!linkSource) {
-                      setLinkSource(thingId);
-                      dispatch({ tag: "selectThing", thingId });
-                    } else if (linkSource !== thingId) {
-                      let resolvedType: string;
-                      if (linkType === "auto") {
-                        const srcThing = model.things.get(linkSource);
-                        const tgtThing = model.things.get(thingId);
-                        resolvedType = "agent";
-                        if (srcThing?.kind === "process") resolvedType = "effect";
-                        if (srcThing?.kind === "object" && tgtThing?.kind === "object") resolvedType = "aggregation";
-                      } else {
-                        resolvedType = linkType;
-                      }
+            // Simulation visual overlay
+            let simClass = "";
+            let simFilter: string | undefined;
+            let simOpacity = 1;
+            if (simModelState && thing.kind === "object") {
+              const objState = simModelState.objects.get(thingId);
+              if (objState && !objState.exists) {
+                simClass = " thing-group--sim-consumed";
+                simOpacity = 0.3;
+              }
+            }
+            if (simModelState && thing.kind === "process") {
+              if (simActiveProcessId === thingId) {
+                simClass = " thing-group--sim-active";
+                simFilter = "url(#glow-sim-active)";
+              } else if (simModelState.waitingProcesses.has(thingId)) {
+                simClass = " thing-group--sim-waiting";
+                simFilter = "url(#glow-sim-waiting)";
+              }
+            }
 
-                      dispatch({
-                        tag: "addLink",
-                        link: {
-                          id: genId("lnk"),
-                          type: resolvedType as any,
-                          source: linkSource,
-                          target: thingId,
-                        },
-                      });
-                      setLinkSource(null);
-                      dispatch({ tag: "setMode", mode: "select" });
+            const simWrapStyle = simOpacity < 1 ? { opacity: simOpacity } : undefined;
+            return (
+              <g key={thingId} className={simClass || undefined} style={simWrapStyle}>
+                <ThingNode
+                  thing={thing}
+                  appearance={app}
+                  states={isAppContainer ? [] : states}
+                  isSelected={selectedThing === thingId}
+                  isDragging={isDragging}
+                  isLinkSource={isLinkSource}
+                  isExternal={isAppExternal}
+                  isContainer={isAppContainer}
+                  dragDelta={isDragging ? dragDelta : { x: 0, y: 0 }}
+                  simFilter={simFilter}
+                  simStatePillOverride={simModelState && thing.kind === "object" ? simModelState.objects.get(thingId)?.currentState : undefined}
+                  onMouseDown={(e) => onThingMouseDown(thingId, e)}
+                  onSelect={() => {
+                    if (mode === "addLink") {
+                      if (!linkSource) {
+                        setLinkSource(thingId);
+                        dispatch({ tag: "selectThing", thingId });
+                      } else if (linkSource !== thingId) {
+                        let resolvedType: string;
+                        if (linkType === "auto") {
+                          const srcThing = model.things.get(linkSource);
+                          const tgtThing = model.things.get(thingId);
+                          resolvedType = "agent";
+                          if (srcThing?.kind === "process") resolvedType = "effect";
+                          if (srcThing?.kind === "object" && tgtThing?.kind === "object") resolvedType = "aggregation";
+                        } else {
+                          resolvedType = linkType;
+                        }
+
+                        dispatch({
+                          tag: "addLink",
+                          link: {
+                            id: genId("lnk"),
+                            type: resolvedType as any,
+                            source: linkSource,
+                            target: thingId,
+                          },
+                        });
+                        setLinkSource(null);
+                        dispatch({ tag: "setMode", mode: "select" });
+                      }
+                      return;
                     }
-                    return;
-                  }
-                  dispatch({ tag: "selectThing", thingId });
-                }}
-                onDoubleClick={() => onThingDoubleClick(thingId)}
-              />
+                    dispatch({ tag: "selectThing", thingId });
+                  }}
+                  onDoubleClick={() => onThingDoubleClick(thingId)}
+                />
+              </g>
             );
           })}
 

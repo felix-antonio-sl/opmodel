@@ -6,7 +6,7 @@
    into Model mutations or UI state transitions.
    ═══════════════════════════════════════════════════ */
 
-import type { Model, Thing, Link, State, InvariantError, RefinementType, OplEdit } from "@opmodel/core";
+import type { Model, Thing, Link, State, InvariantError, RefinementType, OplEdit, SimulationTrace } from "@opmodel/core";
 import {
   updateAppearance,
   updateThing,
@@ -25,6 +25,16 @@ import {
   isOk,
   type Result,
 } from "@opmodel/core";
+
+/* ─── Simulation UI State ─── */
+
+export interface SimulationUIState {
+  trace: SimulationTrace;
+  currentStepIndex: number;     // -1 = initial state, 0..N = after step[i]
+  status: "paused" | "running" | "completed" | "deadlocked";
+  speed: number;                // ms between auto-steps
+  frozenModel: Model;           // snapshot at simulation start
+}
 
 /* ─── Editor Mode ─── */
 
@@ -52,7 +62,14 @@ export type Command =
   | { tag: "refineThing"; thingId: string; opdId: string; refinementType: RefinementType; childOpdId: string; childOpdName: string }
   | { tag: "applyOplEdit"; edit: OplEdit }
   | { tag: "setMode"; mode: EditorMode }
-  | { tag: "setLinkType"; linkType: LinkTypeChoice };
+  | { tag: "setLinkType"; linkType: LinkTypeChoice }
+  /* ─── Simulation Commands ─── */
+  | { tag: "startSimulation" }
+  | { tag: "stepSimulation"; direction: 1 | -1 }
+  | { tag: "resetSimulation" }
+  | { tag: "setSimulationStep"; index: number }
+  | { tag: "setSimulationSpeed"; speed: number }
+  | { tag: "toggleSimulationAutoRun" };
 
 /* ─── Effect Coproduct ─── */
 
@@ -62,7 +79,8 @@ export type Effect =
   | { type: "uiTransition"; field: "currentOpd"; value: string }
   | { type: "uiTransition"; field: "mode"; value: EditorMode }
   | { type: "uiTransition"; field: "linkSource"; value: string | null }
-  | { type: "uiTransition"; field: "linkType"; value: LinkTypeChoice };
+  | { type: "uiTransition"; field: "linkType"; value: LinkTypeChoice }
+  | { type: "simulationEffect"; action: "start" | "step" | "reset" | "setStep" | "setSpeed" | "toggleAutoRun"; payload?: number };
 
 /* ─── Interpret: Natural Transformation η ─── */
 
@@ -177,5 +195,25 @@ export function interpret(cmd: Command): Effect {
 
     case "setLinkType":
       return { type: "uiTransition", field: "linkType", value: cmd.linkType };
+
+    /* ─── Simulation ─── */
+
+    case "startSimulation":
+      return { type: "simulationEffect", action: "start" };
+
+    case "stepSimulation":
+      return { type: "simulationEffect", action: "step", payload: cmd.direction };
+
+    case "resetSimulation":
+      return { type: "simulationEffect", action: "reset" };
+
+    case "setSimulationStep":
+      return { type: "simulationEffect", action: "setStep", payload: cmd.index };
+
+    case "setSimulationSpeed":
+      return { type: "simulationEffect", action: "setSpeed", payload: cmd.speed };
+
+    case "toggleSimulationAutoRun":
+      return { type: "simulationEffect", action: "toggleAutoRun" };
   }
 }

@@ -1410,3 +1410,267 @@ body,
   gap: 8px;
   margin-top: 16px;
 }
+
+/* ═══════════════════════════════════════════════════
+   Simulation Panel + Canvas Overlay
+   ═══════════════════════════════════════════════════ */
+
+/* ─── Panel ─── */
+
+.sim-panel {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sim-panel__start-btn {
+  width: 100%;
+  padding: 8px 16px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.sim-panel__start-btn:hover {
+  opacity: 0.9;
+}
+
+.sim-panel__controls {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.sim-panel__btn {
+  padding: 4px 10px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.sim-panel__btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.sim-panel__btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.sim-panel__btn--stop {
+  margin-left: auto;
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.sim-panel__btn--active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.sim-panel__status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.sim-panel__badge {
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.sim-panel__badge--paused {
+  background: var(--bg-hover);
+  color: var(--text-muted);
+}
+
+.sim-panel__badge--running {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.sim-panel__badge--completed {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.sim-panel__badge--deadlocked {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.sim-panel__speed,
+.sim-panel__scrubber {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.sim-panel__speed input[type="range"],
+.sim-panel__scrubber input[type="range"] {
+  flex: 1;
+  height: 4px;
+  accent-color: var(--accent);
+}
+
+.sim-panel__speed label,
+.sim-panel__scrubber label {
+  min-width: 48px;
+  text-align: right;
+}
+
+/* ─── Trace Log ─── */
+
+.sim-panel__trace-title,
+.sim-panel__snapshot-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 8px 0 4px;
+  letter-spacing: 0.5px;
+}
+
+.sim-panel__trace {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.sim-panel__step {
+  padding: 4px 8px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.sim-panel__step:last-child {
+  border-bottom: none;
+}
+
+.sim-panel__step:hover {
+  background: var(--bg-hover);
+}
+
+.sim-panel__step--current {
+  background: rgba(43, 108, 176, 0.08);
+  border-left: 3px solid var(--accent);
+}
+
+.sim-panel__step--future {
+  opacity: 0.4;
+}
+
+.sim-panel__step-title {
+  font-weight: 500;
+}
+
+.sim-panel__step-effects {
+  font-size: 11px;
+  color: var(--text-muted);
+  padding-left: 12px;
+}
+
+.sim-panel__step-effect {
+  margin: 1px 0;
+}
+
+/* ─── State Snapshot ─── */
+
+.sim-panel__snapshot {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.sim-panel__snapshot table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.sim-panel__snapshot th {
+  text-align: left;
+  padding: 3px 8px;
+  background: var(--bg-hover);
+  font-weight: 500;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}
+
+.sim-panel__snapshot td {
+  padding: 3px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sim-panel__snapshot tr:last-child td {
+  border-bottom: none;
+}
+
+.sim-panel__obj--consumed {
+  color: var(--danger);
+  font-style: italic;
+}
+
+.sim-panel__obj--exists {
+  color: var(--success, #16794a);
+}
+
+/* ─── Canvas Overlay ─── */
+
+.thing-group--sim-active .thing-shape {
+  stroke: var(--success, #16794a) !important;
+  stroke-width: 3 !important;
+}
+
+.thing-group--sim-waiting .thing-shape {
+  stroke: var(--warning, #c05621) !important;
+  stroke-width: 2.5 !important;
+  stroke-dasharray: 4,2;
+  animation: pulse-sim 1.2s ease-in-out infinite;
+}
+
+.thing-group--sim-consumed .thing-shape {
+  stroke-dasharray: 3,3 !important;
+}
+
+.state-pill--sim-current {
+  fill: var(--success, #16794a) !important;
+  stroke: var(--success, #16794a) !important;
+}
+
+.state-pill--sim-current + .state-label {
+  fill: white !important;
+}
+
+.link-line--sim-active .link-line {
+  stroke-width: 3 !important;
+  filter: brightness(1.2);
+}
+
+.link-line--sim-dimmed {
+  opacity: 0.2;
+}
+
+@keyframes pulse-sim {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
