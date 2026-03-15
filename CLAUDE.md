@@ -10,7 +10,7 @@ All documentation follows OPM (ISO 19450) guidelines and KODA Framework architec
 
 ## Repository Structure
 
-- **packages/core/** — Domain Engine (TypeScript, zero dependencies). Types, Result monad, createModel, serialization, CRUD API, 30+ invariant guards, OPL lens, simulation engine. 270+ tests.
+- **packages/core/** — Domain Engine (TypeScript, zero dependencies). Types, Result monad, createModel, serialization, CRUD API, 37 invariant guards, OPL lens, simulation engine (with in-zoom recursion). 320+ tests.
 - **packages/cli/** — CLI `opmod` command (9 commands: new, add, remove, list, show, validate, update, refine, opl). 90+ tests.
 - **packages/web/** — Web editor (React, full CRUD, OPL panel with 3 tabs, undo/redo, import/export).
 - **docs/superpowers/specs/** — Product specifications and requirements. Central artifacts: `opm-modeling-app-backlog-lean.md`, `opm-data-model.md` (Rev.3), `opm-json-schema.json`.
@@ -36,7 +36,7 @@ All documentation follows OPM (ISO 19450) guidelines and KODA Framework architec
 | DA-2 | Graph-Native Storage with OPD fibration (property graph, not flat JSON) | Defined, pending categorical evolution |
 | DA-3 | Single-User Pro (no auth, sophisticated internals) | Defined |
 | DA-4 | Layered Architecture (Interfaces → Domain Engine → Graph Store) | Defined |
-| DA-5 | Simulation Engine as Coalgebra Evaluator | Implemented (trivalent PreconditionResult, waitingProcesses, deadlock detection) |
+| DA-5 | Simulation Engine as Coalgebra Evaluator | Implemented (trivalent PreconditionResult, waitingProcesses, deadlock detection, in-zoom recursion ISO §14.2.1) |
 | DA-6 | OPL Engine as Bidirectional Lens | Implemented (expose/applyOplEdit/render/editsFrom, PutGet+GetPut verified) |
 
 ## Key Domain Concepts
@@ -59,7 +59,7 @@ L-M1-02 → L-M1-07 (In-zoom)
 ## Development
 
 - **Runtime:** Bun v1.3.10 (`~/.bun/bin/bun`). Requiere: `export BUN_INSTALL="$HOME/.bun" && export PATH="$BUN_INSTALL/bin:$PATH"`
-- **Tests:** `bunx vitest run` (all 406 tests from root). Single file: `bunx vitest run packages/core/tests/api.test.ts`
+- **Tests:** `bunx vitest run` (all 500 tests from root). Single file: `bunx vitest run packages/core/tests/api.test.ts`
 - **Type check:** `cd packages/core && bunx tsc --noEmit` (7 pre-existing TS2532 in test files — known, vitest passes)
 - **Monorepo:** Bun workspaces (root `package.json`)
 - **Pattern:** Immutable Model — funciones puras retornan `Result<Model, InvariantError>`, Maps para O(1) lookups
