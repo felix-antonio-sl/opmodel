@@ -1425,6 +1425,25 @@ Como modelador, quiero ejecutar una simulación conceptual del modelo basada en 
 
 **Dependencias:** L-M1-06, L-M1-07, L-M2-01
 
+**Gaps y bugs conocidos del motor de simulación (2026-03-14):**
+
+| ID | Severidad | Descripción | ISO | Estado |
+|----|-----------|-------------|-----|--------|
+| SIM-BUG-01 | CRITICAL | **Loop infinito por procesos sin precondiciones.** Proceso sin links transformadores ni habilitadores tiene `evaluatePrecondition → satisfied: true` trivialmente. Se ejecuta infinitamente en cada step de `runSimulation`. Result sobre objeto existente es no-op silencioso. | §14.2.1 | Pendiente |
+| SIM-BUG-02 | CRITICAL | **Invocation link no implementado como trigger.** El engine ignora invocation links. No espera a que el proceso fuente complete para iniciar el proceso target. Procesos con invocation deberían tener semántica de control de flujo, no de transformación. | §9.5 | Pendiente |
+| SIM-GAP-01 | Medium | **Sin soporte para subprocesos paralelos (misma Y).** ISO §14.2.2.2 define orden parcial: subprocesos a la misma altura Y ejecutan en paralelo con barrier sync. Implementación actual serializa todo. | §14.2.2.2 | Pendiente |
+| SIM-GAP-02 | Medium | **Falta invariante I-EVENT-INZOOM-BOUNDARY.** ISO §14.2.2.4.2: event links "shall not" cruzar contorno de proceso in-zoomed desde afuera hacia subprocesos. No hay guard que lo prevenga. | §14.2.2.4.2 | Pendiente |
+| SIM-GAP-03 | Medium | **Effect link encoding convention.** `source_state` en effect link referencia estado del target (affectee), no del source. Convención confusa. Effect links son bidireccionales per ISO. Simulation ya corregida (kind-based detection), pero encoding del modelo no normalizado. | §9.3.3.2, Annex C.16 | Parcial |
+| ~~SIM-FIX-01~~ | ~~P0~~ | ~~Effect link direction hardcoded en simulationStep.~~ | ~~Annex C.16~~ | **Fixeado** (d61fa23) |
+| ~~SIM-FIX-02~~ | ~~P0~~ | ~~Referencia ISO incorrecta (§10.5.2 → §14.2.2.4.1).~~ | ~~N/A~~ | **Fixeado** (d61fa23) |
+
+**Nota sobre SIM-BUG-01 + SIM-BUG-02:** Estos bugs están relacionados. El root cause es que el engine trata todos los procesos como ejecutables independientes (Set plano). No implementa:
+1. **Invocation como trigger**: proceso B solo se activa cuando proceso A completa (1-cell de control)
+2. **Proceso-completado como evento**: el engine no genera eventos `process-completed` que disparen invocations
+3. **Guard de elegibilidad**: un proceso sin precondiciones Y sin invocation entrante debería ser ejecutable solo una vez (o requerir un evento explícito para re-ejecutarse)
+
+La solución requiere implementar invocation como semántica de control de flujo en el motor ECA, no solo como link visual.
+
 ---
 
 ### L-M5-02 — Condiciones, ramas y bucles
