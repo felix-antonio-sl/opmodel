@@ -417,7 +417,13 @@ export function simulationStep(
     consumptionIds: [],
     resultIds: [],
     stateChanges: [],
-    newState: { ...state, objects: new Map(state.objects), waitingProcesses: new Set(state.waitingProcesses), step: state.step + 1 },
+    newState: {
+      ...state,
+      // Deep-copy each ObjectState so mutations don't leak to prior steps
+      objects: new Map([...state.objects].map(([k, v]) => [k, { ...v }])),
+      waitingProcesses: new Set(state.waitingProcesses),
+      step: state.step + 1,
+    },
   };
 
   // Encontrar proceso a ejecutar basado en evento

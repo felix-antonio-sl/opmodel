@@ -578,6 +578,27 @@ describe("runSimulation — in-zoom expansion", () => {
     expect(trace.steps[0].parentProcessId).toBeUndefined();
   });
 
+  it("intermediate step states are independent (no shared mutation)", () => {
+    const model = loadCoffeeMakingModel();
+    const trace = runSimulation(model);
+
+    // After Step 1 (Grinding): Coffee Beans consumed, Water still exists in "cold"
+    const step1 = trace.steps[0];
+    expect(step1.processName).toContain("Grinding");
+    expect(step1.newState.objects.get("obj-coffee-beans")?.exists).toBe(false);
+    expect(step1.newState.objects.get("obj-water")?.exists).toBe(true);
+    expect(step1.newState.objects.get("obj-water")?.currentState).toBe("state-water-cold");
+
+    // After Step 2 (Boiling): Water changes to "hot", still exists
+    const step2 = trace.steps[1];
+    expect(step2.processName).toContain("Boiling");
+    expect(step2.newState.objects.get("obj-water")?.exists).toBe(true);
+    expect(step2.newState.objects.get("obj-water")?.currentState).toBe("state-water-hot");
+
+    // Step 1 state must NOT be mutated by step 2 — Water still "cold" in step 1
+    expect(step1.newState.objects.get("obj-water")?.currentState).toBe("state-water-cold");
+  });
+
   it("Brewing transitions Coffee to ready state (Bug C fix)", () => {
     const model = loadCoffeeMakingModel();
     const trace = runSimulation(model);
