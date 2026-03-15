@@ -304,7 +304,7 @@ describe("I-29: fan member type consistency", () => {
     m = (addThing(m, obj("obj-water", "Water")) as any).value;
     m = (addThing(m, obj("obj-cup", "Cup")) as any).value;
     m = (addLink(m, { id: "lnk-eff", type: "effect", source: "proc-boil", target: "obj-water" }) as any).value;
-    m = (addLink(m, { id: "lnk-con", type: "consumption", source: "proc-boil", target: "obj-cup" }) as any).value;
+    m = (addLink(m, { id: "lnk-con", type: "consumption", source: "obj-cup", target: "proc-boil" }) as any).value;
     m = (addFan(m, { id: "fan-1", type: "xor", members: ["lnk-eff", "lnk-con"] }) as any).value;
     const errors = errorsOf(m, "I-29");
     expect(errors.length).toBeGreaterThanOrEqual(1);

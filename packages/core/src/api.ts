@@ -216,6 +216,10 @@ export function addLink(
   if (PROCEDURAL_TYPES.has(link.type) && source.kind === target.kind) {
     return err({ code: "I-33", message: `${link.type} link must connect object↔process, not ${source.kind}↔${source.kind}`, entity: link.id });
   }
+  // I-33b: Consumption must go object→process (ISO §6.1)
+  if (link.type === "consumption" && source.kind !== "object") {
+    return err({ code: "I-33", message: `consumption link source must be object (ISO §6.1)`, entity: link.id });
+  }
 
   // I-16-EXT: Enabling link uniqueness — max 1 enabling link per (object, process) pair (ISO §8.1.2)
   if (link.type === "agent" || link.type === "instrument") {
@@ -1037,8 +1041,11 @@ export function updateLink(
 
   // I-STATELESS-EFFECT: effect links cannot target stateless objects
   if (updated.type === "effect") {
-    const target = model.things.get(updated.target);
-    if (target?.stateful === false) {
+    // Find the object endpoint (may be source or target depending on direction)
+    const srcThing = model.things.get(updated.source);
+    const tgtThing = model.things.get(updated.target);
+    const objectThing = srcThing?.kind === "object" ? srcThing : tgtThing;
+    if (objectThing?.stateful === false) {
       return err({ code: "I-STATELESS-EFFECT", message: "Stateless objects cannot be affected — use consumption or result links", entity: id });
     }
   }
@@ -1221,6 +1228,10 @@ export function validate(model: Model): InvariantError[] {
       const tgt = model.things.get(link.target);
       if (src && tgt && src.kind === tgt.kind) {
         errors.push({ code: "I-33", message: `${link.type} link ${id} must connect object↔process`, entity: id });
+      }
+      // I-33b: Consumption must go object→process (ISO §6.1)
+      if (link.type === "consumption" && src && src.kind !== "object") {
+        errors.push({ code: "I-33", message: `consumption link ${id} source must be object (ISO §6.1)`, entity: id });
       }
     }
   }

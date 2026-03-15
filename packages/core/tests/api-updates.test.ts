@@ -343,7 +343,7 @@ describe("updateAppearance", () => {
 describe("updateFan", () => {
   it("updates fan type", () => {
     let m = buildModelWithLink();
-    m = (addLink(m, { id: "lnk-2", type: "consumption", source: "proc-heat", target: "obj-water" }) as any).value;
+    m = (addLink(m, { id: "lnk-2", type: "consumption", source: "obj-water", target: "proc-heat" }) as any).value;
     m = (addFan(m, { id: "fan-1", type: "xor", members: ["lnk-1", "lnk-2"] }) as any).value;
     const r = updateFan(m, "fan-1", { type: "or" });
     expect(isOk(r)).toBe(true);
@@ -352,7 +352,7 @@ describe("updateFan", () => {
 
   it("rejects update with fewer than 2 members (I-07)", () => {
     let m = buildModelWithLink();
-    m = (addLink(m, { id: "lnk-2", type: "consumption", source: "proc-heat", target: "obj-water" }) as any).value;
+    m = (addLink(m, { id: "lnk-2", type: "consumption", source: "obj-water", target: "proc-heat" }) as any).value;
     m = (addFan(m, { id: "fan-1", type: "xor", members: ["lnk-1", "lnk-2"] }) as any).value;
     const r = updateFan(m, "fan-1", { members: ["lnk-1"] });
     expect(isErr(r)).toBe(true);
@@ -361,7 +361,7 @@ describe("updateFan", () => {
 
   it("rejects update with non-existent member link (I-07)", () => {
     let m = buildModelWithLink();
-    m = (addLink(m, { id: "lnk-2", type: "consumption", source: "proc-heat", target: "obj-water" }) as any).value;
+    m = (addLink(m, { id: "lnk-2", type: "consumption", source: "obj-water", target: "proc-heat" }) as any).value;
     m = (addFan(m, { id: "fan-1", type: "xor", members: ["lnk-1", "lnk-2"] }) as any).value;
     const r = updateFan(m, "fan-1", { members: ["lnk-1", "lnk-ghost"] });
     expect(isErr(r)).toBe(true);

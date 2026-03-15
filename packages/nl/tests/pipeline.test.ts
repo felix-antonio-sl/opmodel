@@ -41,7 +41,7 @@ describe("pipeline", () => {
   test("end-to-end: batch with cross-reference", async () => {
     const provider = mockProvider(JSON.stringify([
       { kind: "add-thing", name: "Heating", thingKind: "process" },
-      { kind: "add-link", sourceName: "Heating", targetName: "Water", linkType: "consumption" },
+      { kind: "add-link", sourceName: "Water", targetName: "Heating", linkType: "consumption" },
     ]));
     const pipeline = createPipeline({ provider });
     const result = await pipeline.generate("Add heating process that consumes water", { model, opdId });

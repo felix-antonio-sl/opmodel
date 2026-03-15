@@ -224,19 +224,24 @@ export function evaluatePrecondition(
   for (const link of links) {
     // Para transforming links, verificar que los objetos existan
     if (["consumption", "effect", "input", "output"].includes(link.type)) {
-      // Direction: source=process, target=object for transforming links
-      if (link.source !== processId) continue;
-      const objectId = link.target;
+      // Detect process/object endpoints by kind (direction-agnostic)
+      const srcThing = model.things.get(link.source);
+      const tgtThing = model.things.get(link.target);
+      const processEnd = srcThing?.kind === "process" ? link.source : link.target;
+      const objectEnd = srcThing?.kind === "object" ? link.source : link.target;
+      if (processEnd !== processId) continue;
+      const objectId = objectEnd;
       const objState = state.objects.get(objectId);
 
       if (!objState?.exists) {
         return { satisfied: false, reason: `Object ${objectId} does not exist`, response: getResponse(model, link.id) };
       }
 
-      // Verificar estado específico si está especificado
-      if (link.source_state) {
-        const requiredState = model.states.get(link.source_state);
-        if (requiredState && objState.currentState !== link.source_state) {
+      // Check state-specified: use whichever state field is populated on the object endpoint
+      const stateRef = link.source_state || link.target_state;
+      if (stateRef) {
+        const requiredState = model.states.get(stateRef);
+        if (requiredState && objState.currentState !== stateRef) {
           return { satisfied: false, reason: `Object ${objectId} not in required state ${requiredState.name}`, response: getResponse(model, link.id) };
         }
       }
@@ -335,7 +340,9 @@ export function simulationStep(
   for (const link of links) {
     // Consumption: objeto deja de existir
     if (link.type === "consumption") {
-      const objId = link.target;
+      // consumption: source=object (ISO), target=process — detect by kind
+      const srcThing = model.things.get(link.source);
+      const objId = srcThing?.kind === "object" ? link.source : link.target;
       const obj = step.newState.objects.get(objId);
       if (obj) {
         obj.exists = false;
@@ -470,10 +477,16 @@ export function getPreprocessSet(
   const result: Array<{ objectId: string; objectType: "consumee" | "affectee" | "agent" | "instrument" }> = [];
 
   for (const link of model.links.values()) {
-    // Transforming links: source=process, target=object
-    if (link.source === processId && link.type === "consumption") {
-      result.push({ objectId: link.target, objectType: "consumee" });
+    // Consumption: source=object, target=process (ISO direction) — detect by kind
+    if (link.type === "consumption") {
+      const srcThing = model.things.get(link.source);
+      const processEnd = srcThing?.kind === "process" ? link.source : link.target;
+      const objectEnd = srcThing?.kind === "object" ? link.source : link.target;
+      if (processEnd === processId) {
+        result.push({ objectId: objectEnd, objectType: "consumee" });
+      }
     }
+    // Effect: source=process, target=object
     if (link.source === processId && link.type === "effect") {
       result.push({ objectId: link.target, objectType: "affectee" });
     }

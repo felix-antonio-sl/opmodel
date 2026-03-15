@@ -36,7 +36,7 @@ function buildTestModel(): { model: Model; opdId: string } {
   if (!r.ok) throw new Error("setup failed");
   m = r.value;
 
-  r = addLink(m, { id: "lnk-consumption", type: "consumption", source: "proc-boiling", target: "obj-water" });
+  r = addLink(m, { id: "lnk-consumption", type: "consumption", source: "obj-water", target: "proc-boiling" });
   if (!r.ok) throw new Error("setup failed");
   m = r.value;
 
@@ -176,7 +176,7 @@ describe("resolve", () => {
 
   test("resolves remove-link by endpoint names and type", () => {
     const result = resolve(
-      [{ kind: "remove-link", sourceName: "Boiling", targetName: "Water", linkType: "consumption" }],
+      [{ kind: "remove-link", sourceName: "Water", targetName: "Boiling", linkType: "consumption" }],
       model, opdId,
     );
     expect(result.ok).toBe(true);
@@ -196,7 +196,7 @@ describe("resolve", () => {
 
   test("resolves add-modifier by link endpoint names", () => {
     const result = resolve(
-      [{ kind: "add-modifier", sourceName: "Boiling", targetName: "Water", linkType: "consumption", modifierType: "condition" }],
+      [{ kind: "add-modifier", sourceName: "Water", targetName: "Boiling", linkType: "consumption", modifierType: "condition" }],
       model, opdId,
     );
     expect(result.ok).toBe(true);
@@ -211,7 +211,7 @@ describe("resolve", () => {
 
   test("resolves remove-modifier", () => {
     const result = resolve(
-      [{ kind: "remove-modifier", sourceName: "Boiling", targetName: "Water", linkType: "consumption", modifierType: "event" }],
+      [{ kind: "remove-modifier", sourceName: "Water", targetName: "Boiling", linkType: "consumption", modifierType: "event" }],
       model, opdId,
     );
     expect(result.ok).toBe(true);

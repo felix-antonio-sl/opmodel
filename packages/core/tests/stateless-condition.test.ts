@@ -78,7 +78,7 @@ describe("I-STATELESS-EFFECT", () => {
     m = (addThing(m, statelessObj("obj-x", "X")) as any).value;
     m = (addThing(m, proc("proc-p", "P")) as any).value;
     const r = addLink(m, {
-      id: "lnk-1", type: "consumption", source: "proc-p", target: "obj-x",
+      id: "lnk-1", type: "consumption", source: "obj-x", target: "proc-p",
     });
     expect(isOk(r)).toBe(true);
   });
@@ -159,7 +159,7 @@ describe("I-CONDITION-MODE", () => {
     let m = createModel("Test");
     m = (addThing(m, defaultObj("obj-x", "X")) as any).value;
     m = (addThing(m, proc("proc-p", "P")) as any).value;
-    m = (addLink(m, { id: "lnk-1", type: "consumption", source: "proc-p", target: "obj-x" }) as any).value;
+    m = (addLink(m, { id: "lnk-1", type: "consumption", source: "obj-x", target: "proc-p" }) as any).value;
     const r = addModifier(m, {
       id: "mod-1", over: "lnk-1", type: "event", condition_mode: "skip",
     });
@@ -171,7 +171,7 @@ describe("I-CONDITION-MODE", () => {
     let m = createModel("Test");
     m = (addThing(m, defaultObj("obj-x", "X")) as any).value;
     m = (addThing(m, proc("proc-p", "P")) as any).value;
-    m = (addLink(m, { id: "lnk-1", type: "consumption", source: "proc-p", target: "obj-x" }) as any).value;
+    m = (addLink(m, { id: "lnk-1", type: "consumption", source: "obj-x", target: "proc-p" }) as any).value;
     const r = addModifier(m, {
       id: "mod-1", over: "lnk-1", type: "condition", condition_mode: "skip",
     });
@@ -182,7 +182,7 @@ describe("I-CONDITION-MODE", () => {
     let m = createModel("Test");
     m = (addThing(m, defaultObj("obj-x", "X")) as any).value;
     m = (addThing(m, proc("proc-p", "P")) as any).value;
-    m = (addLink(m, { id: "lnk-1", type: "consumption", source: "proc-p", target: "obj-x" }) as any).value;
+    m = (addLink(m, { id: "lnk-1", type: "consumption", source: "obj-x", target: "proc-p" }) as any).value;
     m = (addModifier(m, { id: "mod-1", over: "lnk-1", type: "condition", condition_mode: "skip" }) as any).value;
     const r = updateModifier(m, "mod-1", { type: "event" });
     expect(isErr(r)).toBe(true);
@@ -195,7 +195,7 @@ describe("I-STATELESS-EFFECT in updateLink", () => {
     let m = createModel("Test");
     m = (addThing(m, statelessObj("obj-x", "X")) as any).value;
     m = (addThing(m, proc("proc-p", "P")) as any).value;
-    m = (addLink(m, { id: "lnk-1", type: "consumption", source: "proc-p", target: "obj-x" }) as any).value;
+    m = (addLink(m, { id: "lnk-1", type: "consumption", source: "obj-x", target: "proc-p" }) as any).value;
     const r = updateLink(m, "lnk-1", { type: "effect" });
     expect(isErr(r)).toBe(true);
     if (isErr(r)) expect(r.error.code).toBe("I-STATELESS-EFFECT");
@@ -220,7 +220,7 @@ describe("validate — new invariants", () => {
     let m = createModel("Test");
     m = (addThing(m, defaultObj("obj-x", "X")) as any).value;
     m = (addThing(m, proc("proc-p", "P")) as any).value;
-    m = (addLink(m, { id: "lnk-1", type: "consumption", source: "proc-p", target: "obj-x" }) as any).value;
+    m = (addLink(m, { id: "lnk-1", type: "consumption", source: "obj-x", target: "proc-p" }) as any).value;
     m = (addModifier(m, { id: "mod-1", over: "lnk-1", type: "event" }) as any).value;
     const badModel = {
       ...m,

@@ -173,7 +173,7 @@ describe("I-16: validate detects duplicate transforming links", () => {
     m = unwrap(addThing(m, { id: "proc-p", kind: "process", name: "P", essence: "physical", affiliation: "systemic" }));
     m = unwrap(addThing(m, { id: "obj-o", kind: "object", name: "O", essence: "physical", affiliation: "systemic" }));
     m = unwrap(addLink(m, { id: "lnk-1", type: "effect", source: "proc-p", target: "obj-o" }));
-    m = unwrap(addLink(m, { id: "lnk-2", type: "consumption", source: "proc-p", target: "obj-o" }));
+    m = unwrap(addLink(m, { id: "lnk-2", type: "consumption", source: "obj-o", target: "proc-p" }));
     const errors = validate(m);
     expect(errors.some(e => e.code === "I-16")).toBe(true);
   });
@@ -184,7 +184,7 @@ describe("I-16: validate detects duplicate transforming links", () => {
     m = unwrap(addThing(m, { id: "obj-a", kind: "object", name: "A", essence: "physical", affiliation: "systemic" }));
     m = unwrap(addThing(m, { id: "obj-b", kind: "object", name: "B", essence: "physical", affiliation: "systemic" }));
     m = unwrap(addLink(m, { id: "lnk-1", type: "effect", source: "proc-p", target: "obj-a" }));
-    m = unwrap(addLink(m, { id: "lnk-2", type: "consumption", source: "proc-p", target: "obj-b" }));
+    m = unwrap(addLink(m, { id: "lnk-2", type: "consumption", source: "obj-b", target: "proc-p" }));
     const errors = validate(m);
     expect(errors.some(e => e.code === "I-16")).toBe(false);
   });

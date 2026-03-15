@@ -166,11 +166,12 @@ function renderLinkSentence(s: OplLinkSentence): string {
       return `${s.sourceName} is an instrument of ${s.targetName}.`;
     }
     case "consumption": {
-      // State-specified consumption: "Process consumes S Object"
-      if (s.targetStateName) {
-        return `${s.sourceName} consumes ${s.targetStateName} ${s.targetName}.`;
+      // consumption: source=object, target=process (ISO direction)
+      // OPL: "Process consumes [State] Object" → target consumes source
+      if (s.sourceStateName) {
+        return `${s.targetName} consumes ${s.sourceStateName} ${s.sourceName}.`;
       }
-      return `${s.sourceName} consumes ${s.targetName}.`;
+      return `${s.targetName} consumes ${s.sourceName}.`;
     }
     case "effect": {
       // State-specified effect (ISO 19450 9.3.3)
@@ -230,12 +231,16 @@ function renderLinkSentence(s: OplLinkSentence): string {
 function renderModifierSentence(s: OplModifierSentence): string {
   // Determine process/object names based on link direction convention:
   // Enabling links (agent, instrument): source=object, target=process
-  // Transforming links (consumption, effect, etc.): source=process, target=object
+  // Consumption (ISO): source=object, target=process
+  // Other transforming (effect, result, input, output): source=process, target=object
   const isEnabling = ["agent", "instrument"].includes(s.linkType);
-  const processName = isEnabling ? s.targetName : s.sourceName;
-  const objectName = isEnabling ? s.sourceName : s.targetName;
-  // State name: for enabling links it's on source (object); for transforming on target (object)
-  const stateName = isEnabling ? s.sourceStateName : s.targetStateName;
+  const isConsumption = s.linkType === "consumption";
+  // For enabling and consumption: source=object, target=process
+  // For other transforming (effect, result, input, output): source=process, target=object
+  const objectIsSource = isEnabling || isConsumption;
+  const processName = objectIsSource ? s.targetName : s.sourceName;
+  const objectName = objectIsSource ? s.sourceName : s.targetName;
+  const stateName = objectIsSource ? s.sourceStateName : s.targetStateName;
 
   if (s.modifierType === "event") {
     if (s.negated && stateName) {

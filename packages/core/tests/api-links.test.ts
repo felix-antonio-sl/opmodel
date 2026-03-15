@@ -130,8 +130,8 @@ describe("addLink", () => {
     if (isErr(r)) expect(r.error.code).toBe("I-33");
   });
 
-  it("allows consumption link from process to object (I-33 valid — codebase convention)", () => {
-    const r = addLink(buildModel(), { id: "lnk-ok", type: "consumption", source: "proc-heating", target: "obj-water" });
+  it("allows consumption link from object to process (I-33 valid — ISO convention)", () => {
+    const r = addLink(buildModel(), { id: "lnk-ok", type: "consumption", source: "obj-water", target: "proc-heating" });
     expect(isOk(r)).toBe(true);
   });
 
@@ -255,8 +255,8 @@ describe("addLink", () => {
     let m = buildModel();
     m = (addState(m, { id: "st-cold", parent: "obj-water", name: "cold", initial: false, final: false, default: false }) as any).value;
     m = (addState(m, { id: "st-ready", parent: "obj-barista", name: "ready", initial: false, final: false, default: false }) as any).value;
-    // consumption: heating→water, target_state=st-ready (belongs to barista, not water)
-    const r = addLink(m, { id: "lnk-bad", type: "consumption", source: "proc-heating", target: "obj-water", target_state: "st-ready" });
+    // consumption: water→heating (ISO), source_state=st-ready (belongs to barista, not water)
+    const r = addLink(m, { id: "lnk-bad", type: "consumption", source: "obj-water", target: "proc-heating", source_state: "st-ready" });
     expect(isErr(r)).toBe(true);
     if (isErr(r)) expect(r.error.code).toBe("I-28");
   });

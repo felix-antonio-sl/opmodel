@@ -39,13 +39,13 @@
     {"id": "lnk-barista-agent-grinding", "source": "obj-barista", "target": "proc-grinding", "type": "agent"},
     {"id": "lnk-barista-agent-boiling", "source": "obj-barista", "target": "proc-boiling", "type": "agent"},
     {"id": "lnk-barista-agent-brewing", "source": "obj-barista", "target": "proc-brewing", "type": "agent"},
-    {"id": "lnk-coffee-making-consumption-beans", "source": "proc-coffee-making", "target": "obj-coffee-beans", "type": "consumption"},
+    {"id": "lnk-coffee-making-consumption-beans", "source": "obj-coffee-beans", "target": "proc-coffee-making", "type": "consumption"},
     {"id": "lnk-coffee-making-effect-water", "source": "proc-coffee-making", "source_state": "state-water-cold", "target": "obj-water", "target_state": "state-water-hot", "type": "effect"},
     {"id": "lnk-coffee-making-result-coffee", "source": "proc-coffee-making", "target": "obj-coffee", "type": "result"},
-    {"id": "lnk-grinding-consumes-beans", "source": "proc-grinding", "target": "obj-coffee-beans", "type": "consumption"},
+    {"id": "lnk-grinding-consumes-beans", "source": "obj-coffee-beans", "target": "proc-grinding", "type": "consumption"},
     {"id": "lnk-grinding-yields-ground", "source": "proc-grinding", "target": "obj-ground-coffee", "type": "result"},
     {"id": "lnk-boiling-effects-water", "source": "proc-boiling", "source_state": "state-water-cold", "target": "obj-water", "target_state": "state-water-hot", "type": "effect"},
-    {"id": "lnk-brewing-consumes-ground", "source": "proc-brewing", "target": "obj-ground-coffee", "type": "consumption"},
+    {"id": "lnk-brewing-consumes-ground", "source": "obj-ground-coffee", "target": "proc-brewing", "type": "consumption"},
     {"id": "lnk-brewing-yields-coffee", "source": "proc-brewing", "target": "obj-coffee", "type": "result"}
   ],
   "modifiers": [

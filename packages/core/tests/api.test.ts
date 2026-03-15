@@ -146,7 +146,7 @@ describe("removeThing", () => {
     m = { ...m,
       links: new Map(m.links)
         .set("lnk-a", { id: "lnk-a", type: "effect" as const, source: "proc-heating", target: "obj-water" })
-        .set("lnk-b", { id: "lnk-b", type: "consumption" as const, source: "proc-heating", target: "obj-water" }),
+        .set("lnk-b", { id: "lnk-b", type: "consumption" as const, source: "obj-water", target: "proc-heating" }),
       fans: new Map(m.fans).set("fan-1", {
         id: "fan-1", type: "xor" as const, members: ["lnk-a", "lnk-b"],
       }),

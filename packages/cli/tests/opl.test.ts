@@ -28,7 +28,7 @@ function buildTestModel(): Model {
   });
   if (!isOk(r)) throw r.error; m = r.value;
   r = addLink(m, {
-    id: "lnk-1", type: "consumption", source: "proc-boiling", target: "obj-water",
+    id: "lnk-1", type: "consumption", source: "obj-water", target: "proc-boiling",
   });
   if (!isOk(r)) throw r.error; m = r.value;
   return m;

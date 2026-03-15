@@ -28,7 +28,7 @@ const proc = (id: string, name: string): Thing => ({
 
 /**
  * Build a minimal OPM model: Water -[effect]-> Boiling, with states liquid/gas.
- * Convention: transforming links source=process, target=object.
+ * Convention: effect/result links source=process, target=object; consumption source=object, target=process (ISO).
  */
 function buildBoilingModel(): Model {
   let m = createModel("Test");
@@ -46,7 +46,7 @@ function buildBoilingModel(): Model {
 
 /**
  * Build a model with consumption + result:
- * Coffee Beans -[consumption]-> Grinding -[result]-> Ground Coffee
+ * Coffee Beans -[consumption]-> Grinding -[result]-> Ground Coffee (ISO: source=object)
  */
 function buildGrindingModel(): Model {
   let m = createModel("Test");
@@ -54,8 +54,8 @@ function buildGrindingModel(): Model {
   m = (addThing(m, obj("obj-ground", "Ground Coffee")) as any).value;
   m = (addThing(m, proc("proc-grind", "Grinding")) as any).value;
   m = (addThing(m, obj("obj-grinder", "Grinder")) as any).value;
-  // Consumption: Grinding consumes Coffee Beans
-  m = (addLink(m, { id: "lnk-con", type: "consumption", source: "proc-grind", target: "obj-beans" }) as any).value;
+  // Consumption: Grinding consumes Coffee Beans (ISO: source=object)
+  m = (addLink(m, { id: "lnk-con", type: "consumption", source: "obj-beans", target: "proc-grind" }) as any).value;
   // Result: Grinding yields Ground Coffee
   m = (addLink(m, { id: "lnk-res", type: "result", source: "proc-grind", target: "obj-ground" }) as any).value;
   // Agent: Grinder handles Grinding
@@ -405,9 +405,9 @@ describe("runSimulation — deadlock detection", () => {
     m = (addThing(m, obj("obj-raw", "Raw")) as any).value;
     m = (addThing(m, proc("proc-produce", "Producing")) as any).value;
     m = (addThing(m, proc("proc-burn", "Burning")) as any).value;
-    m = (addLink(m, { id: "lnk-con", type: "consumption", source: "proc-produce", target: "obj-raw" }) as any).value;
+    m = (addLink(m, { id: "lnk-con", type: "consumption", source: "obj-raw", target: "proc-produce" }) as any).value;
     m = (addLink(m, { id: "lnk-res", type: "result", source: "proc-produce", target: "obj-fuel" }) as any).value;
-    m = (addLink(m, { id: "lnk-con2", type: "consumption", source: "proc-burn", target: "obj-fuel" }) as any).value;
+    m = (addLink(m, { id: "lnk-con2", type: "consumption", source: "obj-fuel", target: "proc-burn" }) as any).value;
     m = (addModifier(m, { id: "mod-cond", over: "lnk-con2", type: "condition", condition_mode: "wait" }) as any).value;
 
     const initState = createInitialState(m);

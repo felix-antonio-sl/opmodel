@@ -52,7 +52,7 @@ function buildModel() {
   if (!isOk(r)) throw r.error; m = r.value;
   r = addState(m, { id: "state-gas", parent: "obj-water", name: "gas", initial: false, final: false, default: false });
   if (!isOk(r)) throw r.error; m = r.value;
-  r = addLink(m, { id: "lnk-boiling-consumption-water", type: "consumption", source: "proc-boiling", target: "obj-water" });
+  r = addLink(m, { id: "lnk-boiling-consumption-water", type: "consumption", source: "obj-water", target: "proc-boiling" });
   if (!isOk(r)) throw r.error; m = r.value;
   r = addLink(m, { id: "lnk-boiling-effect-water", type: "effect", source: "proc-boiling", target: "obj-water", source_state: "state-liquid", target_state: "state-gas" });
   if (!isOk(r)) throw r.error; m = r.value;
@@ -127,7 +127,7 @@ describe("expose", () => {
     let r = addThing(m, waterObj); if (!isOk(r)) throw r.error; m = r.value;
     r = addThing(m, boilingProc); if (!isOk(r)) throw r.error; m = r.value;
     r = addAppearance(m, waterApp); if (!isOk(r)) throw r.error; m = r.value;
-    r = addLink(m, { id: "lnk-1", type: "consumption", source: "proc-boiling", target: "obj-water" });
+    r = addLink(m, { id: "lnk-1", type: "consumption", source: "obj-water", target: "proc-boiling" });
     if (!isOk(r)) throw r.error; m = r.value;
     const doc = expose(m, "opd-sd");
     const links = doc.sentences.filter(s => s.kind === "link");
@@ -495,7 +495,9 @@ describe("GetPut", () => {
     }
 
     const doc2 = expose(fresh, "opd-sd");
-    expect(sentencesWithoutIds(doc2)).toEqual(sentencesWithoutIds(doc1));
+    // Sort by JSON serialization to ignore link ordering differences from auto-generated IDs
+    const sort = (arr: any[]) => [...arr].sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+    expect(sort(sentencesWithoutIds(doc2))).toEqual(sort(sentencesWithoutIds(doc1)));
   });
 
   it("round-trip on empty model", () => {

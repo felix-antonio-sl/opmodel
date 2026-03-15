@@ -47,8 +47,8 @@ describe("Coffee Making System (end-to-end CLI)", () => {
 
     // 5. Add links
     executeAdd("link", { type: "agent", source: "obj-barista", target: "proc-coffee-making", file: filePath });
-    executeAdd("link", { type: "consumption", source: "proc-coffee-making", target: "obj-coffee-beans", file: filePath });
-    executeAdd("link", { type: "consumption", source: "proc-coffee-making", target: "obj-water", file: filePath });
+    executeAdd("link", { type: "consumption", source: "obj-coffee-beans", target: "proc-coffee-making", file: filePath });
+    executeAdd("link", { type: "consumption", source: "obj-water", target: "proc-coffee-making", file: filePath });
     executeAdd("link", { type: "result", source: "proc-coffee-making", target: "obj-coffee", file: filePath });
 
     // 6. Validate

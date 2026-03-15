@@ -21,7 +21,7 @@ describe("parse", () => {
       { kind: "add-thing", name: "Water", thingKind: "object" },
       { kind: "add-states", thingName: "Water", stateNames: ["cold", "hot"] },
       { kind: "add-thing", name: "Boiling", thingKind: "process" },
-      { kind: "add-link", sourceName: "Boiling", targetName: "Water", linkType: "consumption" },
+      { kind: "add-link", sourceName: "Water", targetName: "Boiling", linkType: "consumption" },
     ]);
     const result = parse(raw);
     expect(result.ok).toBe(true);
