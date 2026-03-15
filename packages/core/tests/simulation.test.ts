@@ -644,11 +644,12 @@ describe("resolveLinksForOpd", () => {
     expect(directLinks.length).toBeGreaterThan(0);
   });
 
-  it("produces exactly 5 visible links in SD for Coffee Making", () => {
+  it("produces exactly 4 visible links in SD (instrument filtered as internal)", () => {
     const m = loadCoffeeMakingModel();
     const resolved = resolveLinksForOpd(m, "opd-sd");
-    expect(resolved).toHaveLength(5);
+    // instrument Water[hot]→Brewing filtered: state-water-hot is produced internally by Boiling
+    expect(resolved).toHaveLength(4);
     const types = resolved.map(rl => rl.link.type).sort();
-    expect(types).toEqual(["agent", "consumption", "effect", "instrument", "result"]);
+    expect(types).toEqual(["agent", "consumption", "effect", "result"]);
   });
 });

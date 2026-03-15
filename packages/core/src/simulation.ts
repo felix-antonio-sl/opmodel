@@ -223,6 +223,17 @@ export function resolveLinksForOpd(model: Model, opdId: string): ResolvedLink[] 
     return subprocessToAncestor.get(thingId) ?? null;
   }
 
+  // 4. Collect states produced internally (target_state of effect/result links on subprocesses)
+  //    Used to filter enabling links whose required state is an internal product.
+  const internallyProducedStates = new Set<string>();
+  for (const link of model.links.values()) {
+    if (!["effect", "result"].includes(link.type)) continue;
+    if (!link.target_state) continue;
+    if (subprocessToAncestor.has(link.source) || subprocessToAncestor.has(link.target)) {
+      internallyProducedStates.add(link.target_state);
+    }
+  }
+
   const result: ResolvedLink[] = [];
   const seen = new Set<string>();
 
@@ -231,6 +242,12 @@ export function resolveLinksForOpd(model: Model, opdId: string): ResolvedLink[] 
     const vt = resolve(link.target);
     if (!vs || !vt) continue;
     if (vs === vt) continue; // Skip self-loops from same-parent resolution
+
+    // Filter internal scheduling dependencies: enabling link whose required state
+    // is produced by a sibling subprocess (not an external precondition)
+    if (["agent", "instrument"].includes(link.type) && link.source_state) {
+      if (internallyProducedStates.has(link.source_state)) continue;
+    }
 
     const key = `${link.type}|${vs}|${vt}`;
     if (seen.has(key)) continue;
