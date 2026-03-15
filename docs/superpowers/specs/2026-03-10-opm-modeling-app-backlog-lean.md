@@ -482,6 +482,12 @@ Como modelador, quiero hacer in-zoom a un proceso para crear un OPD descendiente
 
 - Given el Domain Engine con un in-zoom ejecutado sobre un proceso p, when se crea el OPD descendiente, then la operación implementa una retracción en la opfibración π: C_opm → C_opd_tree generando una nueva fibra OPD_{p} en C_opd_tree. Los objetos "heredados" del OPD padre son el pullback del proceso sobre su fibra: exactamente los objetos del padre conectados a p aparecen como externos en OPD_{p}. El diagrama conmuta: External_Objects → OPD_{parent} ↓ OPD_{child} → Process p.
 
+- **I-ENTITY-UNIQUENESS — Unicidad de entidades:** Cada Thing y cada Link es una entidad única con ID irrepetible, independiente de en cuántos OPDs aparezca. Un Link existe UNA vez en el modelo; las Appearances determinan en qué OPDs son visibles sus endpoints. Cuando un link conecta un subproceso (sin appearance en el OPD actual) con un objeto (con appearance), el renderer resuelve el endpoint al contorno del proceso padre in-zoomed — el link NO se duplica ni se crea virtualmente. La visibilidad es un problema de fibración (π*), no de entidades.
+
+- **I-LINK-VISIBILITY — Visibilidad de links por OPD (pullback π\*):** Un link es visible en un OPD si ambos endpoints son *resolvibles* en ese OPD: (1) el thing tiene appearance directa, o (2) el thing es subproceso de un proceso in-zoomed que sí tiene appearance (resolución por contorno). Links resueltos por contorno se marcan como agregados [∑] en el rendering. Deduplicación: si N links del mismo tipo resuelven al mismo par (objeto, padre), se emite uno solo.
+
+- **ISO §10.5.2 — Distribución de links al crear in-zoom:** Los links procedurales del proceso padre se MUEVEN a los subprocesos (consumption al primero, result al último, agent/instrument/effect a todos). El proceso padre queda con 0 links procedurales. I-17 se exime para procesos in-zoomed (la transformación se satisface transitivamente via la fibración).
+
 **Dependencias:** L-M1-02, L-M1-03
 
 ---
