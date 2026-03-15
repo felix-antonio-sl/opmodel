@@ -37,6 +37,7 @@ export {
   getPreprocessSet,
   getPostprocessSet,
   getExecutableProcesses,
+  resolveLinksForOpd,
   type ModelState,
   type ObjectState,
   type SimulationEvent,
@@ -44,4 +45,5 @@ export {
   type SimulationTrace,
   type PreconditionResult,
   type ExecutableProcess,
+  type ResolvedLink,
 } from "./simulation";

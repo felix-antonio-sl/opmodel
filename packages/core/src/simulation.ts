@@ -165,6 +165,88 @@ export function getExecutableProcesses(model: Model, maxDepth: number = 10): Exe
   return result;
 }
 
+/** Link resolved for OPD visibility with visual endpoint mapping */
+export interface ResolvedLink {
+  link: Link;
+  visualSource: string;
+  visualTarget: string;
+  aggregated: boolean;
+}
+
+/**
+ * Compute visible links for an OPD by resolving endpoints through in-zoom containers.
+ * Implements the pullback π* of I-LINK-VISIBILITY (ISO §14.2.2.4.1).
+ * Only processes participate in subprocess-to-parent resolution; objects need direct appearances.
+ */
+export function resolveLinksForOpd(model: Model, opdId: string): ResolvedLink[] {
+  // 1. Appearances in this OPD
+  const appearances = new Set<string>();
+  for (const app of model.appearances.values()) {
+    if (app.opd === opdId) appearances.add(app.thing);
+  }
+
+  // 2. Build subprocessToAncestor: subprocess ID → visible ancestor process ID
+  //    Transitively resolves nested in-zoom chains.
+  const subprocessToAncestor = new Map<string, string>();
+
+  const inZoomOpds = new Map<string, OPD>();
+  for (const opd of model.opds.values()) {
+    if (opd.refines && opd.refinement_type === "in-zoom") {
+      inZoomOpds.set(opd.refines, opd);
+    }
+  }
+
+  function registerDescendants(ancestorId: string, processId: string): void {
+    const childOpd = inZoomOpds.get(processId);
+    if (!childOpd) return;
+    for (const app of model.appearances.values()) {
+      if (app.opd !== childOpd.id) continue;
+      if (app.thing === processId) continue;
+      const thing = model.things.get(app.thing);
+      if (thing?.kind === "process") {
+        subprocessToAncestor.set(thing.id, ancestorId);
+        registerDescendants(ancestorId, thing.id);
+      }
+    }
+  }
+
+  for (const thingId of appearances) {
+    const thing = model.things.get(thingId);
+    if (thing?.kind === "process") {
+      registerDescendants(thingId, thingId);
+    }
+  }
+
+  // 3. Resolve each link
+  function resolve(thingId: string): string | null {
+    if (appearances.has(thingId)) return thingId;
+    return subprocessToAncestor.get(thingId) ?? null;
+  }
+
+  const result: ResolvedLink[] = [];
+  const seen = new Set<string>();
+
+  for (const link of model.links.values()) {
+    const vs = resolve(link.source);
+    const vt = resolve(link.target);
+    if (!vs || !vt) continue;
+    if (vs === vt) continue; // Skip self-loops from same-parent resolution
+
+    const key = `${link.type}|${vs}|${vt}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    result.push({
+      link,
+      visualSource: vs,
+      visualTarget: vt,
+      aggregated: vs !== link.source || vt !== link.target,
+    });
+  }
+
+  return result;
+}
+
 // === Coalgebra: c: ModelState → Event × (Precond → ModelState + 1) ===
 
 /**
