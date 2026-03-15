@@ -181,6 +181,8 @@ export interface Fan {
   type: FanType;
   direction?: "converging" | "diverging"; // ISO §12.2-12.3: Tables 17-21 define distinct semantics per direction
   members: string[]; // link IDs grouped by this fan
+  incomplete?: boolean; // ISO §10.3.2: partial structure marker (on triangle, not individual links)
+  member_multiplicities?: Record<string, string>; // link ID → multiplicity expression (ISO §11.1)
 }
 
 export interface Scenario {

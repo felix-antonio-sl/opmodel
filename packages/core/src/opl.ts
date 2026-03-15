@@ -111,6 +111,9 @@ export function expose(model: Model, opdId: string): OplDocument {
     if (link.tag) {
       sentence.tag = link.tag;
     }
+    if (link.direction) {
+      sentence.direction = link.direction;
+    }
     sentences.push(sentence);
   }
 
@@ -223,7 +226,16 @@ function renderLinkSentence(s: OplLinkSentence): string {
     case "classification": return `${s.targetName} is classified by ${s.sourceName}.`;
     case "invocation": return `${s.sourceName} invokes ${s.targetName}.`;
     case "exception": return `${s.sourceName} handles exception from ${s.targetName}.`;
-    case "tagged": return `${s.sourceName} ${s.tag ?? "relates to"} ${s.targetName}.`;
+    case "tagged": {
+      // ISO §10.2.2: null-tagged defaults — "relates to" (uni/bi), "are related" (reciprocal)
+      const defaultTag = s.direction === "reciprocal" ? "are related" : "relates to";
+      const tag = s.tag ?? defaultTag;
+      return s.direction === "bidirectional"
+        ? `${s.sourceName} ${tag} ${s.targetName} and vice versa.`
+        : s.direction === "reciprocal"
+          ? `${s.sourceName} and ${s.targetName} ${tag}.`
+          : `${s.sourceName} ${tag} ${s.targetName}.`;
+    }
     default: return `${s.sourceName} --[${s.linkType}]--> ${s.targetName}.`;
   }
 }

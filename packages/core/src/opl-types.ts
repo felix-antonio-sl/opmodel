@@ -44,6 +44,7 @@ export interface OplLinkSentence {
   sourceStateName?: string;
   targetStateName?: string;
   tag?: string;
+  direction?: "unidirectional" | "bidirectional" | "reciprocal";
   incomplete?: boolean;
 }
 

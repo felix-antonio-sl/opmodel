@@ -1118,6 +1118,16 @@ export function validate(model: Model): InvariantError[] {
     for (const memberId of fan.members) {
       if (!model.links.has(memberId)) errors.push({ code: "I-07", message: `Fan ${id} member not found: ${memberId}`, entity: id });
     }
+    // I-FAN-PROB: ISO §12.7 — XOR fan link probabilities must sum to 1.0
+    if (fan.type === "xor") {
+      const probs = fan.members.map(mid => model.links.get(mid)?.probability).filter((p): p is number => p != null);
+      if (probs.length > 0 && probs.length === fan.members.length) {
+        const sum = probs.reduce((a, b) => a + b, 0);
+        if (Math.abs(sum - 1.0) > 0.001) {
+          errors.push({ code: "I-FAN-PROB", message: `Fan ${id} XOR probabilities sum to ${sum}, must be 1.0`, entity: id });
+        }
+      }
+    }
   }
 
   // I-08
