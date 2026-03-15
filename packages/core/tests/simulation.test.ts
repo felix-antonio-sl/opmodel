@@ -636,28 +636,28 @@ describe("resolveLinksForOpd", () => {
     expect(groundLinks).toHaveLength(0);
   });
 
-  it("returns direct links inside in-zoom OPD including instrument (not filtered)", () => {
+  it("returns direct links inside in-zoom OPD (not filtered)", () => {
     const m = loadCoffeeMakingModel();
     const resolved = resolveLinksForOpd(m, "opd-sd1");
     expect(resolved.length).toBeGreaterThan(0);
     const directLinks = resolved.filter(rl => !rl.aggregated);
     expect(directLinks.length).toBeGreaterThan(0);
-    // Instrument link Water[hot]→Brewing must appear in SD1 (not filtered — direct link)
-    const instrLinks = resolved.filter(rl => rl.link.type === "instrument");
-    expect(instrLinks).toHaveLength(1);
-    expect(instrLinks[0].visualSource).toBe("obj-water");
-    expect(instrLinks[0].visualTarget).toBe("proc-brewing");
-    expect(instrLinks[0].aggregated).toBe(false);
+    // All 12 links are direct in SD1 (all endpoints have appearances there)
+    // Effect link on Water should be visible (internal filter only applies to aggregated)
+    const effectLinks = resolved.filter(rl => rl.link.type === "effect");
+    expect(effectLinks).toHaveLength(1);
+    expect(effectLinks[0].aggregated).toBe(false);
   });
 
-  it("produces exactly 3 visible links in SD (external interface only)", () => {
+  it("produces exactly 5 visible links in SD (external interface)", () => {
     const m = loadCoffeeMakingModel();
     const resolved = resolveLinksForOpd(m, "opd-sd");
-    // SD shows only external interface: agent + consumption + result
-    // Water has no appearance in SD (internal mechanism), so effect is not visible
-    // instrument Water[hot]→Brewing also not visible (no Water appearance + internal dep)
-    expect(resolved).toHaveLength(3);
+    // SD shows external interface:
+    //   agent (Barista, deduped from 3) + instrument (Coffee Machine, deduped from 3)
+    //   + consumption (Beans) + consumption (Water) + result (Coffee)
+    // Effect on Water is filtered: Water is consumed internally by Brewing
+    expect(resolved).toHaveLength(5);
     const types = resolved.map(rl => rl.link.type).sort();
-    expect(types).toEqual(["agent", "consumption", "result"]);
+    expect(types).toEqual(["agent", "consumption", "consumption", "instrument", "result"]);
   });
 });

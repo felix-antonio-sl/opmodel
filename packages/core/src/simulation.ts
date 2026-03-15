@@ -223,14 +223,22 @@ export function resolveLinksForOpd(model: Model, opdId: string): ResolvedLink[] 
     return subprocessToAncestor.get(thingId) ?? null;
   }
 
-  // 4. Collect states produced internally (target_state of effect/result links on subprocesses)
-  //    Used to filter enabling links whose required state is an internal product.
+  // 4. Collect internal mechanism data for filtering aggregated links.
+  //    a) States produced internally (target_state of effect/result on subprocesses)
+  //    b) Objects consumed internally (consumption links on subprocesses)
   const internallyProducedStates = new Set<string>();
+  const internallyConsumedObjects = new Set<string>();
   for (const link of model.links.values()) {
-    if (!["effect", "result"].includes(link.type)) continue;
-    if (!link.target_state) continue;
-    if (subprocessToAncestor.has(link.source) || subprocessToAncestor.has(link.target)) {
+    const isSiblingLink = subprocessToAncestor.has(link.source) || subprocessToAncestor.has(link.target);
+    if (!isSiblingLink) continue;
+    if (["effect", "result"].includes(link.type) && link.target_state) {
       internallyProducedStates.add(link.target_state);
+    }
+    if (link.type === "consumption") {
+      // Detect object endpoint by kind
+      const srcThing = model.things.get(link.source);
+      const objId = srcThing?.kind === "object" ? link.source : link.target;
+      internallyConsumedObjects.add(objId);
     }
   }
 
@@ -245,10 +253,20 @@ export function resolveLinksForOpd(model: Model, opdId: string): ResolvedLink[] 
 
     const isAggregated = vs !== link.source || vt !== link.target;
 
-    // Filter internal scheduling dependencies ONLY for aggregated links (projected to parent).
-    // Inside the in-zoom OPD, show all links including internal dependencies.
-    if (isAggregated && ["agent", "instrument"].includes(link.type) && link.source_state) {
-      if (internallyProducedStates.has(link.source_state)) continue;
+    // Filter internal mechanisms ONLY for aggregated links (projected to parent).
+    // Inside the in-zoom OPD, show all links.
+    if (isAggregated) {
+      // a) Enabling links whose required state is produced internally
+      if (["agent", "instrument"].includes(link.type) && link.source_state) {
+        if (internallyProducedStates.has(link.source_state)) continue;
+      }
+      // b) Effect links on objects that are consumed by a sibling subprocess —
+      //    the state change is an internal preparation step, not external interface
+      if (link.type === "effect") {
+        const srcThing = model.things.get(link.source);
+        const objId = srcThing?.kind === "object" ? link.source : link.target;
+        if (internallyConsumedObjects.has(objId)) continue;
+      }
     }
 
     const key = `${link.type}|${vs}|${vt}`;
