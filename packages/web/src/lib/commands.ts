@@ -61,6 +61,7 @@ export type Command =
   | { tag: "updateState"; stateId: string; patch: Partial<Omit<State, "id" | "parent">> }
   | { tag: "refineThing"; thingId: string; opdId: string; refinementType: RefinementType; childOpdId: string; childOpdName: string }
   | { tag: "applyOplEdit"; edit: OplEdit }
+  | { tag: "updateAppearance"; thingId: string; opdId: string; patch: Record<string, unknown> }
   | { tag: "setMode"; mode: EditorMode }
   | { tag: "setLinkType"; linkType: LinkTypeChoice }
   /* ─── Simulation Commands ─── */
@@ -182,6 +183,12 @@ export function interpret(cmd: Command): Effect {
       return {
         type: "modelMutation",
         apply: (m) => refineThing(m, cmd.thingId, cmd.opdId, cmd.refinementType, cmd.childOpdId, cmd.childOpdName),
+      };
+
+    case "updateAppearance":
+      return {
+        type: "modelMutation",
+        apply: (m) => updateAppearance(m, cmd.thingId, cmd.opdId, cmd.patch as any),
       };
 
     case "applyOplEdit":

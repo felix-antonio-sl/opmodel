@@ -70,6 +70,26 @@ function statesForThing(model: Model, thingId: string): State[] {
     });
 }
 
+/* State pill rect — matches ThingNode rendering layout exactly */
+function statePillRect(
+  app: { x: number; y: number; w: number; h: number },
+  visibleStates: State[],
+  stateId: string,
+): Rect | null {
+  const idx = visibleStates.findIndex((s) => s.id === stateId);
+  if (idx === -1) return null;
+  const pillW = Math.min(50, (app.w - 12) / visibleStates.length - 4);
+  const pillH = 16;
+  const totalPillW = visibleStates.length * (pillW + 4) - 4;
+  const startX = app.x + (app.w - totalPillW) / 2;
+  return {
+    x: startX + idx * (pillW + 4),
+    y: app.y + app.h - 4,
+    w: pillW,
+    h: pillH,
+  };
+}
+
 /* ─── SVG Defs ─── */
 
 function SvgDefs() {
@@ -79,21 +99,34 @@ function SvgDefs() {
         <circle cx="10" cy="10" r="0.6" fill="rgba(0,0,0,0.06)" />
       </pattern>
 
+      {/* Procedural transforming: filled arrowhead (consumption→, result→, effect↔) */}
       <marker id="arrow-proc" viewBox="0 0 10 8" refX="10" refY="4" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
         <path d="M0,0 L10,4 L0,8Z" fill="#16794a" />
       </marker>
-      <marker id="arrow-enabling" viewBox="0 0 10 8" refX="10" refY="4" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
-        <path d="M0,0 L10,4 L0,8Z" fill="#2b6cb0" />
-      </marker>
-      <marker id="arrow-struct" viewBox="0 0 10 8" refX="10" refY="4" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
-        <path d="M0,0 L10,4 L0,8" fill="none" stroke="#6b5fad" strokeWidth="1.5" />
-      </marker>
-      <marker id="arrow-control" viewBox="0 0 10 8" refX="10" refY="4" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
-        <path d="M0,0 L10,4 L0,8Z" fill="#c05621" />
+
+      {/* Enabling: Agent = filled circle ● (ISO §8.1.1) */}
+      <marker id="dot-agent" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+        <circle cx="5" cy="5" r="4" fill="#2b6cb0" />
       </marker>
 
-      <marker id="dot-consumption" viewBox="0 0 8 8" refX="4" refY="4" markerWidth="6" markerHeight="6" orient="auto">
-        <circle cx="4" cy="4" r="3" fill="#16794a" />
+      {/* Enabling: Instrument = hollow circle ○ (ISO §8.1.2) */}
+      <marker id="circle-instrument" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+        <circle cx="5" cy="5" r="3.5" fill="white" stroke="#2b6cb0" strokeWidth="1.5" />
+      </marker>
+
+      {/* Structural: Aggregation/Exhibition = filled triangle ▲ (ISO §6) */}
+      <marker id="triangle-filled" viewBox="0 0 12 12" refX="12" refY="6" markerWidth="12" markerHeight="12" orient="auto-start-reverse">
+        <path d="M0,0 L12,6 L0,12Z" fill="#6b5fad" />
+      </marker>
+
+      {/* Structural: Generalization/Classification = open triangle △ (ISO §6) */}
+      <marker id="triangle-open" viewBox="0 0 12 12" refX="12" refY="6" markerWidth="12" markerHeight="12" orient="auto-start-reverse">
+        <path d="M0,0 L12,6 L0,12Z" fill="white" stroke="#6b5fad" strokeWidth="1.5" />
+      </marker>
+
+      {/* Control: invocation/exception = filled arrowhead */}
+      <marker id="arrow-control" viewBox="0 0 10 8" refX="10" refY="4" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
+        <path d="M0,0 L10,4 L0,8Z" fill="#c05621" />
       </marker>
 
       <filter id="glow-selected" x="-20%" y="-20%" width="140%" height="140%">
@@ -234,17 +267,13 @@ function ThingNode({
   const extraH = hasStates ? 24 : 0;
   const totalH = h + extraH;
 
-  const strokeColor = isExternal
-    ? "var(--text-muted)"
-    : thing.kind === "process" ? "var(--process-stroke)" : "var(--object-stroke)";
+  // ISO 19450: color always follows kind (object=green, process=blue), regardless of external/container
+  const strokeColor = thing.kind === "process" ? "var(--process-stroke)" : "var(--object-stroke)";
   const isPhysical = thing.essence === "physical";
-  const fillColor = isContainer
-    ? "rgba(43, 108, 176, 0.03)"
-    : isExternal
-      ? "var(--bg-panel)"
-      : thing.kind === "process"
-        ? (isPhysical ? "var(--process-fill-physical)" : "var(--process-fill)")
-        : (isPhysical ? "var(--object-fill-physical)" : "var(--object-fill)");
+  const kindFill = thing.kind === "process"
+    ? (isPhysical ? "var(--process-fill-physical)" : "var(--process-fill)")
+    : (isPhysical ? "var(--object-fill-physical)" : "var(--object-fill)");
+  const fillColor = kindFill;
   const strokeWidth = isContainer ? 2.0 : isExternal ? 1.0 : isPhysical ? 3.5 : 1.2;
   const strokeDash = isExternal ? "4,3" : thing.affiliation === "environmental" ? "6,3" : undefined;
 
@@ -294,8 +323,6 @@ function ThingNode({
           y={y}
           width={w}
           height={totalH}
-          rx={3}
-          ry={3}
           fill={fillColor}
           stroke={strokeColor}
           strokeWidth={strokeWidth}
@@ -380,14 +407,50 @@ function LinkLine({
   const mid = midpoint(p1, p2);
   const color = LINK_COLORS[link.type] ?? "#505878";
 
-  const arrowId =
-    link.type === "aggregation" || link.type === "exhibition" || link.type === "generalization" || link.type === "classification"
-      ? "arrow-struct"
-      : link.type === "invocation" || link.type === "exception"
-        ? "arrow-control"
-        : link.type === "agent" || link.type === "instrument" || link.type === "input"
-          ? "arrow-enabling"
-          : "arrow-proc";
+  // ISO 19450 marker assignment per link type
+  let markerEnd: string | undefined;
+  let markerStart: string | undefined;
+
+  switch (link.type) {
+    // Enabling links: ISO §8.1 — circle markers at process end
+    case "agent":
+      markerEnd = "url(#dot-agent)";       // ● filled circle
+      break;
+    case "instrument":
+      markerEnd = "url(#circle-instrument)"; // ○ hollow circle
+      break;
+    // Transforming links: ISO §7.2
+    case "consumption":
+    case "result":
+      markerEnd = "url(#arrow-proc)";       // → single arrowhead
+      break;
+    case "effect":
+      markerEnd = "url(#arrow-proc)";       // ↔ bidirectional
+      markerStart = "url(#arrow-proc)";
+      break;
+    case "input":
+      markerEnd = "url(#arrow-proc)";
+      break;
+    case "output":
+      markerEnd = "url(#arrow-proc)";
+      break;
+    // Structural links: ISO §6 — triangle markers at parent/whole/general end
+    case "aggregation":
+    case "exhibition":
+      markerEnd = "url(#triangle-filled)";  // ▲ filled triangle
+      break;
+    case "generalization":
+    case "classification":
+      markerEnd = "url(#triangle-open)";    // △ open triangle
+      break;
+    // Control links
+    case "invocation":
+    case "exception":
+      markerEnd = "url(#arrow-control)";
+      break;
+    default:
+      markerEnd = "url(#arrow-proc)";
+  }
 
   return (
     <g>
@@ -398,15 +461,15 @@ function LinkLine({
         x2={p2.x}
         y2={p2.y}
         stroke={color}
-        markerEnd={`url(#${arrowId})`}
-        markerStart={link.type === "consumption" ? "url(#dot-consumption)" : undefined}
+        markerEnd={markerEnd}
+        markerStart={markerStart}
       />
       <text className="link-label" x={mid.x} y={mid.y - 7}>
         {link.type}
       </text>
       {modifier && (
         <text className="modifier-badge" x={mid.x} y={mid.y + 8}>
-          [{modifier.type}]
+          {modifier.type === "event" ? "e" : "c"}
         </text>
       )}
     </g>
@@ -693,11 +756,44 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
 
           {/* Links (behind things) — re-route during drag */}
           {visibleLinks.map(({ link, modifier, visualSource, visualTarget }) => {
-            const srcRect = getEffectiveRect(visualSource);
-            const tgtRect = getEffectiveRect(visualTarget);
+            let srcRect = getEffectiveRect(visualSource);
+            let tgtRect = getEffectiveRect(visualTarget);
             const srcThing = model.things.get(visualSource);
             const tgtThing = model.things.get(visualTarget);
             if (!srcRect || !tgtRect || !srcThing || !tgtThing) return null;
+
+            // Route to state pill when link has source_state/target_state
+            // Use drag-adjusted position so pills follow the thing during drag
+            let srcKindOverride: "object" | "process" | undefined;
+            let tgtKindOverride: "object" | "process" | undefined;
+            if (link.source_state) {
+              const srcApp = appearances.get(visualSource);
+              if (srcApp) {
+                const ox = dragTarget === visualSource ? dragDelta.x : 0;
+                const oy = dragTarget === visualSource ? dragDelta.y : 0;
+                const adj = { x: srcApp.x + ox, y: srcApp.y + oy, w: srcApp.w, h: srcApp.h };
+                const allSrcStates = statesForThing(model, visualSource);
+                const visSrcStates = srcApp.suppressed_states
+                  ? allSrcStates.filter((s) => !srcApp.suppressed_states!.includes(s.id))
+                  : allSrcStates;
+                const pill = statePillRect(adj, visSrcStates, link.source_state);
+                if (pill) { srcRect = pill; srcKindOverride = "object"; }
+              }
+            }
+            if (link.target_state) {
+              const tgtApp = appearances.get(visualTarget);
+              if (tgtApp) {
+                const ox = dragTarget === visualTarget ? dragDelta.x : 0;
+                const oy = dragTarget === visualTarget ? dragDelta.y : 0;
+                const adj = { x: tgtApp.x + ox, y: tgtApp.y + oy, w: tgtApp.w, h: tgtApp.h };
+                const allTgtStates = statesForThing(model, visualTarget);
+                const visTgtStates = tgtApp.suppressed_states
+                  ? allTgtStates.filter((s) => !tgtApp.suppressed_states!.includes(s.id))
+                  : allTgtStates;
+                const pill = statePillRect(adj, visTgtStates, link.target_state);
+                if (pill) { tgtRect = pill; tgtKindOverride = "object"; }
+              }
+            }
 
             let linkSimClass = "";
             if (simModelState) {
@@ -719,8 +815,8 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
                   link={link}
                   sourceRect={srcRect}
                   targetRect={tgtRect}
-                  sourceKind={srcThing.kind}
-                  targetKind={tgtThing.kind}
+                  sourceKind={srcKindOverride ?? srcThing.kind}
+                  targetKind={tgtKindOverride ?? tgtThing.kind}
                   modifier={modifier}
                 />
               </g>

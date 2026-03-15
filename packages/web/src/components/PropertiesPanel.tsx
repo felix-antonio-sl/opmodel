@@ -1,6 +1,13 @@
-import type { Model, Thing, State, Link, RefinementType, OPD } from "@opmodel/core";
+import type { Model, Thing, State, Link, LinkType, RefinementType, OPD } from "@opmodel/core";
 import type { Command } from "../lib/commands";
 import { genId } from "../lib/ids";
+
+const LINK_TYPES: LinkType[] = [
+  "agent", "instrument",
+  "consumption", "effect", "result", "input", "output",
+  "aggregation", "exhibition", "generalization", "classification",
+  "invocation", "exception",
+];
 
 interface Props {
   model: Model;
@@ -36,9 +43,24 @@ function nextChildOpdName(model: Model, parentOpdId: string): string {
   return `${parentName}${sep}${maxN + 1}`;
 }
 
-function StateRow({ state, dispatch }: { state: State; dispatch: (cmd: Command) => boolean }) {
+function StateRow({
+  state, dispatch, isSuppressed, onToggleSuppression,
+}: {
+  state: State;
+  dispatch: (cmd: Command) => boolean;
+  isSuppressed: boolean;
+  onToggleSuppression: () => void;
+}) {
   return (
-    <div className="props-panel__state-row">
+    <div className="props-panel__state-row" style={isSuppressed ? { opacity: 0.5 } : undefined}>
+      <label className="props-panel__state-flag" title={isSuppressed ? "Show in OPD" : "Hide in OPD"}>
+        <input
+          type="checkbox"
+          checked={!isSuppressed}
+          onChange={onToggleSuppression}
+        />
+        V
+      </label>
       <input
         className="props-panel__state-input"
         value={state.name}
@@ -178,6 +200,21 @@ export function PropertiesPanel({ model, thingId, opdId, dispatch }: Props) {
 
   const states = statesOf(model, thingId);
   const links = linksOf(model, thingId);
+  const appKey = `${thingId}::${opdId}`;
+  const appearance = model.appearances.get(appKey);
+  const suppressedStates = appearance?.suppressed_states ?? [];
+
+  const toggleSuppression = (stateId: string) => {
+    const newSuppressed = suppressedStates.includes(stateId)
+      ? suppressedStates.filter((id) => id !== stateId)
+      : [...suppressedStates, stateId];
+    dispatch({
+      tag: "updateAppearance",
+      thingId,
+      opdId,
+      patch: { suppressed_states: newSuppressed.length > 0 ? newSuppressed : undefined },
+    });
+  };
 
   return (
     <div className="props-panel">
@@ -261,29 +298,113 @@ export function PropertiesPanel({ model, thingId, opdId, dispatch }: Props) {
             </button>
           </div>
           {states.map((s) => (
-            <StateRow key={s.id} state={s} dispatch={dispatch} />
+            <StateRow
+              key={s.id}
+              state={s}
+              dispatch={dispatch}
+              isSuppressed={suppressedStates.includes(s.id)}
+              onToggleSuppression={() => toggleSuppression(s.id)}
+            />
           ))}
         </div>
       )}
 
-      {/* Links summary */}
+      {/* Links — editable type, endpoints, states */}
       {links.length > 0 && (
         <div className="props-panel__section">
           <span className="props-panel__label">Links ({links.length})</span>
           {links.map((l) => {
-            const other = l.source === thingId ? l.target : l.source;
-            const otherName = model.things.get(other)?.name ?? other;
-            const dir = l.source === thingId ? "→" : "←";
+            const sourceThing = model.things.get(l.source);
+            const targetThing = model.things.get(l.target);
+            const sourceStates = sourceThing?.kind === "object" ? statesOf(model, l.source) : [];
+            const targetStates = targetThing?.kind === "object" ? statesOf(model, l.target) : [];
+            const allThings = [...model.things.values()];
+
             return (
-              <div key={l.id} className="props-panel__link-row">
-                <span className="props-panel__link-type">{l.type}</span>
-                <span>{dir} {otherName}</span>
-                <button
-                  className="props-panel__remove-btn"
-                  onClick={() => dispatch({ tag: "removeLink", linkId: l.id })}
-                >
-                  ×
-                </button>
+              <div key={l.id} style={{ padding: "4px 0", borderBottom: "1px solid var(--border)" }}>
+                <div className="props-panel__link-row">
+                  {/* Link type selector */}
+                  <select
+                    className="props-panel__select"
+                    style={{ fontSize: 10, minWidth: 80 }}
+                    value={l.type}
+                    onChange={(e) =>
+                      dispatch({ tag: "updateLink", linkId: l.id, patch: { type: e.target.value as LinkType } })
+                    }
+                  >
+                    {LINK_TYPES.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                  <button
+                    className="props-panel__remove-btn"
+                    onClick={() => dispatch({ tag: "removeLink", linkId: l.id })}
+                  >
+                    ×
+                  </button>
+                </div>
+                {/* Source selector */}
+                <div style={{ display: "flex", gap: 4, marginTop: 2, alignItems: "center" }}>
+                  <span style={{ fontSize: 9, color: "var(--text-muted)", minWidth: 20 }}>src</span>
+                  <select
+                    className="props-panel__select"
+                    style={{ flex: 1, fontSize: 10 }}
+                    value={l.source}
+                    onChange={(e) =>
+                      dispatch({ tag: "updateLink", linkId: l.id, patch: { source: e.target.value, source_state: undefined } })
+                    }
+                  >
+                    {allThings.map((t) => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                  {sourceStates.length > 0 && (
+                    <select
+                      className="props-panel__select"
+                      style={{ fontSize: 9, maxWidth: 70 }}
+                      value={l.source_state ?? ""}
+                      onChange={(e) =>
+                        dispatch({ tag: "updateLink", linkId: l.id, patch: { source_state: e.target.value || undefined } })
+                      }
+                    >
+                      <option value="">(any)</option>
+                      {sourceStates.map((s) => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+                {/* Target selector */}
+                <div style={{ display: "flex", gap: 4, marginTop: 2, alignItems: "center" }}>
+                  <span style={{ fontSize: 9, color: "var(--text-muted)", minWidth: 20 }}>tgt</span>
+                  <select
+                    className="props-panel__select"
+                    style={{ flex: 1, fontSize: 10 }}
+                    value={l.target}
+                    onChange={(e) =>
+                      dispatch({ tag: "updateLink", linkId: l.id, patch: { target: e.target.value, target_state: undefined } })
+                    }
+                  >
+                    {allThings.map((t) => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                  {targetStates.length > 0 && (
+                    <select
+                      className="props-panel__select"
+                      style={{ fontSize: 9, maxWidth: 70 }}
+                      value={l.target_state ?? ""}
+                      onChange={(e) =>
+                        dispatch({ tag: "updateLink", linkId: l.id, patch: { target_state: e.target.value || undefined } })
+                      }
+                    >
+                      <option value="">(any)</option>
+                      {targetStates.map((s) => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
               </div>
             );
           })}
