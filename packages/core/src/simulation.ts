@@ -243,9 +243,11 @@ export function resolveLinksForOpd(model: Model, opdId: string): ResolvedLink[] 
     if (!vs || !vt) continue;
     if (vs === vt) continue; // Skip self-loops from same-parent resolution
 
-    // Filter internal scheduling dependencies: enabling link whose required state
-    // is produced by a sibling subprocess (not an external precondition)
-    if (["agent", "instrument"].includes(link.type) && link.source_state) {
+    const isAggregated = vs !== link.source || vt !== link.target;
+
+    // Filter internal scheduling dependencies ONLY for aggregated links (projected to parent).
+    // Inside the in-zoom OPD, show all links including internal dependencies.
+    if (isAggregated && ["agent", "instrument"].includes(link.type) && link.source_state) {
       if (internallyProducedStates.has(link.source_state)) continue;
     }
 
@@ -257,7 +259,7 @@ export function resolveLinksForOpd(model: Model, opdId: string): ResolvedLink[] 
       link,
       visualSource: vs,
       visualTarget: vt,
-      aggregated: vs !== link.source || vt !== link.target,
+      aggregated: isAggregated,
     });
   }
 

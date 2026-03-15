@@ -636,12 +636,18 @@ describe("resolveLinksForOpd", () => {
     expect(groundLinks).toHaveLength(0);
   });
 
-  it("returns direct links inside in-zoom OPD (not aggregated)", () => {
+  it("returns direct links inside in-zoom OPD including instrument (not filtered)", () => {
     const m = loadCoffeeMakingModel();
     const resolved = resolveLinksForOpd(m, "opd-sd1");
     expect(resolved.length).toBeGreaterThan(0);
     const directLinks = resolved.filter(rl => !rl.aggregated);
     expect(directLinks.length).toBeGreaterThan(0);
+    // Instrument link Water[hot]→Brewing must appear in SD1 (not filtered — direct link)
+    const instrLinks = resolved.filter(rl => rl.link.type === "instrument");
+    expect(instrLinks).toHaveLength(1);
+    expect(instrLinks[0].visualSource).toBe("obj-water");
+    expect(instrLinks[0].visualTarget).toBe("proc-brewing");
+    expect(instrLinks[0].aggregated).toBe(false);
   });
 
   it("produces exactly 4 visible links in SD (instrument filtered as internal)", () => {
