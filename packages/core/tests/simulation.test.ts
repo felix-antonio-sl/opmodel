@@ -14,6 +14,7 @@ import {
   getPreprocessSet,
   getPostprocessSet,
   getExecutableProcesses,
+  resolveLinksForOpd,
 } from "../src/simulation";
 
 // === Helpers ===
@@ -586,5 +587,68 @@ describe("runSimulation — in-zoom expansion", () => {
     expect(coffeeState).toBeDefined();
     expect(coffeeState!.exists).toBe(true);
     expect(coffeeState!.currentState).toBe("state-coffee-ready");
+  });
+});
+
+// === resolveLinksForOpd ===
+
+describe("resolveLinksForOpd", () => {
+  it("returns direct links for flat model (no in-zoom)", () => {
+    const m = buildBoilingModel();
+    // buildBoilingModel has no appearances, so no links visible
+    const resolved = resolveLinksForOpd(m, "opd-sd");
+    expect(resolved).toHaveLength(0);
+  });
+
+  it("resolves subprocess endpoints to parent contour", () => {
+    const m = loadCoffeeMakingModel();
+    const resolved = resolveLinksForOpd(m, "opd-sd");
+    expect(resolved.length).toBeGreaterThan(0);
+    // No subprocess should appear as visual endpoint
+    for (const rl of resolved) {
+      expect(rl.visualSource).not.toBe("proc-grinding");
+      expect(rl.visualSource).not.toBe("proc-boiling");
+      expect(rl.visualSource).not.toBe("proc-brewing");
+      expect(rl.visualTarget).not.toBe("proc-grinding");
+      expect(rl.visualTarget).not.toBe("proc-boiling");
+      expect(rl.visualTarget).not.toBe("proc-brewing");
+    }
+    expect(resolved.every(rl => rl.aggregated)).toBe(true);
+  });
+
+  it("deduplicates agent links to same resolved endpoints", () => {
+    const m = loadCoffeeMakingModel();
+    const resolved = resolveLinksForOpd(m, "opd-sd");
+    const agentLinks = resolved.filter(rl => rl.link.type === "agent");
+    // 3 agent links (Barista→Grinding/Boiling/Brewing) dedup to 1
+    expect(agentLinks).toHaveLength(1);
+    expect(agentLinks[0].visualSource).toBe("obj-barista");
+    expect(agentLinks[0].visualTarget).toBe("proc-coffee-making");
+  });
+
+  it("skips links with non-resolvable endpoints (internal objects)", () => {
+    const m = loadCoffeeMakingModel();
+    const resolved = resolveLinksForOpd(m, "opd-sd");
+    // Ground Coffee has no appearance in SD — links touching it are skipped
+    const groundLinks = resolved.filter(rl =>
+      rl.link.source === "obj-ground-coffee" || rl.link.target === "obj-ground-coffee"
+    );
+    expect(groundLinks).toHaveLength(0);
+  });
+
+  it("returns direct links inside in-zoom OPD (not aggregated)", () => {
+    const m = loadCoffeeMakingModel();
+    const resolved = resolveLinksForOpd(m, "opd-sd1");
+    expect(resolved.length).toBeGreaterThan(0);
+    const directLinks = resolved.filter(rl => !rl.aggregated);
+    expect(directLinks.length).toBeGreaterThan(0);
+  });
+
+  it("produces exactly 5 visible links in SD for Coffee Making", () => {
+    const m = loadCoffeeMakingModel();
+    const resolved = resolveLinksForOpd(m, "opd-sd");
+    expect(resolved).toHaveLength(5);
+    const types = resolved.map(rl => rl.link.type).sort();
+    expect(types).toEqual(["agent", "consumption", "effect", "instrument", "result"]);
   });
 });
