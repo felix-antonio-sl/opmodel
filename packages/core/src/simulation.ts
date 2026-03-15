@@ -397,6 +397,10 @@ export function runSimulation(
   // Expand in-zoomed processes into executable leaves (ISO §14.2.1)
   const executableProcesses = getExecutableProcesses(model);
 
+  // Track completed processes — a process executes at most once per simulation
+  // (re-activation requires invocation link, not yet implemented — SIM-BUG-02)
+  const completedProcesses = new Set<string>();
+
   for (let i = 0; i < maxSteps; i++) {
     let executed = false;
 
@@ -421,6 +425,7 @@ export function runSimulation(
           }
           steps.push(stepResult);
           currentState = stepResult.newState;
+          completedProcesses.add(waitingId); // Mark unblocked process as completed
           executed = true;
           break;
         }
@@ -432,6 +437,7 @@ export function runSimulation(
     // 2. Evaluar procesos ejecutables (con in-zoom expansion)
     for (const ep of executableProcesses) {
       if (currentState.waitingProcesses.has(ep.id)) continue;
+      if (completedProcesses.has(ep.id)) continue; // SIM-BUG-01: don't re-execute
       const event: SimulationEvent = { kind: "manual", targetId: ep.id };
       const stepResult = simulationStep(model, currentState, event);
 
@@ -443,6 +449,7 @@ export function runSimulation(
         }
         steps.push(stepResult);
         currentState = stepResult.newState;
+        completedProcesses.add(ep.id); // Mark as completed
         executed = true;
         break;
       } else if (stepResult.processId && stepResult.newState.waitingProcesses.has(stepResult.processId)) {

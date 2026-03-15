@@ -277,6 +277,19 @@ describe("runSimulation", () => {
     const trace = runSimulation(m, undefined, 5);
     expect(trace.steps.length).toBeLessThanOrEqual(5);
   });
+
+  it("does not re-execute a completed process (SIM-BUG-01)", () => {
+    // Process without preconditions should execute exactly once, not loop
+    let m = createModel("BugRepro");
+    m = (addThing(m, proc("proc-a", "Alpha")) as any).value;
+    m = (addThing(m, obj("obj-x", "X")) as any).value;
+    m = (addLink(m, { id: "lnk-r", type: "result", source: "proc-a", target: "obj-x" }) as any).value;
+
+    const trace = runSimulation(m, undefined, 20);
+    const alphaSteps = trace.steps.filter(s => s.processId === "proc-a");
+    expect(alphaSteps).toHaveLength(1); // exactly once, not 20 times
+    expect(trace.completed).toBe(true);
+  });
 });
 
 // === evaluatePrecondition — trivalent response (C2) ===
