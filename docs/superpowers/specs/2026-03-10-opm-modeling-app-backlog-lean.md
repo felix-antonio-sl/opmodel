@@ -488,6 +488,10 @@ Como modelador, quiero hacer in-zoom a un proceso para crear un OPD descendiente
 
 - **ISO §10.5.2 — Distribución de links al crear in-zoom:** Los links procedurales del proceso padre se MUEVEN a los subprocesos (consumption al primero, result al último, agent/instrument/effect a todos). El proceso padre queda con 0 links procedurales. I-17 se exime para procesos in-zoomed (la transformación se satisface transitivamente via la fibración).
 
+- **I-SD-INTERFACE — SD muestra solo interfaz externa:** ISO §14.2.2.6.1.3: el SD contiene un único proceso sistémico que representa la función que entrega valor a stakeholders. Los links visibles en el SD son la interfaz EXTERNA del proceso (qué entra, qué sale, quién opera). Objetos que son mecanismos internos (ej: Water en Coffee Making — se calienta como parte del proceso, no es output observable) NO deben tener appearance en el SD. Pertenecen al OPD in-zoom donde el mecanismo es visible.
+
+- **I-INTERNAL-DEP-FILTER — Filtro de dependencias internas en resolveLinksForOpd:** Un enabling link (agent/instrument) con `source_state` es una dependencia interna si ese estado es el `target_state` de un effect/result de un subproceso hermano. Estas dependencias se filtran del pullback π* (no se proyectan al padre) pero SÍ se muestran dentro del OPD in-zoom.
+
 **Dependencias:** L-M1-02, L-M1-03
 
 ---
