@@ -1360,7 +1360,7 @@ export function validate(model: Model): InvariantError[] {
   }
 
   // I-17: Process must have at least one transformation link (no orphan processes)
-  // Exempt in-zoomed processes: their transformation is delegated to subprocesses (ISO §10.5.2)
+  // Exempt in-zoomed processes: their transformation is delegated to subprocesses (ISO §14.2.2.4.1)
   const inZoomedProcessIds = new Set(
     [...model.opds.values()]
       .filter(o => o.refines && o.refinement_type === "in-zoom")

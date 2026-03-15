@@ -350,9 +350,10 @@ export function simulationStep(
       }
     }
 
-    // Effect: cambio de estado
+    // Effect: cambio de estado — bidirectional per ISO, detect object by kind
     if (link.type === "effect") {
-      const objId = link.target;
+      const srcThing = model.things.get(link.source);
+      const objId = srcThing?.kind === "object" ? link.source : link.target;
       const obj = step.newState.objects.get(objId);
       if (obj && link.target_state) {
         const fromState = obj.currentState;
