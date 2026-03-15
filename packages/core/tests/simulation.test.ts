@@ -563,4 +563,15 @@ describe("runSimulation — in-zoom expansion", () => {
     expect(trace.steps[0].processId).toBe("proc-boil");
     expect(trace.steps[0].parentProcessId).toBeUndefined();
   });
+
+  it("Brewing transitions Coffee to ready state (Bug C fix)", () => {
+    const model = loadCoffeeMakingModel();
+    const trace = runSimulation(model);
+
+    // After complete simulation, Coffee must be in "ready" state
+    const coffeeState = trace.finalState.objects.get("obj-coffee");
+    expect(coffeeState).toBeDefined();
+    expect(coffeeState!.exists).toBe(true);
+    expect(coffeeState!.currentState).toBe("state-coffee-ready");
+  });
 });
