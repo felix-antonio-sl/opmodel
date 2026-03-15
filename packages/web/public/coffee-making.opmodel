@@ -50,7 +50,6 @@
     {"h": 50, "opd": "opd-sd", "thing": "obj-barista", "w": 120, "x": 50, "y": 50},
     {"h": 50, "opd": "opd-sd", "thing": "obj-coffee", "w": 120, "x": 500, "y": 200},
     {"h": 50, "opd": "opd-sd", "thing": "obj-coffee-beans", "w": 140, "x": 50, "y": 200},
-    {"h": 50, "opd": "opd-sd", "thing": "obj-water", "w": 120, "x": 50, "y": 350},
     {"h": 80, "opd": "opd-sd", "thing": "proc-coffee-making", "w": 180, "x": 280, "y": 180},
     {"h": 400, "internal": true, "opd": "opd-sd1", "thing": "proc-coffee-making", "w": 300, "x": 200, "y": 0},
     {"h": 60, "internal": true, "opd": "opd-sd1", "thing": "proc-grinding", "w": 140, "x": 250, "y": 80},

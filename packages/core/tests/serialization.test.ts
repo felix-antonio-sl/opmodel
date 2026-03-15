@@ -101,7 +101,7 @@ describe("loadModel", () => {
     expect(model.opds.size).toBe(2);
     expect(model.links.size).toBe(9);
     expect(model.modifiers.size).toBe(0);
-    expect(model.appearances.size).toBe(14);
+    expect(model.appearances.size).toBe(13);
     expect(model.assertions.size).toBe(1);
   });
 
@@ -123,9 +123,9 @@ describe("loadModel", () => {
     );
     const result = loadModel(json);
     if (!isOk(result)) return;
-    const app = result.value.appearances.get("obj-water::opd-sd");
+    const app = result.value.appearances.get("obj-water::opd-sd1");
     expect(app).toBeDefined();
-    expect(app?.x).toBe(50);
+    expect(app?.x).toBe(80);
   });
 
   it("rejects invalid JSON", () => {

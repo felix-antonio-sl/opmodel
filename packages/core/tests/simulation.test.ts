@@ -650,12 +650,14 @@ describe("resolveLinksForOpd", () => {
     expect(instrLinks[0].aggregated).toBe(false);
   });
 
-  it("produces exactly 4 visible links in SD (instrument filtered as internal)", () => {
+  it("produces exactly 3 visible links in SD (external interface only)", () => {
     const m = loadCoffeeMakingModel();
     const resolved = resolveLinksForOpd(m, "opd-sd");
-    // instrument Water[hot]→Brewing filtered: state-water-hot is produced internally by Boiling
-    expect(resolved).toHaveLength(4);
+    // SD shows only external interface: agent + consumption + result
+    // Water has no appearance in SD (internal mechanism), so effect is not visible
+    // instrument Water[hot]→Brewing also not visible (no Water appearance + internal dep)
+    expect(resolved).toHaveLength(3);
     const types = resolved.map(rl => rl.link.type).sort();
-    expect(types).toEqual(["agent", "consumption", "effect", "result"]);
+    expect(types).toEqual(["agent", "consumption", "result"]);
   });
 });
