@@ -2,8 +2,8 @@
   "opmodel": "1.1.0",
   "meta": {
     "created": "2026-03-10T15:30:00Z",
-    "description": "Sistema de preparación de café — SD con wizard artificial",
-    "modified": "2026-03-14T12:00:00Z",
+    "description": "Coffee Making System — in-zoom decomposition with structural causal dependencies",
+    "modified": "2026-03-14T23:00:00Z",
     "name": "Coffee Making System",
     "system_type": "artificial"
   },
@@ -41,11 +41,11 @@
     {"id": "lnk-grinding-consumes-beans", "source": "obj-coffee-beans", "target": "proc-grinding", "type": "consumption"},
     {"id": "lnk-grinding-yields-ground", "source": "proc-grinding", "target": "obj-ground-coffee", "type": "result"},
     {"id": "lnk-boiling-effects-water", "source": "proc-boiling", "source_state": "state-water-cold", "target": "obj-water", "target_state": "state-water-hot", "type": "effect"},
+    {"id": "lnk-water-instrument-brewing", "source": "obj-water", "source_state": "state-water-hot", "target": "proc-brewing", "type": "instrument"},
     {"id": "lnk-brewing-consumes-ground", "source": "obj-ground-coffee", "target": "proc-brewing", "type": "consumption"},
     {"id": "lnk-brewing-yields-coffee", "source": "proc-brewing", "target": "obj-coffee", "target_state": "state-coffee-ready", "type": "result"}
   ],
-  "modifiers": [
-  ],
+  "modifiers": [],
   "appearances": [
     {"h": 50, "opd": "opd-sd", "thing": "obj-barista", "w": 120, "x": 50, "y": 50},
     {"h": 50, "opd": "opd-sd", "thing": "obj-coffee", "w": 120, "x": 500, "y": 200},
@@ -60,7 +60,7 @@
     {"h": 50, "internal": false, "opd": "opd-sd1", "thing": "obj-coffee-beans", "w": 120, "x": 80, "y": 50},
     {"h": 50, "internal": false, "opd": "opd-sd1", "thing": "obj-barista", "w": 100, "x": 450, "y": 150},
     {"h": 50, "internal": false, "opd": "opd-sd1", "thing": "obj-coffee", "w": 120, "x": 80, "y": 310},
-    {"h": 50, "internal": false, "opd": "opd-sd1", "thing": "obj-water", "w": 120, "x": 50, "y": 100}
+    {"h": 50, "internal": false, "opd": "opd-sd1", "thing": "obj-water", "w": 120, "x": 80, "y": 210}
   ],
   "fans": [],
   "scenarios": [],

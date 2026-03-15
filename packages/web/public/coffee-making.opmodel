@@ -2,8 +2,8 @@
   "opmodel": "1.1.0",
   "meta": {
     "created": "2026-03-10T15:30:00Z",
-    "description": "Sistema de preparación de café — SD con wizard artificial",
-    "modified": "2026-03-14T12:00:00Z",
+    "description": "Coffee Making System — in-zoom decomposition with structural causal dependencies",
+    "modified": "2026-03-14T23:00:00Z",
     "name": "Coffee Making System",
     "system_type": "artificial"
   },
@@ -35,22 +35,17 @@
     {"id": "opd-sd1", "name": "SD1", "opd_type": "hierarchical", "parent_opd": "opd-sd", "refines": "proc-coffee-making", "refinement_type": "in-zoom"}
   ],
   "links": [
-    {"id": "lnk-barista-agent-coffee-making", "source": "obj-barista", "target": "proc-coffee-making", "type": "agent"},
     {"id": "lnk-barista-agent-grinding", "source": "obj-barista", "target": "proc-grinding", "type": "agent"},
     {"id": "lnk-barista-agent-boiling", "source": "obj-barista", "target": "proc-boiling", "type": "agent"},
     {"id": "lnk-barista-agent-brewing", "source": "obj-barista", "target": "proc-brewing", "type": "agent"},
-    {"id": "lnk-coffee-making-consumption-beans", "source": "obj-coffee-beans", "target": "proc-coffee-making", "type": "consumption"},
-    {"id": "lnk-coffee-making-effect-water", "source": "proc-coffee-making", "source_state": "state-water-cold", "target": "obj-water", "target_state": "state-water-hot", "type": "effect"},
-    {"id": "lnk-coffee-making-result-coffee", "source": "proc-coffee-making", "target": "obj-coffee", "type": "result"},
     {"id": "lnk-grinding-consumes-beans", "source": "obj-coffee-beans", "target": "proc-grinding", "type": "consumption"},
     {"id": "lnk-grinding-yields-ground", "source": "proc-grinding", "target": "obj-ground-coffee", "type": "result"},
     {"id": "lnk-boiling-effects-water", "source": "proc-boiling", "source_state": "state-water-cold", "target": "obj-water", "target_state": "state-water-hot", "type": "effect"},
+    {"id": "lnk-water-instrument-brewing", "source": "obj-water", "source_state": "state-water-hot", "target": "proc-brewing", "type": "instrument"},
     {"id": "lnk-brewing-consumes-ground", "source": "obj-ground-coffee", "target": "proc-brewing", "type": "consumption"},
-    {"id": "lnk-brewing-yields-coffee", "source": "proc-brewing", "target": "obj-coffee", "type": "result"}
+    {"id": "lnk-brewing-yields-coffee", "source": "proc-brewing", "target": "obj-coffee", "target_state": "state-coffee-ready", "type": "result"}
   ],
-  "modifiers": [
-    {"id": "mod-water-event", "over": "lnk-coffee-making-effect-water", "type": "event"}
-  ],
+  "modifiers": [],
   "appearances": [
     {"h": 50, "opd": "opd-sd", "thing": "obj-barista", "w": 120, "x": 50, "y": 50},
     {"h": 50, "opd": "opd-sd", "thing": "obj-coffee", "w": 120, "x": 500, "y": 200},
@@ -65,7 +60,7 @@
     {"h": 50, "internal": false, "opd": "opd-sd1", "thing": "obj-coffee-beans", "w": 120, "x": 80, "y": 50},
     {"h": 50, "internal": false, "opd": "opd-sd1", "thing": "obj-barista", "w": 100, "x": 450, "y": 150},
     {"h": 50, "internal": false, "opd": "opd-sd1", "thing": "obj-coffee", "w": 120, "x": 80, "y": 310},
-    {"h": 50, "internal": false, "opd": "opd-sd1", "thing": "obj-water", "w": 120, "x": 50, "y": 100}
+    {"h": 50, "internal": false, "opd": "opd-sd1", "thing": "obj-water", "w": 120, "x": 80, "y": 210}
   ],
   "fans": [],
   "scenarios": [],
