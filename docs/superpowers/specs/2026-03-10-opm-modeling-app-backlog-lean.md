@@ -490,7 +490,9 @@ Como modelador, quiero hacer in-zoom a un proceso para crear un OPD descendiente
 
 - **I-SD-INTERFACE — SD muestra solo interfaz externa:** ISO §14.2.2.6.1.3: el SD contiene un único proceso sistémico que representa la función que entrega valor a stakeholders. Los links visibles en el SD son la interfaz EXTERNA del proceso (qué entra, qué sale, quién opera). Objetos que son mecanismos internos (ej: Water en Coffee Making — se calienta como parte del proceso, no es output observable) NO deben tener appearance en el SD. Pertenecen al OPD in-zoom donde el mecanismo es visible.
 
-- **I-INTERNAL-DEP-FILTER — Filtro de dependencias internas en resolveLinksForOpd:** Un enabling link (agent/instrument) con `source_state` es una dependencia interna si ese estado es el `target_state` de un effect/result de un subproceso hermano. Estas dependencias se filtran del pullback π* (no se proyectan al padre) pero SÍ se muestran dentro del OPD in-zoom.
+- **I-INTERNAL-DEP-FILTER — Filtro de dependencias internas en resolveLinksForOpd:** Un enabling link (agent/instrument) con `source_state` es una dependencia interna si ese estado es el `target_state` de un effect/result de un subproceso hermano. Un effect link sobre un objeto que es consumido por un subproceso hermano es una preparación interna. Estas dependencias se filtran del pullback π* (no se proyectan al padre) pero SÍ se muestran dentro del OPD in-zoom.
+
+- **I-STATE-EXPRESSION-SUPPRESSION — Coherencia de facts entre OPDs (ISO §14.2.1.1 + §14.2.3):** No hay dos facts — hay un fact visto a dos niveles de detalle. Un link state-specified (ej: `consumption Water[hot]`) se muestra en el OPD in-zoom con calificación de estado (state expression). En el OPD padre, el mismo link se muestra sin calificación (state suppression) porque los estados del objeto están suprimidos en ese contexto. La ISO §14.2.3 permite explícitamente que un fact en un OPD sea refinamiento o abstracción de un fact en otro OPD. Corrección por construcción via state expression/suppression.
 
 **Dependencias:** L-M1-02, L-M1-03
 
