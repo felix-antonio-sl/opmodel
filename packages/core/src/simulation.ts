@@ -6,6 +6,9 @@ import type { Model, Thing, State, Link, Modifier, OPD } from "./types";
 import type { InvariantError, Result } from "./result";
 import { ok, err } from "./result";
 
+/** Maximum self-invocation repetitions per process before stopping (ISO §9.5.2.5.2) */
+export const MAX_SELF_INVOCATIONS = 10;
+
 // === Tipos Coalgebraicos ===
 
 /** Estado de un objeto individual durante simulación */
@@ -49,6 +52,7 @@ export interface SimulationStep {
   newState: ModelState;
   parentProcessId?: string;   // Present when executing a subprocess (in-zoom)
   opdContext?: string;         // OPD ID where subprocess lives
+  invokedBy?: string;          // Process that triggered this via invocation link (ISO §9.5.2.5.1)
 }
 
 /** Traza coinductiva de simulación */
@@ -517,17 +521,54 @@ export function runSimulation(
   const executableProcesses = getExecutableProcesses(model);
 
   // Track completed processes — a process executes at most once per simulation
-  // (re-activation requires invocation link, not yet implemented — SIM-BUG-02)
+  // (re-activation via invocation link — ISO §9.5.2.5.1)
   const completedProcesses = new Set<string>();
+  const selfInvocationCount = new Map<string, number>();
+  const pendingInvocations = new Map<string, string>(); // targetId → sourceId (who invoked it)
+
+  /** Phase 3: process invocation links from a just-completed process */
+  function processInvocations(justCompleted: string): void {
+    for (const link of model.links.values()) {
+      if (link.type !== "invocation" || link.source !== justCompleted) continue;
+      const targetId = link.target;
+      const isSelf = targetId === justCompleted;
+
+      // Self-invocation guard (Approach A)
+      if (isSelf) {
+        const count = selfInvocationCount.get(targetId) ?? 0;
+        if (count >= MAX_SELF_INVOCATIONS) continue;
+        selfInvocationCount.set(targetId, count + 1);
+      } else {
+        // Reset self-invocation counter when invoked by another process
+        selfInvocationCount.delete(targetId);
+      }
+
+      // Re-enable target (override SIM-BUG-01 guard for invoked processes)
+      completedProcesses.delete(targetId);
+      pendingInvocations.set(targetId, justCompleted);
+    }
+  }
+
+  /** Enrich step with invocation and in-zoom context */
+  function enrichStep(stepResult: SimulationStep, processId: string): void {
+    const ep = executableProcesses.find(p => p.id === processId);
+    if (ep?.parentProcessId) {
+      stepResult.parentProcessId = ep.parentProcessId;
+      stepResult.opdContext = ep.opdId;
+    }
+    if (pendingInvocations.has(processId)) {
+      stepResult.invokedBy = pendingInvocations.get(processId);
+      pendingInvocations.delete(processId);
+    }
+  }
 
   for (let i = 0; i < maxSteps; i++) {
     let executed = false;
 
-    // 1. Re-evaluar procesos en espera primero
+    // Phase 1: Re-evaluar procesos en espera primero
     for (const waitingId of [...currentState.waitingProcesses]) {
       const precond = evaluatePrecondition(model, currentState, waitingId);
       if (precond.satisfied) {
-        // Crear nuevo estado sin este proceso en waitingProcesses (inmutable)
         const unblocked: ModelState = {
           ...currentState,
           objects: new Map(currentState.objects),
@@ -536,15 +577,11 @@ export function runSimulation(
         const event: SimulationEvent = { kind: "manual", targetId: waitingId };
         const stepResult = simulationStep(model, unblocked, event);
         if (!stepResult.skipped) {
-          // Enrich with in-zoom context from executable list
-          const ep = executableProcesses.find(p => p.id === waitingId);
-          if (ep?.parentProcessId) {
-            stepResult.parentProcessId = ep.parentProcessId;
-            stepResult.opdContext = ep.opdId;
-          }
+          enrichStep(stepResult, waitingId);
           steps.push(stepResult);
           currentState = stepResult.newState;
-          completedProcesses.add(waitingId); // Mark unblocked process as completed
+          completedProcesses.add(waitingId);
+          processInvocations(waitingId);
           executed = true;
           break;
         }
@@ -553,32 +590,27 @@ export function runSimulation(
 
     if (executed) continue;
 
-    // 2. Evaluar procesos ejecutables (con in-zoom expansion)
+    // Phase 2: Evaluar procesos ejecutables (con in-zoom expansion)
     for (const ep of executableProcesses) {
       if (currentState.waitingProcesses.has(ep.id)) continue;
-      if (completedProcesses.has(ep.id)) continue; // SIM-BUG-01: don't re-execute
+      if (completedProcesses.has(ep.id)) continue;
       const event: SimulationEvent = { kind: "manual", targetId: ep.id };
       const stepResult = simulationStep(model, currentState, event);
 
       if (!stepResult.skipped) {
-        // Enrich step with in-zoom context
-        if (ep.parentProcessId) {
-          stepResult.parentProcessId = ep.parentProcessId;
-          stepResult.opdContext = ep.opdId;
-        }
+        enrichStep(stepResult, ep.id);
         steps.push(stepResult);
         currentState = stepResult.newState;
-        completedProcesses.add(ep.id); // Mark as completed
+        completedProcesses.add(ep.id);
+        processInvocations(ep.id);
         executed = true;
         break;
       } else if (stepResult.processId && stepResult.newState.waitingProcesses.has(stepResult.processId)) {
-        // Proceso fue añadido a waiting por simulationStep — propagar el nuevo estado
         currentState = stepResult.newState;
       }
     }
 
     if (!executed) {
-      // Deadlock: waiting processes exist but none can execute
       if (currentState.waitingProcesses.size > 0) {
         return { steps, finalState: currentState, completed: false, deadlocked: true };
       }

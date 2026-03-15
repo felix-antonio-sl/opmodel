@@ -661,3 +661,106 @@ describe("resolveLinksForOpd", () => {
     expect(types).toEqual(["agent", "consumption", "consumption", "instrument", "result"]);
   });
 });
+
+// === Invocation Links (SIM-BUG-02) ===
+
+/**
+ * Build model: Grinding -[invocation]-> Brewing
+ * Ground Coffee has states raw (initial) → ready.
+ * Grinding effects Ground Coffee from raw→ready.
+ * Brewing consumes Ground Coffee at state "ready" (state-specified).
+ * This ensures Brewing can ONLY run after Grinding changes the state.
+ */
+function buildInvocationModel(): Model {
+  let m = createModel("Test");
+  m = (addThing(m, obj("obj-ground", "Ground Coffee")) as any).value;
+  m = (addThing(m, obj("obj-coffee", "Coffee")) as any).value;
+  m = (addThing(m, proc("proc-grind", "Grinding")) as any).value;
+  m = (addThing(m, proc("proc-brew", "Brewing")) as any).value;
+  m = (addState(m, { id: "st-raw", parent: "obj-ground", name: "raw", initial: true, final: false, default: true }) as any).value;
+  m = (addState(m, { id: "st-ready", parent: "obj-ground", name: "ready", initial: false, final: false, default: false }) as any).value;
+  // Grinding effects Ground Coffee: raw → ready
+  m = (addLink(m, { id: "lnk-eff", type: "effect", source: "proc-grind", target: "obj-ground", source_state: "st-raw", target_state: "st-ready" }) as any).value;
+  // Brewing consumes Ground Coffee at state "ready" (state-specified)
+  m = (addLink(m, { id: "lnk-con", type: "consumption", source: "obj-ground", target: "proc-brew", source_state: "st-ready" }) as any).value;
+  // Brewing yields Coffee
+  m = (addLink(m, { id: "lnk-res", type: "result", source: "proc-brew", target: "obj-coffee" }) as any).value;
+  // Invocation: Grinding invokes Brewing
+  m = (addLink(m, { id: "lnk-invoke", type: "invocation", source: "proc-grind", target: "proc-brew" }) as any).value;
+  return m;
+}
+
+describe("invocation links (SIM-BUG-02)", () => {
+  it("triggers destination process when source completes", () => {
+    const m = buildInvocationModel();
+    const trace = runSimulation(m);
+    expect(trace.steps.length).toBeGreaterThanOrEqual(2);
+    const grindStep = trace.steps.find(s => s.processName === "Grinding" && !s.skipped);
+    const brewStep = trace.steps.find(s => s.processName === "Brewing" && !s.skipped);
+    expect(grindStep).toBeDefined();
+    expect(brewStep).toBeDefined();
+    expect(brewStep!.invokedBy).toBe("proc-grind");
+    expect(trace.finalState.objects.get("obj-coffee")?.exists).toBe(true);
+  });
+
+  it("self-invocation loops until MAX_SELF_INVOCATIONS", () => {
+    let m = createModel("Test");
+    m = (addThing(m, proc("proc-loop", "Looper")) as any).value;
+    m = (addLink(m, { id: "lnk-self", type: "invocation", source: "proc-loop", target: "proc-loop" }) as any).value;
+    const trace = runSimulation(m);
+    const loopSteps = trace.steps.filter(s => s.processId === "proc-loop" && !s.skipped);
+    // 1 initial + 10 self-invocations = 11
+    expect(loopSteps.length).toBe(11);
+    expect(trace.completed).toBe(true);
+    expect(trace.deadlocked).toBe(false);
+  });
+
+  it("self-invocation stops when precondition fails (Approach C)", () => {
+    let m = createModel("Test");
+    m = (addThing(m, obj("obj-fuel", "Fuel")) as any).value;
+    m = (addThing(m, proc("proc-burn", "Burning")) as any).value;
+    m = (addLink(m, { id: "lnk-con", type: "consumption", source: "obj-fuel", target: "proc-burn" }) as any).value;
+    m = (addLink(m, { id: "lnk-self", type: "invocation", source: "proc-burn", target: "proc-burn" }) as any).value;
+    const trace = runSimulation(m);
+    const burnSteps = trace.steps.filter(s => s.processId === "proc-burn" && !s.skipped);
+    expect(burnSteps.length).toBe(1);
+    expect(trace.finalState.objects.get("obj-fuel")?.exists).toBe(false);
+  });
+
+  it("invocation chain A→B→C executes sequentially", () => {
+    let m = createModel("Test");
+    m = (addThing(m, proc("proc-a", "Step A")) as any).value;
+    m = (addThing(m, proc("proc-b", "Step B")) as any).value;
+    m = (addThing(m, proc("proc-c", "Step C")) as any).value;
+    m = (addLink(m, { id: "lnk-ab", type: "invocation", source: "proc-a", target: "proc-b" }) as any).value;
+    m = (addLink(m, { id: "lnk-bc", type: "invocation", source: "proc-b", target: "proc-c" }) as any).value;
+    const trace = runSimulation(m);
+    expect(trace.steps.length).toBeGreaterThanOrEqual(3);
+    const names = trace.steps.filter(s => !s.skipped).map(s => s.processName);
+    expect(names).toEqual(["Step A", "Step B", "Step C"]);
+    expect(trace.steps[1].invokedBy).toBe("proc-a");
+    expect(trace.steps[2].invokedBy).toBe("proc-b");
+  });
+
+  it("invoked process with unsatisfied precondition goes to waiting", () => {
+    // A invokes B, B needs consumed object → B goes to waiting then deadlocks
+    let m = createModel("Test");
+    m = (addThing(m, obj("obj-fuel", "Fuel")) as any).value;
+    m = (addThing(m, proc("proc-a", "Step A")) as any).value;
+    m = (addThing(m, proc("proc-b", "Step B")) as any).value;
+    // A consumes fuel
+    m = (addLink(m, { id: "lnk-con-a", type: "consumption", source: "obj-fuel", target: "proc-a" }) as any).value;
+    // B also needs fuel (condition wait)
+    m = (addLink(m, { id: "lnk-con-b", type: "consumption", source: "obj-fuel", target: "proc-b" }) as any).value;
+    m = (addModifier(m, { id: "mod-cond", over: "lnk-con-b", type: "condition", condition_mode: "wait" }) as any).value;
+    // A invokes B
+    m = (addLink(m, { id: "lnk-invoke", type: "invocation", source: "proc-a", target: "proc-b" }) as any).value;
+    const trace = runSimulation(m);
+    // A executes (consumes fuel), B is invoked but fuel gone → B waits → deadlock
+    const aStep = trace.steps.find(s => s.processName === "Step A" && !s.skipped);
+    expect(aStep).toBeDefined();
+    const bExecuted = trace.steps.filter(s => s.processName === "Step B" && !s.skipped);
+    expect(bExecuted.length).toBe(0);
+    expect(trace.deadlocked).toBe(true);
+  });
+});
