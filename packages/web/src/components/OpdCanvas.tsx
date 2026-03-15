@@ -507,6 +507,27 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
   const [dragDelta, setDragDelta] = useState<Point>({ x: 0, y: 0 });
   const [dragOrigin, setDragOrigin] = useState<Point>({ x: 0, y: 0 });
 
+  // Container drag coupling: when dragging the container of an in-zoom OPD,
+  // all internal things move together (ISO: container encapsulates contents).
+  const containerThingId = useMemo(() => {
+    const opd = model.opds.get(opdId);
+    return opd?.refines ?? null;
+  }, [model, opdId]);
+
+  // Set of things that move during drag (container + all siblings, or just the single thing)
+  const draggedThings = useMemo(() => {
+    if (!dragTarget) return new Set<string>();
+    if (dragTarget === containerThingId) {
+      // Container drag: move all things in this OPD
+      const set = new Set<string>();
+      for (const app of model.appearances.values()) {
+        if (app.opd === opdId) set.add(app.thing);
+      }
+      return set;
+    }
+    return new Set([dragTarget]);
+  }, [dragTarget, containerThingId, model, opdId]);
+
   // Inline rename state
   const [renaming, setRenaming] = useState<string | null>(null);
 
@@ -598,23 +619,31 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
 
   const onMouseUp = useCallback(() => {
     if (dragTarget) {
-      // Commit drag as a single model mutation
-      const app = appearances.get(dragTarget);
-      if (app && (Math.abs(dragDelta.x) > 1 || Math.abs(dragDelta.y) > 1)) {
-        dispatch({
-          tag: "moveThing",
-          thingId: dragTarget,
-          opdId,
-          x: Math.round(app.x + dragDelta.x),
-          y: Math.round(app.y + dragDelta.y),
-        });
+      if (Math.abs(dragDelta.x) > 1 || Math.abs(dragDelta.y) > 1) {
+        if (draggedThings.size > 1) {
+          // Container drag: batch-move all things in the OPD
+          const moves: Array<{ thingId: string; opdId: string; x: number; y: number }> = [];
+          for (const thingId of draggedThings) {
+            const app = appearances.get(thingId);
+            if (app) {
+              moves.push({ thingId, opdId, x: Math.round(app.x + dragDelta.x), y: Math.round(app.y + dragDelta.y) });
+            }
+          }
+          if (moves.length > 0) dispatch({ tag: "moveThings", moves });
+        } else {
+          // Single thing drag
+          const app = appearances.get(dragTarget);
+          if (app) {
+            dispatch({ tag: "moveThing", thingId: dragTarget, opdId, x: Math.round(app.x + dragDelta.x), y: Math.round(app.y + dragDelta.y) });
+          }
+        }
       }
       setDragTarget(null);
       setDragDelta({ x: 0, y: 0 });
       return;
     }
     setPanning(false);
-  }, [dragTarget, dragDelta, appearances, opdId, dispatch]);
+  }, [dragTarget, dragDelta, draggedThings, appearances, opdId, dispatch]);
 
   const onWheel = useCallback(
     (e: React.WheelEvent) => {
@@ -696,8 +725,8 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
       const app = appearances.get(thingId);
       if (!app) return null;
       const states = statesForThing(model, thingId);
-      const ox = dragTarget === thingId ? dragDelta.x : 0;
-      const oy = dragTarget === thingId ? dragDelta.y : 0;
+      const ox = draggedThings.has(thingId) ? dragDelta.x : 0;
+      const oy = draggedThings.has(thingId) ? dragDelta.y : 0;
       return {
         x: app.x + ox,
         y: app.y + oy,
@@ -705,7 +734,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
         h: app.h + (states.length > 0 ? 24 : 0),
       };
     },
-    [appearances, model, dragTarget, dragDelta],
+    [appearances, model, draggedThings, dragDelta],
   );
 
   // Cursor
@@ -798,8 +827,8 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
               if (link.source_state) {
                 const srcApp = appearances.get(visualSource);
                 if (srcApp) {
-                  const ox = dragTarget === visualSource ? dragDelta.x : 0;
-                  const oy = dragTarget === visualSource ? dragDelta.y : 0;
+                  const ox = draggedThings.has(visualSource) ? dragDelta.x : 0;
+                  const oy = draggedThings.has(visualSource) ? dragDelta.y : 0;
                   const adj = { x: srcApp.x + ox, y: srcApp.y + oy, w: srcApp.w, h: srcApp.h };
                   const allSrcStates = statesForThing(model, visualSource);
                   const visSrcStates = srcApp.suppressed_states
@@ -812,8 +841,8 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
               if (link.target_state) {
                 const tgtApp = appearances.get(visualTarget);
                 if (tgtApp) {
-                  const ox = dragTarget === visualTarget ? dragDelta.x : 0;
-                  const oy = dragTarget === visualTarget ? dragDelta.y : 0;
+                  const ox = draggedThings.has(visualTarget) ? dragDelta.x : 0;
+                  const oy = draggedThings.has(visualTarget) ? dragDelta.y : 0;
                   const adj = { x: tgtApp.x + ox, y: tgtApp.y + oy, w: tgtApp.w, h: tgtApp.h };
                   const allTgtStates = statesForThing(model, visualTarget);
                   const visTgtStates = tgtApp.suppressed_states
@@ -870,7 +899,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
             const states = app.suppressed_states
               ? allStates.filter(s => !app.suppressed_states!.includes(s.id))
               : allStates;
-            const isDragging = dragTarget === thingId;
+            const isDragging = draggedThings.has(thingId);
             const isLinkSource = linkSource === thingId;
             const isAppExternal = app.internal === false;
             const isAppContainer = app.internal === true && opd?.refines === thingId;

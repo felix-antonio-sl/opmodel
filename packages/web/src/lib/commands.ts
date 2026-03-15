@@ -46,6 +46,7 @@ export type LinkTypeChoice = "auto" | Link["type"];
 
 export type Command =
   | { tag: "moveThing"; thingId: string; opdId: string; x: number; y: number }
+  | { tag: "moveThings"; moves: Array<{ thingId: string; opdId: string; x: number; y: number }> }
   | { tag: "resizeThing"; thingId: string; opdId: string; w: number; h: number }
   | { tag: "renameThing"; thingId: string; name: string }
   | { tag: "updateThingProps"; thingId: string; patch: Partial<Omit<Thing, "id">> }
@@ -91,6 +92,20 @@ export function interpret(cmd: Command): Effect {
       return {
         type: "modelMutation",
         apply: (m) => updateAppearance(m, cmd.thingId, cmd.opdId, { x: cmd.x, y: cmd.y }),
+      };
+
+    case "moveThings":
+      return {
+        type: "modelMutation",
+        apply: (m) => {
+          let current = m;
+          for (const move of cmd.moves) {
+            const r = updateAppearance(current, move.thingId, move.opdId, { x: move.x, y: move.y });
+            if (!isOk(r)) return r;
+            current = r.value;
+          }
+          return { value: current, ok: true } as Result<Model, InvariantError>;
+        },
       };
 
     case "resizeThing":
