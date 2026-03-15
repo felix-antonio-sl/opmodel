@@ -34,6 +34,7 @@ export interface Duration {
   min?: number;
   max?: number;
   unit: TimeUnit;
+  distribution?: { name: string; params: Record<string, number> }; // ISO §9.5.4.1: e.g. {name:"normal", params:{mean:45.6, sd:7.3}}
 }
 
 export interface Range {
@@ -146,6 +147,7 @@ export interface Link {
   discriminating_values?: string[];
   incomplete?: boolean; // ISO 19450: partial/incomplete structures
   exception_type?: "overtime" | "undertime"; // ISO §9.5.4. Only when type === "exception"
+  distributed?: boolean; // ISO §14.2.2.4.1: link targets parent contour, applies to all subprocesses
   hyperlinks?: string[];
   vertices?: Position[];
 }
@@ -177,7 +179,8 @@ export interface Appearance {
 export interface Fan {
   id: string;
   type: FanType;
-  members: string[];
+  direction?: "converging" | "diverging"; // ISO §12.2-12.3: Tables 17-21 define distinct semantics per direction
+  members: string[]; // link IDs grouped by this fan
 }
 
 export interface Scenario {
