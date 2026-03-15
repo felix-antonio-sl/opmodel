@@ -662,6 +662,169 @@ describe("resolveLinksForOpd", () => {
   });
 });
 
+// === SIM-GAP-03: Effect link encoding convention ===
+
+describe("SIM-GAP-03 — effect link source_state/target_state semantics", () => {
+  it("effect link with only target_state does NOT require target_state as precondition", () => {
+    // ISO §9.3.3.2: source_state = FROM state (precondition), target_state = TO state (postcondition)
+    // An effect with only target_state means "transition object TO this state" with no FROM constraint
+    let m = createModel("Test");
+    m = (addThing(m, obj("obj-water", "Water")) as any).value;
+    m = (addThing(m, proc("proc-heat", "Heating")) as any).value;
+    m = (addState(m, { id: "st-cold", parent: "obj-water", name: "cold", initial: true, final: false, default: true }) as any).value;
+    m = (addState(m, { id: "st-hot", parent: "obj-water", name: "hot", initial: false, final: false, default: false }) as any).value;
+    // Effect with only target_state: Heating makes Water hot (no source_state precondition)
+    m = (addLink(m, {
+      id: "lnk-eff", type: "effect", source: "proc-heat", target: "obj-water",
+      target_state: "st-hot",
+    }) as any).value;
+
+    const state = createInitialState(m);
+    // Water starts in "cold" — should STILL satisfy precondition (no FROM constraint)
+    const result = evaluatePrecondition(m, state, "proc-heat");
+    expect(result.satisfied).toBe(true);
+  });
+
+  it("effect link with source_state checks it as precondition (FROM state)", () => {
+    let m = createModel("Test");
+    m = (addThing(m, obj("obj-water", "Water")) as any).value;
+    m = (addThing(m, proc("proc-heat", "Heating")) as any).value;
+    m = (addState(m, { id: "st-cold", parent: "obj-water", name: "cold", initial: true, final: false, default: true }) as any).value;
+    m = (addState(m, { id: "st-hot", parent: "obj-water", name: "hot", initial: false, final: false, default: false }) as any).value;
+    // Effect with source_state: requires Water in "cold" state → transitions to "hot"
+    m = (addLink(m, {
+      id: "lnk-eff", type: "effect", source: "proc-heat", target: "obj-water",
+      source_state: "st-cold", target_state: "st-hot",
+    }) as any).value;
+
+    const state = createInitialState(m);
+    // Water starts in "cold" → precondition satisfied
+    expect(evaluatePrecondition(m, state, "proc-heat").satisfied).toBe(true);
+    // Change to "hot" → precondition should FAIL (FROM requires "cold")
+    state.objects.get("obj-water")!.currentState = "st-hot";
+    expect(evaluatePrecondition(m, state, "proc-heat").satisfied).toBe(false);
+  });
+
+  it("full simulation: effect with only target_state transitions object correctly", () => {
+    let m = createModel("Test");
+    m = (addThing(m, obj("obj-water", "Water")) as any).value;
+    m = (addThing(m, proc("proc-heat", "Heating")) as any).value;
+    m = (addState(m, { id: "st-cold", parent: "obj-water", name: "cold", initial: true, final: false, default: true }) as any).value;
+    m = (addState(m, { id: "st-hot", parent: "obj-water", name: "hot", initial: false, final: false, default: false }) as any).value;
+    m = (addLink(m, {
+      id: "lnk-eff", type: "effect", source: "proc-heat", target: "obj-water",
+      target_state: "st-hot",
+    }) as any).value;
+
+    const trace = runSimulation(m);
+    expect(trace.steps.length).toBe(1);
+    expect(trace.steps[0].processId).toBe("proc-heat");
+    expect(trace.steps[0].preconditionMet).toBe(true);
+    expect(trace.finalState.objects.get("obj-water")?.currentState).toBe("st-hot");
+  });
+});
+
+// === SIM-GAP-01: Parallel subprocesses with barrier sync ===
+
+describe("SIM-GAP-01 — parallel subprocesses (ISO §14.2.2.2)", () => {
+  /**
+   * Build model with in-zoom: proc-main has 3 subprocesses at Y=100 (A, B) and Y=200 (C).
+   * Each subprocess consumes/produces something to track execution.
+   * A and B are at the same Y → should execute in the same wave.
+   * C at Y=200 → should execute AFTER both A and B complete.
+   */
+  function buildParallelModel() {
+    let m = createModel("Parallel Test");
+    m = (addThing(m, proc("proc-main", "Main Process")) as any).value;
+    m = (addThing(m, proc("proc-a", "Step A")) as any).value;
+    m = (addThing(m, proc("proc-b", "Step B")) as any).value;
+    m = (addThing(m, proc("proc-c", "Step C")) as any).value;
+    m = (addThing(m, obj("obj-x", "X")) as any).value;
+    m = (addThing(m, obj("obj-y", "Y")) as any).value;
+    m = (addThing(m, obj("obj-z", "Z")) as any).value;
+    // In-zoom OPD for proc-main
+    m = (addOPD(m, { id: "opd-iz", name: "IZ", opd_type: "hierarchical", parent_opd: "opd-sd", refines: "proc-main", refinement_type: "in-zoom" }) as any).value;
+    // Appearances: A and B at Y=100 (same wave), C at Y=200
+    m = (addAppearance(m, { thing: "proc-main", opd: "opd-iz", x: 0, y: 0, w: 400, h: 400, internal: true }) as any).value;
+    m = (addAppearance(m, { thing: "proc-a", opd: "opd-iz", x: 50, y: 100, w: 120, h: 60, internal: true }) as any).value;
+    m = (addAppearance(m, { thing: "proc-b", opd: "opd-iz", x: 200, y: 100, w: 120, h: 60, internal: true }) as any).value;
+    m = (addAppearance(m, { thing: "proc-c", opd: "opd-iz", x: 120, y: 200, w: 120, h: 60, internal: true }) as any).value;
+    // A produces X, B produces Y
+    m = (addLink(m, { id: "lnk-ra", type: "result", source: "proc-a", target: "obj-x" }) as any).value;
+    m = (addLink(m, { id: "lnk-rb", type: "result", source: "proc-b", target: "obj-y" }) as any).value;
+    // C consumes X and Y (requires both parallel predecessors to complete)
+    m = (addLink(m, { id: "lnk-cx", type: "consumption", source: "obj-x", target: "proc-c" }) as any).value;
+    m = (addLink(m, { id: "lnk-cy", type: "consumption", source: "obj-y", target: "proc-c" }) as any).value;
+    // C produces Z
+    m = (addLink(m, { id: "lnk-rz", type: "result", source: "proc-c", target: "obj-z" }) as any).value;
+    return m;
+  }
+
+  it("executes all same-Y subprocesses before advancing to next Y", () => {
+    const m = buildParallelModel();
+    const trace = runSimulation(m);
+
+    // All 3 subprocesses should execute
+    expect(trace.steps.filter(s => !s.skipped).length).toBe(3);
+    expect(trace.completed).toBe(true);
+    expect(trace.deadlocked).toBe(false);
+
+    const executedNames = trace.steps.filter(s => !s.skipped).map(s => s.processName);
+    // A and B execute first (same wave), then C
+    expect(executedNames).toContain("Step A");
+    expect(executedNames).toContain("Step B");
+    expect(executedNames[2]).toBe("Step C");
+
+    // C produces Z
+    expect(trace.finalState.objects.get("obj-z")?.exists).toBe(true);
+  });
+
+  it("barrier sync: C only runs after BOTH A and B complete", () => {
+    const m = buildParallelModel();
+    const trace = runSimulation(m);
+
+    const stepNames = trace.steps.filter(s => !s.skipped).map(s => s.processName);
+    const aIdx = stepNames.indexOf("Step A");
+    const bIdx = stepNames.indexOf("Step B");
+    const cIdx = stepNames.indexOf("Step C");
+
+    // Both A and B must appear before C
+    expect(aIdx).toBeLessThan(cIdx);
+    expect(bIdx).toBeLessThan(cIdx);
+  });
+
+  it("parallel processes see pre-wave state (snapshot semantics)", () => {
+    // If A produces obj-x and B consumes obj-x, in parallel B should NOT see A's result
+    // (because they're in the same wave, B evaluates precondition against pre-wave state)
+    let m = createModel("Snapshot Test");
+    m = (addThing(m, proc("proc-main", "Main")) as any).value;
+    m = (addThing(m, proc("proc-a", "Producer")) as any).value;
+    m = (addThing(m, proc("proc-b", "Consumer")) as any).value;
+    m = (addThing(m, obj("obj-item", "Item")) as any).value;
+    m = (addOPD(m, { id: "opd-iz", name: "IZ", opd_type: "hierarchical", parent_opd: "opd-sd", refines: "proc-main", refinement_type: "in-zoom" }) as any).value;
+    m = (addAppearance(m, { thing: "proc-main", opd: "opd-iz", x: 0, y: 0, w: 400, h: 400, internal: true }) as any).value;
+    // Both at same Y → same wave
+    m = (addAppearance(m, { thing: "proc-a", opd: "opd-iz", x: 50, y: 100, w: 120, h: 60, internal: true }) as any).value;
+    m = (addAppearance(m, { thing: "proc-b", opd: "opd-iz", x: 200, y: 100, w: 120, h: 60, internal: true }) as any).value;
+    // A produces Item
+    m = (addLink(m, { id: "lnk-r", type: "result", source: "proc-a", target: "obj-item" }) as any).value;
+    // B consumes Item (Item doesn't exist yet at start)
+    m = (addLink(m, { id: "lnk-c", type: "consumption", source: "obj-item", target: "proc-b" }) as any).value;
+
+    const initState = createInitialState(m);
+    // Item does not exist initially
+    initState.objects.get("obj-item")!.exists = false;
+
+    const trace = runSimulation(m, initState);
+    // B should NOT execute — in the same wave, it sees pre-wave state where Item doesn't exist
+    const bStep = trace.steps.find(s => s.processName === "Consumer" && !s.skipped);
+    expect(bStep).toBeUndefined();
+    // A should execute and produce Item
+    const aStep = trace.steps.find(s => s.processName === "Producer" && !s.skipped);
+    expect(aStep).toBeDefined();
+  });
+});
+
 // === Invocation Links (SIM-BUG-02) ===
 
 /**

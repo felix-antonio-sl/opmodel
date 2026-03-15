@@ -1571,5 +1571,43 @@ export function validate(model: Model): InvariantError[] {
     }
   }
 
+  // I-EVENT-INZOOM-BOUNDARY: event links shall not cross in-zoom boundary (ISO §14.2.2.4.2)
+  // Only PROCESSES inside in-zoom count as subprocesses; objects are shared resources.
+  const inZoomSubprocesses = new Map<string, string>(); // subprocess ID → in-zoom OPD ID
+  for (const opd of model.opds.values()) {
+    if (opd.refines && opd.refinement_type === "in-zoom") {
+      for (const app of model.appearances.values()) {
+        if (app.opd === opd.id && app.thing !== opd.refines) {
+          const thing = model.things.get(app.thing);
+          if (thing?.kind === "process") {
+            inZoomSubprocesses.set(thing.id, opd.id);
+          }
+        }
+      }
+    }
+  }
+  for (const [modId, mod] of model.modifiers) {
+    if (mod.type !== "event") continue;
+    const link = model.links.get(mod.over);
+    if (!link) continue;
+    // Check if either endpoint is a subprocess and the other is NOT in the same in-zoom OPD
+    for (const [endpointId, otherId] of [[link.source, link.target], [link.target, link.source]] as const) {
+      const opdId = inZoomSubprocesses.get(endpointId);
+      if (!opdId) continue;
+      // Other endpoint must also appear in the same in-zoom OPD
+      const otherInSameOpd = [...model.appearances.values()].some(
+        a => a.opd === opdId && a.thing === otherId
+      );
+      if (!otherInSameOpd) {
+        errors.push({
+          code: "I-EVENT-INZOOM-BOUNDARY",
+          message: `Event modifier ${modId} on link ${link.id} crosses in-zoom boundary (ISO §14.2.2.4.2)`,
+          entity: modId,
+        });
+        break;
+      }
+    }
+  }
+
   return errors;
 }

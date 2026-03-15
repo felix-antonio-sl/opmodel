@@ -360,8 +360,10 @@ export function evaluatePrecondition(
         return { satisfied: false, reason: `Object ${objectId} does not exist`, response: getResponse(model, link.id) };
       }
 
-      // Check state-specified: use whichever state field is populated on the object endpoint
-      const stateRef = link.source_state || link.target_state;
+      // State-specified precondition: for effect links, only source_state is a precondition
+      // (target_state is the postcondition — the TO state). For other transforming links,
+      // use whichever state field is populated on the object endpoint.
+      const stateRef = link.type === "effect" ? link.source_state : (link.source_state || link.target_state);
       if (stateRef) {
         const requiredState = model.states.get(stateRef);
         if (requiredState && objState.currentState !== stateRef) {
@@ -526,8 +528,10 @@ export function runSimulation(
   const selfInvocationCount = new Map<string, number>();
   const pendingInvocations = new Map<string, string>(); // targetId → sourceId (who invoked it)
 
-  /** Phase 3: process invocation links from a just-completed process */
-  function processInvocations(justCompleted: string): void {
+  /** Phase 3: process invocation links from a just-completed process.
+   *  Returns true if any invocation was triggered (for wave snapshot invalidation). */
+  function processInvocations(justCompleted: string): boolean {
+    let triggered = false;
     for (const link of model.links.values()) {
       if (link.type !== "invocation" || link.source !== justCompleted) continue;
       const targetId = link.target;
@@ -546,7 +550,9 @@ export function runSimulation(
       // Re-enable target (override SIM-BUG-01 guard for invoked processes)
       completedProcesses.delete(targetId);
       pendingInvocations.set(targetId, justCompleted);
+      triggered = true;
     }
+    return triggered;
   }
 
   /** Enrich step with invocation and in-zoom context */
@@ -562,10 +568,16 @@ export function runSimulation(
     }
   }
 
+  // Wave state for parallel subprocess semantics (ISO §14.2.2.2)
+  // Processes at the same Y-level form a wave; preconditions are evaluated
+  // against a snapshot taken when the wave starts (parallel pre-image).
+  let currentWaveOrder: number | null = null;
+  let waveSnapshot: ModelState | null = null;
+
   for (let i = 0; i < maxSteps; i++) {
     let executed = false;
 
-    // Phase 1: Re-evaluar procesos en espera primero
+    // Phase 1: Re-evaluar procesos en espera primero (against currentState, not snapshot)
     for (const waitingId of [...currentState.waitingProcesses]) {
       const precond = evaluatePrecondition(model, currentState, waitingId);
       if (precond.satisfied) {
@@ -583,6 +595,9 @@ export function runSimulation(
           completedProcesses.add(waitingId);
           processInvocations(waitingId);
           executed = true;
+          // State changed out-of-band — invalidate wave snapshot
+          currentWaveOrder = null;
+          waveSnapshot = null;
           break;
         }
       }
@@ -590,10 +605,42 @@ export function runSimulation(
 
     if (executed) continue;
 
-    // Phase 2: Evaluar procesos ejecutables (con in-zoom expansion)
+    // Phase 2: Wave-based execution with snapshot semantics (ISO §14.2.2.2)
     for (const ep of executableProcesses) {
       if (currentState.waitingProcesses.has(ep.id)) continue;
       if (completedProcesses.has(ep.id)) continue;
+
+      // Wave transition: take snapshot when entering a new Y-level
+      if (currentWaveOrder === null || ep.order !== currentWaveOrder) {
+        currentWaveOrder = ep.order;
+        // Deep-copy ObjectState values so mutations in simulationStep don't affect snapshot
+        const snapshotObjects = new Map<string, ObjectState>();
+        for (const [id, objState] of currentState.objects) {
+          snapshotObjects.set(id, { ...objState });
+        }
+        waveSnapshot = {
+          ...currentState,
+          objects: snapshotObjects,
+          waitingProcesses: new Set(currentState.waitingProcesses),
+        };
+      }
+
+      // Evaluate precondition against wave snapshot (parallel semantics)
+      const precond = evaluatePrecondition(model, waveSnapshot!, ep.id);
+      if (!precond.satisfied) {
+        if (precond.response === "wait") {
+          currentState = {
+            ...currentState,
+            objects: new Map(currentState.objects),
+            waitingProcesses: new Set([...currentState.waitingProcesses, ep.id]),
+          };
+        } else {
+          // lost/skip: mark completed so barrier can clear
+          completedProcesses.add(ep.id);
+        }
+        continue;
+      }
+
       const event: SimulationEvent = { kind: "manual", targetId: ep.id };
       const stepResult = simulationStep(model, currentState, event);
 
@@ -602,11 +649,20 @@ export function runSimulation(
         steps.push(stepResult);
         currentState = stepResult.newState;
         completedProcesses.add(ep.id);
-        processInvocations(ep.id);
+        const invoked = processInvocations(ep.id);
+        if (invoked) {
+          // Invocation re-enabled a process — invalidate wave snapshot
+          currentWaveOrder = null;
+          waveSnapshot = null;
+        }
         executed = true;
         break;
-      } else if (stepResult.processId && stepResult.newState.waitingProcesses.has(stepResult.processId)) {
-        currentState = stepResult.newState;
+      } else {
+        // Snapshot said satisfied but execution failed (parallel conflict) — mark completed
+        completedProcesses.add(ep.id);
+        if (stepResult.processId && stepResult.newState.waitingProcesses.has(stepResult.processId)) {
+          currentState = stepResult.newState;
+        }
       }
     }
 
