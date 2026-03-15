@@ -764,34 +764,64 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
 
             // Route to state pill when link has source_state/target_state
             // Use drag-adjusted position so pills follow the thing during drag
+            //
+            // For effect links, both source_state (FROM) and target_state (TO) refer to the
+            // OBJECT endpoint, not to the link's source/target. Route the object end to
+            // source_state (the pre-condition state) only.
             let srcKindOverride: "object" | "process" | undefined;
             let tgtKindOverride: "object" | "process" | undefined;
-            if (link.source_state) {
-              const srcApp = appearances.get(visualSource);
-              if (srcApp) {
-                const ox = dragTarget === visualSource ? dragDelta.x : 0;
-                const oy = dragTarget === visualSource ? dragDelta.y : 0;
-                const adj = { x: srcApp.x + ox, y: srcApp.y + oy, w: srcApp.w, h: srcApp.h };
-                const allSrcStates = statesForThing(model, visualSource);
-                const visSrcStates = srcApp.suppressed_states
-                  ? allSrcStates.filter((s) => !srcApp.suppressed_states!.includes(s.id))
-                  : allSrcStates;
-                const pill = statePillRect(adj, visSrcStates, link.source_state);
-                if (pill) { srcRect = pill; srcKindOverride = "object"; }
+
+            if (link.type === "effect") {
+              // Effect links: route the object endpoint to source_state (FROM state)
+              // Identify which end is the object
+              const objectEnd = srcThing.kind === "object" ? visualSource : visualTarget;
+              if (link.source_state) {
+                const objApp = appearances.get(objectEnd);
+                if (objApp) {
+                  const ox = dragTarget === objectEnd ? dragDelta.x : 0;
+                  const oy = dragTarget === objectEnd ? dragDelta.y : 0;
+                  const adj = { x: objApp.x + ox, y: objApp.y + oy, w: objApp.w, h: objApp.h };
+                  const allObjStates = statesForThing(model, objectEnd);
+                  const visObjStates = objApp.suppressed_states
+                    ? allObjStates.filter((s) => !objApp.suppressed_states!.includes(s.id))
+                    : allObjStates;
+                  const pill = statePillRect(adj, visObjStates, link.source_state);
+                  if (pill) {
+                    if (objectEnd === visualSource) { srcRect = pill; srcKindOverride = "object"; }
+                    else { tgtRect = pill; tgtKindOverride = "object"; }
+                  }
+                }
               }
-            }
-            if (link.target_state) {
-              const tgtApp = appearances.get(visualTarget);
-              if (tgtApp) {
-                const ox = dragTarget === visualTarget ? dragDelta.x : 0;
-                const oy = dragTarget === visualTarget ? dragDelta.y : 0;
-                const adj = { x: tgtApp.x + ox, y: tgtApp.y + oy, w: tgtApp.w, h: tgtApp.h };
-                const allTgtStates = statesForThing(model, visualTarget);
-                const visTgtStates = tgtApp.suppressed_states
-                  ? allTgtStates.filter((s) => !tgtApp.suppressed_states!.includes(s.id))
-                  : allTgtStates;
-                const pill = statePillRect(adj, visTgtStates, link.target_state);
-                if (pill) { tgtRect = pill; tgtKindOverride = "object"; }
+              // target_state (TO state) is NOT routed — it's the destination state, not a visual endpoint
+            } else {
+              // Non-effect links: source_state belongs to source, target_state to target
+              if (link.source_state) {
+                const srcApp = appearances.get(visualSource);
+                if (srcApp) {
+                  const ox = dragTarget === visualSource ? dragDelta.x : 0;
+                  const oy = dragTarget === visualSource ? dragDelta.y : 0;
+                  const adj = { x: srcApp.x + ox, y: srcApp.y + oy, w: srcApp.w, h: srcApp.h };
+                  const allSrcStates = statesForThing(model, visualSource);
+                  const visSrcStates = srcApp.suppressed_states
+                    ? allSrcStates.filter((s) => !srcApp.suppressed_states!.includes(s.id))
+                    : allSrcStates;
+                  const pill = statePillRect(adj, visSrcStates, link.source_state);
+                  if (pill) { srcRect = pill; srcKindOverride = "object"; }
+                }
+              }
+              if (link.target_state) {
+                const tgtApp = appearances.get(visualTarget);
+                if (tgtApp) {
+                  const ox = dragTarget === visualTarget ? dragDelta.x : 0;
+                  const oy = dragTarget === visualTarget ? dragDelta.y : 0;
+                  const adj = { x: tgtApp.x + ox, y: tgtApp.y + oy, w: tgtApp.w, h: tgtApp.h };
+                  const allTgtStates = statesForThing(model, visualTarget);
+                  const visTgtStates = tgtApp.suppressed_states
+                    ? allTgtStates.filter((s) => !tgtApp.suppressed_states!.includes(s.id))
+                    : allTgtStates;
+                  const pill = statePillRect(adj, visTgtStates, link.target_state);
+                  if (pill) { tgtRect = pill; tgtKindOverride = "object"; }
+                }
               }
             }
 
