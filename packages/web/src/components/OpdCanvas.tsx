@@ -740,7 +740,10 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
             .map(([thingId, app]) => {
             const thing = model.things.get(thingId);
             if (!thing) return null;
-            const states = statesForThing(model, thingId);
+            const allStates = statesForThing(model, thingId);
+            const states = app.suppressed_states
+              ? allStates.filter(s => !app.suppressed_states!.includes(s.id))
+              : allStates;
             const isDragging = dragTarget === thingId;
             const isLinkSource = linkSource === thingId;
             const isAppExternal = app.internal === false;

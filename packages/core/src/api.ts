@@ -1244,10 +1244,11 @@ export function validate(model: Model): InvariantError[] {
   }
 
   // I-16: unique transforming link per (process, object) pair
-  // Transforming links (effect/consumption/result) are mutually exclusive:
-  // effect = object persists with state change, consumption = object ceases to exist, result = object comes into existence
+  // Transforming links (effect/consumption/result) are mutually exclusive EXCEPT:
+  // consumption + result on same (process, object) is valid — the process destroys
+  // the object in one state and re-creates it in another (ISO §9.3.1 + §9.3.2)
   const transformingTypes = new Set(["effect", "consumption", "result"]);
-  const proceduralPairs = new Map<string, string>();
+  const proceduralPairs = new Map<string, { type: string; id: string }>();
   for (const [id, link] of model.links) {
     if (transformingTypes.has(link.type)) {
       const source = model.things.get(link.source);
@@ -1256,10 +1257,16 @@ export function validate(model: Model): InvariantError[] {
         const procId = source.kind === "process" ? link.source : link.target;
         const objId = source.kind === "object" ? link.source : link.target;
         const pairKey = `${procId}::${objId}`;
-        if (proceduralPairs.has(pairKey)) {
-          errors.push({ code: "I-16", message: `Multiple procedural links between process ${procId} and object ${objId}`, entity: id });
+        const existing = proceduralPairs.get(pairKey);
+        if (existing) {
+          // Allow consumption + result pair (object transformation cycle)
+          const types = new Set([existing.type, link.type]);
+          const isTransformCycle = types.has("consumption") && types.has("result") && types.size === 2;
+          if (!isTransformCycle) {
+            errors.push({ code: "I-16", message: `Multiple procedural links between process ${procId} and object ${objId}`, entity: id });
+          }
         } else {
-          proceduralPairs.set(pairKey, id);
+          proceduralPairs.set(pairKey, { type: link.type, id });
         }
       }
     }

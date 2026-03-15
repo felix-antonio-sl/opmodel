@@ -260,9 +260,9 @@ export function resolveLinksForOpd(model: Model, opdId: string): ResolvedLink[] 
       if (["agent", "instrument"].includes(link.type) && link.source_state) {
         if (internallyProducedStates.has(link.source_state)) continue;
       }
-      // b) Effect links on objects that are consumed by a sibling subprocess —
-      //    the state change is an internal preparation step, not external interface
-      if (link.type === "effect") {
+      // b) Effect/result links on objects that are consumed by a sibling subprocess —
+      //    the transformation is an internal mechanism, not external interface
+      if (["effect", "result"].includes(link.type)) {
         const srcThing = model.things.get(link.source);
         const objId = srcThing?.kind === "object" ? link.source : link.target;
         if (internallyConsumedObjects.has(objId)) continue;

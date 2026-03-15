@@ -44,7 +44,8 @@
     {"id": "lnk-machine-instrument-brewing", "source": "obj-coffee-machine", "target": "proc-brewing", "type": "instrument"},
     {"id": "lnk-grinding-consumes-beans", "source": "obj-coffee-beans", "target": "proc-grinding", "type": "consumption"},
     {"id": "lnk-grinding-yields-ground", "source": "proc-grinding", "target": "obj-ground-coffee", "type": "result"},
-    {"id": "lnk-boiling-effects-water", "source": "proc-boiling", "source_state": "state-water-cold", "target": "obj-water", "target_state": "state-water-hot", "type": "effect"},
+    {"id": "lnk-boiling-consumes-water", "source": "obj-water", "source_state": "state-water-cold", "target": "proc-boiling", "type": "consumption"},
+    {"id": "lnk-boiling-yields-hot-water", "source": "proc-boiling", "target": "obj-water", "target_state": "state-water-hot", "type": "result"},
     {"id": "lnk-brewing-consumes-water", "source": "obj-water", "source_state": "state-water-hot", "target": "proc-brewing", "type": "consumption"},
     {"id": "lnk-brewing-consumes-ground", "source": "obj-ground-coffee", "target": "proc-brewing", "type": "consumption"},
     {"id": "lnk-brewing-yields-coffee", "source": "proc-brewing", "target": "obj-coffee", "target_state": "state-coffee-ready", "type": "result"}
@@ -55,7 +56,7 @@
     {"h": 50, "opd": "opd-sd", "thing": "obj-coffee", "w": 120, "x": 550, "y": 200},
     {"h": 50, "opd": "opd-sd", "thing": "obj-coffee-beans", "w": 140, "x": 50, "y": 200},
     {"h": 50, "opd": "opd-sd", "thing": "obj-coffee-machine", "w": 140, "x": 50, "y": 350},
-    {"h": 50, "opd": "opd-sd", "thing": "obj-water", "w": 120, "x": 300, "y": 350},
+    {"h": 50, "opd": "opd-sd", "suppressed_states": ["state-water-cold", "state-water-hot"], "thing": "obj-water", "w": 120, "x": 300, "y": 350},
     {"h": 80, "opd": "opd-sd", "thing": "proc-coffee-making", "w": 200, "x": 280, "y": 150},
     {"h": 400, "internal": true, "opd": "opd-sd1", "thing": "proc-coffee-making", "w": 300, "x": 200, "y": 0},
     {"h": 60, "internal": true, "opd": "opd-sd1", "thing": "proc-grinding", "w": 140, "x": 250, "y": 80},

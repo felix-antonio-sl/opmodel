@@ -642,11 +642,11 @@ describe("resolveLinksForOpd", () => {
     expect(resolved.length).toBeGreaterThan(0);
     const directLinks = resolved.filter(rl => !rl.aggregated);
     expect(directLinks.length).toBeGreaterThan(0);
-    // All 12 links are direct in SD1 (all endpoints have appearances there)
-    // Effect link on Water should be visible (internal filter only applies to aggregated)
-    const effectLinks = resolved.filter(rl => rl.link.type === "effect");
-    expect(effectLinks).toHaveLength(1);
-    expect(effectLinks[0].aggregated).toBe(false);
+    // Boiling has consumption+result on Water (visible as direct links in SD1)
+    const boilingLinks = resolved.filter(rl =>
+      rl.link.source === "proc-boiling" || rl.link.target === "proc-boiling"
+    );
+    expect(boilingLinks.length).toBeGreaterThanOrEqual(3); // agent + consumption + result
   });
 
   it("produces exactly 5 visible links in SD (external interface)", () => {
