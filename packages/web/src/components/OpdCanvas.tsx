@@ -1,6 +1,6 @@
 import { useRef, useState, useCallback, useMemo, useEffect } from "react";
 import type { Model, Thing, State, Link, Appearance, Modifier, OPD } from "@opmodel/core";
-import { createInitialState, type ModelState } from "@opmodel/core";
+import { createInitialState, resolveLinksForOpd, type ModelState } from "@opmodel/core";
 import type { Command, EditorMode, LinkTypeChoice, SimulationUIState } from "../lib/commands";
 import { genId } from "../lib/ids";
 import {
@@ -464,17 +464,16 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
     return map;
   }, [model, opdId]);
 
-  // Collect visible links
+  // Collect visible links (with endpoint resolution for in-zoom containers)
   const visibleLinks = useMemo(() => {
-    const links: { link: Link; modifier?: Modifier }[] = [];
-    for (const link of model.links.values()) {
-      if (appearances.has(link.source) && appearances.has(link.target)) {
-        const mod = [...model.modifiers.values()].find((m) => m.over === link.id);
-        links.push({ link, modifier: mod });
-      }
-    }
-    return links;
-  }, [model, opdId, appearances]);
+    const resolved = resolveLinksForOpd(model, opdId);
+    return resolved.map(rl => ({
+      link: rl.link,
+      modifier: [...model.modifiers.values()].find((m) => m.over === rl.link.id),
+      visualSource: rl.visualSource,
+      visualTarget: rl.visualTarget,
+    }));
+  }, [model, opdId]);
 
   // Convert client coords to SVG model coords
   const clientToModel = useCallback(
@@ -693,21 +692,21 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
           <rect x="-500" y="-500" width="3000" height="3000" fill="url(#grid-dots)" />
 
           {/* Links (behind things) — re-route during drag */}
-          {visibleLinks.map(({ link, modifier }) => {
-            const srcRect = getEffectiveRect(link.source);
-            const tgtRect = getEffectiveRect(link.target);
-            const srcThing = model.things.get(link.source);
-            const tgtThing = model.things.get(link.target);
+          {visibleLinks.map(({ link, modifier, visualSource, visualTarget }) => {
+            const srcRect = getEffectiveRect(visualSource);
+            const tgtRect = getEffectiveRect(visualTarget);
+            const srcThing = model.things.get(visualSource);
+            const tgtThing = model.things.get(visualTarget);
             if (!srcRect || !tgtRect || !srcThing || !tgtThing) return null;
 
             let linkSimClass = "";
             if (simModelState) {
-              const isActiveLink = simActiveProcessId && (link.source === simActiveProcessId || link.target === simActiveProcessId);
+              const isActiveLink = simActiveProcessId && (visualSource === simActiveProcessId || visualTarget === simActiveProcessId);
               if (isActiveLink) {
                 linkSimClass = " link-line--sim-active";
               } else {
-                const srcObj = simModelState.objects.get(link.source);
-                const tgtObj = simModelState.objects.get(link.target);
+                const srcObj = simModelState.objects.get(visualSource);
+                const tgtObj = simModelState.objects.get(visualTarget);
                 if ((srcObj && !srcObj.exists) || (tgtObj && !tgtObj.exists)) {
                   linkSimClass = " link-line--sim-dimmed";
                 }
