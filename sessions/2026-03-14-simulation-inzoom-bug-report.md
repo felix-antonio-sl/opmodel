@@ -1,10 +1,11 @@
-# Bug Report: Simulation Engine In-Zoom Link Distribution
+# Bug Report: Simulation Engine In-Zoom + Fixture Consistency
 
 **Fecha:** 2026-03-14
 **Reportado por:** Sesión af338813 (NL Parser + Links ISO)
 **Dirigido a:** Sesión c8326d5b (Simulation In-Zoom)
-**Severidad:** CRITICAL — simulación produce resultados incorrectos
+**Severidad:** CRITICAL — simulación produce resultados incorrectos + fixture semánticamente inválido
 **Reproducción:** Cargar Coffee Making fixture, ejecutar simulación manual
+**Modelo afectado:** `tests/coffee-making.opmodel` + `packages/web/public/coffee-making.opmodel`
 
 ---
 
@@ -19,11 +20,59 @@ El usuario espera que al completar Coffee Making, el café esté listo.
 
 ---
 
-## 2. Root Causes (3 bugs independientes)
+## 2. Root Causes (4 bugs, ordenados por severidad)
+
+### Bug D (CRITICAL): Fixture viola ISO §10.5.2 — links duplicados en padre e hijos
+
+**Problema:** El fixture Coffee Making tiene links procedurales en DOS niveles simultáneamente:
+
+```
+NIVEL PADRE (proc-coffee-making):
+  ├── consumption ← Coffee Beans       ← REDUNDANTE con Grinding
+  ├── effect → Water (cold→hot)        ← REDUNDANTE con Boiling
+  └── result → Coffee                  ← REDUNDANTE con Brewing
+
+NIVEL HIJO (subprocesos):
+  ├── proc-grinding:  consumption ← Coffee Beans,    result → Ground Coffee
+  ├── proc-boiling:   effect → Water (cold→hot)
+  └── proc-brewing:   consumption ← Ground Coffee,   result → Coffee
+```
+
+**ISO §10.5.2 dice explícitamente:**
+
+> "When a process is in-zoomed, all the consumption and result links that were attached to it **shall be attached initially or by default to its first subprocess** [consumption] or last subprocess [result]."
+
+Es decir: al crear el in-zoom, los links del padre se **mueven** a los subprocesos — NO se duplican. Tener links en ambos niveles es una violación de fact consistency.
+
+**Semántica incorrecta del fixture actual:**
+
+El modelo afirma simultáneamente que:
+1. Coffee Making (como unidad atómica) consume Coffee Beans
+2. Grinding (subproceso de Coffee Making) TAMBIÉN consume Coffee Beans
+
+Esto es una contradicción: ¿quién consume los beans? ¿El padre o el hijo? Si ambos, ¿se consumen dos veces? El modelo es ambiguo y semánticamente inválido.
+
+**Regla ISO para distribución:**
+
+| Link en padre | ¿Qué ocurre al crear in-zoom? | ¿A quién se asigna? |
+|---------------|-------------------------------|---------------------|
+| consumption | Se MUEVE al primer subproceso | Grinding |
+| result | Se MUEVE al último subproceso | Brewing |
+| agent | Se DISTRIBUYE a todos | Grinding + Boiling + Brewing |
+| instrument | Se DISTRIBUYE a todos | Grinding + Boiling + Brewing |
+| effect | Se DISTRIBUYE a los relevantes | Boiling (en este caso) |
+
+**Restricción ISO adicional (§10.5.2):**
+
+> "Consumption and result links **SHALL NOT** be attached to outer contour of in-zoomed process."
+
+Los links de consumption y result en `proc-coffee-making` violan esta restricción directamente.
+
+---
 
 ### Bug A: `runSimulation` descarta eventos dirigidos a procesos in-zoomed
 
-**Ubicación:** `packages/core/src/simulation.ts`, `runSimulation()` ~línea 400+
+**Ubicación:** `packages/core/src/simulation.ts`, `runSimulation()`
 
 **Problema:** `getExecutableProcesses()` expande `proc-coffee-making` en sus subprocesos leaf (Grinding, Boiling, Brewing). Cuando el usuario envía `{ kind: "manual", targetId: "proc-coffee-making" }`, `runSimulation` busca `proc-coffee-making` en la lista de ejecutables — no lo encuentra — y **descarta el evento silenciosamente** (0 pasos ejecutados).
 
@@ -35,37 +84,21 @@ runSimulation({ targetId: "proc-coffee-making" }) → 0 steps
 
 **Impacto:** Ningún proceso se ejecuta. La simulación no avanza.
 
+**Comportamiento esperado:** Al recibir un evento para un proceso in-zoomed, el engine debería:
+1. Detectar que el proceso tiene in-zoom
+2. Expandir a subprocesos en Y-order
+3. Ejecutar la secuencia completa: Grinding → Boiling → Brewing
+4. Reportar que fue una ejecución delegada (el step debería indicar `parentProcessId`)
+
 ---
 
 ### Bug B: Links del proceso padre quedan huérfanos durante in-zoom execution
 
 **Ubicación:** `packages/core/src/simulation.ts`, `simulationStep()` ~línea 333
 
-**Problema:** Cuando se ejecutan subprocesos (Grinding, Boiling, Brewing), `simulationStep` solo procesa links directamente conectados a ese subproceso. Los links conectados al proceso padre (`proc-coffee-making`) **nunca se procesan**:
+**Problema:** Cuando se ejecutan subprocesos (Grinding, Boiling, Brewing), `simulationStep` solo procesa links directamente conectados a ese subproceso. Los links conectados al proceso padre (`proc-coffee-making`) **nunca se procesan**.
 
-```
-Links on proc-coffee-making (PADRE):
-  lnk-barista-agent-coffee-making     [agent]       — HUÉRFANO
-  lnk-coffee-making-consumption-beans [consumption]  — HUÉRFANO
-  lnk-coffee-making-effect-water      [effect]       — HUÉRFANO
-  lnk-coffee-making-result-coffee     [result]       — HUÉRFANO
-
-Links on subprocesses (EJECUTADOS):
-  proc-grinding:  consumption(beans), result(ground-coffee)  ← ESTOS sí se procesan
-  proc-boiling:   effect(water cold→hot)                     ← ESTE sí se procesa
-  proc-brewing:   consumption(ground-coffee), result(coffee) ← ESTOS sí se procesan
-```
-
-**Consecuencia:** El modelo tiene links DUPLICADOS — tanto en el padre como en los subprocesos. Los del padre son redundantes y nunca ejecutados. Pero si un link SOLO existe en el padre (sin duplicado en un subproceso), su efecto se pierde completamente.
-
-**Relación con ISO §10.5.2:** La ISO define **distribution semantics** — un link en el contorno de un proceso in-zoomed se distribuye a cada subproceso. Las reglas son:
-
-| Link type | Distribución ISO | Estado actual |
-|-----------|-----------------|---------------|
-| agent, instrument | Se distribuye a todos los subprocesos | ✅ La fixture tiene duplicados manuales |
-| effect | Se distribuye a todos los subprocesos | ⚠️ Solo en Boiling, no en todos |
-| consumption | **NO se distribuye** — va al primer subproceso | ⚠️ En Grinding + padre (redundante) |
-| result | **NO se distribuye** — va al último subproceso | ⚠️ En Brewing + padre (redundante) |
+**Nota:** Este bug se vuelve irrelevante si Bug D se resuelve correctamente (eliminando los links del padre). Pero si el modelo retiene links en el padre por razones de visualización en el OPD top-level, el engine necesita saber que esos links son "resumenes" y no deben ejecutarse directamente.
 
 ---
 
@@ -79,16 +112,16 @@ Links on subprocesses (EJECUTADOS):
 {"id": "lnk-brewing-yields-coffee", "source": "proc-brewing", "target": "obj-coffee", "type": "result"}
 ```
 
-El engine de simulación (`simulationStep` línea ~366):
+El engine de simulación:
 ```typescript
 if (link.target_state) {
   obj.currentState = link.target_state;
 }
 ```
 
-Sin `target_state`, el estado NO cambia. Coffee ya existe con estado "unmade" (estado inicial), y el result link solo confirma `exists: true` sin transicionar a "ready".
+Sin `target_state`, Coffee se marca como `exists: true` pero permanece en estado "unmade" (el estado inicial). El usuario espera que Coffee pase a "ready".
 
-**Fix directo:** Agregar `"target_state": "state-coffee-ready"` al result link.
+**Fix:** Agregar `"target_state": "state-coffee-ready"` al result link.
 
 ---
 
@@ -98,142 +131,195 @@ Sin `target_state`, el estado NO cambia. Coffee ya existe con estado "unmade" (e
 // 1. Cargar modelo
 const m = loadModel(readFileSync('tests/coffee-making.opmodel'));
 
-// 2. Verificar ejecutables
+// 2. Verificar ejecutables — Coffee Making NO aparece
 getExecutableProcesses(m);
-// → [proc-grinding, proc-boiling, proc-brewing] (NO proc-coffee-making)
+// → [proc-grinding, proc-boiling, proc-brewing] (proc-coffee-making EXCLUIDO)
 
-// 3. Intentar simular Coffee Making
+// 3. Intentar simular Coffee Making directamente
 runSimulation(m, init, [{ kind: 'manual', targetId: 'proc-coffee-making', timestamp: 1 }]);
-// → 0 pasos (evento descartado)
+// → 0 pasos ❌ (evento descartado silenciosamente)
 
 // 4. Simular subprocesos manualmente en secuencia
-simulationStep(m, state, { kind: 'manual', targetId: 'proc-grinding', ... });
-// → consume Coffee Beans, produce Ground Coffee ✅
-simulationStep(m, state, { kind: 'manual', targetId: 'proc-boiling', ... });
+simulationStep(m, state, { targetId: 'proc-grinding' });
+// → consume Coffee Beans ✅, produce Ground Coffee ✅
+
+simulationStep(m, state, { targetId: 'proc-boiling' });
 // → Water cold→hot ✅
-simulationStep(m, state, { kind: 'manual', targetId: 'proc-brewing', ... });
-// → consume Ground Coffee, produce Coffee ✅ (pero sin target_state)
-// → Coffee.currentState sigue siendo "unmade" ❌
+
+simulationStep(m, state, { targetId: 'proc-brewing' });
+// → consume Ground Coffee ✅, produce Coffee ✅
+// → PERO Coffee.currentState = "unmade" ❌ (falta target_state en link)
+
+// 5. Links del padre proc-coffee-making: NUNCA ejecutados
+// → consumption(beans), effect(water), result(coffee) — todos huérfanos
 ```
 
 ---
 
-## 4. Análisis categórico
+## 4. Estado del fixture actual vs fixture correcto
 
-El in-zoom es un **functor de refinement** ρ: C_parent → C_child que descompone un 1-cell (proceso) en una cadena de 1-cells (subprocesos). Los links del proceso padre son **2-cells** que deben ser pushforward via ρ:
+### Fixture ACTUAL (incorrecto)
 
 ```
-ρ_*(link_parent) = distribución sobre C_child
+Links:
+  ┌─ proc-coffee-making ──────────────────────────────┐
+  │  agent ← Barista           ← REDUNDANTE           │
+  │  consumption ← Coffee Beans ← PROHIBIDO por ISO   │
+  │  effect → Water             ← PROHIBIDO por ISO   │
+  │  result → Coffee            ← PROHIBIDO por ISO   │
+  └────────────────────────────────────────────────────┘
+      ↓ in-zoom (opd-sd1)
+  ┌─ proc-grinding ────────────────────────────────────┐
+  │  agent ← Barista                                    │
+  │  consumption ← Coffee Beans                         │
+  │  result → Ground Coffee                             │
+  ├─ proc-boiling ─────────────────────────────────────┤
+  │  agent ← Barista                                    │
+  │  effect → Water (cold→hot)                          │
+  ├─ proc-brewing ─────────────────────────────────────┤
+  │  agent ← Barista                                    │
+  │  consumption ← Ground Coffee                        │
+  │  result → Coffee                                    │
+  └────────────────────────────────────────────────────┘
 ```
 
-Actualmente, el pushforward ρ_* no está implementado. Los links del padre existen en C_parent pero no se mapean a C_child. El simulation engine opera SOLO en C_child (ejecuta subprocesos), pero los links son fibrados sobre C_parent — hay un **fiber mismatch**.
+### Fixture CORRECTO (ISO §10.5.2)
 
-La ISO resuelve esto con reglas de distribución explícitas (§10.5.2):
-- Agent/instrument/effect: distribución universal (∀ subproceso)
-- Consumption/result: distribución restringida (primer/último subproceso)
+```
+Links:
+  ┌─ proc-coffee-making ──────────────────────────────┐
+  │  (SIN links procedurales — distribuidos a hijos)   │
+  └────────────────────────────────────────────────────┘
+      ↓ in-zoom (opd-sd1)
+  ┌─ proc-grinding (primer subproceso) ────────────────┐
+  │  agent ← Barista          (distribuido de padre)    │
+  │  consumption ← Coffee Beans (movido de padre)       │
+  │  result → Ground Coffee   (propio del subproceso)   │
+  ├─ proc-boiling ─────────────────────────────────────┤
+  │  agent ← Barista          (distribuido de padre)    │
+  │  effect → Water cold→hot  (movido de padre)         │
+  ├─ proc-brewing (último subproceso) ─────────────────┤
+  │  agent ← Barista          (distribuido de padre)    │
+  │  consumption ← Ground Coffee (propio)               │
+  │  result → Coffee [ready]  (movido de padre + state) │
+  └────────────────────────────────────────────────────┘
+```
+
+**Diferencias clave:**
+1. proc-coffee-making tiene **cero links procedurales** (todos distribuidos)
+2. Los result links tienen `target_state` especificado
+3. No hay duplicación — cada link existe en exactamente un nivel
+
+### ¿Qué se muestra en el OPD top-level?
+
+Cuando Coffee Making se muestra como caja negra en el OPD top-level (sin in-zoom visible), los links de sus subprocesos se **agregan visualmente** en el contorno del padre. Es decir:
+
+- El OPD muestra Coffee Beans → Coffee Making (consumption) como un link visual
+- Pero el link REAL está en proc-grinding, no en proc-coffee-making
+- Es una **proyección visual**, no un link real en el modelo
+
+Esto requiere que el renderer del OPD sepa agregar links de subprocesos cuando muestra el padre colapsado.
 
 ---
 
-## 5. Propuesta de solución (intuición)
+## 5. Análisis categórico
 
-### Opción A: Event delegation (fix rápido)
+### El in-zoom como functor de refinement
 
-Cuando `runSimulation` recibe un evento dirigido a un proceso in-zoomed:
-1. Detectar que `proc-coffee-making` tiene in-zoom OPD
-2. Expandir a subprocesos vía `getExecutableProcesses()`
-3. Ejecutar subprocesos en secuencia (por Y-order)
-4. Después del último subproceso, procesar links del proceso padre que NO tienen duplicados en subprocesos
+El in-zoom define un functor ρ: Proc → Chain(Proc) que descompone un proceso en una cadena ordenada de subprocesos. Los links del padre son 1-cells en la categoría OPM que deben ser transportados vía ρ:
 
+```
+ρ_*(link_parent) = link_distributed
+```
+
+Este pushforward ρ_* tiene reglas estructurales:
+
+```
+ρ_*(consumption) = ι_first(consumption)    // inyección en primer subproceso
+ρ_*(result)      = ι_last(result)          // inyección en último subproceso
+ρ_*(agent)       = Δ(agent)               // diagonal: copia a todos
+ρ_*(instrument)  = Δ(instrument)          // diagonal: copia a todos
+ρ_*(effect)      = Δ(effect)              // diagonal: copia a todos
+```
+
+Donde:
+- ι_first, ι_last: inyecciones en endpoints de la cadena
+- Δ: functor diagonal (duplica a todos los objetos de la cadena)
+
+### Pullback y OPD rendering
+
+El OPD top-level muestra el padre colapsado. Los links visibles en ese OPD son el **pullback** de los links distribuidos:
+
+```
+π*(links_subprocesos) = links_visibles_en_padre
+```
+
+Este pullback es la operación INVERSA de la distribución. Categóricamente:
+
+```
+ρ_* ⊣ π*    (distribución es left adjoint de pullback)
+```
+
+La adjunción garantiza que distribuir y luego re-agregar produce los mismos links — es la ley de fact consistency.
+
+---
+
+## 6. Propuesta de solución
+
+### Fase 1: Fix inmediato (datos)
+
+1. **Eliminar los 4 links del padre** en Coffee Making (consumption, effect, result, agent del padre)
+2. **Agregar `target_state: "state-coffee-ready"`** al result link de Brewing
+3. **Sync** `packages/web/public/coffee-making.opmodel`
+
+### Fase 2: Event delegation en simulation engine
+
+Implementar en `runSimulation`:
 ```typescript
-// En runSimulation:
-if (isInZoomed(processId)) {
-  const subs = getExecutableProcesses(model).filter(p => p.parentProcessId === processId);
+// Cuando evento apunta a proceso in-zoomed:
+if (isInZoomed(processId, model)) {
+  const subs = getExecutableProcesses(model)
+    .filter(p => p.parentProcessId === processId)
+    .sort((a, b) => a.order - b.order);
+
   for (const sub of subs) {
-    // ejecutar sub
+    // Ejecutar subproceso con sus propios links
+    const step = simulationStep(model, currentState, { kind: 'manual', targetId: sub.id, timestamp: t });
+    if (step.preconditionMet) currentState = step.newState;
+    steps.push(step);
   }
-  // procesar links huérfanos del padre (result, etc.)
 }
 ```
 
-**Pros:** Mínimo cambio, resuelve Bug A y parcialmente Bug B.
-**Contras:** No implementa distribución ISO formal; los links duplicados siguen siendo manuales.
+### Fase 3: Link distribution engine (ISO §10.5.2)
 
-### Opción B: Link distribution engine (fix correcto)
+Implementar `distributeLinks()` que computa links virtuales para subprocesos basándose en los links del padre. Esto permitiría que el usuario modele SOLO a nivel del padre y el engine distribuya automáticamente al crear el in-zoom.
 
-Implementar ρ_* como un paso de preprocessing:
+### Fase 4: OPD aggregation rendering
 
-```typescript
-function distributeLinks(model: Model, parentId: string, childOpd: OPD): DistributedLink[] {
-  const parentLinks = getLinksForProcess(model, parentId);
-  const subprocesses = getSubprocesses(model, childOpd); // sorted by Y
+Implementar `aggregateLinks()` (el pullback π*) que computa los links a mostrar visualmente en el OPD padre cuando Coffee Making está colapsado. Esto elimina la necesidad de links duplicados en el modelo.
 
-  return parentLinks.flatMap(link => {
-    switch (link.type) {
-      case "agent": case "instrument":
-        // Distribute to ALL subprocesses
-        return subprocesses.map(sp => ({ ...link, processId: sp.id }));
-      case "effect":
-        // Distribute to ALL (object persists)
-        return subprocesses.map(sp => ({ ...link, processId: sp.id }));
-      case "consumption":
-        // First subprocess ONLY (ISO §10.5.2)
-        return [{ ...link, processId: subprocesses[0].id }];
-      case "result":
-        // Last subprocess ONLY (ISO §10.5.2)
-        return [{ ...link, processId: subprocesses[subprocesses.length - 1].id }];
-    }
-  });
-}
-```
+### Priorización
 
-Luego, `simulationStep` usaría los distributed links en vez de los links directos del modelo.
-
-**Pros:** ISO-correct, elimina necesidad de duplicar links manualmente en la fixture.
-**Contras:** Más complejo, requiere decidir si las distributed links son virtuales (computadas) o persistidas.
-
-### Opción C: Hybrid — parent completion step
-
-Después de ejecutar todos los subprocesos de un in-zoom, agregar un **completion step** que procesa los links del proceso padre:
-
-```typescript
-// Cuando el último subproceso completa:
-if (isLastSubprocess(processId, parentProcessId)) {
-  processParentLinks(model, state, parentProcessId);
-}
-```
-
-**Pros:** Simple, no requiere distribution engine.
-**Contras:** Los links del padre se ejecutan "al final" en vez de distribuidos por subproceso.
-
-### Recomendación
-
-**Corto plazo:** Opción C (parent completion step) + fix Bug C (agregar `target_state` al fixture).
-**Mediano plazo:** Opción B (link distribution engine) para compliance ISO §10.5.2 completo.
-
----
-
-## 6. Fix inmediato para la fixture (Bug C)
-
-Independiente de la solución del engine, el fixture tiene un bug de datos:
-
-```diff
-- {"id": "lnk-brewing-yields-coffee", "source": "proc-brewing", "target": "obj-coffee", "type": "result"}
-+ {"id": "lnk-brewing-yields-coffee", "source": "proc-brewing", "target": "obj-coffee", "target_state": "state-coffee-ready", "type": "result"}
-
-- {"id": "lnk-coffee-making-result-coffee", "source": "proc-coffee-making", "target": "obj-coffee", "type": "result"}
-+ {"id": "lnk-coffee-making-result-coffee", "source": "proc-coffee-making", "target": "obj-coffee", "target_state": "state-coffee-ready", "type": "result"}
-```
+| Fase | Complejidad | Impacto | Recomendación |
+|------|------------|---------|---------------|
+| 1 (fixture fix) | Trivial | Alto — elimina bugs observados | **Ahora** |
+| 2 (event delegation) | Baja | Alto — simulación funciona end-to-end | **Próximo sprint** |
+| 3 (distribution) | Media | Medio — modelos limpios, sin duplicación manual | P2 |
+| 4 (OPD aggregation) | Alta | Medio — visualización correcta de padre colapsado | P2 |
 
 ---
 
 ## 7. Archivos afectados
 
-| Archivo | Bug | Cambio necesario |
-|---------|-----|-----------------|
-| `packages/core/src/simulation.ts` | A, B | Event delegation o distribution engine |
-| `tests/coffee-making.opmodel` | C | Agregar target_state a result links |
-| `packages/web/public/coffee-making.opmodel` | C | Sync con fixture principal |
-| `packages/core/tests/simulation.test.ts` | A, B | Tests para in-zoom event delegation |
+| Archivo | Fase | Cambio necesario |
+|---------|------|-----------------|
+| `tests/coffee-making.opmodel` | 1 | Eliminar links del padre, agregar target_state |
+| `packages/web/public/coffee-making.opmodel` | 1 | Sync con fixture |
+| `packages/core/src/simulation.ts` | 2 | Event delegation para procesos in-zoomed |
+| `packages/core/tests/simulation.test.ts` | 2 | Tests de delegación |
+| `packages/core/src/simulation.ts` | 3 | `distributeLinks()` function |
+| `packages/web/src/components/OpdCanvas.tsx` | 4 | Agregar links de subprocesos en vista padre |
 
 ---
 
@@ -241,9 +327,10 @@ Independiente de la solución del engine, el fixture tiene un bug de datos:
 
 | Gap | Relación |
 |-----|----------|
-| **C6 (Fact Consistency)** | Los links duplicados padre/hijo violan fact consistency — deberían derivarse, no duplicarse |
-| **I-05 (Distribution)** | ISO §10.5.2 distribution constraints no implementadas |
+| **C6 (Fact Consistency)** | Los links duplicados padre/hijo violan fact consistency — este bug es una manifestación directa de C6 |
+| **ISO §10.5.2** | Distribution constraints no implementadas — el fixture las viola manualmente |
 | **DA-5 (Coalgebra)** | El functor de refinement ρ no está integrado en la evaluación coalgebraica |
+| **I-17 (Process transforms ≥1 object)** | Si eliminamos links del padre, validate() podría reportar I-17 en proc-coffee-making — necesita exclusión para procesos in-zoomed |
 
 ---
 
