@@ -465,48 +465,50 @@ export function simulationStep(
     return step;
   }
 
-  // Ejecutar efectos del proceso
+  // Ejecutar efectos del proceso — phased: consumption → effect → result
+  // Phase ordering ensures consumption+result on the same object works correctly
+  // (destroy old state before creating new state).
   const links = [...model.links.values()].filter(l => l.target === processId || l.source === processId);
 
+  // Phase 1: Consumption — objeto deja de existir
   for (const link of links) {
-    // Consumption: objeto deja de existir
-    if (link.type === "consumption") {
-      // consumption: source=object (ISO), target=process — detect by kind
-      const srcThing = model.things.get(link.source);
-      const objId = srcThing?.kind === "object" ? link.source : link.target;
-      const obj = step.newState.objects.get(objId);
-      if (obj) {
-        obj.exists = false;
-        step.consumptionIds.push(objId);
-      }
+    if (link.type !== "consumption") continue;
+    const srcThing = model.things.get(link.source);
+    const objId = srcThing?.kind === "object" ? link.source : link.target;
+    const obj = step.newState.objects.get(objId);
+    if (obj) {
+      obj.exists = false;
+      step.consumptionIds.push(objId);
     }
+  }
 
-    // Effect: cambio de estado — bidirectional per ISO, detect object by kind
-    if (link.type === "effect") {
-      const srcThing = model.things.get(link.source);
-      const objId = srcThing?.kind === "object" ? link.source : link.target;
-      const obj = step.newState.objects.get(objId);
-      if (obj && link.target_state) {
-        const fromState = obj.currentState;
-        obj.currentState = link.target_state;
-        step.stateChanges.push({ objectId: objId, fromState, toState: link.target_state });
-      }
+  // Phase 2: Effect — cambio de estado (bidirectional per ISO, detect object by kind)
+  for (const link of links) {
+    if (link.type !== "effect") continue;
+    const srcThing = model.things.get(link.source);
+    const objId = srcThing?.kind === "object" ? link.source : link.target;
+    const obj = step.newState.objects.get(objId);
+    if (obj && link.target_state) {
+      const fromState = obj.currentState;
+      obj.currentState = link.target_state;
+      step.stateChanges.push({ objectId: objId, fromState, toState: link.target_state });
     }
+  }
 
-    // Result: objeto comienza a existir
-    if (link.type === "result") {
-      const objId = link.target;
-      let obj = step.newState.objects.get(objId);
-      if (!obj) {
-        obj = { exists: true };
-        step.newState.objects.set(objId, obj);
-      }
-      obj.exists = true;
-      if (link.target_state) {
-        obj.currentState = link.target_state;
-      }
-      step.resultIds.push(objId);
+  // Phase 3: Result — objeto comienza a existir
+  for (const link of links) {
+    if (link.type !== "result") continue;
+    const objId = link.target;
+    let obj = step.newState.objects.get(objId);
+    if (!obj) {
+      obj = { exists: true };
+      step.newState.objects.set(objId, obj);
     }
+    obj.exists = true;
+    if (link.target_state) {
+      obj.currentState = link.target_state;
+    }
+    step.resultIds.push(objId);
   }
 
   return step;
