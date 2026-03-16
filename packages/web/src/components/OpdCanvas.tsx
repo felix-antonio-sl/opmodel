@@ -275,7 +275,7 @@ function ThingNode({
     : (isPhysical ? "var(--object-fill-physical)" : "var(--object-fill)");
   const fillColor = kindFill;
   const strokeWidth = isContainer ? 2.0 : isExternal ? 1.0 : isPhysical ? 3.5 : 1.2;
-  const strokeDash = isExternal ? "4,3" : thing.affiliation === "environmental" ? "6,3" : undefined;
+  const strokeDash = thing.affiliation === "environmental" ? "6,3" : undefined;
 
   const filterStr = isDragging
     ? "url(#glow-drag)"
@@ -392,6 +392,7 @@ function LinkLine({
   sourceKind,
   targetKind,
   modifier,
+  labelOverride,
 }: {
   link: Link;
   sourceRect: Rect;
@@ -399,6 +400,7 @@ function LinkLine({
   sourceKind: "object" | "process";
   targetKind: "object" | "process";
   modifier?: Modifier;
+  labelOverride?: string;
 }) {
   const srcCenter = center(sourceRect);
   const tgtCenter = center(targetRect);
@@ -465,7 +467,7 @@ function LinkLine({
         markerStart={markerStart}
       />
       <text className="link-label" x={mid.x} y={mid.y - 7}>
-        {link.type}
+        {labelOverride ?? (link.type === "tagged" && link.tag ? link.tag : link.type)}
       </text>
       {modifier && (
         <text className="modifier-badge" x={mid.x} y={mid.y + 8}>
@@ -551,12 +553,47 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
   // Collect visible links (with endpoint resolution for in-zoom containers)
   const visibleLinks = useMemo(() => {
     const resolved = resolveLinksForOpd(model, opdId);
-    return resolved.map(rl => ({
+    const entries = resolved.map(rl => ({
       link: rl.link,
       modifier: [...model.modifiers.values()].find((m) => m.over === rl.link.id),
       visualSource: rl.visualSource,
       visualTarget: rl.visualTarget,
+      labelOverride: undefined as string | undefined,
     }));
+
+    // Merge consumption+result pairs on same (object, process) into single visual effect.
+    // A consumption+result pair is the in-zoom refinement of an effect link (DA-7).
+    const consumptions = new Map<string, number>();
+    const results = new Map<string, number>();
+    entries.forEach((entry, i) => {
+      const srcThing = model.things.get(entry.visualSource);
+      const objId = srcThing?.kind === "object" ? entry.visualSource : entry.visualTarget;
+      const procId = srcThing?.kind === "process" ? entry.visualSource : entry.visualTarget;
+      if (entry.link.type === "consumption") consumptions.set(`${objId}|${procId}`, i);
+      else if (entry.link.type === "result") results.set(`${objId}|${procId}`, i);
+    });
+
+    const toRemove = new Set<number>();
+    for (const [key, consIdx] of consumptions) {
+      const resIdx = results.get(key);
+      if (resIdx === undefined) continue;
+      const consEntry = entries[consIdx]!;
+      const resEntry = entries[resIdx]!;
+      const fromState = consEntry.link.source_state ? model.states.get(consEntry.link.source_state) : undefined;
+      const toState = resEntry.link.target_state ? model.states.get(resEntry.link.target_state) : undefined;
+      const label = fromState && toState ? `${fromState.name} → ${toState.name}` : "effect";
+      const [objId = "", procId = ""] = key.split("|");
+      entries[consIdx] = {
+        link: { ...consEntry.link, type: "effect" as any, source: procId, target: objId, source_state: consEntry.link.source_state, target_state: resEntry.link.target_state },
+        modifier: consEntry.modifier ?? resEntry.modifier,
+        visualSource: procId,
+        visualTarget: objId,
+        labelOverride: label,
+      };
+      toRemove.add(resIdx);
+    }
+
+    return entries.filter((_, i) => !toRemove.has(i));
   }, [model, opdId]);
 
   // Convert client coords to SVG model coords
@@ -784,7 +821,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
           <rect x="-500" y="-500" width="3000" height="3000" fill="url(#grid-dots)" />
 
           {/* Links (behind things) — re-route during drag */}
-          {visibleLinks.map(({ link, modifier, visualSource, visualTarget }) => {
+          {visibleLinks.map(({ link, modifier, visualSource, visualTarget, labelOverride }) => {
             let srcRect = getEffectiveRect(visualSource);
             let tgtRect = getEffectiveRect(visualTarget);
             const srcThing = model.things.get(visualSource);
@@ -877,6 +914,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
                   sourceKind={srcKindOverride ?? srcThing.kind}
                   targetKind={tgtKindOverride ?? tgtThing.kind}
                   modifier={modifier}
+                  labelOverride={labelOverride}
                 />
               </g>
             );
