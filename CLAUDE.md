@@ -38,6 +38,7 @@ All documentation follows OPM (ISO 19450) guidelines and KODA Framework architec
 | DA-4 | Layered Architecture (Interfaces → Domain Engine → Graph Store) | Defined |
 | DA-5 | Simulation Engine as Coalgebra Evaluator | Implemented (trivalent PreconditionResult, waitingProcesses, deadlock detection, in-zoom recursion ISO §14.2.1) |
 | DA-6 | OPL Engine as Bidirectional Lens | Implemented (expose/applyOplEdit/render/editsFrom, PutGet+GetPut verified) |
+| DA-7 | Link Refinement Fibration (effect ≅ consumption ⊕ result) | Implemented (Opción D: compute on demand, zero schema change, `findConsumptionResultPairs`) |
 
 ## Key Domain Concepts
 
@@ -59,7 +60,7 @@ L-M1-02 → L-M1-07 (In-zoom)
 ## Development
 
 - **Runtime:** Bun v1.3.10 (`~/.bun/bin/bun`). Requiere: `export BUN_INSTALL="$HOME/.bun" && export PATH="$BUN_INSTALL/bin:$PATH"`
-- **Tests:** `bunx vitest run` (all 500 tests from root). Single file: `bunx vitest run packages/core/tests/api.test.ts`
+- **Tests:** `bunx vitest run` (all 551 tests from root). Single file: `bunx vitest run packages/core/tests/api.test.ts`
 - **Type check:** `cd packages/core && bunx tsc --noEmit` (7 pre-existing TS2532 in test files — known, vitest passes)
 - **Monorepo:** Bun workspaces (root `package.json`)
 - **Pattern:** Immutable Model — funciones puras retornan `Result<Model, InvariantError>`, Maps para O(1) lookups

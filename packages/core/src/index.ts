@@ -17,6 +17,8 @@ export {
   addSubModel, removeSubModel, updateSubModel,
   updateMeta, updateSettings,
   validate,
+  findConsumptionResultPairs,
+  type ConsumptionResultPair,
 } from "./api";
 export {
   type History,

@@ -6,6 +6,7 @@ import type {
 import type { InvariantError } from "./result";
 import { ok, err, type Result } from "./result";
 import { collectAllIds, touch, cleanPatch } from "./helpers";
+import type { ResolvedLink } from "./simulation";
 
 export function addThing(
   model: Model,
@@ -1610,4 +1611,66 @@ export function validate(model: Model): InvariantError[] {
   }
 
   return errors;
+}
+
+// ── Consumption+Result Pairing (DA-7) ──────────────────────────────────
+
+export interface ConsumptionResultPair {
+  consumptionLink: Link;
+  resultLink: Link;
+  objectId: string;
+  processId: string;
+  fromStateName?: string;
+  toStateName?: string;
+}
+
+/**
+ * Find consumption+result pairs within resolved links for an OPD.
+ * A pair exists when both a consumption and result link connect the same
+ * (object, process). This is the intra-OPD manifestation of the
+ * effect ≅ consumption ⊕ result identity (DA-7).
+ */
+export function findConsumptionResultPairs(
+  model: Model,
+  resolvedLinks: ResolvedLink[],
+): ConsumptionResultPair[] {
+  // Index consumption and result links by (objectId|processId) key
+  const consumptions = new Map<string, number>();
+  const results = new Map<string, number>();
+
+  resolvedLinks.forEach((rl, i) => {
+    const srcThing = model.things.get(rl.visualSource);
+    const objId = srcThing?.kind === "object" ? rl.visualSource : rl.visualTarget;
+    const procId = srcThing?.kind === "process" ? rl.visualSource : rl.visualTarget;
+    if (rl.link.type === "consumption") consumptions.set(`${objId}|${procId}`, i);
+    else if (rl.link.type === "result") results.set(`${objId}|${procId}`, i);
+  });
+
+  const pairs: ConsumptionResultPair[] = [];
+  for (const [key, consIdx] of consumptions) {
+    const resIdx = results.get(key);
+    if (resIdx === undefined) continue;
+
+    const consRL = resolvedLinks[consIdx]!;
+    const resRL = resolvedLinks[resIdx]!;
+    const [objId = "", procId = ""] = key.split("|");
+
+    const fromState = consRL.link.source_state
+      ? model.states.get(consRL.link.source_state)
+      : undefined;
+    const toState = resRL.link.target_state
+      ? model.states.get(resRL.link.target_state)
+      : undefined;
+
+    pairs.push({
+      consumptionLink: consRL.link,
+      resultLink: resRL.link,
+      objectId: objId,
+      processId: procId,
+      fromStateName: fromState?.name,
+      toStateName: toState?.name,
+    });
+  }
+
+  return pairs;
 }

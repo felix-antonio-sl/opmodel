@@ -1,6 +1,6 @@
 import { useRef, useState, useCallback, useMemo, useEffect } from "react";
 import type { Model, Thing, State, Link, Appearance, Modifier, OPD } from "@opmodel/core";
-import { createInitialState, resolveLinksForOpd, type ModelState } from "@opmodel/core";
+import { createInitialState, resolveLinksForOpd, findConsumptionResultPairs, type ModelState } from "@opmodel/core";
 import type { Command, EditorMode, LinkTypeChoice, SimulationUIState } from "../lib/commands";
 import { genId } from "../lib/ids";
 import {
@@ -561,39 +561,31 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
       labelOverride: undefined as string | undefined,
     }));
 
-    // Merge consumption+result pairs on same (object, process) into single visual effect.
-    // A consumption+result pair is the in-zoom refinement of an effect link (DA-7).
-    const consumptions = new Map<string, number>();
-    const results = new Map<string, number>();
-    entries.forEach((entry, i) => {
-      const srcThing = model.things.get(entry.visualSource);
-      const objId = srcThing?.kind === "object" ? entry.visualSource : entry.visualTarget;
-      const procId = srcThing?.kind === "process" ? entry.visualSource : entry.visualTarget;
-      if (entry.link.type === "consumption") consumptions.set(`${objId}|${procId}`, i);
-      else if (entry.link.type === "result") results.set(`${objId}|${procId}`, i);
-    });
+    // Merge consumption+result pairs into single visual effect (DA-7).
+    const pairs = findConsumptionResultPairs(model, resolved);
+    const consumptionIds = new Set(pairs.map(p => p.consumptionLink.id));
+    const resultIds = new Set(pairs.map(p => p.resultLink.id));
 
-    const toRemove = new Set<number>();
-    for (const [key, consIdx] of consumptions) {
-      const resIdx = results.get(key);
-      if (resIdx === undefined) continue;
-      const consEntry = entries[consIdx]!;
-      const resEntry = entries[resIdx]!;
-      const fromState = consEntry.link.source_state ? model.states.get(consEntry.link.source_state) : undefined;
-      const toState = resEntry.link.target_state ? model.states.get(resEntry.link.target_state) : undefined;
-      const label = fromState && toState ? `${fromState.name} → ${toState.name}` : "effect";
-      const [objId = "", procId = ""] = key.split("|");
-      entries[consIdx] = {
-        link: { ...consEntry.link, type: "effect" as any, source: procId, target: objId, source_state: consEntry.link.source_state, target_state: resEntry.link.target_state },
-        modifier: consEntry.modifier ?? resEntry.modifier,
-        visualSource: procId,
-        visualTarget: objId,
+    // Build a lookup from consumption link ID → merged visual entry
+    const mergedEntries = new Map<string, typeof entries[number]>();
+    for (const pair of pairs) {
+      const consEntry = entries.find(e => e.link.id === pair.consumptionLink.id);
+      const resEntry = entries.find(e => e.link.id === pair.resultLink.id);
+      if (!consEntry) continue;
+      const label = pair.fromStateName && pair.toStateName
+        ? `${pair.fromStateName} → ${pair.toStateName}` : "effect";
+      mergedEntries.set(pair.consumptionLink.id, {
+        link: { ...consEntry.link, type: "effect" as any, source: pair.processId, target: pair.objectId, source_state: pair.consumptionLink.source_state, target_state: pair.resultLink.target_state },
+        modifier: consEntry.modifier ?? resEntry?.modifier,
+        visualSource: pair.processId,
+        visualTarget: pair.objectId,
         labelOverride: label,
-      };
-      toRemove.add(resIdx);
+      });
     }
 
-    return entries.filter((_, i) => !toRemove.has(i));
+    return entries
+      .filter(e => !resultIds.has(e.link.id))
+      .map(e => mergedEntries.get(e.link.id) ?? e);
   }, [model, opdId]);
 
   // Convert client coords to SVG model coords
