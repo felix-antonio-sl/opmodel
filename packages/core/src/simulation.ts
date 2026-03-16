@@ -227,19 +227,13 @@ export function resolveLinksForOpd(model: Model, opdId: string): ResolvedLink[] 
     return subprocessToAncestor.get(thingId) ?? null;
   }
 
-  // 4. Collect internal mechanism data for filtering aggregated links.
-  //    a) States produced internally (target_state of effect/result on subprocesses)
-  //    b) Objects consumed internally (consumption links on subprocesses)
-  const internallyProducedStates = new Set<string>();
+  // 4. Collect objects consumed internally (consumption links on subprocesses)
+  //    Used to suppress aggregated effect/result links on these objects.
   const internallyConsumedObjects = new Set<string>();
   for (const link of model.links.values()) {
     const isSiblingLink = subprocessToAncestor.has(link.source) || subprocessToAncestor.has(link.target);
     if (!isSiblingLink) continue;
-    if (["effect", "result"].includes(link.type) && link.target_state) {
-      internallyProducedStates.add(link.target_state);
-    }
     if (link.type === "consumption") {
-      // Detect object endpoint by kind
       const srcThing = model.things.get(link.source);
       const objId = srcThing?.kind === "object" ? link.source : link.target;
       internallyConsumedObjects.add(objId);
@@ -249,23 +243,36 @@ export function resolveLinksForOpd(model: Model, opdId: string): ResolvedLink[] 
   const result: ResolvedLink[] = [];
   const seen = new Set<string>();
 
+  // RESOLVE-01: In-zoom OPD parent-level link filtering
+  const opd = model.opds.get(opdId);
+  const containerThingId = opd?.refines;
+  let internalThings: Set<string> | null = null;
+  if (containerThingId) {
+    internalThings = new Set<string>();
+    for (const app of model.appearances.values()) {
+      if (app.opd === opdId && app.internal === true) internalThings.add(app.thing);
+    }
+  }
+
   for (const link of model.links.values()) {
     const vs = resolve(link.source);
     const vt = resolve(link.target);
     if (!vs || !vt) continue;
     if (vs === vt) continue; // Skip self-loops from same-parent resolution
 
+    // RESOLVE-01: Filter parent-level links in in-zoom OPDs
+    if (containerThingId && internalThings) {
+      if (vs === containerThingId || vt === containerThingId) continue;
+      if (!internalThings.has(vs) && !internalThings.has(vt)) continue;
+    }
+
     const isAggregated = vs !== link.source || vt !== link.target;
 
     // Filter internal mechanisms ONLY for aggregated links (projected to parent).
     // Inside the in-zoom OPD, show all links.
     if (isAggregated) {
-      // a) Enabling links whose required state is produced internally
-      if (["agent", "instrument"].includes(link.type) && link.source_state) {
-        if (internallyProducedStates.has(link.source_state)) continue;
-      }
-      // b) Effect/result links on objects that are consumed by a sibling subprocess —
-      //    the transformation is an internal mechanism, not external interface
+      // Effect/result links on objects that are consumed by a sibling subprocess —
+      // the transformation is an internal mechanism, not external interface
       if (["effect", "result"].includes(link.type)) {
         const srcThing = model.things.get(link.source);
         const objId = srcThing?.kind === "object" ? link.source : link.target;
@@ -274,7 +281,18 @@ export function resolveLinksForOpd(model: Model, opdId: string): ResolvedLink[] 
     }
 
     const key = `${link.type}|${vs}|${vt}`;
-    if (seen.has(key)) continue;
+    if (seen.has(key)) {
+      // Prefer direct links over aggregated for same visual key
+      if (!isAggregated) {
+        const idx = result.findIndex(r =>
+          `${r.link.type}|${r.visualSource}|${r.visualTarget}` === key && r.aggregated
+        );
+        if (idx !== -1) {
+          result[idx] = { link, visualSource: vs, visualTarget: vt, aggregated: false };
+        }
+      }
+      continue;
+    }
     seen.add(key);
 
     result.push({
@@ -285,7 +303,36 @@ export function resolveLinksForOpd(model: Model, opdId: string): ResolvedLink[] 
     });
   }
 
-  return result;
+  // Post-filter: suppress aggregated enabling links that are internal details.
+  // Rule 1 (VISUAL-03): source is part of a whole that has a direct link of same type.
+  // Rule 2: source already has a direct link to the same process (redundant role).
+  const partToWhole = new Map<string, string>();
+  for (const l of model.links.values()) {
+    if (l.type === "aggregation") partToWhole.set(l.target, l.source);
+  }
+
+  const directLinkKeys = new Set<string>();
+  const directParticipants = new Set<string>();
+  for (const rl of result) {
+    if (!rl.aggregated) {
+      directLinkKeys.add(`${rl.link.type}|${rl.visualSource}|${rl.visualTarget}`);
+      const srcThing = model.things.get(rl.visualSource);
+      const tgtThing = model.things.get(rl.visualTarget);
+      if (srcThing?.kind === "object") directParticipants.add(`${rl.visualSource}|${rl.visualTarget}`);
+      if (tgtThing?.kind === "object") directParticipants.add(`${rl.visualTarget}|${rl.visualSource}`);
+    }
+  }
+
+  return result.filter(rl => {
+    if (!rl.aggregated) return true;
+    if (!["instrument", "agent"].includes(rl.link.type)) return true;
+    // Rule 1: source is part of whole that already has direct link of same type
+    const whole = partToWhole.get(rl.visualSource);
+    if (whole && directLinkKeys.has(`${rl.link.type}|${whole}|${rl.visualTarget}`)) return false;
+    // Rule 2: source already has a direct link to same process → resolved enabling is redundant
+    if (directParticipants.has(`${rl.visualSource}|${rl.visualTarget}`)) return false;
+    return true;
+  });
 }
 
 // === Coalgebra: c: ModelState → Event × (Precond → ModelState + 1) ===

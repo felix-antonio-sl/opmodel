@@ -87,9 +87,22 @@ export function expose(model: Model, opdId: string): OplDocument {
   }
 
   // 4. Links (both endpoints visible, sorted by ID)
-  const sortedLinks = [...model.links.values()]
+  let sortedLinks = [...model.links.values()]
     .filter(l => visibleThings.has(l.source) && visibleThings.has(l.target))
     .sort((a, b) => a.id.localeCompare(b.id));
+
+  // In in-zoom OPDs, filter parent-level links (ISO: only internal decomposition)
+  const containerThingId = opd?.refines;
+  if (containerThingId) {
+    const internalThings = new Set<string>();
+    for (const app of model.appearances.values()) {
+      if (app.opd === opdId && app.internal === true) internalThings.add(app.thing);
+    }
+    sortedLinks = sortedLinks.filter(l =>
+      l.source !== containerThingId && l.target !== containerThingId &&
+      (internalThings.has(l.source) || internalThings.has(l.target))
+    );
+  }
 
   for (const link of sortedLinks) {
     const sentence: OplLinkSentence = {
@@ -210,11 +223,12 @@ function renderLinkSentence(s: OplLinkSentence): string {
       return `${s.sourceName} consists of ${s.targetName}.`;
     }
     case "exhibition": {
-      // Incomplete exhibition
+      // Convention: source=Feature (informatical, I-19), target=Exhibitor
+      // OPL: "Exhibitor exhibits Feature" → targetName exhibits sourceName
       if (s.incomplete) {
-        return `${s.sourceName} exhibits ${s.targetName} and at least one other feature.`;
+        return `${s.targetName} exhibits ${s.sourceName} and at least one other feature.`;
       }
-      return `${s.sourceName} exhibits ${s.targetName}.`;
+      return `${s.targetName} exhibits ${s.sourceName}.`;
     }
     case "generalization": {
       // Incomplete generalization
