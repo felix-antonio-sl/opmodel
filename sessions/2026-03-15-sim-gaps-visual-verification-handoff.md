@@ -1,8 +1,8 @@
-# Handoff: SIM-GAP Closure + Visual Verification
+# Handoff: SIM-GAP Closure + Visual Verification + Simulation UI Fixes
 
 **Fecha:** 2026-03-15
 **Sesión:** sim-gaps-visual-verification (session 3)
-**514 tests passing, 48 commits on origin/master**
+**515 tests passing, 53 commits on master**
 
 ---
 
@@ -33,8 +33,8 @@ const stateRef = link.type === "effect" ? link.source_state : (link.source_state
 
 **Fix**: Wave-based execution en `runSimulation`:
 - Procesos agrupados por Y-coordinate en "waves"
-- Snapshot del estado tomado al inicio de cada wave
-- Precondiciones evaluadas contra el snapshot (parallel pre-image)
+- Snapshot del estado tomado al inicio de cada wave (parallel pre-image)
+- Precondiciones evaluadas contra el snapshot
 - `processInvocations` retorna boolean; si triggerea invocación, invalida el wave snapshot
 - Procesos que fallan con "lost"/"skip" en snapshot se marcan completados (clearing barrier)
 
@@ -48,24 +48,67 @@ Verificación en browser via Chrome extension + DOM inspection del modelo Coffee
 |-----------|-------|-----------|-------------|-----|
 | agent | 3 | dot-agent ● | none | ✅ §8.1.1 |
 | instrument | 3 | circle-instrument ○ | none | ✅ §8.1.2 |
-| consumption | 3 | arrow-proc → | none | ✅ §7.2.1 |
-| result | 2 | arrow-proc → | none | ✅ §7.2.2 |
-| effect | 1 | arrow-proc → | arrow-proc ← | ✅ §7.2.3 ↔ |
+| consumption | 4 | arrow-proc → | none | ✅ §7.2.1 |
+| result | 3 | arrow-proc → | none | ✅ §7.2.2 |
 
-## Commits de esta sesión
+### 5. Effect Link State-Pill Routing Fix
+
+**Bug**: Para effect links, el código de rendering ruteaba `target_state` al thing target (correcto para otros links) pero para effect links ambos estados pertenecen al OBJETO endpoint. Esto causaba que el link terminara en el pill "hot" en vez del pill "cold" (FROM state).
+
+**Fix**: Para effect links, se rutea el extremo del objeto al `source_state` (FROM state); `target_state` no se rutea visualmente.
+
+### 6. Simulation ObjectState Deep-Copy Fix
+
+**Bug**: `simulationStep` creaba `new Map(state.objects)` que compartía los objetos `ObjectState`. Mutaciones (`obj.exists`, `obj.currentState`) leakeaban a todos los pasos, causando que la UI de simulación mostrara el estado FINAL en cada paso.
+
+**Fix**: Spread-copy de cada `ObjectState` al crear `newState.objects`. Verificado visualmente: Step 2 (Boiling) ahora muestra Water: exists, hot correctamente (antes mostraba consumed).
+
+**Tests**: 1 nuevo (intermediate step state independence)
+
+### 7. Container Drag Coupling en In-Zoom OPDs
+
+**Bug**: Al arrastrar el proceso container (Coffee Making) en SD1, los subprocesos internos no se movían con él.
+
+**Fix**:
+- Nuevo comando batch `moveThings` en `commands.ts` (single undo step)
+- `draggedThings` Set: si el target es el container (`opd.refines`), incluye todas las appearances del OPD
+- Delta visual aplicado a todos los `draggedThings` durante drag
+- Links y state pills reposicionados via `draggedThings.has()` checks
+
+### 8. Coffee Making Fixture: Effect → Consumption + Result
+
+**Refactor ISO**: El effect link (Boiling ↔ Water cold→hot) fue reemplazado por el patrón ISO correcto de transformación de estado:
+- `consumption`: Water(cold) → Boiling (consume agua fría)
+- `result`: Boiling → Water(hot) (produce agua caliente)
+
+**Cascade**: `simulationStep` refactorizado a ejecución por fases (consumption → effect → result) para garantizar que consumption+result sobre el mismo objeto funcione independiente del orden de inserción de links. Fixture pasa de 12 a 13 links.
+
+### 9. TypeScript en Web Package
+
+Instalado `typescript@5.9.3` como devDependency en `packages/web` para soporte de `npx tsc --noEmit`.
+
+## Commits de esta sesión (7)
 
 | Commit | Descripción |
 |--------|------------|
 | `7298355` | fix(sim): close 3 simulation gaps with TDD (9 tests) |
 | `2ac5156` | docs: mark SIM-GAP-01/02/03 as fixed in backlog |
+| `fc16d16` | docs: session handoff (primera versión) |
+| `e8631f8` | fix(web): effect link state-pill routing uses object endpoint |
+| `9896bdb` | fix(sim): deep-copy ObjectState to preserve intermediate step states |
+| `713671c` | feat(web): container drag coupling in in-zoom OPDs |
+| `cdb61e3` | refactor(model): replace effect link with consumption+result on Water |
 
-## Artefactos
+## Artefactos modificados
 
 | Artefacto | Path |
 |-----------|------|
-| Backlog actualizado | `docs/superpowers/specs/2026-03-10-opm-modeling-app-backlog-lean.md` |
 | Simulation engine | `packages/core/src/simulation.ts` |
 | API invariants | `packages/core/src/api.ts` |
+| OPD Canvas | `packages/web/src/components/OpdCanvas.tsx` |
+| Command algebra | `packages/web/src/lib/commands.ts` |
+| Coffee Making fixture | `tests/coffee-making.opmodel` |
+| Backlog | `docs/superpowers/specs/2026-03-10-opm-modeling-app-backlog-lean.md` |
 
 ## Estado de Simulation Gaps
 
@@ -102,8 +145,8 @@ Verificación en browser via Chrome extension + DOM inspection del modelo Coffee
 
 ## Stats
 
-- **514 tests** (36 test files, 4 packages)
-- **48 commits** on master
+- **515 tests** (36 test files, 4 packages)
+- **53 commits** on master
 - **0 CRITICAL bugs** restantes
 - **0 Medium simulation gaps** restantes
 - **0 Medium data model gaps** restantes
