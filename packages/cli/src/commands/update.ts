@@ -10,6 +10,7 @@ import { readModel, writeModel, resolveModelFile } from "../io";
 interface UpdateOptions {
   file?: string;
   input?: string;
+  json?: boolean;
   name?: string;
   kind?: Kind;
   essence?: Essence;
@@ -70,7 +71,7 @@ function handleUpdateThing(model: Model, id: string, opts: UpdateOptions): { mod
     if (opts.affiliation !== undefined) patch.affiliation = opts.affiliation;
   }
   if (Object.keys(patch).length === 0) fatal("No fields to update. Provide flags or --input.");
-  const newModel = handleResult(updateThing(model, id, patch as any), { json: false });
+  const newModel = handleResult(updateThing(model, id, patch as any), { json: !!opts.json });
   const entity = newModel.things.get(id);
   return { model: newModel, result: { id, type: "thing", entity } };
 }
@@ -88,7 +89,7 @@ function handleUpdateState(model: Model, id: string, opts: UpdateOptions): { mod
     if (opts.default !== undefined) patch.default = opts.default;
   }
   if (Object.keys(patch).length === 0) fatal("No fields to update. Provide flags or --input.");
-  const newModel = handleResult(updateState(model, id, patch as any), { json: false });
+  const newModel = handleResult(updateState(model, id, patch as any), { json: !!opts.json });
   const entity = newModel.states.get(id);
   return { model: newModel, result: { id, type: "state", entity } };
 }
@@ -106,7 +107,7 @@ function handleUpdateLink(model: Model, id: string, opts: UpdateOptions): { mode
     if (opts.targetState !== undefined) patch.target_state = opts.targetState;
   }
   if (Object.keys(patch).length === 0) fatal("No fields to update. Provide flags or --input.");
-  const newModel = handleResult(updateLink(model, id, patch as any), { json: false });
+  const newModel = handleResult(updateLink(model, id, patch as any), { json: !!opts.json });
   const entity = newModel.links.get(id);
   return { model: newModel, result: { id, type: "link", entity } };
 }
@@ -124,7 +125,7 @@ function handleUpdateOPD(model: Model, id: string, opts: UpdateOptions): { model
     if (opts.refinement !== undefined) patch.refinement_type = opts.refinement;
   }
   if (Object.keys(patch).length === 0) fatal("No fields to update. Provide flags or --input.");
-  const newModel = handleResult(updateOPD(model, id, patch as any), { json: false });
+  const newModel = handleResult(updateOPD(model, id, patch as any), { json: !!opts.json });
   const entity = newModel.opds.get(id);
   return { model: newModel, result: { id, type: "opd", entity } };
 }
@@ -140,14 +141,14 @@ function handleUpdateMeta(model: Model, opts: UpdateOptions): { model: Model; re
     if (opts.systemType !== undefined) patch.system_type = opts.systemType;
   }
   if (Object.keys(patch).length === 0) fatal("No fields to update. Provide flags or --input.");
-  const newModel = handleResult(updateMeta(model, patch as any), { json: false });
+  const newModel = handleResult(updateMeta(model, patch as any), { json: !!opts.json });
   return { model: newModel, result: { type: "meta", entity: newModel.meta } };
 }
 
 function handleUpdateSettings(model: Model, opts: UpdateOptions): { model: Model; result: UpdateResult } {
   if (!opts.input) fatal("Settings requires --input with JSON patch.");
   const patch = parseInputPatch(opts.input, "settings");
-  const newModel = handleResult(updateSettings(model, patch as any), { json: false });
+  const newModel = handleResult(updateSettings(model, patch as any), { json: !!opts.json });
   return { model: newModel, result: { type: "settings", entity: newModel.settings } };
 }
 

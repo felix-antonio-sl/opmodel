@@ -278,6 +278,24 @@ describe("removeLink", () => {
     if (isOk(r)) expect(r.value.links.size).toBe(0);
   });
 
+  // --- I-EXCEPTION-TYPE: exception_type only on exception links ---
+
+  it("rejects exception_type on non-exception link (I-EXCEPTION-TYPE)", () => {
+    const r = addLink(buildModel(), { id: "lnk-bad", type: "effect", source: "proc-heating", target: "obj-water", exception_type: "overtime" });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-EXCEPTION-TYPE");
+  });
+
+  it("allows exception_type on exception link (I-EXCEPTION-TYPE valid)", () => {
+    const procTimed: Thing = { id: "proc-timed", kind: "process", name: "Timed", essence: "physical", affiliation: "systemic", duration: { nominal: 60, max: 120, unit: "s" } };
+    const procHandler: Thing = { id: "proc-handler", kind: "process", name: "Handler", essence: "physical", affiliation: "systemic" };
+    let m = buildModel();
+    m = (addThing(m, procTimed) as any).value;
+    m = (addThing(m, procHandler) as any).value;
+    const r = addLink(m, { id: "lnk-exc", type: "exception", source: "proc-timed", target: "proc-handler", exception_type: "overtime" });
+    expect(isOk(r)).toBe(true);
+  });
+
   it("cascade removes modifiers over the link", () => {
     let m = buildModel();
     m = (addLink(m, { id: "lnk-effect", type: "effect", source: "proc-heating", target: "obj-water" }) as any).value;

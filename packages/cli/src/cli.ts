@@ -273,6 +273,7 @@ update
   .option("--file <file>", "Path to .opmodel file")
   .action((id: string, opts: Record<string, unknown>) => {
     const jsonFlag = program.opts().json as boolean;
+    opts.json = jsonFlag;
     const result = executeUpdate("thing", id, opts as any);
     if (jsonFlag) {
       console.log(JSON.stringify({ action: "updated", type: result.type, id: result.id, entity: result.entity }, null, 2));
@@ -298,6 +299,7 @@ update
   .option("--file <file>", "Path to .opmodel file")
   .action((id: string, opts: Record<string, unknown>) => {
     const jsonFlag = program.opts().json as boolean;
+    opts.json = jsonFlag;
     const result = executeUpdate("state", id, opts as any);
     if (jsonFlag) {
       console.log(JSON.stringify({ action: "updated", type: result.type, id: result.id, entity: result.entity }, null, 2));
@@ -320,6 +322,7 @@ update
   .option("--file <file>", "Path to .opmodel file")
   .action((id: string, opts: Record<string, unknown>) => {
     const jsonFlag = program.opts().json as boolean;
+    opts.json = jsonFlag;
     const result = executeUpdate("link", id, opts as any);
     if (jsonFlag) {
       console.log(JSON.stringify({ action: "updated", type: result.type, id: result.id, entity: result.entity }, null, 2));
@@ -341,6 +344,7 @@ update
   .option("--file <file>", "Path to .opmodel file")
   .action((id: string, opts: Record<string, unknown>) => {
     const jsonFlag = program.opts().json as boolean;
+    opts.json = jsonFlag;
     const result = executeUpdate("opd", id, opts as any);
     if (jsonFlag) {
       console.log(JSON.stringify({ action: "updated", type: result.type, id: result.id, entity: result.entity }, null, 2));
@@ -360,6 +364,7 @@ update
   .option("--file <file>", "Path to .opmodel file")
   .action((opts: Record<string, unknown>) => {
     const jsonFlag = program.opts().json as boolean;
+    opts.json = jsonFlag;
     const result = executeUpdate("meta", undefined, opts as any);
     if (jsonFlag) {
       console.log(JSON.stringify({ action: "updated", type: result.type, entity: result.entity }, null, 2));
@@ -376,6 +381,7 @@ update
   .option("--file <file>", "Path to .opmodel file")
   .action((opts: Record<string, unknown>) => {
     const jsonFlag = program.opts().json as boolean;
+    opts.json = jsonFlag;
     const result = executeUpdate("settings", undefined, opts as any);
     if (jsonFlag) {
       console.log(JSON.stringify({ action: "updated", type: result.type, entity: result.entity }, null, 2));

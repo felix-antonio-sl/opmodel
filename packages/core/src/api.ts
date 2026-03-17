@@ -280,6 +280,11 @@ export function addLink(
     }
   }
 
+  // I-EXCEPTION-TYPE: exception_type only valid on exception links (ISO §9.5.4)
+  if (link.exception_type && link.type !== "exception") {
+    return err({ code: "I-EXCEPTION-TYPE", message: `exception_type only allowed on exception links, not ${link.type}`, entity: link.id });
+  }
+
   // I-18: agent source must be physical
   if (link.type === "agent") {
     if (source.essence !== "physical") {
@@ -1186,6 +1191,10 @@ export function validate(model: Model): InvariantError[] {
     if (link.type === "exception") {
       const source = model.things.get(link.source);
       if (source && !source.duration?.max) errors.push({ code: "I-14", message: `Exception link ${id} source must have duration.max`, entity: id });
+    }
+    // I-EXCEPTION-TYPE: exception_type only valid on exception links (ISO §9.5.4)
+    if (link.exception_type && link.type !== "exception") {
+      errors.push({ code: "I-EXCEPTION-TYPE", message: `Link ${id} has exception_type but type is ${link.type}`, entity: id });
     }
   }
 

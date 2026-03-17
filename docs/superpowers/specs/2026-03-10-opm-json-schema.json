@@ -94,6 +94,19 @@
         "unit": {
           "type": "string",
           "enum": ["ms", "s", "min", "h", "d"]
+        },
+        "distribution": {
+          "type": "object",
+          "description": "ISO §9.5.4.1: stochastic distribution",
+          "required": ["name", "params"],
+          "additionalProperties": false,
+          "properties": {
+            "name": { "type": "string" },
+            "params": {
+              "type": "object",
+              "additionalProperties": { "type": "number" }
+            }
+          }
         }
       }
     },
@@ -375,6 +388,7 @@
           "type": "string",
           "enum": ["overtime", "undertime"]
         },
+        "distributed": { "type": "boolean", "description": "ISO §14.2.2.4.1: link targets parent contour, applies to all subprocesses" },
         "hyperlinks": {
           "type": "array",
           "items": { "type": "string" }
@@ -515,19 +529,30 @@
 
     "Fan": {
       "type": "object",
-      "description": "XOR/OR grouping of links (§5.1)",
+      "description": "XOR/OR/AND grouping of links (§5.1, ISO §12)",
       "required": ["id", "type", "members"],
       "additionalProperties": false,
       "properties": {
         "id": { "type": "string", "pattern": "^fan-" },
         "type": {
           "type": "string",
-          "enum": ["xor", "or"]
+          "enum": ["xor", "or", "and"]
+        },
+        "direction": {
+          "type": "string",
+          "enum": ["converging", "diverging"],
+          "description": "ISO §12.2-12.3: Tables 17-21 define distinct semantics per direction"
         },
         "members": {
           "type": "array",
           "items": { "type": "string" },
           "minItems": 2
+        },
+        "incomplete": { "type": "boolean", "description": "ISO §10.3.2: partial structure marker" },
+        "member_multiplicities": {
+          "type": "object",
+          "description": "ISO §11.1: link ID → multiplicity expression",
+          "additionalProperties": { "type": "string" }
         }
       }
     },
