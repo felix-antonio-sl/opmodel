@@ -1,4 +1,4 @@
-import type { Model } from "./types";
+import type { Model, Link } from "./types";
 
 export function collectAllIds(model: Model): Set<string> {
   const ids = new Set<string>();
@@ -26,6 +26,18 @@ export function cleanPatch<T extends Record<string, unknown>>(patch: T): T {
 
 export function appearanceKey(thing: string, opd: string): string {
   return `${thing}::${opd}`;
+}
+
+export type TransformingMode = "effect" | "input-specified" | "output-specified" | "input-output";
+
+export function transformingMode(link: Link): TransformingMode | null {
+  if (link.type !== "effect") return null;
+  const hasSource = !!link.source_state;
+  const hasTarget = !!link.target_state;
+  if (hasSource && hasTarget) return "input-output";
+  if (hasSource) return "input-specified";
+  if (hasTarget) return "output-specified";
+  return "effect";
 }
 
 export function touch(model: Model): Model {

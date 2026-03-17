@@ -1,7 +1,7 @@
 export * from "./types";
 export * from "./result";
 export { createModel } from "./model";
-export { appearanceKey } from "./helpers";
+export { appearanceKey, transformingMode, type TransformingMode } from "./helpers";
 export { loadModel, saveModel, type LoadError } from "./serialization";
 export {
   addThing, removeThing, updateThing,
