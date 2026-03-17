@@ -50,6 +50,7 @@ const LINK_COLORS: Record<string, string> = {
   exhibition: "#6b5fad",
   generalization: "#6b5fad",
   classification: "#6b5fad",
+  tagged: "#6b5fad",
   invocation: "#c05621",
   exception: "#c05621",
 };
@@ -179,14 +180,31 @@ function SvgDefs() {
         <circle cx="5" cy="5" r="3.5" fill="white" stroke="#2b6cb0" strokeWidth="1.5" />
       </marker>
 
-      {/* Structural: Aggregation/Exhibition = filled triangle ▲ (ISO §6) */}
+      {/* Structural: Aggregation = filled triangle ▲ (ISO §6) */}
       <marker id="triangle-filled" viewBox="0 0 12 12" refX="12" refY="6" markerWidth="12" markerHeight="12" orient="auto-start-reverse">
         <path d="M0,0 L12,6 L0,12Z" fill="#6b5fad" />
       </marker>
 
-      {/* Structural: Generalization/Classification = open triangle △ (ISO §6) */}
+      {/* Structural: Exhibition = filled triangle with inner line (ISO §6) */}
+      <marker id="triangle-exhibit" viewBox="0 0 12 12" refX="12" refY="6" markerWidth="12" markerHeight="12" orient="auto-start-reverse">
+        <path d="M0,0 L12,6 L0,12Z" fill="#6b5fad" />
+        <line x1="3" y1="4" x2="3" y2="8" stroke="white" strokeWidth="1.5" />
+      </marker>
+
+      {/* Structural: Generalization = open triangle △ (ISO §6) */}
       <marker id="triangle-open" viewBox="0 0 12 12" refX="12" refY="6" markerWidth="12" markerHeight="12" orient="auto-start-reverse">
         <path d="M0,0 L12,6 L0,12Z" fill="white" stroke="#6b5fad" strokeWidth="1.5" />
+      </marker>
+
+      {/* Structural: Classification = open triangle on baseline (ISO §6) */}
+      <marker id="triangle-classify" viewBox="0 0 14 14" refX="14" refY="7" markerWidth="14" markerHeight="14" orient="auto-start-reverse">
+        <path d="M0,2 L12,7 L0,12Z" fill="white" stroke="#6b5fad" strokeWidth="1.5" />
+        <line x1="0" y1="12" x2="12" y2="12" stroke="#6b5fad" strokeWidth="1.5" />
+      </marker>
+
+      {/* Structural: Tagged = purple arrow (ISO §10.2) */}
+      <marker id="arrow-tagged" viewBox="0 0 10 8" refX="10" refY="4" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
+        <path d="M0,0 L10,4 L0,8Z" fill="#6b5fad" />
       </marker>
 
       {/* Control: invocation/exception = filled arrowhead */}
@@ -517,15 +535,26 @@ function LinkLine({
     case "output":
       markerEnd = "url(#arrow-proc)";
       break;
-    // Structural links: ISO §6 — triangle markers at parent/whole/general end
+    // Structural links: ISO §6 — distinct markers per type
     case "aggregation":
+      markerEnd = "url(#triangle-filled)";    // ▲ filled triangle
+      break;
     case "exhibition":
-      markerEnd = "url(#triangle-filled)";  // ▲ filled triangle
+      markerEnd = "url(#triangle-exhibit)";   // ▲ filled + inner line
       break;
     case "generalization":
-    case "classification":
-      markerEnd = "url(#triangle-open)";    // △ open triangle
+      markerEnd = "url(#triangle-open)";      // △ open triangle
       break;
+    case "classification":
+      markerEnd = "url(#triangle-classify)";  // △ open + baseline
+      break;
+    case "tagged": {
+      markerEnd = "url(#arrow-tagged)";       // → structural purple
+      if (link.direction === "bidirectional" || link.direction === "reciprocal") {
+        markerStart = "url(#arrow-tagged)";   // ↔
+      }
+      break;
+    }
     // Control links
     case "invocation":
     case "exception":
