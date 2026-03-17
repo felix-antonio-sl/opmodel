@@ -169,8 +169,8 @@ describe("render", () => {
     const m = buildModel();
     const doc = expose(m, "opd-sd");
     const text = render(doc);
-    expect(text).toContain("Water is an object, physical, systemic.");
-    expect(text).toContain("Boiling is a process, physical, systemic.");
+    expect(text).toContain("Water is an object, physical.");
+    expect(text).toContain("Boiling is a process, physical.");
   });
 
   it("renders state enumerations", () => {
@@ -213,7 +213,7 @@ describe("render", () => {
     if (!isOk(r)) throw r.error; m = r.value;
     const doc = expose(m, "opd-sd");
     const text = render(doc);
-    expect(text).toContain("Water is an object, systemic.");
+    expect(text).toContain("Water is an object.");
     expect(text).not.toContain("physical");
   });
 
@@ -233,8 +233,45 @@ describe("render", () => {
     if (!isOk(r)) throw r.error; m = r.value;
     const doc = expose(m, "opd-sd");
     const text = render(doc);
-    expect(text).toContain("Water is an object, systemic.");
+    expect(text).toContain("Water is an object.");
     expect(text).toContain("Cup is an object, environmental.");
+  });
+
+  it("omits systemic affiliation from rendering (ISO default)", () => {
+    const m = buildModel();
+    const doc = expose(m, "opd-sd");
+    const text = render(doc);
+    expect(text).toContain("Water is an object, physical.");
+    expect(text).not.toContain("systemic");
+  });
+
+  it("renders environmental affiliation (non-default)", () => {
+    const m = buildModel();
+    const doc = expose(m, "opd-sd");
+    const text = render(doc);
+    expect(text).toContain("Cup is an object, physical, environmental.");
+  });
+
+  it("omits both defaults when informatical+systemic with non_default essence", () => {
+    let m = buildModel();
+    // Add an informatical+systemic object (both ISO defaults)
+    let r = addThing(m, { id: "obj-data", kind: "object", name: "Data", essence: "informatical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addAppearance(m, { thing: "obj-data", opd: "opd-sd", x: 0, y: 0, w: 100, h: 50 });
+    if (!isOk(r)) throw r.error; m = r.value;
+    let r2 = updateSettings(m, { opl_essence_visibility: "non_default" });
+    if (!isOk(r2)) throw r2.error; m = r2.value;
+    const doc = expose(m, "opd-sd");
+    const text = render(doc);
+    expect(text).toContain("Data is an object.");
+  });
+
+  it("renders both non-default essence and affiliation", () => {
+    const m = buildModel();
+    const doc = expose(m, "opd-sd");
+    const text = render(doc);
+    // Cup is physical + environmental (both non-default)
+    expect(text).toContain("Cup is an object, physical, environmental.");
   });
 });
 

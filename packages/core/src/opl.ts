@@ -22,7 +22,7 @@ export function expose(model: Model, opdId: string): OplDocument {
     essenceVisibility: settings.opl_essence_visibility ?? "all",
     unitsVisibility: settings.opl_units_visibility ?? "always",
     aliasVisibility: settings.opl_alias_visibility ?? false,
-    primaryEssence: settings.primary_essence ?? "physical",
+    primaryEssence: settings.primary_essence ?? "informatical",
   };
 
   // 1. Collect visible things
@@ -315,7 +315,9 @@ function renderSentence(s: OplSentence, settings: OplRenderSettings): string {
           (settings.essenceVisibility === "non_default" && s.essence !== settings.primaryEssence)) {
         text += `, ${s.essence}`;
       }
-      text += `, ${s.affiliation}`;
+      if (s.affiliation !== "systemic") {
+        text += `, ${s.affiliation}`;
+      }
       if (s.alias && settings.aliasVisibility) {
         text += ` (alias: ${s.alias})`;
       }
