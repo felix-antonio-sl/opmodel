@@ -459,6 +459,8 @@ function LinkLine({
   modifier,
   labelOverride,
   isMergedPair,
+  isInputHalf,
+  isOutputHalf,
 }: {
   link: Link;
   sourceRect: Rect;
@@ -468,6 +470,8 @@ function LinkLine({
   modifier?: Modifier;
   labelOverride?: string;
   isMergedPair?: boolean;
+  isInputHalf?: boolean;
+  isOutputHalf?: boolean;
 }) {
   const srcCenter = center(sourceRect);
   const tgtCenter = center(targetRect);
@@ -497,10 +501,16 @@ function LinkLine({
     case "result":
       markerEnd = "url(#arrow-proc)";       // → single arrowhead
       break;
-    case "effect":
-      markerEnd = "url(#arrow-proc)";       // ↔ bidirectional
-      markerStart = "url(#arrow-proc)";
+    case "effect": {
+      const isDirected = isInputHalf || isOutputHalf;
+      if (isDirected) {
+        markerEnd = "url(#arrow-proc)";       // → unidirectional
+      } else {
+        markerEnd = "url(#arrow-proc)";       // ↔ bidirectional
+        markerStart = "url(#arrow-proc)";
+      }
       break;
+    }
     case "input":
       markerEnd = "url(#arrow-proc)";
       break;
@@ -889,7 +899,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
           <rect x="-500" y="-500" width="3000" height="3000" fill="url(#grid-dots)" />
 
           {/* Links (behind things) — re-route during drag */}
-          {visibleLinks.map(({ link, modifier, visualSource, visualTarget, labelOverride, isMergedPair }) => {
+          {visibleLinks.map(({ link, modifier, visualSource, visualTarget, labelOverride, isMergedPair, isInputHalf, isOutputHalf }) => {
             let srcRect = getEffectiveRect(visualSource);
             let tgtRect = getEffectiveRect(visualTarget);
             const srcThing = model.things.get(visualSource);
@@ -974,7 +984,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
             }
 
             return (
-              <g key={link.id} className={linkSimClass || undefined}>
+              <g key={isInputHalf ? `${link.id}__in` : isOutputHalf ? `${link.id}__out` : link.id} className={linkSimClass || undefined}>
                 <LinkLine
                   link={link}
                   sourceRect={srcRect}
@@ -984,6 +994,8 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
                   modifier={modifier}
                   labelOverride={labelOverride}
                   isMergedPair={isMergedPair}
+                  isInputHalf={isInputHalf}
+                  isOutputHalf={isOutputHalf}
                 />
               </g>
             );
