@@ -95,22 +95,24 @@ El canvas usa `visualSource` y `visualTarget` para determinar desde dónde hacia
 
 **Clave**: Para `input-specified` y para el input half de `input-output`, los visual endpoints se **intercambian** respecto al data model para que `markerEnd` (que siempre apunta al visualTarget) señale al proceso.
 
-#### Mecánica de split para `input-output`
+#### Pipeline de visual entries
 
-El pipeline `visibleLinks` en OpdCanvas ya tiene precedente con DA-7 `findConsumptionResultPairs` que genera entries sintéticas para merged consumption+result pairs. Se añade un paso análogo:
+El pipeline `visibleLinks` en OpdCanvas ya tiene precedente con DA-7 `findConsumptionResultPairs` que genera entries sintéticas para merged consumption+result pairs. Se añade un paso análogo que maneja **todos** los modos del effect link:
 
 ```
 visibleLinks pipeline:
   1. resolveLinksForOpd(model, opdId)           // existente
   2. findConsumptionResultPairs(...)             // existente (DA-7)
-  3. splitInputOutputPairs(entries, model)       // NUEVO — desdobla effect con 2 estados
+  3. adjustEffectEndpoints(entries, model)       // NUEVO — ajusta endpoints de todos los effect modes
   4. Filtrar resultIds de DA-7                   // existente
   5. Render entries                              // existente
 ```
 
-##### Función `splitInputOutputPairs`
+##### Función `adjustEffectEndpoints`
 
 Vive en `OpdCanvas.tsx` como función local (opera sobre entries visuales del canvas, no sobre el modelo puro — a diferencia de `findConsumptionResultPairs` que opera sobre ResolvedLinks en core).
+
+Maneja los 4 modos del effect link en una sola función:
 
 ```typescript
 // OpdCanvas.tsx — inline helper
@@ -121,57 +123,93 @@ interface VisualLinkEntry {
   visualTarget: string;
   labelOverride: string | undefined;
   isMergedPair: boolean;
-  isInputHalf?: boolean;
-  isOutputHalf?: boolean;
+  isInputHalf?: boolean;   // input half of input-output split
+  isOutputHalf?: boolean;  // output half of input-output split OR output-specified
 }
 
-function splitInputOutputPairs(
+function adjustEffectEndpoints(
   entries: VisualLinkEntry[],
   model: Model,
 ): VisualLinkEntry[] {
   return entries.flatMap(entry => {
-    if (transformingMode(entry.link) !== "input-output") return [entry];
+    const mode = transformingMode(entry.link);
+    if (!mode || mode === "effect") return [entry]; // non-effect or basic effect: passthrough
 
+    // Resolve object/process endpoints (invariant I-33 guarantees object↔process pairing)
     const srcThing = model.things.get(entry.visualSource);
     const objectId = srcThing?.kind === "object" ? entry.visualSource : entry.visualTarget;
     const processId = srcThing?.kind === "process" ? entry.visualSource : entry.visualTarget;
 
-    const inputHalf: VisualLinkEntry = {
-      ...entry,
-      link: { ...entry.link, target_state: undefined },
-      visualSource: objectId,     // SWAP — pill side is source
-      visualTarget: processId,    // SWAP — process is target (markerEnd points here)
-      isInputHalf: true,
-    };
+    switch (mode) {
+      case "input-specified":
+        // Swap visual endpoints: pill s₁ is source, process is target → markerEnd at process ✓
+        return [{
+          ...entry,
+          visualSource: objectId,
+          visualTarget: processId,
+          isInputHalf: true,
+        }];
 
-    const outputHalf: VisualLinkEntry = {
-      ...entry,
-      link: { ...entry.link, source_state: undefined },
-      visualSource: processId,    // process is source
-      visualTarget: objectId,     // pill side is target (markerEnd points here)
-      isOutputHalf: true,
-    };
+      case "output-specified":
+        // Keep visual endpoints: process is source, pill s₂ is target → markerEnd at pill ✓
+        return [{
+          ...entry,
+          visualSource: processId,
+          visualTarget: objectId,
+          isOutputHalf: true,
+        }];
 
-    return [inputHalf, outputHalf];
+      case "input-output":
+        // Split into two directed entries
+        return [
+          {
+            ...entry,
+            link: { ...entry.link, target_state: undefined },
+            visualSource: objectId,     // SWAP — pill s₁ side is source
+            visualTarget: processId,    // SWAP — process is target (markerEnd points here)
+            isInputHalf: true,
+          },
+          {
+            ...entry,
+            link: { ...entry.link, source_state: undefined },
+            visualSource: processId,    // process is source
+            visualTarget: objectId,     // pill s₂ side is target (markerEnd points here)
+            isOutputHalf: true,
+          },
+        ];
+
+      default:
+        return [entry];
+    }
   });
 }
 ```
 
-##### Routing por half
+**Nota sobre DA-7 orthogonalidad**: DA-7 merged pairs tienen `link.type = "consumption"` (no `"effect"`), por lo que `transformingMode` retorna `null` y pasan intactos por `adjustEffectEndpoints`. Las flags `isMergedPair` e `isInputHalf`/`isOutputHalf` son mutuamente excluyentes en la práctica.
 
-Después del split, cada half pasa por el routing existente con ajustes:
+##### Routing por entry
 
-- **Input half** (`isInputHalf: true`): `link.source_state` está presente, `visualSource = objectId`. El routing identifica el object endpoint como visualSource y rutea `srcRect` al pill de `source_state`. El `tgtRect` permanece como el proceso. `markerEnd` → proceso. ✓
+Después de `adjustEffectEndpoints`, cada entry pasa por el routing existente. Las flags `isInputHalf` y `isOutputHalf` guían el routing a state pills:
 
-- **Output half** (`isOutputHalf: true`): `link.target_state` está presente, `visualSource = processId`. Se necesita **nueva lógica de routing**: identificar que el object endpoint es `visualTarget` y rutear `tgtRect` al pill de `target_state`. `markerEnd` → pill s₂. ✓
+- **`isInputHalf`**: `link.source_state` está presente, `visualSource = objectId`. El routing identifica el object endpoint como `visualSource` y rutea `srcRect` al pill de `source_state`. El `tgtRect` permanece como el proceso. `markerEnd` → proceso. ✓
 
-#### Routing para modos parciales (sin split)
+- **`isOutputHalf`**: Dos escenarios distintos que comparten la misma lógica de routing:
+  - (a) Output half de un split `input-output`: `link.target_state` está presente, `link.source_state` fue cleared.
+  - (b) Standalone `output-specified`: `link.target_state` está presente, `link.source_state` nunca existió.
+  En ambos casos: `visualSource = processId`, `visualTarget = objectId`. Se necesita **nueva lógica de routing** en la rama effect: identificar que el object endpoint es `visualTarget` y rutear `tgtRect` al pill de `target_state`. `markerEnd` → pill s₂. ✓
 
-Para effect links con un solo estado especificado, no se genera split. Se ajusta el routing dentro del branch effect existente:
+La condición de routing para target_state en el branch effect es:
 
-- **`input-specified`**: Se intercambian `visualSource`/`visualTarget` en el paso 3 (splitInputOutputPairs detecta este modo y hace el swap sin split). Alternativamente, el swap ocurre inline antes del rendering. El routing rutea el object endpoint (ahora `visualSource`) al pill de `source_state`. `markerEnd` apunta al proceso. Correcto.
+```typescript
+// Nuevo bloque en el branch effect/isMergedPair del routing
+if (entry.isOutputHalf && link.target_state) {
+  // Route object endpoint (visualTarget) to target_state pill
+  const pill = statePillRect(objApp, visObjStates, link.target_state);
+  if (pill) { tgtRect = pill; tgtKindOverride = "object"; }
+}
+```
 
-- **`output-specified`**: Se mantienen los visual endpoints originales (process→object). Se agrega routing del object endpoint (`visualTarget`) al pill de `target_state`. Actualmente la rama effect solo rutea `source_state`; se agrega un bloque análogo para `target_state` cuando `isOutputHalf || transformingMode === "output-specified"`. `markerEnd` apunta al pill. Correcto.
+**Nota**: `isOutputHalf` es la única flag que se consulta para routing. No se usa `transformingMode` en el routing porque la función `adjustEffectEndpoints` ya resolvió la semántica y las flags capturan el resultado.
 
 #### Markers por modo
 
@@ -213,7 +251,7 @@ Sin cambio. Es ortogonal — opera sobre links de tipo consumption/result, no so
 | `packages/core/src/helpers.ts` | NUEVO: `TransformingMode` type + `transformingMode()` función | ~15 |
 | `packages/core/src/index.ts` | Re-exportar `TransformingMode`, `transformingMode` | ~2 |
 | `packages/core/tests/helpers.test.ts` | 7 tests para `transformingMode` | ~40 |
-| `packages/web/src/components/OpdCanvas.tsx` | `splitInputOutputPairs`, refactor markers por modo, routing output-specified, swap para input-specified | ~80 |
+| `packages/web/src/components/OpdCanvas.tsx` | `adjustEffectEndpoints`, refactor markers por modo, routing output-specified | ~80 |
 
 ## 5. NO se modifica
 
@@ -239,7 +277,13 @@ Sin cambio. Es ortogonal — opera sobre links de tipo consumption/result, no so
 | 6 | non-effect con estados → null | `{type: "consumption", source_state: "s1"}` | `null` |
 | 7 | empty string state → falsy | `{type: "effect", source_state: ""}` | `"effect"` |
 
+**Nota sobre test 7**: Los state IDs válidos siguen el patrón `state-*` (invariantes I-06/I-28 lo garantizan en modelos válidos). El test con empty string es defensivo — verifica que `!!""` se trata como ausencia de estado.
+
 Suite completo: `bunx vitest run` — 570+ tests, 0 regresiones.
+
+### Labels en halves
+
+Después del split, cada half renderiza el `link.type` como label (comportamiento existente del canvas). Ambos halves muestran **"effect"** como label. Esto es correcto — el tipo semántico es effect en ambos casos. No se agrega label customizado (como "input"/"output") porque ISO no lo requiere y la dirección de la flecha ya comunica la semántica.
 
 ### Verificación visual (manual, browser)
 
