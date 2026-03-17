@@ -38,7 +38,8 @@ All documentation follows OPM (ISO 19450) guidelines and KODA Framework architec
 | DA-4 | Layered Architecture (Interfaces → Domain Engine → Graph Store) | Defined |
 | DA-5 | Simulation Engine as Coalgebra Evaluator | Implemented (trivalent PreconditionResult, waitingProcesses, deadlock detection, in-zoom recursion ISO §14.2.1) |
 | DA-6 | OPL Engine as Bidirectional Lens | Implemented (expose/applyOplEdit/render/editsFrom, PutGet+GetPut verified) |
-| DA-7 | Link Refinement Fibration (effect ≅ consumption ⊕ result) | Implemented (Opción D: compute on demand, zero schema change, `findConsumptionResultPairs`) |
+| DA-7 | Link Refinement Fibration (consumption+result visual merge) | Implemented (Opción D: compute on demand, zero schema change, `findConsumptionResultPairs`) |
+| DA-8 | Effect Fibration (effect ≅ 4 visual modes via transformingMode) | Implemented (`transformingMode` functor, `adjustEffectEndpoints`, per-mode markers+routing) |
 
 ## Key Domain Concepts
 
