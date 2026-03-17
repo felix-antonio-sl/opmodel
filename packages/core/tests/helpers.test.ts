@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { cleanPatch, touch } from "../src/helpers";
+import { cleanPatch, touch, transformingMode } from "../src/helpers";
+import type { Link } from "../src/types";
 import { createModel } from "../src/model";
 
 describe("cleanPatch", () => {
@@ -60,5 +61,39 @@ describe("touch", () => {
     const originalModified = model.meta.modified;
     touch(model);
     expect(model.meta.modified).toBe(originalModified);
+  });
+});
+
+const baseLink: Link = {
+  id: "lnk-test", type: "effect", source: "proc-a", target: "obj-b",
+};
+
+describe("transformingMode", () => {
+  it("returns 'effect' for effect link without states", () => {
+    expect(transformingMode(baseLink)).toBe("effect");
+  });
+
+  it("returns 'input-specified' for effect link with source_state only", () => {
+    expect(transformingMode({ ...baseLink, source_state: "s1" })).toBe("input-specified");
+  });
+
+  it("returns 'output-specified' for effect link with target_state only", () => {
+    expect(transformingMode({ ...baseLink, target_state: "s2" })).toBe("output-specified");
+  });
+
+  it("returns 'input-output' for effect link with both states", () => {
+    expect(transformingMode({ ...baseLink, source_state: "s1", target_state: "s2" })).toBe("input-output");
+  });
+
+  it("returns null for non-effect link", () => {
+    expect(transformingMode({ ...baseLink, type: "consumption" })).toBeNull();
+  });
+
+  it("returns null for non-effect link even with states", () => {
+    expect(transformingMode({ ...baseLink, type: "consumption", source_state: "s1" })).toBeNull();
+  });
+
+  it("treats empty string state as absent", () => {
+    expect(transformingMode({ ...baseLink, source_state: "" })).toBe("effect");
   });
 });
