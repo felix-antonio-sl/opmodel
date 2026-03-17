@@ -28,47 +28,22 @@ function loadFixture(name: string) {
 // === Tests ===
 
 describe("findConsumptionResultPairs", () => {
-  it("coffee-making SD1: identifies 1 pair (Water, Boiling) with cold→hot", () => {
+  it("coffee-making SD1: no pairs (Water/Boiling is an effect link)", () => {
     const model = loadFixture("coffee-making");
     const resolved = resolveLinksForOpd(model, "opd-sd1");
     const pairs = findConsumptionResultPairs(model, resolved);
 
-    // Only (Water, Boiling) is a real pair:
-    //   consumption water@cold → proc-boiling + result proc-boiling → water@hot
-    // (Coffee Beans, Grinding) is NOT a pair because consumption is on Coffee Beans
-    //   but result goes to Ground Coffee (different object!)
-    expect(pairs).toHaveLength(1);
-
-    const [pair] = pairs;
-    expect(pair!.objectId).toBe("obj-water");
-    expect(pair!.processId).toBe("proc-boiling");
-    expect(pair!.fromStateName).toBe("cold");
-    expect(pair!.toStateName).toBe("hot");
-    expect(pair!.consumptionLink.type).toBe("consumption");
-    expect(pair!.resultLink.type).toBe("result");
+    // Water/Boiling is now an effect link, not consumption+result → no pairs
+    expect(pairs).toHaveLength(0);
   });
 
-  it("driver-rescuing SD1: identifies 2 pairs", () => {
+  it("driver-rescuing SD1: no pairs (Call/CallTransmitting and DangerStatus/CallHandling are effect links)", () => {
     const model = loadFixture("driver-rescuing");
     const resolved = resolveLinksForOpd(model, "opd-sd1");
     const pairs = findConsumptionResultPairs(model, resolved);
 
-    expect(pairs).toHaveLength(2);
-
-    // Sort by objectId for deterministic assertion
-    const sorted = [...pairs].sort((a, b) => a.objectId.localeCompare(b.objectId));
-
-    // Pair 1: (Call, Call Transmitting) — requested → online
-    expect(sorted[0]!.objectId).toBe("obj-call");
-    expect(sorted[0]!.processId).toBe("proc-call-transmitting");
-    expect(sorted[0]!.fromStateName).toBe("requested");
-    expect(sorted[0]!.toStateName).toBe("online");
-
-    // Pair 2: (Danger Status, Call Handling) — endangered → safe
-    expect(sorted[1]!.objectId).toBe("obj-danger-status");
-    expect(sorted[1]!.processId).toBe("proc-call-handling");
-    expect(sorted[1]!.fromStateName).toBe("endangered");
-    expect(sorted[1]!.toStateName).toBe("safe");
+    // Call/CallTransmitting and DangerStatus/CallHandling are now effect links → no pairs
+    expect(pairs).toHaveLength(0);
   });
 
   it("stateless pair: consumption + result without states → valid pair", () => {

@@ -5,7 +5,7 @@ import type {
 } from "./types";
 import type { InvariantError } from "./result";
 import { ok, err, type Result } from "./result";
-import { collectAllIds, touch, cleanPatch } from "./helpers";
+import { collectAllIds, touch, cleanPatch, appearanceKey } from "./helpers";
 import type { ResolvedLink } from "./simulation";
 
 export function addThing(
@@ -298,6 +298,34 @@ export function addLink(
     }
   }
 
+  // I-16: Transform exclusivity — effect/consumption/result mutually exclusive per (P,O) pair
+  // Exception: consumption + result on same (P,O) is valid — object destroyed then recreated (ISO §9.3.1 + §9.3.2)
+  const transformingTypesEager = new Set(["effect", "consumption", "result"]);
+  if (transformingTypesEager.has(link.type)) {
+    const procId = source.kind === "process" ? link.source : link.target;
+    const objId = source.kind === "object" ? link.source : link.target;
+    for (const existing of model.links.values()) {
+      if (!transformingTypesEager.has(existing.type)) continue;
+      const eSrc = model.things.get(existing.source);
+      const eTgt = model.things.get(existing.target);
+      if (!eSrc || !eTgt) continue;
+      const eProcId = eSrc.kind === "process" ? existing.source : existing.target;
+      const eObjId = eSrc.kind === "object" ? existing.source : existing.target;
+      if (eProcId === procId && eObjId === objId) {
+        const types = new Set([existing.type, link.type]);
+        const isConsumptionResultPair = types.has("consumption") && types.has("result") && types.size === 2;
+        if (!isConsumptionResultPair) {
+          return err({ code: "I-16", message: `Conflicting transforming link: ${existing.type} already exists between process ${procId} and object ${objId}`, entity: link.id });
+        }
+      }
+    }
+  }
+
+  // I-TAG-REQUIRED: tagged links must have a tag
+  if (link.type === "tagged" && !link.tag) {
+    return err({ code: "I-TAG-REQUIRED", message: "Tagged link requires a tag value", entity: link.id });
+  }
+
   // I-31: at most 1 discriminating exhibition link per exhibitor
   if (link.type === "exhibition" && link.discriminating) {
     for (const existingLink of model.links.values()) {
@@ -398,6 +426,24 @@ export function addOPD(
   if (opd.opd_type === "view" && opd.parent_opd !== null) {
     return err({ code: "I-03", message: `View OPD must have parent_opd=null`, entity: opd.id });
   }
+  // INCONSISTENT_REFINEMENT: refines and refinement_type must both be present or both absent
+  const hasRefines = opd.refines !== undefined;
+  const hasRefinementType = opd.refinement_type !== undefined;
+  if (hasRefines !== hasRefinementType) {
+    return err({ code: "INCONSISTENT_REFINEMENT", message: `OPD ${opd.id} has refines without refinement_type or vice versa`, entity: opd.id });
+  }
+  // I-30: in-zoom must refine a process, unfold must refine an object
+  if (opd.refines !== undefined && opd.refinement_type !== undefined) {
+    const refinesThing = model.things.get(opd.refines);
+    if (refinesThing) {
+      if (opd.refinement_type === "in-zoom" && refinesThing.kind !== "process") {
+        return err({ code: "I-30", message: `In-zoom OPD must refine a process, not ${refinesThing.kind}`, entity: opd.id });
+      }
+      if (opd.refinement_type === "unfold" && refinesThing.kind !== "object") {
+        return err({ code: "I-30", message: `Unfold OPD must refine an object, not ${refinesThing.kind}`, entity: opd.id });
+      }
+    }
+  }
   return ok(touch({ ...model, opds: new Map(model.opds).set(opd.id, opd) }));
 }
 
@@ -452,7 +498,7 @@ export function refineThing(
   if (parentOpd.opd_type !== "hierarchical") {
     return err({ code: "INVALID_REFINEMENT", message: `Cannot refine from view OPD: ${parentOpdId}`, entity: parentOpdId });
   }
-  const thingAppKey = `${thingId}::${parentOpdId}`;
+  const thingAppKey = appearanceKey(thingId, parentOpdId);
   if (!model.appearances.has(thingAppKey)) {
     return err({ code: "NOT_FOUND", message: `Thing ${thingId} has no appearance in OPD ${parentOpdId}`, entity: thingId });
   }
@@ -519,13 +565,13 @@ export function refineThing(
   const opds = new Map(model.opds).set(childOpdId, childOpd);
 
   const appearances = new Map(model.appearances);
-  appearances.set(`${thingId}::${childOpdId}`, {
+  appearances.set(appearanceKey(thingId, childOpdId), {
     thing: thingId, opd: childOpdId,
     x: 0, y: 0, w: 200, h: 150, internal: true,
   });
   let index = 0;
   for (const extThingId of externalThings) {
-    appearances.set(`${extThingId}::${childOpdId}`, {
+    appearances.set(appearanceKey(extThingId, childOpdId), {
       thing: extThingId, opd: childOpdId,
       x: 50 + index * 150, y: 50, w: 120, h: 60, internal: false,
     });
@@ -541,7 +587,7 @@ export function addAppearance(
   model: Model,
   appearance: Appearance,
 ): Result<Model, InvariantError> {
-  const key = `${appearance.thing}::${appearance.opd}`;
+  const key = appearanceKey(appearance.thing, appearance.opd);
   // I-04: unique per (thing, opd)
   if (model.appearances.has(key)) {
     return err({ code: "I-04", message: `Appearance already exists: ${key}`, entity: key });
@@ -561,7 +607,7 @@ export function removeAppearance(
   thing: string,
   opd: string,
 ): Result<Model, InvariantError> {
-  const key = `${thing}::${opd}`;
+  const key = appearanceKey(thing, opd);
   if (!model.appearances.has(key)) {
     return err({ code: "NOT_FOUND", message: `Appearance not found: ${key}`, entity: key });
   }
@@ -596,6 +642,11 @@ export function addFan(model: Model, fan: Fan): Result<Model, InvariantError> {
   if (fan.members.length < 2) return err({ code: "I-07", message: `Fan must have at least 2 members, got ${fan.members.length}`, entity: fan.id });
   for (const memberId of fan.members) {
     if (!model.links.has(memberId)) return err({ code: "I-07", message: `Fan member link not found: ${memberId}`, entity: fan.id });
+  }
+  // I-29: all members must be same link type
+  const memberTypes = fan.members.map(mid => model.links.get(mid)!.type);
+  if (memberTypes.some(t => t !== memberTypes[0])) {
+    return err({ code: "I-29", message: `Fan members must all be same link type`, entity: fan.id });
   }
   return ok(touch({ ...model, fans: new Map(model.fans).set(fan.id, fan) }));
 }
@@ -872,6 +923,24 @@ export function updateOPD(
       return err({ code: "I-03", message: `Parent OPD not found: ${updated.parent_opd}`, entity: id });
     }
   }
+  // INCONSISTENT_REFINEMENT: refines and refinement_type must both be present or both absent
+  const hasRefines = updated.refines !== undefined;
+  const hasRefinementType = updated.refinement_type !== undefined;
+  if (hasRefines !== hasRefinementType) {
+    return err({ code: "INCONSISTENT_REFINEMENT", message: `OPD ${id} has refines without refinement_type or vice versa`, entity: id });
+  }
+  // I-30: in-zoom must refine a process, unfold must refine an object
+  if (updated.refines !== undefined && updated.refinement_type !== undefined) {
+    const refinesThing = model.things.get(updated.refines);
+    if (refinesThing) {
+      if (updated.refinement_type === "in-zoom" && refinesThing.kind !== "process") {
+        return err({ code: "I-30", message: `In-zoom OPD must refine a process, not ${refinesThing.kind}`, entity: id });
+      }
+      if (updated.refinement_type === "unfold" && refinesThing.kind !== "object") {
+        return err({ code: "I-30", message: `Unfold OPD must refine an object, not ${refinesThing.kind}`, entity: id });
+      }
+    }
+  }
   return ok(touch({ ...model, opds: new Map(model.opds).set(id, updated) }));
 }
 
@@ -881,7 +950,7 @@ export function updateAppearance(
   opd: string,
   patch: Partial<Omit<Appearance, "thing" | "opd">>,
 ): Result<Model, InvariantError> {
-  const key = `${thing}::${opd}`;
+  const key = appearanceKey(thing, opd);
   const existing = model.appearances.get(key);
   if (!existing) return err({ code: "NOT_FOUND", message: `Appearance not found: ${key}`, entity: key });
   const cleaned = cleanPatch(patch as Record<string, unknown>);
@@ -912,6 +981,11 @@ export function updateFan(
       if (!model.links.has(memberId)) {
         return err({ code: "I-07", message: `Fan member link not found: ${memberId}`, entity: id });
       }
+    }
+    // I-29: all members must be same link type
+    const memberTypes = updated.members.map(mid => model.links.get(mid)!.type);
+    if (memberTypes.some(t => t !== memberTypes[0])) {
+      return err({ code: "I-29", message: `Fan members must all be same link type`, entity: id });
     }
   }
   return ok(touch({ ...model, fans: new Map(model.fans).set(id, updated) }));
@@ -1102,7 +1176,7 @@ export function validate(model: Model): InvariantError[] {
   // but verify no duplicate thing+opd pairs exist in values
   const seenAppearances = new Set<string>();
   for (const app of model.appearances.values()) {
-    const key = `${app.thing}::${app.opd}`;
+    const key = appearanceKey(app.thing, app.opd);
     if (seenAppearances.has(key)) errors.push({ code: "I-04", message: `Duplicate appearance: ${key}`, entity: key });
     seenAppearances.add(key);
   }
@@ -1265,8 +1339,8 @@ export function validate(model: Model): InvariantError[] {
 
   // I-16: unique transforming link per (process, object) pair
   // Transforming links (effect/consumption/result) are mutually exclusive EXCEPT:
-  // consumption + result on same (process, object) is valid — the process destroys
-  // the object in one state and re-creates it in another (ISO §9.3.1 + §9.3.2)
+  // consumption + result on same (process, object) is valid — object is destroyed
+  // (consumption) and a new instance created (result). NOT equivalent to effect/state-change.
   const transformingTypes = new Set(["effect", "consumption", "result"]);
   const proceduralPairs = new Map<string, { type: string; id: string }>();
   for (const [id, link] of model.links) {
@@ -1279,10 +1353,10 @@ export function validate(model: Model): InvariantError[] {
         const pairKey = `${procId}::${objId}`;
         const existing = proceduralPairs.get(pairKey);
         if (existing) {
-          // Allow consumption + result pair (object transformation cycle)
+          // Allow consumption + result pair (destruction + creation, not state change)
           const types = new Set([existing.type, link.type]);
-          const isTransformCycle = types.has("consumption") && types.has("result") && types.size === 2;
-          if (!isTransformCycle) {
+          const isConsumptionResultPair = types.has("consumption") && types.has("result") && types.size === 2;
+          if (!isConsumptionResultPair) {
             errors.push({ code: "I-16", message: `Multiple procedural links between process ${procId} and object ${objId}`, entity: id });
           }
         } else {
@@ -1636,8 +1710,8 @@ export interface ConsumptionResultPair {
 /**
  * Find consumption+result pairs within resolved links for an OPD.
  * A pair exists when both a consumption and result link connect the same
- * (object, process). This is the intra-OPD manifestation of the
- * effect ≅ consumption ⊕ result identity (DA-7).
+ * (object, process). This visual grouping shows the destruction+creation
+ * cycle as a unified arrow (DA-7). NOT equivalent to effect (state change).
  */
 export function findConsumptionResultPairs(
   model: Model,

@@ -513,8 +513,7 @@ export function simulationStep(
   }
 
   // Ejecutar efectos del proceso — phased: consumption → effect → result
-  // Phase ordering ensures consumption+result on the same object works correctly
-  // (destroy old state before creating new state).
+  // Phase ordering: consumption (destroy) → effect (state change) → result (create)
   const links = [...model.links.values()].filter(l => l.target === processId || l.source === processId);
 
   // Phase 1: Consumption — objeto deja de existir

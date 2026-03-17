@@ -106,6 +106,7 @@ describe("updateSettings", () => {
 });
 
 const water: Thing = { id: "obj-water", kind: "object", name: "Water", essence: "physical", affiliation: "systemic" };
+const milk: Thing = { id: "obj-milk", kind: "object", name: "Milk", essence: "physical", affiliation: "systemic" };
 const proc: Thing = { id: "proc-heat", kind: "process", name: "Heat", essence: "physical", affiliation: "systemic" };
 
 function buildModelWithLink() {
@@ -343,7 +344,8 @@ describe("updateAppearance", () => {
 describe("updateFan", () => {
   it("updates fan type", () => {
     let m = buildModelWithLink();
-    m = (addLink(m, { id: "lnk-2", type: "consumption", source: "obj-water", target: "proc-heat" }) as any).value;
+    m = (addThing(m, milk) as any).value;
+    m = (addLink(m, { id: "lnk-2", type: "effect", source: "proc-heat", target: "obj-milk" }) as any).value;
     m = (addFan(m, { id: "fan-1", type: "xor", members: ["lnk-1", "lnk-2"] }) as any).value;
     const r = updateFan(m, "fan-1", { type: "or" });
     expect(isOk(r)).toBe(true);
@@ -352,7 +354,8 @@ describe("updateFan", () => {
 
   it("rejects update with fewer than 2 members (I-07)", () => {
     let m = buildModelWithLink();
-    m = (addLink(m, { id: "lnk-2", type: "consumption", source: "obj-water", target: "proc-heat" }) as any).value;
+    m = (addThing(m, milk) as any).value;
+    m = (addLink(m, { id: "lnk-2", type: "effect", source: "proc-heat", target: "obj-milk" }) as any).value;
     m = (addFan(m, { id: "fan-1", type: "xor", members: ["lnk-1", "lnk-2"] }) as any).value;
     const r = updateFan(m, "fan-1", { members: ["lnk-1"] });
     expect(isErr(r)).toBe(true);
@@ -361,7 +364,8 @@ describe("updateFan", () => {
 
   it("rejects update with non-existent member link (I-07)", () => {
     let m = buildModelWithLink();
-    m = (addLink(m, { id: "lnk-2", type: "consumption", source: "obj-water", target: "proc-heat" }) as any).value;
+    m = (addThing(m, milk) as any).value;
+    m = (addLink(m, { id: "lnk-2", type: "effect", source: "proc-heat", target: "obj-milk" }) as any).value;
     m = (addFan(m, { id: "fan-1", type: "xor", members: ["lnk-1", "lnk-2"] }) as any).value;
     const r = updateFan(m, "fan-1", { members: ["lnk-1", "lnk-ghost"] });
     expect(isErr(r)).toBe(true);

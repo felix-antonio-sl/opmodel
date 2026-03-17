@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { createModel } from "../src/model";
-import { addThing, addLink, addState, addFan, addOPD, validate } from "../src/api";
-import { isOk } from "../src/result";
+import { addThing, addLink, addState, addFan, addOPD, updateFan, updateOPD, validate } from "../src/api";
+import { isOk, isErr } from "../src/result";
 import type { Thing, Link, State, Fan, OPD } from "../src/types";
 
 // === Helpers ===
@@ -295,19 +295,47 @@ describe("I-28: state-specified link validation", () => {
   });
 });
 
-// === I-29: Fan members same link type ===
+// === I-29: Fan members same link type (eager in addFan/updateFan) ===
 
 describe("I-29: fan member type consistency", () => {
-  it("flags fan with mixed link types", () => {
+  it("flags fan with mixed link types (validate)", () => {
     let m = createModel("Test");
     m = (addThing(m, proc("proc-boil", "Boiling")) as any).value;
     m = (addThing(m, obj("obj-water", "Water")) as any).value;
     m = (addThing(m, obj("obj-cup", "Cup")) as any).value;
     m = (addLink(m, { id: "lnk-eff", type: "effect", source: "proc-boil", target: "obj-water" }) as any).value;
     m = (addLink(m, { id: "lnk-con", type: "consumption", source: "obj-cup", target: "proc-boil" }) as any).value;
-    m = (addFan(m, { id: "fan-1", type: "xor", members: ["lnk-eff", "lnk-con"] }) as any).value;
+    // Bypass addFan guard by manually setting
+    m = { ...m, fans: new Map(m.fans).set("fan-1", { id: "fan-1", type: "xor", members: ["lnk-eff", "lnk-con"] }) };
     const errors = errorsOf(m, "I-29");
     expect(errors.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("rejects addFan with mixed link types (I-29 eager)", () => {
+    let m = createModel("Test");
+    m = (addThing(m, proc("proc-boil", "Boiling")) as any).value;
+    m = (addThing(m, obj("obj-water", "Water")) as any).value;
+    m = (addThing(m, obj("obj-cup", "Cup")) as any).value;
+    m = (addLink(m, { id: "lnk-eff", type: "effect", source: "proc-boil", target: "obj-water" }) as any).value;
+    m = (addLink(m, { id: "lnk-con", type: "consumption", source: "obj-cup", target: "proc-boil" }) as any).value;
+    const r = addFan(m, { id: "fan-1", type: "xor", members: ["lnk-eff", "lnk-con"] });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-29");
+  });
+
+  it("rejects updateFan introducing mixed link types (I-29 eager)", () => {
+    let m = createModel("Test");
+    m = (addThing(m, proc("proc-boil", "Boiling")) as any).value;
+    m = (addThing(m, obj("obj-water", "Water")) as any).value;
+    m = (addThing(m, obj("obj-milk", "Milk")) as any).value;
+    m = (addThing(m, obj("obj-cup", "Cup")) as any).value;
+    m = (addLink(m, { id: "lnk-eff1", type: "effect", source: "proc-boil", target: "obj-water" }) as any).value;
+    m = (addLink(m, { id: "lnk-eff2", type: "effect", source: "proc-boil", target: "obj-milk" }) as any).value;
+    m = (addLink(m, { id: "lnk-con", type: "consumption", source: "obj-cup", target: "proc-boil" }) as any).value;
+    m = (addFan(m, { id: "fan-1", type: "xor", members: ["lnk-eff1", "lnk-eff2"] }) as any).value;
+    const r = updateFan(m, "fan-1", { members: ["lnk-eff1", "lnk-con"] });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-29");
   });
 
   it("passes when all members are same type", () => {
@@ -326,10 +354,9 @@ describe("I-29: fan member type consistency", () => {
 // === I-30: OPD refines process (in-zoom) or object (unfold) ===
 
 describe("I-30: OPD refinement type consistency", () => {
-  it("flags in-zoom that refines an object", () => {
+  it("flags in-zoom that refines an object (validate)", () => {
     let m = createModel("Test");
     m = (addThing(m, obj("obj-water", "Water")) as any).value;
-    // Manually set OPD with in-zoom refining an object
     m = { ...m, opds: new Map(m.opds).set("opd-child", {
       id: "opd-child", name: "Water Detail", opd_type: "hierarchical",
       parent_opd: "opd-sd", refines: "obj-water", refinement_type: "in-zoom",
@@ -338,7 +365,7 @@ describe("I-30: OPD refinement type consistency", () => {
     expect(errors.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("flags unfold that refines a process", () => {
+  it("flags unfold that refines a process (validate)", () => {
     let m = createModel("Test");
     m = (addThing(m, proc("proc-boil", "Boiling")) as any).value;
     m = { ...m, opds: new Map(m.opds).set("opd-child", {
@@ -349,7 +376,7 @@ describe("I-30: OPD refinement type consistency", () => {
     expect(errors.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("passes in-zoom refining a process", () => {
+  it("passes in-zoom refining a process (validate)", () => {
     let m = createModel("Test");
     m = (addThing(m, proc("proc-boil", "Boiling")) as any).value;
     m = { ...m, opds: new Map(m.opds).set("opd-child", {
@@ -358,5 +385,104 @@ describe("I-30: OPD refinement type consistency", () => {
     }) };
     const errors = errorsOf(m, "I-30");
     expect(errors).toHaveLength(0);
+  });
+
+  it("rejects addOPD with in-zoom refining an object (I-30 eager)", () => {
+    let m = createModel("Test");
+    m = (addThing(m, obj("obj-water", "Water")) as any).value;
+    const r = addOPD(m, {
+      id: "opd-child", name: "Water Detail", opd_type: "hierarchical",
+      parent_opd: "opd-sd", refines: "obj-water", refinement_type: "in-zoom",
+    });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-30");
+  });
+
+  it("rejects addOPD with unfold refining a process (I-30 eager)", () => {
+    let m = createModel("Test");
+    m = (addThing(m, proc("proc-boil", "Boiling")) as any).value;
+    const r = addOPD(m, {
+      id: "opd-child", name: "Boil Unfold", opd_type: "hierarchical",
+      parent_opd: "opd-sd", refines: "proc-boil", refinement_type: "unfold",
+    });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-30");
+  });
+
+  it("allows addOPD with in-zoom refining a process (I-30 eager valid)", () => {
+    let m = createModel("Test");
+    m = (addThing(m, proc("proc-boil", "Boiling")) as any).value;
+    const r = addOPD(m, {
+      id: "opd-child", name: "Boil Detail", opd_type: "hierarchical",
+      parent_opd: "opd-sd", refines: "proc-boil", refinement_type: "in-zoom",
+    });
+    expect(isOk(r)).toBe(true);
+  });
+
+  it("rejects updateOPD changing to invalid refinement (I-30 eager)", () => {
+    let m = createModel("Test");
+    m = (addThing(m, proc("proc-boil", "Boiling")) as any).value;
+    m = (addOPD(m, {
+      id: "opd-child", name: "Boil Detail", opd_type: "hierarchical",
+      parent_opd: "opd-sd", refines: "proc-boil", refinement_type: "in-zoom",
+    }) as any).value;
+    const r = updateOPD(m, "opd-child", { refinement_type: "unfold" });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-30");
+  });
+});
+
+// === INCONSISTENT_REFINEMENT: refines ↔ refinement_type must both be present or absent ===
+
+describe("INCONSISTENT_REFINEMENT: eager in addOPD/updateOPD", () => {
+  it("rejects addOPD with refines but no refinement_type", () => {
+    let m = createModel("Test");
+    m = (addThing(m, proc("proc-boil", "Boiling")) as any).value;
+    const r = addOPD(m, {
+      id: "opd-child", name: "Detail", opd_type: "hierarchical",
+      parent_opd: "opd-sd", refines: "proc-boil",
+    });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("INCONSISTENT_REFINEMENT");
+  });
+
+  it("rejects addOPD with refinement_type but no refines", () => {
+    let m = createModel("Test");
+    const r = addOPD(m, {
+      id: "opd-child", name: "Detail", opd_type: "hierarchical",
+      parent_opd: "opd-sd", refinement_type: "in-zoom",
+    });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("INCONSISTENT_REFINEMENT");
+  });
+
+  it("allows addOPD with both refines and refinement_type", () => {
+    let m = createModel("Test");
+    m = (addThing(m, proc("proc-boil", "Boiling")) as any).value;
+    const r = addOPD(m, {
+      id: "opd-child", name: "Detail", opd_type: "hierarchical",
+      parent_opd: "opd-sd", refines: "proc-boil", refinement_type: "in-zoom",
+    });
+    expect(isOk(r)).toBe(true);
+  });
+
+  it("allows addOPD with neither refines nor refinement_type", () => {
+    let m = createModel("Test");
+    const r = addOPD(m, {
+      id: "opd-child", name: "Detail", opd_type: "hierarchical",
+      parent_opd: "opd-sd",
+    });
+    expect(isOk(r)).toBe(true);
+  });
+
+  it("rejects updateOPD introducing inconsistency", () => {
+    let m = createModel("Test");
+    m = (addOPD(m, {
+      id: "opd-child", name: "Detail", opd_type: "hierarchical",
+      parent_opd: "opd-sd",
+    }) as any).value;
+    const r = updateOPD(m, "opd-child", { refines: "proc-boil" });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("INCONSISTENT_REFINEMENT");
   });
 });

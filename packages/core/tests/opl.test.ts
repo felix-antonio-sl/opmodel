@@ -52,8 +52,6 @@ function buildModel() {
   if (!isOk(r)) throw r.error; m = r.value;
   r = addState(m, { id: "state-gas", parent: "obj-water", name: "gas", initial: false, final: false, default: false });
   if (!isOk(r)) throw r.error; m = r.value;
-  r = addLink(m, { id: "lnk-boiling-consumption-water", type: "consumption", source: "obj-water", target: "proc-boiling" });
-  if (!isOk(r)) throw r.error; m = r.value;
   r = addLink(m, { id: "lnk-boiling-effect-water", type: "effect", source: "proc-boiling", target: "obj-water", source_state: "state-liquid", target_state: "state-gas" });
   if (!isOk(r)) throw r.error; m = r.value;
   r = addLink(m, { id: "lnk-cup-aggregation-water", type: "aggregation", source: "obj-cup", target: "obj-water" });
@@ -100,12 +98,12 @@ describe("expose", () => {
     const m = buildModel();
     const doc = expose(m, "opd-sd");
     const links = doc.sentences.filter(s => s.kind === "link");
-    expect(links).toHaveLength(3);
+    expect(links).toHaveLength(2);
   });
 
   it("produces modifier sentences", () => {
     let m = buildModel();
-    let r = addModifier(m, { id: "mod-event", over: "lnk-boiling-consumption-water", type: "event" });
+    let r = addModifier(m, { id: "mod-event", over: "lnk-boiling-effect-water", type: "event" });
     if (!isOk(r)) throw r.error; m = r.value;
     const doc = expose(m, "opd-sd");
     const modifiers = doc.sentences.filter(s => s.kind === "modifier");
@@ -186,7 +184,6 @@ describe("render", () => {
     const m = buildModel();
     const doc = expose(m, "opd-sd");
     const text = render(doc);
-    expect(text).toContain("Boiling consumes Water.");
     expect(text).toContain("Cup consists of Water.");
   });
 
@@ -306,7 +303,7 @@ describe("applyOplEdit", () => {
     const r = applyOplEdit(m, edit);
     expect(isOk(r)).toBe(true);
     if (!isOk(r)) return;
-    expect(r.value.links.size).toBe(4); // 3 existing + 1 new
+    expect(r.value.links.size).toBe(3); // 2 existing + 1 new
   });
 
   it("remove-thing cascades correctly", () => {
@@ -343,7 +340,7 @@ describe("applyOplEdit", () => {
     let m = buildModel();
     const edit: OplEdit = {
       kind: "add-modifier",
-      modifier: { over: "lnk-boiling-consumption-water", type: "event" },
+      modifier: { over: "lnk-boiling-effect-water", type: "event" },
     };
     const r = applyOplEdit(m, edit);
     expect(isOk(r)).toBe(true);
@@ -351,7 +348,7 @@ describe("applyOplEdit", () => {
     expect(r.value.modifiers.size).toBe(1);
     const mod = [...r.value.modifiers.values()][0]!;
     expect(mod.type).toBe("event");
-    expect(mod.over).toBe("lnk-boiling-consumption-water");
+    expect(mod.over).toBe("lnk-boiling-effect-water");
   });
 
   it("remove-state removes a state", () => {
@@ -457,14 +454,14 @@ describe("PutGet", () => {
 
   it("remove-link → expose no longer contains it", () => {
     const m = buildModel();
-    const edit: OplEdit = { kind: "remove-link", linkId: "lnk-boiling-consumption-water" };
+    const edit: OplEdit = { kind: "remove-link", linkId: "lnk-boiling-effect-water" };
     const r = applyOplEdit(m, edit);
     if (!isOk(r)) throw r.error;
     const doc = expose(r.value, "opd-sd");
-    const consumptionLink = doc.sentences.find(
-      s => s.kind === "link" && s.linkId === "lnk-boiling-consumption-water"
+    const effectLink = doc.sentences.find(
+      s => s.kind === "link" && s.linkId === "lnk-boiling-effect-water"
     );
-    expect(consumptionLink).toBeUndefined();
+    expect(effectLink).toBeUndefined();
   });
 });
 

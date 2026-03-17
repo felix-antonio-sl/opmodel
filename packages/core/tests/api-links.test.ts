@@ -296,6 +296,52 @@ describe("removeLink", () => {
     expect(isOk(r)).toBe(true);
   });
 
+  // --- I-16: Transform exclusivity (eager) ---
+
+  it("rejects effect link when consumption already exists on same (P,O) pair (I-16 eager)", () => {
+    let m = buildModel();
+    m = (addLink(m, { id: "lnk-con", type: "consumption", source: "obj-water", target: "proc-heating" }) as any).value;
+    const r = addLink(m, { id: "lnk-eff", type: "effect", source: "proc-heating", target: "obj-water" });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-16");
+  });
+
+  it("rejects consumption link when effect already exists on same (P,O) pair (I-16 eager)", () => {
+    let m = buildModel();
+    m = (addLink(m, { id: "lnk-eff", type: "effect", source: "proc-heating", target: "obj-water" }) as any).value;
+    const r = addLink(m, { id: "lnk-con", type: "consumption", source: "obj-water", target: "proc-heating" });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-16");
+  });
+
+  it("allows consumption + result on same (P,O) pair — destruction+creation (I-16 valid)", () => {
+    let m = buildModel();
+    m = (addLink(m, { id: "lnk-con", type: "consumption", source: "obj-water", target: "proc-heating" }) as any).value;
+    const r = addLink(m, { id: "lnk-res", type: "result", source: "proc-heating", target: "obj-water" });
+    expect(isOk(r)).toBe(true);
+  });
+
+  it("rejects duplicate effect on same (P,O) pair (I-16 eager)", () => {
+    let m = buildModel();
+    m = (addLink(m, { id: "lnk-eff1", type: "effect", source: "proc-heating", target: "obj-water" }) as any).value;
+    const r = addLink(m, { id: "lnk-eff2", type: "effect", source: "proc-heating", target: "obj-water" });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-16");
+  });
+
+  // --- I-TAG-REQUIRED: tagged links must have tag ---
+
+  it("rejects tagged link without tag field (I-TAG-REQUIRED)", () => {
+    const r = addLink(buildModel(), { id: "lnk-noname", type: "tagged", source: "obj-barista", target: "obj-water" });
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("I-TAG-REQUIRED");
+  });
+
+  it("allows tagged link with tag field (I-TAG-REQUIRED valid)", () => {
+    const r = addLink(buildModel(), { id: "lnk-tagged", type: "tagged", source: "obj-barista", target: "obj-water", tag: "knows" });
+    expect(isOk(r)).toBe(true);
+  });
+
   it("cascade removes modifiers over the link", () => {
     let m = buildModel();
     m = (addLink(m, { id: "lnk-effect", type: "effect", source: "proc-heating", target: "obj-water" }) as any).value;

@@ -145,7 +145,7 @@ describe("resolve", () => {
 
   test("resolves add-link by endpoint names", () => {
     const result = resolve(
-      [{ kind: "add-link", sourceName: "Boiling", targetName: "Water", linkType: "effect" }],
+      [{ kind: "add-link", sourceName: "Boiling", targetName: "Water", linkType: "result" }],
       model, opdId,
     );
     expect(result.ok).toBe(true);
@@ -155,14 +155,14 @@ describe("resolve", () => {
     if (edit.kind !== "add-link") return;
     expect(edit.link.source).toBe("proc-boiling");
     expect(edit.link.target).toBe("obj-water");
-    expect(edit.link.type).toBe("effect");
+    expect(edit.link.type).toBe("result");
   });
 
   test("resolves add-link with state names scoped to endpoints", () => {
     const result = resolve(
       [{
         kind: "add-link", sourceName: "Boiling", targetName: "Water",
-        linkType: "effect", targetState: "hot",
+        linkType: "result", targetState: "hot",
       }],
       model, opdId,
     );
@@ -235,7 +235,7 @@ describe("resolve", () => {
   test("batch: states added in edit 1 available for link in edit 2", () => {
     const result = resolve([
       { kind: "add-states", thingName: "Water", stateNames: ["boiling"] },
-      { kind: "add-link", sourceName: "Boiling", targetName: "Water", linkType: "effect", targetState: "boiling" },
+      { kind: "add-link", sourceName: "Boiling", targetName: "Water", linkType: "result", targetState: "boiling" },
     ], model, opdId);
     expect(result.ok).toBe(true);
     if (!result.ok) return;

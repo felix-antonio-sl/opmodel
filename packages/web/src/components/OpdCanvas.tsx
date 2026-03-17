@@ -393,6 +393,7 @@ function LinkLine({
   targetKind,
   modifier,
   labelOverride,
+  isMergedPair,
 }: {
   link: Link;
   sourceRect: Rect;
@@ -401,6 +402,7 @@ function LinkLine({
   targetKind: "object" | "process";
   modifier?: Modifier;
   labelOverride?: string;
+  isMergedPair?: boolean;
 }) {
   const srcCenter = center(sourceRect);
   const tgtCenter = center(targetRect);
@@ -413,7 +415,11 @@ function LinkLine({
   let markerEnd: string | undefined;
   let markerStart: string | undefined;
 
-  switch (link.type) {
+  if (isMergedPair) {
+    // DA-7 merged consumption+result: arrows at both ends (process→object direction)
+    markerEnd = "url(#arrow-proc)";
+    markerStart = "url(#arrow-proc)";
+  } else switch (link.type) {
     // Enabling links: ISO §8.1 — circle markers at process end
     case "agent":
       markerEnd = "url(#dot-agent)";       // ● filled circle
@@ -559,9 +565,11 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
       visualSource: rl.visualSource,
       visualTarget: rl.visualTarget,
       labelOverride: undefined as string | undefined,
+      isMergedPair: false,
     }));
 
-    // Merge consumption+result pairs into single visual effect (DA-7).
+    // Merge consumption+result pairs into single visual link (DA-7).
+    // Keeps type as "consumption" — NOT "effect". Marked as mergedPair for distinct rendering.
     const pairs = findConsumptionResultPairs(model, resolved);
     const consumptionIds = new Set(pairs.map(p => p.consumptionLink.id));
     const resultIds = new Set(pairs.map(p => p.resultLink.id));
@@ -573,13 +581,14 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
       const resEntry = entries.find(e => e.link.id === pair.resultLink.id);
       if (!consEntry) continue;
       const label = pair.fromStateName && pair.toStateName
-        ? `${pair.fromStateName} → ${pair.toStateName}` : "effect";
+        ? `${pair.fromStateName} → ${pair.toStateName}` : "consumption+result";
       mergedEntries.set(pair.consumptionLink.id, {
-        link: { ...consEntry.link, type: "effect" as any, source: pair.processId, target: pair.objectId, source_state: pair.consumptionLink.source_state, target_state: pair.resultLink.target_state },
+        link: { ...consEntry.link, source: pair.processId, target: pair.objectId, source_state: pair.consumptionLink.source_state, target_state: pair.resultLink.target_state },
         modifier: consEntry.modifier ?? resEntry?.modifier,
         visualSource: pair.processId,
         visualTarget: pair.objectId,
         labelOverride: label,
+        isMergedPair: true,
       });
     }
 
@@ -813,7 +822,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
           <rect x="-500" y="-500" width="3000" height="3000" fill="url(#grid-dots)" />
 
           {/* Links (behind things) — re-route during drag */}
-          {visibleLinks.map(({ link, modifier, visualSource, visualTarget, labelOverride }) => {
+          {visibleLinks.map(({ link, modifier, visualSource, visualTarget, labelOverride, isMergedPair }) => {
             let srcRect = getEffectiveRect(visualSource);
             let tgtRect = getEffectiveRect(visualTarget);
             const srcThing = model.things.get(visualSource);
@@ -829,8 +838,8 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
             let srcKindOverride: "object" | "process" | undefined;
             let tgtKindOverride: "object" | "process" | undefined;
 
-            if (link.type === "effect") {
-              // Effect links: route the object endpoint to source_state (FROM state)
+            if (link.type === "effect" || isMergedPair) {
+              // Effect / merged consumption+result: route the object endpoint to source_state (FROM state)
               // Identify which end is the object
               const objectEnd = srcThing.kind === "object" ? visualSource : visualTarget;
               if (link.source_state) {
@@ -907,6 +916,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
                   targetKind={tgtKindOverride ?? tgtThing.kind}
                   modifier={modifier}
                   labelOverride={labelOverride}
+                  isMergedPair={isMergedPair}
                 />
               </g>
             );

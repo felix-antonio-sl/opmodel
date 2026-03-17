@@ -37,7 +37,7 @@ describe("OnStar Driver Rescuing System", () => {
       expect(m.things.size).toBe(15);   // 10 objects + 5 processes
       expect(m.states.size).toBe(4);
       expect(m.opds.size).toBe(2);
-      expect(m.links.size).toBe(23);
+      expect(m.links.size).toBe(21);
       expect(m.appearances.size).toBe(21);
     });
 
@@ -78,7 +78,7 @@ describe("OnStar Driver Rescuing System", () => {
       expect(text).toContain("OnStar System is an instrument of Driver Rescuing.");
     });
 
-    it('renders "Driver Rescuing affects Driver."', () => {
+    it('renders effect "Driver Rescuing affects Driver."', () => {
       const m = loadDriverRescuingModel();
       const text = render(expose(m, "opd-sd"));
       expect(text).toContain("Driver Rescuing affects Driver.");
@@ -109,11 +109,10 @@ describe("OnStar Driver Rescuing System", () => {
       expect(text).toContain("Driver exhibits Danger Status.");
     });
 
-    it('renders consumption+result for Call Transmitting ↔ Call', () => {
+    it('renders effect for Call Transmitting ↔ Call', () => {
       const m = loadDriverRescuingModel();
       const text = render(expose(m, "opd-sd1"));
-      expect(text).toContain("Call Transmitting consumes requested Call.");
-      expect(text).toContain("Call Transmitting yields online Call.");
+      expect(text).toContain("Call Transmitting changes Call from requested to online.");
     });
 
     it('renders result "Call Making yields Call."', () => {
@@ -122,11 +121,10 @@ describe("OnStar Driver Rescuing System", () => {
       expect(text).toContain("Call Making yields Call.");
     });
 
-    it('renders consumption+result for Call Handling ↔ Danger Status', () => {
+    it('renders effect for Call Handling ↔ Danger Status', () => {
       const m = loadDriverRescuingModel();
       const text = render(expose(m, "opd-sd1"));
-      expect(text).toContain("Call Handling consumes endangered Danger Status.");
-      expect(text).toContain("Call Handling yields safe Danger Status.");
+      expect(text).toContain("Call Handling changes Danger Status from endangered to safe.");
     });
 
     it("renders state enumerations for Call and Danger Status", () => {
@@ -201,14 +199,17 @@ describe("OnStar Driver Rescuing System", () => {
       expect(step.preconditionMet).toBe(true);
     });
 
-    it("step 2: Call Transmitting consumes Call (requested) and yields Call (online)", () => {
+    it("step 2: Call Transmitting changes Call from requested to online", () => {
       const m = loadDriverRescuingModel();
       const trace = runSimulation(m);
       const step = trace.steps[1];
 
       expect(step.processId).toBe("proc-call-transmitting");
-      expect(step.consumptionIds).toContain("obj-call");
-      expect(step.resultIds).toContain("obj-call");
+      expect(step.stateChanges).toContainEqual({
+        objectId: "obj-call",
+        fromState: "state-call-requested",
+        toState: "state-call-online",
+      });
     });
 
     it("step 3: Vehicle Location Calculating requires Call at state online", () => {
@@ -220,14 +221,17 @@ describe("OnStar Driver Rescuing System", () => {
       expect(step.preconditionMet).toBe(true);
     });
 
-    it("step 4: Call Handling consumes Danger Status (endangered) and yields Danger Status (safe)", () => {
+    it("step 4: Call Handling changes Danger Status from endangered to safe", () => {
       const m = loadDriverRescuingModel();
       const trace = runSimulation(m);
       const step = trace.steps[3];
 
       expect(step.processId).toBe("proc-call-handling");
-      expect(step.consumptionIds).toContain("obj-danger-status");
-      expect(step.resultIds).toContain("obj-danger-status");
+      expect(step.stateChanges).toContainEqual({
+        objectId: "obj-danger-status",
+        fromState: "state-danger-endangered",
+        toState: "state-danger-safe",
+      });
     });
 
     it("final state: Call=online, Danger Status=safe", () => {
@@ -271,7 +275,7 @@ describe("OnStar Driver Rescuing System", () => {
       expect(types.has("agent")).toBe(true);
       expect(types.has("instrument")).toBe(true);
       expect(types.has("result")).toBe(true);
-      expect(types.has("consumption")).toBe(true);
+      expect(types.has("effect")).toBe(true);
     });
 
     it("SD1: excludes parent-level links (RESOLVE-01)", () => {
@@ -280,7 +284,7 @@ describe("OnStar Driver Rescuing System", () => {
       const linkIds = resolved.map(r => r.link.id);
       // Parent-level links should NOT appear
       expect(linkIds).not.toContain("lnk-advisor-agent-rescuing");   // agent to container
-      expect(linkIds).not.toContain("lnk-rescuing-effect-driver");   // effect from container
+      expect(linkIds).not.toContain("lnk-rescuing-effect-driver");   // effect on container process
       expect(linkIds).not.toContain("lnk-driver-tagged-console");    // tagged between externals
     });
 
@@ -298,11 +302,11 @@ describe("OnStar Driver Rescuing System", () => {
       expect(instrumentSources).not.toContain("obj-cellular-network");
       expect(instrumentSources).not.toContain("obj-gps");
       expect(instrumentSources).not.toContain("obj-onstar-console");
-      // Aggregated agent links from subprocesses should NOT bubble up
+      // With effect link restored, Driver's aggregated agent links are suppressed (VISUAL-03)
       const agentSources = resolved
         .filter(r => r.link.type === "agent")
         .map(r => r.visualSource);
-      expect(agentSources).not.toContain("obj-driver"); // Driver is agent of subprocesses, not of container
+      expect(agentSources).not.toContain("obj-driver");
     });
   });
 });

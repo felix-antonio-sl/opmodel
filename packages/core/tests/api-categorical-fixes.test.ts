@@ -172,8 +172,11 @@ describe("I-16: validate detects duplicate transforming links", () => {
     let m = createModel("test");
     m = unwrap(addThing(m, { id: "proc-p", kind: "process", name: "P", essence: "physical", affiliation: "systemic" }));
     m = unwrap(addThing(m, { id: "obj-o", kind: "object", name: "O", essence: "physical", affiliation: "systemic" }));
-    m = unwrap(addLink(m, { id: "lnk-1", type: "effect", source: "proc-p", target: "obj-o" }));
-    m = unwrap(addLink(m, { id: "lnk-2", type: "consumption", source: "obj-o", target: "proc-p" }));
+    // Bypass eager I-16 guard to test validate() detection
+    const links = new Map(m.links);
+    links.set("lnk-1", { id: "lnk-1", type: "effect", source: "proc-p", target: "obj-o" });
+    links.set("lnk-2", { id: "lnk-2", type: "consumption", source: "obj-o", target: "proc-p" });
+    m = { ...m, links };
     const errors = validate(m);
     expect(errors.some(e => e.code === "I-16")).toBe(true);
   });

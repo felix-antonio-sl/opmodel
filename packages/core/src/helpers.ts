@@ -24,6 +24,10 @@ export function cleanPatch<T extends Record<string, unknown>>(patch: T): T {
   return cleaned as T;
 }
 
+export function appearanceKey(thing: string, opd: string): string {
+  return `${thing}::${opd}`;
+}
+
 export function touch(model: Model): Model {
   return {
     ...model,
