@@ -273,6 +273,77 @@ describe("render", () => {
     // Cup is physical + environmental (both non-default)
     expect(text).toContain("Cup is an object, physical, environmental.");
   });
+
+  // DT-07: Classification OPL sentence
+  it("renders classification as 'B is an instance of A'", () => {
+    let m = buildModel();
+    let r = addThing(m, { id: "obj-beverage", kind: "object", name: "Beverage", essence: "physical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addAppearance(m, { thing: "obj-beverage", opd: "opd-sd", x: 200, y: 300, w: 120, h: 60 });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addLink(m, { id: "lnk-classify", type: "classification", source: "obj-beverage", target: "obj-water" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    const doc = expose(m, "opd-sd");
+    const text = render(doc);
+    expect(text).toContain("Water is an instance of Beverage.");
+  });
+
+  // DT-08: Generalization OPL — objects with article
+  it("renders generalization between objects with article", () => {
+    let m = buildModel();
+    let r = addThing(m, { id: "obj-beverage", kind: "object", name: "Beverage", essence: "physical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addAppearance(m, { thing: "obj-beverage", opd: "opd-sd", x: 200, y: 300, w: 120, h: 60 });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addLink(m, { id: "lnk-gen", type: "generalization", source: "obj-beverage", target: "obj-water" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    const doc = expose(m, "opd-sd");
+    const text = render(doc);
+    expect(text).toContain("Water is a Beverage.");
+  });
+
+  // DT-08: Generalization OPL — objects with 'an' before vowel
+  it("renders generalization between objects with 'an' before vowel", () => {
+    let m = buildModel();
+    let r = addThing(m, { id: "obj-entity", kind: "object", name: "Entity", essence: "physical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addAppearance(m, { thing: "obj-entity", opd: "opd-sd", x: 200, y: 300, w: 120, h: 60 });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addLink(m, { id: "lnk-gen-vowel", type: "generalization", source: "obj-entity", target: "obj-water" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    const doc = expose(m, "opd-sd");
+    const text = render(doc);
+    expect(text).toContain("Water is an Entity.");
+  });
+
+  // DT-08: Generalization OPL — processes without article
+  it("renders generalization between processes without article", () => {
+    let m = buildModel();
+    let r = addThing(m, { id: "proc-processing", kind: "process", name: "Processing", essence: "physical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addAppearance(m, { thing: "proc-processing", opd: "opd-sd", x: 200, y: 300, w: 120, h: 60 });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addLink(m, { id: "lnk-gen-proc", type: "generalization", source: "proc-processing", target: "proc-boiling" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    const doc = expose(m, "opd-sd");
+    const text = render(doc);
+    expect(text).toContain("Boiling is Processing.");
+    expect(text).not.toContain("Boiling is a Processing.");
+  });
+
+  // DT-08: Incomplete generalization unchanged
+  it("renders incomplete generalization unchanged", () => {
+    let m = buildModel();
+    let r = addThing(m, { id: "obj-beverage", kind: "object", name: "Beverage", essence: "physical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addAppearance(m, { thing: "obj-beverage", opd: "opd-sd", x: 200, y: 300, w: 120, h: 60 });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addLink(m, { id: "lnk-gen-inc", type: "generalization", source: "obj-water", target: "obj-beverage", incomplete: true });
+    if (!isOk(r)) throw r.error; m = r.value;
+    const doc = expose(m, "opd-sd");
+    const text = render(doc);
+    expect(text).toContain("Water, Beverage and other specializations are general.");
+  });
 });
 
 // === oplSlug tests ===

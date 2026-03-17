@@ -113,6 +113,8 @@ export function expose(model: Model, opdId: string): OplDocument {
       targetId: link.target,
       sourceName: model.things.get(link.source)?.name ?? link.source,
       targetName: model.things.get(link.target)?.name ?? link.target,
+      sourceKind: model.things.get(link.source)?.kind,
+      targetKind: model.things.get(link.target)?.kind,
       incomplete: link.incomplete ?? false,
     };
     if (link.source_state) {
@@ -231,13 +233,16 @@ function renderLinkSentence(s: OplLinkSentence): string {
       return `${s.targetName} exhibits ${s.sourceName}.`;
     }
     case "generalization": {
-      // Incomplete generalization
       if (s.incomplete) {
         return `${s.sourceName}, ${s.targetName} and other specializations are general.`;
       }
-      return `${s.targetName} is a ${s.sourceName}.`;
+      // ISO: objects use article ("B is a/an A"), processes omit article ("B is A")
+      if (s.targetKind === "object") {
+        return `${s.targetName} is ${aOrAn(s.sourceName)}.`;
+      }
+      return `${s.targetName} is ${s.sourceName}.`;
     }
-    case "classification": return `${s.targetName} is classified by ${s.sourceName}.`;
+    case "classification": return `${s.targetName} is an instance of ${s.sourceName}.`;
     case "invocation": return `${s.sourceName} invokes ${s.targetName}.`;
     case "exception": return `${s.sourceName} handles exception from ${s.targetName}.`;
     case "tagged": {

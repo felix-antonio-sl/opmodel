@@ -46,6 +46,8 @@ export interface OplLinkSentence {
   tag?: string;
   direction?: "unidirectional" | "bidirectional" | "reciprocal";
   incomplete?: boolean;
+  sourceKind?: Kind;
+  targetKind?: Kind;
 }
 
 export interface OplModifierSentence {
