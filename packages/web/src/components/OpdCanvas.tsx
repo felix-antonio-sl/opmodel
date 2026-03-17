@@ -1,6 +1,6 @@
 import { useRef, useState, useCallback, useMemo, useEffect } from "react";
 import type { Model, Thing, State, Link, Appearance, Modifier, OPD } from "@opmodel/core";
-import { createInitialState, resolveLinksForOpd, findConsumptionResultPairs, type ModelState } from "@opmodel/core";
+import { createInitialState, resolveLinksForOpd, findConsumptionResultPairs, transformingMode, type ModelState } from "@opmodel/core";
 import type { Command, EditorMode, LinkTypeChoice, SimulationUIState } from "../lib/commands";
 import { genId } from "../lib/ids";
 import {
@@ -88,6 +88,71 @@ function statePillRect(
     w: pillW,
     h: pillH,
   };
+}
+
+/* ─── DA-8: Adjust effect link endpoints per transformingMode ─── */
+
+function adjustEffectEndpoints(
+  entries: {
+    link: Link;
+    modifier: Modifier | undefined;
+    visualSource: string;
+    visualTarget: string;
+    labelOverride: string | undefined;
+    isMergedPair: boolean;
+    isInputHalf?: boolean;
+    isOutputHalf?: boolean;
+  }[],
+  model: Model,
+) {
+  return entries.flatMap(entry => {
+    const mode = transformingMode(entry.link);
+    if (!mode || mode === "effect") return [entry];
+
+    // Resolve object/process endpoints (I-33 guarantees object↔process)
+    const srcThing = model.things.get(entry.visualSource);
+    const objectId = srcThing?.kind === "object" ? entry.visualSource : entry.visualTarget;
+    const processId = srcThing?.kind === "process" ? entry.visualSource : entry.visualTarget;
+
+    switch (mode) {
+      case "input-specified":
+        return [{
+          ...entry,
+          visualSource: objectId,
+          visualTarget: processId,
+          isInputHalf: true as const,
+        }];
+
+      case "output-specified":
+        return [{
+          ...entry,
+          visualSource: processId,
+          visualTarget: objectId,
+          isOutputHalf: true as const,
+        }];
+
+      case "input-output":
+        return [
+          {
+            ...entry,
+            link: { ...entry.link, target_state: undefined },
+            visualSource: objectId,
+            visualTarget: processId,
+            isInputHalf: true as const,
+          },
+          {
+            ...entry,
+            link: { ...entry.link, source_state: undefined },
+            visualSource: processId,
+            visualTarget: objectId,
+            isOutputHalf: true as const,
+          },
+        ];
+
+      default:
+        return [entry];
+    }
+  });
 }
 
 /* ─── SVG Defs ─── */
@@ -592,9 +657,11 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
       });
     }
 
-    return entries
+    const filtered = entries
       .filter(e => !resultIds.has(e.link.id))
       .map(e => mergedEntries.get(e.link.id) ?? e);
+
+    return adjustEffectEndpoints(filtered, model);
   }, [model, opdId]);
 
   // Convert client coords to SVG model coords
