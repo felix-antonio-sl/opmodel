@@ -916,9 +916,9 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
             let tgtKindOverride: "object" | "process" | undefined;
 
             if (link.type === "effect" || isMergedPair) {
-              // Effect / merged consumption+result: route the object endpoint to source_state (FROM state)
-              // Identify which end is the object
+              // Effect / merged consumption+result: route state-specified endpoints to pills
               const objectEnd = srcThing.kind === "object" ? visualSource : visualTarget;
+              // Route source_state (FROM state) to object endpoint — used by isInputHalf and basic effect
               if (link.source_state) {
                 const objApp = appearances.get(objectEnd);
                 if (objApp) {
@@ -936,7 +936,24 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
                   }
                 }
               }
-              // target_state (TO state) is NOT routed — it's the destination state, not a visual endpoint
+              // Route target_state (TO state) to object endpoint — used by isOutputHalf (DA-8)
+              if (isOutputHalf && link.target_state) {
+                const objApp = appearances.get(objectEnd);
+                if (objApp) {
+                  const ox = dragTarget === objectEnd ? dragDelta.x : 0;
+                  const oy = dragTarget === objectEnd ? dragDelta.y : 0;
+                  const adj = { x: objApp.x + ox, y: objApp.y + oy, w: objApp.w, h: objApp.h };
+                  const allObjStates = statesForThing(model, objectEnd);
+                  const visObjStates = objApp.suppressed_states
+                    ? allObjStates.filter((s) => !objApp.suppressed_states!.includes(s.id))
+                    : allObjStates;
+                  const pill = statePillRect(adj, visObjStates, link.target_state);
+                  if (pill) {
+                    if (objectEnd === visualTarget) { tgtRect = pill; tgtKindOverride = "object"; }
+                    else { srcRect = pill; srcKindOverride = "object"; }
+                  }
+                }
+              }
             } else {
               // Non-effect links: source_state belongs to source, target_state to target
               if (link.source_state) {
