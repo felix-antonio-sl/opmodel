@@ -74,8 +74,8 @@ describe("OnStar Driver Rescuing System", () => {
     it('renders instrument link for OnStar System', () => {
       const m = loadDriverRescuingModel();
       const text = render(expose(m, "opd-sd"));
-      // Non-state-specified instrument renders as "X is an instrument of Y" (GAP-OPL-06: ISO uses "requires")
-      expect(text).toContain("OnStar System is an instrument of Driver Rescuing.");
+      // ISO §9.2.3: "Processing requires Instrument."
+      expect(text).toContain("Driver Rescuing requires OnStar System.");
     });
 
     it('renders effect "Driver Rescuing affects Driver."', () => {
@@ -84,13 +84,17 @@ describe("OnStar Driver Rescuing System", () => {
       expect(text).toContain("Driver Rescuing affects Driver.");
     });
 
-    it('renders aggregation "OnStar System consists of GPS."', () => {
+    it('renders grouped aggregation "OnStar System consists of ..."', () => {
       const m = loadDriverRescuingModel();
       const text = render(expose(m, "opd-sd"));
-      expect(text).toContain("OnStar System consists of GPS.");
-      expect(text).toContain("OnStar System consists of Cellular Network.");
-      expect(text).toContain("OnStar System consists of OnStar Console.");
-      expect(text).toContain("OnStar System consists of VCIM.");
+      // GAP-OPL-04: grouped structural — 4 parts in one sentence
+      expect(text).toContain("OnStar System consists of");
+      expect(text).toContain("GPS");
+      expect(text).toContain("Cellular Network");
+      expect(text).toContain("OnStar Console");
+      expect(text).toContain("VCIM");
+      // Should NOT be individual sentences
+      expect(text).not.toContain("OnStar System consists of GPS.");
     });
 
     it('renders tagged link "Driver communicates via OnStar Console."', () => {
@@ -142,6 +146,33 @@ describe("OnStar Driver Rescuing System", () => {
       expect(text).not.toContain("OnStar Advisor handles Driver Rescuing.");
       expect(text).not.toContain("Driver Rescuing affects Driver.");
       expect(text).not.toContain("Driver communicates via OnStar Console.");
+    });
+
+    it('renders in-zoom sequence for Driver Rescuing (GAP-OPL-03/05)', () => {
+      const m = loadDriverRescuingModel();
+      const text = render(expose(m, "opd-sd1"));
+      expect(text).toContain("Driver Rescuing zooms into");
+      expect(text).toContain("Call Making");
+      expect(text).toContain("Call Transmitting");
+      expect(text).toContain("Vehicle Location Calculating");
+      expect(text).toContain("Call Handling");
+      expect(text).toContain("in that sequence");
+    });
+
+    it('renders state descriptions for Call and Danger Status (GAP-OPL-02)', () => {
+      const m = loadDriverRescuingModel();
+      const text = render(expose(m, "opd-sd1"));
+      expect(text).toContain("State requested of Call is initial.");
+      // Danger Status is a feature of Driver — state descriptions include the exhibitor form
+      expect(text).toContain("State safe of Danger Status of Driver is final.");
+      expect(text).toContain("State endangered of Danger Status of Driver is initial.");
+    });
+
+    it('renders exhibition feature with "of Exhibitor" form (GAP-OPL-07)', () => {
+      const m = loadDriverRescuingModel();
+      const doc = expose(m, "opd-sd1");
+      const text = render(doc);
+      expect(text).toContain("Danger Status of Driver");
     });
   });
 

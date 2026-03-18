@@ -31,6 +31,7 @@ export {
 export type {
   OplSentence, OplThingDeclaration, OplStateEnumeration, OplDuration,
   OplLinkSentence, OplModifierSentence, OplDocument, OplEdit, OplRenderSettings,
+  OplStateDescription, OplGroupedStructuralSentence, OplInZoomSequence, OplAttributeValue,
 } from "./opl-types";
 export {
   createInitialState,
