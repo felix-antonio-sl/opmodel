@@ -117,20 +117,40 @@ function adjustEffectEndpoints(
 
     switch (mode) {
       case "input-specified":
-        return [{
-          ...entry,
-          visualSource: objectId,
-          visualTarget: processId,
-          isInputHalf: true as const,
-        }];
+        return [
+          {
+            ...entry,
+            link: { ...entry.link },
+            visualSource: objectId,
+            visualTarget: processId,
+            isInputHalf: true as const,
+          },
+          {
+            ...entry,
+            link: { ...entry.link, source_state: undefined },
+            visualSource: processId,
+            visualTarget: objectId,
+            isOutputHalf: true as const,
+          },
+        ];
 
       case "output-specified":
-        return [{
-          ...entry,
-          visualSource: processId,
-          visualTarget: objectId,
-          isOutputHalf: true as const,
-        }];
+        return [
+          {
+            ...entry,
+            link: { ...entry.link, target_state: undefined },
+            visualSource: objectId,
+            visualTarget: processId,
+            isInputHalf: true as const,
+          },
+          {
+            ...entry,
+            link: { ...entry.link },
+            visualSource: processId,
+            visualTarget: objectId,
+            isOutputHalf: true as const,
+          },
+        ];
 
       case "input-output":
         return [
