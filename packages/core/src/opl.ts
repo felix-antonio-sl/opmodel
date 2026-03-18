@@ -181,7 +181,7 @@ function renderLinkSentence(s: OplLinkSentence): string {
       if (s.sourceStateName) {
         return `${s.targetName} requires ${s.sourceStateName} ${s.sourceName}.`;
       }
-      return `${s.sourceName} is an instrument of ${s.targetName}.`;
+      return `${s.targetName} requires ${s.sourceName}.`;
     }
     case "consumption": {
       // consumption: source=object, target=process (ISO direction)

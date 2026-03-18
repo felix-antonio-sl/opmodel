@@ -74,8 +74,8 @@ describe("OnStar Driver Rescuing System", () => {
     it('renders instrument link for OnStar System', () => {
       const m = loadDriverRescuingModel();
       const text = render(expose(m, "opd-sd"));
-      // Non-state-specified instrument renders as "X is an instrument of Y" (GAP-OPL-06: ISO uses "requires")
-      expect(text).toContain("OnStar System is an instrument of Driver Rescuing.");
+      // ISO §9.2.3: "Processing requires Instrument."
+      expect(text).toContain("Driver Rescuing requires OnStar System.");
     });
 
     it('renders effect "Driver Rescuing affects Driver."', () => {

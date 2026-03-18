@@ -194,6 +194,16 @@ describe("render", () => {
     expect(text).toContain("Boiling changes Water from liquid to gas.");
   });
 
+  it("renders non-state-specified instrument as 'Process requires Instrument'", () => {
+    let m = buildModel();
+    let r = addLink(m, { id: "lnk-cup-instrument-boiling", type: "instrument", source: "obj-cup", target: "proc-boiling" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    const doc = expose(m, "opd-sd");
+    const text = render(doc);
+    expect(text).toContain("Boiling requires Cup.");
+    expect(text).not.toContain("is an instrument of");
+  });
+
   it("renders duration", () => {
     const m = buildModel();
     const doc = expose(m, "opd-sd");
