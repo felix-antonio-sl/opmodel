@@ -266,8 +266,15 @@ case "state-description":
 case "grouped-structural":
   return renderGroupedStructural(s);
 
+const INCOMPLETE_PHRASES: Record<string, string> = {
+  aggregation: "at least one other part",
+  exhibition: "at least one other feature",
+  generalization: "at least one other specialization",
+  classification: "at least one other instance",
+};
+
 function renderGroupedStructural(s: OplGroupedStructuralSentence): string {
-  const list = formatList(childNames, s.incomplete, incompletePhrase);
+  const list = formatList(s.childNames, s.incomplete, INCOMPLETE_PHRASES[s.linkType]);
   switch (s.linkType) {
     case "aggregation":
       return `${s.parentName} consists of ${list}.`;
@@ -357,13 +364,16 @@ Al procesar state-enumeration, usar el map para poblar los campos
 
 ```
 Para cada OplGroupedStructuralSentence:
-  Para cada childId en childIds:
+  Para cada (childId, index) en childIds:
     Emitir add-link con (parentId, childId, linkType)
     Respetar convención de dirección:
       aggregation: source=parent, target=child
       exhibition: source=child, target=parent
       generalization: source=parent, target=child
       classification: source=parent, target=child
+    Propagar incomplete: cada add-link hereda s.incomplete
+    (Nota: incomplete es propiedad del fan/grupo, no de links individuales.
+     Durante expose() se reconstruye vía OR. PutGet round-trip es sound.)
 ```
 
 ### 6.3 Sentences derivadas → ignorar
