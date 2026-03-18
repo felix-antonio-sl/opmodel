@@ -15,7 +15,7 @@ const STORAGE_KEY = "opmodel:current";
 
 function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel: Model; onNew: () => void; onLoadExample: () => void; onImport: (model: Model) => void }) {
   const store = useModelStore(initialModel);
-  const { model, ui, dispatch, doUndo, doRedo, canUndo, canRedo, lastError, save } = store;
+  const { model, ui, dispatch, doUndo, doRedo, canUndo, canRedo, lastError, save, saveStatus } = store;
 
   // NL pipeline
   const [nlConfig, setNlConfig] = useState<NlConfig | null>(() => {
@@ -243,6 +243,10 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
             <div className="status-bar__sep" />
           </>
         )}
+        <span className={`status-bar__save status-bar__save--${saveStatus}`}>
+          {saveStatus === "saved" ? "Saved" : saveStatus === "saving" ? "Saving..." : "Storage full"}
+        </span>
+        <div className="status-bar__sep" />
         <span className="status-bar__version">opmodel {model.opmodel}</span>
       </footer>
       {showNlSettings && (

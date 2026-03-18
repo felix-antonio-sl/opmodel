@@ -1263,6 +1263,23 @@ body,
   font-size: 10px;
 }
 
+.status-bar__save {
+  font-size: 10px;
+}
+
+.status-bar__save--saved {
+  color: var(--success);
+}
+
+.status-bar__save--saving {
+  color: var(--text-muted);
+}
+
+.status-bar__save--error {
+  color: var(--danger);
+  font-weight: 500;
+}
+
 .status-bar__version {
   color: var(--text-muted);
   font-size: 10px;

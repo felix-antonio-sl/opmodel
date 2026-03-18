@@ -34,6 +34,8 @@ export interface UIState {
   simulation: SimulationUIState | null;
 }
 
+export type SaveStatus = "saved" | "saving" | "error";
+
 export interface ModelStore {
   /** Current model — extract from History comonad */
   model: Model;
@@ -53,6 +55,8 @@ export interface ModelStore {
   lastError: string | null;
   /** Save model to .opmodel file */
   save: () => void;
+  /** Autosave status: saved | saving | error */
+  saveStatus: SaveStatus;
 }
 
 export function useModelStore(initialModel: Model): ModelStore {
@@ -68,6 +72,7 @@ export function useModelStore(initialModel: Model): ModelStore {
     simulation: null,
   });
   const [lastError, setLastError] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
 
   // Refs for accessing current state inside useCallback without stale closures
   const historyRef = useRef(history);
@@ -75,17 +80,20 @@ export function useModelStore(initialModel: Model): ModelStore {
   const uiRef = useRef(ui);
   uiRef.current = ui;
 
-  // Auto-save to localStorage on model changes (debounced)
+  // Auto-save to localStorage on model changes (debounced, respects autosave_interval_s)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => {
     clearTimeout(saveTimer.current);
+    setSaveStatus("saving");
+    const intervalMs = (history.present.settings.autosave_interval_s ?? 0.3) * 1000;
     saveTimer.current = setTimeout(() => {
       try {
         localStorage.setItem(STORAGE_KEY, saveModel(history.present));
+        setSaveStatus("saved");
       } catch {
-        // Storage full or unavailable — silently ignore
+        setSaveStatus("error");
       }
-    }, 300);
+    }, intervalMs);
     return () => clearTimeout(saveTimer.current);
   }, [history.present]);
 
@@ -237,5 +245,6 @@ export function useModelStore(initialModel: Model): ModelStore {
     doRedo,
     lastError,
     save,
+    saveStatus,
   };
 }
