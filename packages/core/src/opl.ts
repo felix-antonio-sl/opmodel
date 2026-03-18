@@ -17,6 +17,7 @@ import {
 export function expose(model: Model, opdId: string): OplDocument {
   const opd = model.opds.get(opdId);
   const opdName = opd?.name ?? opdId;
+  const containerThingId = opd?.refines;
 
   const settings = model.settings;
   const renderSettings: OplRenderSettings = {
@@ -55,6 +56,37 @@ export function expose(model: Model, opdId: string): OplDocument {
   });
 
   const sentences: OplSentence[] = [];
+
+  // In-zoom sequence sentence — ISO §14.2.1.3
+  if (containerThingId) {
+    const containerThing = model.things.get(containerThingId);
+    if (containerThing) {
+      const subprocessApps: Array<{ thingId: string; name: string; y: number }> = [];
+      for (const app of model.appearances.values()) {
+        if (app.opd !== opdId) continue;
+        if (app.thing === containerThingId) continue;
+        if (!app.internal) continue;
+        const thing = model.things.get(app.thing);
+        if (thing?.kind === "process") {
+          subprocessApps.push({ thingId: thing.id, name: thing.name, y: app.y });
+        }
+      }
+      subprocessApps.sort((a, b) => a.y - b.y || a.thingId.localeCompare(b.thingId));
+
+      if (subprocessApps.length > 0) {
+        sentences.push({
+          kind: "in-zoom-sequence",
+          parentId: containerThingId,
+          parentName: containerThing.name,
+          steps: subprocessApps.map(sp => ({
+            thingIds: [sp.thingId],
+            thingNames: [sp.name],
+            parallel: false,
+          })),
+        } as OplInZoomSequence);
+      }
+    }
+  }
 
   // 3. Thing declarations + states + durations
   for (const thingId of sortedThingIds) {
@@ -144,7 +176,6 @@ export function expose(model: Model, opdId: string): OplDocument {
     .sort((a, b) => a.id.localeCompare(b.id));
 
   // In in-zoom OPDs, filter parent-level links (ISO: only internal decomposition)
-  const containerThingId = opd?.refines;
   if (containerThingId) {
     const internalThings = new Set<string>();
     for (const app of model.appearances.values()) {
@@ -537,8 +568,18 @@ function renderSentence(s: OplSentence, settings: OplRenderSettings): string {
       return `${s.thingName} of ${s.exhibitorName} is ${s.valueName}.`;
     case "grouped-structural":
       return renderGroupedStructural(s);
-    case "in-zoom-sequence":
-      return ""; // Stub — implemented in subsequent tasks
+    case "in-zoom-sequence": {
+      const allNames = s.steps.flatMap(step =>
+        step.parallel
+          ? [`parallel ${formatList(step.thingNames)}`]
+          : step.thingNames
+      );
+      const list = formatList(allNames);
+      if (s.steps.length === 1 && s.steps[0]!.thingNames.length === 1) {
+        return `${s.parentName} zooms into ${list}.`;
+      }
+      return `${s.parentName} zooms into ${list}, in that sequence.`;
+    }
   }
 }
 

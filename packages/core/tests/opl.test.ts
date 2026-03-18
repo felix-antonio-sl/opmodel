@@ -910,6 +910,70 @@ describe("render — grouped structural links (GAP-OPL-04)", () => {
   });
 });
 
+// === render — in-zoom sequence (GAP-OPL-03/05) ===
+
+describe("render — in-zoom sequence (GAP-OPL-03/05)", () => {
+  function buildInZoomModel() {
+    let m = createModel("Test");
+    let r = addThing(m, { id: "proc-main", kind: "process", name: "Main Processing", essence: "informatical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addThing(m, { id: "proc-step-a", kind: "process", name: "Step A", essence: "informatical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addThing(m, { id: "proc-step-b", kind: "process", name: "Step B", essence: "informatical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addThing(m, { id: "proc-step-c", kind: "process", name: "Step C", essence: "informatical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addAppearance(m, { thing: "proc-main", opd: "opd-sd", x: 100, y: 100, w: 120, h: 60 });
+    if (!isOk(r)) throw r.error; m = r.value;
+    // Add in-zoom OPD manually
+    const opd1 = { id: "opd-sd1", name: "SD1", opd_type: "hierarchical" as const, parent_opd: "opd-sd", refines: "proc-main", refinement_type: "in-zoom" as const };
+    m = { ...m, opds: new Map(m.opds).set("opd-sd1", opd1) };
+    // SD1: container + subprocess appearances (internal, ordered by Y)
+    r = addAppearance(m, { thing: "proc-main", opd: "opd-sd1", x: 50, y: 50, w: 300, h: 400 });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addAppearance(m, { thing: "proc-step-a", opd: "opd-sd1", x: 100, y: 100, w: 120, h: 50, internal: true });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addAppearance(m, { thing: "proc-step-b", opd: "opd-sd1", x: 100, y: 200, w: 120, h: 50, internal: true });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addAppearance(m, { thing: "proc-step-c", opd: "opd-sd1", x: 100, y: 300, w: 120, h: 50, internal: true });
+    if (!isOk(r)) throw r.error; m = r.value;
+    return m;
+  }
+
+  it("renders sequential in-zoom sentence", () => {
+    const m = buildInZoomModel();
+    const doc = expose(m, "opd-sd1");
+    const text = render(doc);
+    expect(text).toContain("Main Processing zooms into Step A, Step B, and Step C, in that sequence.");
+  });
+
+  it("in-zoom sentence is first in the OPL output", () => {
+    const m = buildInZoomModel();
+    const doc = expose(m, "opd-sd1");
+    expect(doc.sentences[0]?.kind).toBe("in-zoom-sequence");
+  });
+
+  it("single subprocess omits 'in that sequence'", () => {
+    let m = createModel("Test");
+    let r = addThing(m, { id: "proc-parent", kind: "process", name: "Parent", essence: "informatical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addThing(m, { id: "proc-child", kind: "process", name: "Child", essence: "informatical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addAppearance(m, { thing: "proc-parent", opd: "opd-sd", x: 0, y: 0, w: 100, h: 50 });
+    if (!isOk(r)) throw r.error; m = r.value;
+    const opd1 = { id: "opd-sd1", name: "SD1", opd_type: "hierarchical" as const, parent_opd: "opd-sd", refines: "proc-parent", refinement_type: "in-zoom" as const };
+    m = { ...m, opds: new Map(m.opds).set("opd-sd1", opd1) };
+    r = addAppearance(m, { thing: "proc-parent", opd: "opd-sd1", x: 0, y: 0, w: 300, h: 300 });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addAppearance(m, { thing: "proc-child", opd: "opd-sd1", x: 50, y: 50, w: 100, h: 50, internal: true });
+    if (!isOk(r)) throw r.error; m = r.value;
+    const doc = expose(m, "opd-sd1");
+    const text = render(doc);
+    expect(text).toContain("Parent zooms into Child.");
+    expect(text).not.toContain("in that sequence");
+  });
+});
+
 // === editsFrom — condition_mode propagation (GetPut) ===
 
 describe("editsFrom — condition_mode propagation (GetPut)", () => {
