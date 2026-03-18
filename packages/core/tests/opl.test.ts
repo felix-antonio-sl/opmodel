@@ -628,6 +628,48 @@ describe("GetPut", () => {
   });
 });
 
+// === render — state descriptions (GAP-OPL-02) ===
+
+describe("render — state descriptions (GAP-OPL-02)", () => {
+  it("renders 'State S of O is initial.' for initial-only state", () => {
+    let m = buildModel();
+    // Add a state that is only initial (not default)
+    let r = addState(m, { id: "state-cold", parent: "obj-water", name: "cold", initial: true, final: false, default: false });
+    if (!isOk(r)) throw r.error; m = r.value;
+    const doc = expose(m, "opd-sd");
+    const text = render(doc);
+    expect(text).toContain("State cold of Water is initial.");
+  });
+
+  it("does not emit state-description for states with no qualifiers", () => {
+    const m = buildModel();
+    const doc = expose(m, "opd-sd");
+    // state-gas has initial: false, final: false, default: false
+    const descriptions = doc.sentences.filter(
+      s => s.kind === "state-description" && (s as any).stateName === "gas"
+    );
+    expect(descriptions).toHaveLength(0);
+  });
+
+  it("renders combined 'is initial and default' for state with both", () => {
+    const m = buildModel();
+    const doc = expose(m, "opd-sd");
+    const text = render(doc);
+    // state-liquid has initial: true AND default: true
+    expect(text).toContain("State liquid of Water is initial and default.");
+  });
+
+  it("renders 'State S of O is final.' for final state", () => {
+    let m = buildModel();
+    // Add a final state
+    let r = addState(m, { id: "state-vapor", parent: "obj-water", name: "vapor", initial: false, final: true, default: false });
+    if (!isOk(r)) throw r.error; m = r.value;
+    const doc = expose(m, "opd-sd");
+    const text = render(doc);
+    expect(text).toContain("State vapor of Water is final.");
+  });
+});
+
 // === render — modifier sentences (C2) ===
 
 describe("render — modifier sentences (C2)", () => {

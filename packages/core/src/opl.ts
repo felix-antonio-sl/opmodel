@@ -75,6 +75,22 @@ export function expose(model: Model, opdId: string): OplDocument {
       });
     }
 
+    // State descriptions (initial/final/default markers) — ISO §A.4.4.4
+    for (const st of thingStates) {
+      if (st.initial || st.final || st.default) {
+        sentences.push({
+          kind: "state-description",
+          thingId,
+          thingName: thing.name,
+          stateId: st.id,
+          stateName: st.name,
+          initial: st.initial,
+          final: st.final,
+          default: st.default,
+        } as OplStateDescription);
+      }
+    }
+
     // Duration
     if (thing.duration) {
       sentences.push({
@@ -347,7 +363,16 @@ function renderSentence(s: OplSentence, settings: OplRenderSettings): string {
     case "modifier": {
       return renderModifierSentence(s);
     }
-    case "state-description":
+    case "state-description": {
+      const qualifiers: string[] = [];
+      if (s.initial) qualifiers.push("initial");
+      if (s.final) qualifiers.push("final");
+      if (s.default) qualifiers.push("default");
+      const thingDisplay = s.exhibitorName
+        ? `${s.thingName} of ${s.exhibitorName}`
+        : s.thingName;
+      return `State ${s.stateName} of ${thingDisplay} is ${qualifiers.join(" and ")}.`;
+    }
     case "grouped-structural":
     case "in-zoom-sequence":
     case "attribute-value":
@@ -461,6 +486,16 @@ export function editsFrom(doc: OplDocument): OplEdit[] {
     }
   }
 
+  // Build state qualifier lookup from state-description sentences
+  const stateQualifiers = new Map<string, { initial: boolean; final: boolean; default: boolean }>();
+  for (const s of doc.sentences) {
+    if (s.kind === "state-description") {
+      stateQualifiers.set(`${s.thingId}::${s.stateName}`, {
+        initial: s.initial, final: s.final, default: s.default,
+      });
+    }
+  }
+
   for (const s of doc.sentences) {
     switch (s.kind) {
       case "thing-declaration": {
@@ -490,12 +525,15 @@ export function editsFrom(doc: OplDocument): OplEdit[] {
         stateEdits.push({
           kind: "add-states",
           thingId: s.thingId,
-          states: s.stateNames.map(name => ({
-            name,
-            initial: false,
-            final: false,
-            default: false,
-          })),
+          states: s.stateNames.map(name => {
+            const q = stateQualifiers.get(`${s.thingId}::${name}`);
+            return {
+              name,
+              initial: q?.initial ?? false,
+              final: q?.final ?? false,
+              default: q?.default ?? false,
+            };
+          }),
         });
         break;
       case "link": {
