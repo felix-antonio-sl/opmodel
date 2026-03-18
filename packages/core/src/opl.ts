@@ -156,7 +156,52 @@ export function expose(model: Model, opdId: string): OplDocument {
     );
   }
 
+  // Separate structural links for grouping (GAP-OPL-04)
+  const structuralLinks: Link[] = [];
+  const nonStructuralLinks: Link[] = [];
   for (const link of sortedLinks) {
+    if (STRUCTURAL_TYPES.has(link.type)) {
+      structuralLinks.push(link);
+    } else {
+      nonStructuralLinks.push(link);
+    }
+  }
+
+  // Group structural links by (parentId, linkType)
+  const structuralGroups = new Map<string, { parentId: string; linkType: string; links: Link[] }>();
+  for (const link of structuralLinks) {
+    // Parent depends on convention:
+    // aggregation/generalization/classification: source=parent
+    // exhibition: target=parent (exhibitor)
+    const parentId = link.type === "exhibition" ? link.target : link.source;
+    const key = `${parentId}::${link.type}`;
+    if (!structuralGroups.has(key)) {
+      structuralGroups.set(key, { parentId, linkType: link.type, links: [] });
+    }
+    structuralGroups.get(key)!.links.push(link);
+  }
+
+  for (const group of structuralGroups.values()) {
+    const parent = model.things.get(group.parentId);
+    if (!parent) continue;
+    const childIds = group.links.map(l => l.type === "exhibition" ? l.source : l.target);
+    const childNames = childIds.map(id => model.things.get(id)?.name ?? id);
+    const childKinds = childIds.map(id => model.things.get(id)?.kind ?? "object" as const);
+    sentences.push({
+      kind: "grouped-structural",
+      linkType: group.linkType,
+      parentId: group.parentId,
+      parentName: parent.name,
+      parentKind: parent.kind,
+      childIds,
+      childNames,
+      childKinds,
+      incomplete: group.links.some(l => l.incomplete),
+    } as OplGroupedStructuralSentence);
+  }
+
+  // Non-structural links: emit individually (unchanged)
+  for (const link of nonStructuralLinks) {
     const sentence: OplLinkSentence = {
       kind: "link",
       linkId: link.id,
@@ -215,6 +260,34 @@ export function expose(model: Model, opdId: string): OplDocument {
 function aOrAn(word: string): string {
   return /^[aeiou]/i.test(word) ? `an ${word}` : `a ${word}`;
 }
+
+function formatList(names: string[], incomplete?: boolean, incompletePhrase?: string): string {
+  if (names.length === 0) return "";
+  if (names.length === 1) {
+    return incomplete && incompletePhrase ? `${names[0]} and ${incompletePhrase}` : names[0]!;
+  }
+  if (names.length === 2) {
+    if (incomplete && incompletePhrase) {
+      return `${names[0]}, ${names[1]}, and ${incompletePhrase}`;
+    }
+    return `${names[0]} and ${names[1]}`;
+  }
+  const last = names[names.length - 1]!;
+  const rest = names.slice(0, -1);
+  if (incomplete && incompletePhrase) {
+    return `${rest.join(", ")}, ${last}, and ${incompletePhrase}`;
+  }
+  return `${rest.join(", ")}, and ${last}`;
+}
+
+const STRUCTURAL_TYPES = new Set(["aggregation", "exhibition", "generalization", "classification"]);
+
+const INCOMPLETE_PHRASES: Record<string, string> = {
+  aggregation: "at least one other part",
+  exhibition: "at least one other feature",
+  generalization: "at least one other specialization",
+  classification: "at least one other instance",
+};
 
 function renderLinkSentence(s: OplLinkSentence): string {
   const processName = s.sourceName; // For transforming links, source is process
@@ -364,6 +437,56 @@ function renderModifierSentence(s: OplModifierSentence): string {
   return `${s.linkType} link from ${s.sourceName} to ${s.targetName} has ${neg}${s.modifierType} modifier.`;
 }
 
+function renderGroupedStructural(s: OplGroupedStructuralSentence): string {
+  const phrase = INCOMPLETE_PHRASES[s.linkType] ?? "at least one other";
+
+  switch (s.linkType) {
+    case "aggregation":
+      return `${s.parentName} consists of ${formatList(s.childNames, s.incomplete, phrase)}.`;
+
+    case "exhibition": {
+      const attrs = s.childNames.filter((_, i) => s.childKinds[i] === "object");
+      const ops = s.childNames.filter((_, i) => s.childKinds[i] === "process");
+      const isObjectExhibitor = s.parentKind === "object";
+      const first = isObjectExhibitor ? attrs : ops;
+      const second = isObjectExhibitor ? ops : attrs;
+      if (second.length === 0) {
+        return `${s.parentName} exhibits ${formatList(first, s.incomplete, phrase)}.`;
+      }
+      const firstList = formatList(first);
+      const secondList = formatList(second);
+      return `${s.parentName} exhibits ${firstList}, as well as ${secondList}.`;
+    }
+
+    case "generalization": {
+      const list = formatList(s.childNames, s.incomplete, phrase);
+      if (s.childNames.length === 1 && !s.incomplete) {
+        // Single specialization (complete): "Spec is a/an General." (objects) / "Spec is General." (processes)
+        if (s.parentKind === "object") {
+          return `${s.childNames[0]} is ${aOrAn(s.parentName)}.`;
+        }
+        return `${s.childNames[0]} is ${s.parentName}.`;
+      }
+      // Multiple specializations or incomplete: use "are"
+      if (s.parentKind === "object") {
+        return `${list} are ${aOrAn(s.parentName)}.`;
+      }
+      return `${list} are ${s.parentName}.`;
+    }
+
+    case "classification": {
+      const list = formatList(s.childNames, s.incomplete, phrase);
+      if (s.childNames.length === 1) {
+        return `${s.childNames[0]} is an instance of ${s.parentName}.`;
+      }
+      return `${list} are instances of ${s.parentName}.`;
+    }
+
+    default:
+      return "";
+  }
+}
+
 function renderSentence(s: OplSentence, settings: OplRenderSettings): string {
   switch (s.kind) {
     case "thing-declaration": {
@@ -413,6 +536,7 @@ function renderSentence(s: OplSentence, settings: OplRenderSettings): string {
     case "attribute-value":
       return `${s.thingName} of ${s.exhibitorName} is ${s.valueName}.`;
     case "grouped-structural":
+      return renderGroupedStructural(s);
     case "in-zoom-sequence":
       return ""; // Stub — implemented in subsequent tasks
   }
@@ -607,10 +731,28 @@ export function editsFrom(doc: OplDocument): OplEdit[] {
         });
         break;
       case "state-description":
-      case "grouped-structural":
       case "in-zoom-sequence":
       case "attribute-value":
         break; // Stub — implemented in subsequent tasks
+      case "grouped-structural": {
+        const directionMap: Record<string, "source" | "target"> = {
+          aggregation: "source",
+          exhibition: "target",
+          generalization: "source",
+          classification: "source",
+        };
+        const parentRole = directionMap[s.linkType] ?? "source";
+        for (let i = 0; i < s.childIds.length; i++) {
+          const linkData: Omit<Link, "id"> = {
+            type: s.linkType,
+            source: parentRole === "source" ? s.parentId : s.childIds[i]!,
+            target: parentRole === "source" ? s.childIds[i]! : s.parentId,
+            incomplete: s.incomplete || undefined,
+          };
+          linkEdits.push({ kind: "add-link", link: linkData });
+        }
+        break;
+      }
     }
   }
 

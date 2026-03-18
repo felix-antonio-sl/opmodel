@@ -84,13 +84,17 @@ describe("OnStar Driver Rescuing System", () => {
       expect(text).toContain("Driver Rescuing affects Driver.");
     });
 
-    it('renders aggregation "OnStar System consists of GPS."', () => {
+    it('renders grouped aggregation "OnStar System consists of ..."', () => {
       const m = loadDriverRescuingModel();
       const text = render(expose(m, "opd-sd"));
-      expect(text).toContain("OnStar System consists of GPS.");
-      expect(text).toContain("OnStar System consists of Cellular Network.");
-      expect(text).toContain("OnStar System consists of OnStar Console.");
-      expect(text).toContain("OnStar System consists of VCIM.");
+      // GAP-OPL-04: grouped structural — 4 parts in one sentence
+      expect(text).toContain("OnStar System consists of");
+      expect(text).toContain("GPS");
+      expect(text).toContain("Cellular Network");
+      expect(text).toContain("OnStar Console");
+      expect(text).toContain("VCIM");
+      // Should NOT be individual sentences
+      expect(text).not.toContain("OnStar System consists of GPS.");
     });
 
     it('renders tagged link "Driver communicates via OnStar Console."', () => {

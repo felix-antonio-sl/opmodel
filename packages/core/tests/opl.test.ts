@@ -94,11 +94,15 @@ describe("expose", () => {
     expect(d.unit).toBe("min");
   });
 
-  it("produces link sentences for links with both endpoints visible", () => {
+  it("produces link sentences for non-structural links with both endpoints visible", () => {
     const m = buildModel();
     const doc = expose(m, "opd-sd");
     const links = doc.sentences.filter(s => s.kind === "link");
-    expect(links).toHaveLength(2);
+    // Aggregation is now grouped-structural, only effect remains as individual link
+    expect(links).toHaveLength(1);
+    // Grouped structural should have the aggregation
+    const grouped = doc.sentences.filter(s => s.kind === "grouped-structural");
+    expect(grouped).toHaveLength(1);
   });
 
   it("produces modifier sentences", () => {
@@ -341,8 +345,8 @@ describe("render", () => {
     expect(text).not.toContain("Boiling is a Processing.");
   });
 
-  // DT-08: Incomplete generalization unchanged
-  it("renders incomplete generalization unchanged", () => {
+  // DT-08: Incomplete generalization — now grouped (GAP-OPL-04)
+  it("renders incomplete generalization with grouped format", () => {
     let m = buildModel();
     let r = addThing(m, { id: "obj-beverage", kind: "object", name: "Beverage", essence: "physical", affiliation: "systemic" });
     if (!isOk(r)) throw r.error; m = r.value;
@@ -352,7 +356,8 @@ describe("render", () => {
     if (!isOk(r)) throw r.error; m = r.value;
     const doc = expose(m, "opd-sd");
     const text = render(doc);
-    expect(text).toContain("Water, Beverage and other specializations are general.");
+    // GAP-OPL-04: grouped structural — parent=Water (general), child=Beverage (specialization), incomplete
+    expect(text).toContain("Beverage and at least one other specialization are a Water.");
   });
 });
 
@@ -781,6 +786,127 @@ describe("render — exhibition feature form (GAP-OPL-07)", () => {
     const doc = expose(m, "opd-sd");
     const text = render(doc);
     expect(text).toContain("Colour of Vehicle is red.");
+  });
+});
+
+// === render — grouped structural links (GAP-OPL-04) ===
+
+describe("render — grouped structural links (GAP-OPL-04)", () => {
+  function buildGroupedModel() {
+    let m = createModel("Test");
+    let r = addThing(m, { id: "obj-system", kind: "object", name: "System", essence: "informatical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addThing(m, { id: "obj-a", kind: "object", name: "Part A", essence: "informatical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addThing(m, { id: "obj-b", kind: "object", name: "Part B", essence: "informatical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addThing(m, { id: "obj-c", kind: "object", name: "Part C", essence: "informatical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    for (const id of ["obj-system", "obj-a", "obj-b", "obj-c"]) {
+      r = addAppearance(m, { thing: id, opd: "opd-sd", x: 0, y: 0, w: 100, h: 50 });
+      if (!isOk(r)) throw r.error; m = r.value;
+    }
+    r = addLink(m, { id: "lnk-agg-a", type: "aggregation", source: "obj-system", target: "obj-a" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addLink(m, { id: "lnk-agg-b", type: "aggregation", source: "obj-system", target: "obj-b" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addLink(m, { id: "lnk-agg-c", type: "aggregation", source: "obj-system", target: "obj-c" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    return m;
+  }
+
+  it("groups aggregation into single sentence", () => {
+    const m = buildGroupedModel();
+    const doc = expose(m, "opd-sd");
+    const text = render(doc);
+    expect(text).toContain("System consists of Part A, Part B, and Part C.");
+    expect(text).not.toContain("System consists of Part A.");
+  });
+
+  it("renders incomplete aggregation with 'at least one other part'", () => {
+    let m = buildGroupedModel();
+    const links = [...m.links.values()];
+    const aggLink = links.find(l => l.id === "lnk-agg-a")!;
+    m = { ...m, links: new Map(m.links).set(aggLink.id, { ...aggLink, incomplete: true }) };
+    const doc = expose(m, "opd-sd");
+    const text = render(doc);
+    expect(text).toContain("at least one other part");
+  });
+
+  it("groups generalization (objects) with article", () => {
+    let m = createModel("Test");
+    let r = addThing(m, { id: "obj-camera", kind: "object", name: "Camera", essence: "informatical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addThing(m, { id: "obj-analog", kind: "object", name: "Analog Camera", essence: "informatical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addThing(m, { id: "obj-digital", kind: "object", name: "Digital Camera", essence: "informatical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    for (const id of ["obj-camera", "obj-analog", "obj-digital"]) {
+      r = addAppearance(m, { thing: id, opd: "opd-sd", x: 0, y: 0, w: 100, h: 50 });
+      if (!isOk(r)) throw r.error; m = r.value;
+    }
+    r = addLink(m, { id: "lnk-gen-a", type: "generalization", source: "obj-camera", target: "obj-analog" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addLink(m, { id: "lnk-gen-d", type: "generalization", source: "obj-camera", target: "obj-digital" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    const doc = expose(m, "opd-sd");
+    const text = render(doc);
+    expect(text).toContain("Analog Camera and Digital Camera are a Camera.");
+  });
+
+  it("groups classification", () => {
+    let m = createModel("Test");
+    let r = addThing(m, { id: "obj-class", kind: "object", name: "Vehicle", essence: "informatical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addThing(m, { id: "obj-inst-a", kind: "object", name: "Car A", essence: "informatical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addThing(m, { id: "obj-inst-b", kind: "object", name: "Car B", essence: "informatical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    for (const id of ["obj-class", "obj-inst-a", "obj-inst-b"]) {
+      r = addAppearance(m, { thing: id, opd: "opd-sd", x: 0, y: 0, w: 100, h: 50 });
+      if (!isOk(r)) throw r.error; m = r.value;
+    }
+    r = addLink(m, { id: "lnk-cls-a", type: "classification", source: "obj-class", target: "obj-inst-a" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addLink(m, { id: "lnk-cls-b", type: "classification", source: "obj-class", target: "obj-inst-b" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    const doc = expose(m, "opd-sd");
+    const text = render(doc);
+    expect(text).toContain("Car A and Car B are instances of Vehicle.");
+  });
+
+  it("groups exhibition with 'as well as' for mixed kinds", () => {
+    let m = createModel("Test");
+    let r = addThing(m, { id: "obj-adult", kind: "object", name: "Adult", essence: "informatical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addThing(m, { id: "obj-height", kind: "object", name: "Height", essence: "informatical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addThing(m, { id: "obj-weight", kind: "object", name: "Weight", essence: "informatical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addThing(m, { id: "proc-walking", kind: "process", name: "Walking", essence: "informatical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    for (const id of ["obj-adult", "obj-height", "obj-weight", "proc-walking"]) {
+      r = addAppearance(m, { thing: id, opd: "opd-sd", x: 0, y: 0, w: 100, h: 50 });
+      if (!isOk(r)) throw r.error; m = r.value;
+    }
+    r = addLink(m, { id: "lnk-ex-h", type: "exhibition", source: "obj-height", target: "obj-adult" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addLink(m, { id: "lnk-ex-w", type: "exhibition", source: "obj-weight", target: "obj-adult" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addLink(m, { id: "lnk-ex-walk", type: "exhibition", source: "proc-walking", target: "obj-adult" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    const doc = expose(m, "opd-sd");
+    const text = render(doc);
+    expect(text).toContain("Adult exhibits Height and Weight, as well as Walking.");
+  });
+
+  it("editsFrom unfolds grouped structural to N individual add-links", () => {
+    const m = buildGroupedModel();
+    const doc = expose(m, "opd-sd");
+    const edits = editsFrom(doc);
+    const linkEdits = edits.filter(e => e.kind === "add-link");
+    const aggEdits = linkEdits.filter(e => e.kind === "add-link" && (e as any).link.type === "aggregation");
+    expect(aggEdits).toHaveLength(3);
   });
 });
 
