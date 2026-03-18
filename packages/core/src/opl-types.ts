@@ -15,6 +15,7 @@ export interface OplThingDeclaration {
   essence: Essence;
   affiliation: Affiliation;
   alias?: string;
+  exhibitorName?: string;
 }
 
 export interface OplStateEnumeration {
@@ -23,6 +24,7 @@ export interface OplStateEnumeration {
   thingName: string;
   stateIds: string[];
   stateNames: string[];
+  exhibitorName?: string;
 }
 
 export interface OplDuration {
@@ -31,6 +33,18 @@ export interface OplDuration {
   thingName: string;
   nominal: number;
   unit: TimeUnit;
+}
+
+export interface OplStateDescription {
+  kind: "state-description";
+  thingId: string;
+  thingName: string;
+  stateId: string;
+  stateName: string;
+  initial: boolean;
+  final: boolean;
+  default: boolean;
+  exhibitorName?: string;
 }
 
 export interface OplLinkSentence {
@@ -64,12 +78,48 @@ export interface OplModifierSentence {
   targetStateName?: string;
 }
 
+export interface OplGroupedStructuralSentence {
+  kind: "grouped-structural";
+  linkType: "aggregation" | "exhibition" | "generalization" | "classification";
+  parentId: string;
+  parentName: string;
+  parentKind: Kind;
+  childIds: string[];
+  childNames: string[];
+  childKinds: Kind[];
+  incomplete: boolean;
+}
+
+export interface OplInZoomSequence {
+  kind: "in-zoom-sequence";
+  parentId: string;
+  parentName: string;
+  steps: {
+    thingIds: string[];
+    thingNames: string[];
+    parallel: boolean;
+  }[];
+}
+
+export interface OplAttributeValue {
+  kind: "attribute-value";
+  thingId: string;
+  thingName: string;
+  exhibitorId: string;
+  exhibitorName: string;
+  valueName: string;
+}
+
 export type OplSentence =
   | OplThingDeclaration
   | OplStateEnumeration
   | OplDuration
   | OplLinkSentence
-  | OplModifierSentence;
+  | OplModifierSentence
+  | OplStateDescription
+  | OplGroupedStructuralSentence
+  | OplInZoomSequence
+  | OplAttributeValue;
 
 export interface OplRenderSettings {
   essenceVisibility: OplEssenceVisibility;

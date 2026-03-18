@@ -592,6 +592,10 @@ describe("GetPut", () => {
         case "duration": return { kind: s.kind, thingName: s.thingName, nominal: s.nominal, unit: s.unit };
         case "link": return { kind: s.kind, linkType: s.linkType, sourceName: s.sourceName, targetName: s.targetName, sourceStateName: s.sourceStateName, targetStateName: s.targetStateName, tag: s.tag };
         case "modifier": return { kind: s.kind, linkType: s.linkType, sourceName: s.sourceName, targetName: s.targetName, modifierType: s.modifierType, negated: s.negated, conditionMode: s.conditionMode };
+        case "state-description": return { kind: s.kind, thingName: (s as any).thingName, stateName: (s as any).stateName };
+        case "grouped-structural": return { kind: s.kind, linkType: (s as any).linkType, parentName: (s as any).parentName, childNames: (s as any).childNames };
+        case "in-zoom-sequence": return { kind: s.kind, parentName: (s as any).parentName };
+        case "attribute-value": return { kind: s.kind, thingName: (s as any).thingName, valueName: (s as any).valueName };
       }
     });
   }

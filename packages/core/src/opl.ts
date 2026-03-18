@@ -4,6 +4,7 @@ import type { InvariantError, Result } from "./result";
 import type {
   OplDocument, OplEdit, OplSentence,
   OplThingDeclaration, OplLinkSentence, OplModifierSentence, OplRenderSettings,
+  OplStateDescription, OplGroupedStructuralSentence, OplInZoomSequence, OplAttributeValue,
 } from "./opl-types";
 import { ok, err, isOk } from "./result";
 import { collectAllIds } from "./helpers";
@@ -346,6 +347,11 @@ function renderSentence(s: OplSentence, settings: OplRenderSettings): string {
     case "modifier": {
       return renderModifierSentence(s);
     }
+    case "state-description":
+    case "grouped-structural":
+    case "in-zoom-sequence":
+    case "attribute-value":
+      return ""; // Stub — implemented in subsequent tasks
   }
 }
 
@@ -524,6 +530,11 @@ export function editsFrom(doc: OplDocument): OplEdit[] {
           },
         });
         break;
+      case "state-description":
+      case "grouped-structural":
+      case "in-zoom-sequence":
+      case "attribute-value":
+        break; // Stub — implemented in subsequent tasks
     }
   }
 
