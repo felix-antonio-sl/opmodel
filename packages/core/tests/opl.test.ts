@@ -727,6 +727,63 @@ describe("render — modifier sentences (C2)", () => {
   });
 });
 
+// === render — exhibition feature form (GAP-OPL-07) ===
+
+describe("render — exhibition feature form (GAP-OPL-07)", () => {
+  function buildExhibitionModel() {
+    let m = createModel("Test");
+    // Exhibitor: Vehicle (object)
+    let r = addThing(m, { id: "obj-vehicle", kind: "object", name: "Vehicle", essence: "physical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    // Feature: Colour (object attribute of Vehicle)
+    r = addThing(m, { id: "obj-colour", kind: "object", name: "Colour", essence: "informatical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    // Appearances
+    r = addAppearance(m, { thing: "obj-vehicle", opd: "opd-sd", x: 100, y: 100, w: 120, h: 60 });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addAppearance(m, { thing: "obj-colour", opd: "opd-sd", x: 100, y: 250, w: 120, h: 60 });
+    if (!isOk(r)) throw r.error; m = r.value;
+    // Exhibition link: source=feature, target=exhibitor
+    r = addLink(m, { id: "lnk-exhibit-colour", type: "exhibition", source: "obj-colour", target: "obj-vehicle" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    // States on the feature (attribute values)
+    r = addState(m, { id: "state-red", parent: "obj-colour", name: "red", initial: false, final: false, default: true });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addState(m, { id: "state-blue", parent: "obj-colour", name: "blue", initial: false, final: false, default: false });
+    if (!isOk(r)) throw r.error; m = r.value;
+    return m;
+  }
+
+  it('renders thing declaration as "Feature of Exhibitor is a..."', () => {
+    const m = buildExhibitionModel();
+    const doc = expose(m, "opd-sd");
+    const text = render(doc);
+    // Colour is informatical (rendered with all-essence setting)
+    expect(text).toContain("Colour of Vehicle is an object, informatical.");
+  });
+
+  it('renders state enumeration as "Feature of Exhibitor can be..."', () => {
+    const m = buildExhibitionModel();
+    const doc = expose(m, "opd-sd");
+    const text = render(doc);
+    expect(text).toContain("Colour of Vehicle can be blue or red.");
+  });
+
+  it('renders state description as "State S of Feature of Exhibitor is..."', () => {
+    const m = buildExhibitionModel();
+    const doc = expose(m, "opd-sd");
+    const text = render(doc);
+    expect(text).toContain("State red of Colour of Vehicle is default.");
+  });
+
+  it('renders attribute value as "Feature of Exhibitor is value."', () => {
+    const m = buildExhibitionModel();
+    const doc = expose(m, "opd-sd");
+    const text = render(doc);
+    expect(text).toContain("Colour of Vehicle is red.");
+  });
+});
+
 // === editsFrom — condition_mode propagation (GetPut) ===
 
 describe("editsFrom — condition_mode propagation (GetPut)", () => {

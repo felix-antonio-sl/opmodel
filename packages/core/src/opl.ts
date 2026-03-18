@@ -32,6 +32,19 @@ export function expose(model: Model, opdId: string): OplDocument {
     if (app.opd === opdId) visibleThings.add(app.thing);
   }
 
+  // Build exhibition feature lookup: featureId → exhibitorName
+  // Convention: exhibition link source=feature, target=exhibitor
+  // Must be built before thing declarations loop since declarations use it.
+  const exhibitorOf = new Map<string, { id: string; name: string }>();
+  for (const link of model.links.values()) {
+    if (link.type === "exhibition" && visibleThings.has(link.source) && visibleThings.has(link.target)) {
+      const exhibitor = model.things.get(link.target);
+      if (exhibitor) {
+        exhibitorOf.set(link.source, { id: link.target, name: exhibitor.name });
+      }
+    }
+  }
+
   // 2. Sort: objects first, then processes; within each group by ID
   const sortedThingIds = [...visibleThings].sort((a, b) => {
     const ta = model.things.get(a);
@@ -59,6 +72,10 @@ export function expose(model: Model, opdId: string): OplDocument {
     if (renderSettings.aliasVisibility && thing.computational && "alias" in thing.computational) {
       declaration.alias = (thing.computational as ComputationalObject).alias;
     }
+    const exhibitor = exhibitorOf.get(thingId);
+    if (exhibitor) {
+      declaration.exhibitorName = exhibitor.name;
+    }
     sentences.push(declaration);
 
     // States (sorted by ID)
@@ -72,6 +89,7 @@ export function expose(model: Model, opdId: string): OplDocument {
         thingName: thing.name,
         stateIds: thingStates.map(s => s.id),
         stateNames: thingStates.map(s => s.name),
+        exhibitorName: exhibitorOf.get(thingId)?.name,
       });
     }
 
@@ -87,7 +105,24 @@ export function expose(model: Model, opdId: string): OplDocument {
           initial: st.initial,
           final: st.final,
           default: st.default,
+          exhibitorName: exhibitorOf.get(thingId)?.name,
         } as OplStateDescription);
+      }
+    }
+
+    // Attribute value — ISO §10.3.3.2.2: "Feature of Exhibitor is value."
+    const exh = exhibitorOf.get(thingId);
+    if (exh) {
+      const defaultState = thingStates.find(s => s.default);
+      if (defaultState) {
+        sentences.push({
+          kind: "attribute-value",
+          thingId,
+          thingName: thing.name,
+          exhibitorId: exh.id,
+          exhibitorName: exh.name,
+          valueName: defaultState.name,
+        } as OplAttributeValue);
       }
     }
 
@@ -332,7 +367,8 @@ function renderModifierSentence(s: OplModifierSentence): string {
 function renderSentence(s: OplSentence, settings: OplRenderSettings): string {
   switch (s.kind) {
     case "thing-declaration": {
-      let text = `${s.name} is ${aOrAn(s.thingKind)}`;
+      const displayName = s.exhibitorName ? `${s.name} of ${s.exhibitorName}` : s.name;
+      let text = `${displayName} is ${aOrAn(s.thingKind)}`;
       if (settings.essenceVisibility === "all" ||
           (settings.essenceVisibility === "non_default" && s.essence !== settings.primaryEssence)) {
         text += `, ${s.essence}`;
@@ -346,11 +382,12 @@ function renderSentence(s: OplSentence, settings: OplRenderSettings): string {
       return text + ".";
     }
     case "state-enumeration": {
+      const displayName = s.exhibitorName ? `${s.thingName} of ${s.exhibitorName}` : s.thingName;
       if (s.stateNames.length === 0) return "";
-      if (s.stateNames.length === 1) return `${s.thingName} can be ${s.stateNames[0]}.`;
+      if (s.stateNames.length === 1) return `${displayName} can be ${s.stateNames[0]}.`;
       const last = s.stateNames[s.stateNames.length - 1];
       const rest = s.stateNames.slice(0, -1);
-      return `${s.thingName} can be ${rest.join(", ")} or ${last}.`;
+      return `${displayName} can be ${rest.join(", ")} or ${last}.`;
     }
     case "duration": {
       if (settings.unitsVisibility === "hide") {
@@ -373,9 +410,10 @@ function renderSentence(s: OplSentence, settings: OplRenderSettings): string {
         : s.thingName;
       return `State ${s.stateName} of ${thingDisplay} is ${qualifiers.join(" and ")}.`;
     }
+    case "attribute-value":
+      return `${s.thingName} of ${s.exhibitorName} is ${s.valueName}.`;
     case "grouped-structural":
     case "in-zoom-sequence":
-    case "attribute-value":
       return ""; // Stub — implemented in subsequent tasks
   }
 }
