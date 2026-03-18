@@ -971,8 +971,8 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
               if (link.source_state) {
                 const objApp = appearances.get(objectEnd);
                 if (objApp) {
-                  const ox = dragTarget === objectEnd ? dragDelta.x : 0;
-                  const oy = dragTarget === objectEnd ? dragDelta.y : 0;
+                  const ox = draggedThings.has(objectEnd) ? dragDelta.x : 0;
+                  const oy = draggedThings.has(objectEnd) ? dragDelta.y : 0;
                   const adj = { x: objApp.x + ox, y: objApp.y + oy, w: objApp.w, h: objApp.h };
                   const allObjStates = statesForThing(model, objectEnd);
                   const visObjStates = objApp.suppressed_states
@@ -989,8 +989,8 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
               if (isOutputHalf && link.target_state) {
                 const objApp = appearances.get(objectEnd);
                 if (objApp) {
-                  const ox = dragTarget === objectEnd ? dragDelta.x : 0;
-                  const oy = dragTarget === objectEnd ? dragDelta.y : 0;
+                  const ox = draggedThings.has(objectEnd) ? dragDelta.x : 0;
+                  const oy = draggedThings.has(objectEnd) ? dragDelta.y : 0;
                   const adj = { x: objApp.x + ox, y: objApp.y + oy, w: objApp.w, h: objApp.h };
                   const allObjStates = statesForThing(model, objectEnd);
                   const visObjStates = objApp.suppressed_states
