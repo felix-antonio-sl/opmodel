@@ -631,6 +631,26 @@ describe("GetPut", () => {
     expect(edits).toHaveLength(0);
     expect(doc1.sentences).toHaveLength(0);
   });
+
+  it("round-trip preserves state initial/final/default qualifiers", () => {
+    const m = buildModel();
+    const doc1 = expose(m, "opd-sd");
+
+    let fresh = createModel("Test-RT");
+    const edits = editsFrom(doc1);
+    for (const edit of edits) {
+      const r = applyOplEdit(fresh, edit);
+      if (!isOk(r)) throw new Error(`Edit failed: ${JSON.stringify(r.error)}`);
+      fresh = r.value;
+    }
+
+    const liquidState = [...fresh.states.values()].find(s => s.name === "liquid");
+    expect(liquidState?.initial).toBe(true);
+    expect(liquidState?.default).toBe(true);
+    const gasState = [...fresh.states.values()].find(s => s.name === "gas");
+    expect(gasState?.initial).toBe(false);
+    expect(gasState?.default).toBe(false);
+  });
 });
 
 // === render — state descriptions (GAP-OPL-02) ===

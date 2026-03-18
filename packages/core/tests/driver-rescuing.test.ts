@@ -147,6 +147,33 @@ describe("OnStar Driver Rescuing System", () => {
       expect(text).not.toContain("Driver Rescuing affects Driver.");
       expect(text).not.toContain("Driver communicates via OnStar Console.");
     });
+
+    it('renders in-zoom sequence for Driver Rescuing (GAP-OPL-03/05)', () => {
+      const m = loadDriverRescuingModel();
+      const text = render(expose(m, "opd-sd1"));
+      expect(text).toContain("Driver Rescuing zooms into");
+      expect(text).toContain("Call Making");
+      expect(text).toContain("Call Transmitting");
+      expect(text).toContain("Vehicle Location Calculating");
+      expect(text).toContain("Call Handling");
+      expect(text).toContain("in that sequence");
+    });
+
+    it('renders state descriptions for Call and Danger Status (GAP-OPL-02)', () => {
+      const m = loadDriverRescuingModel();
+      const text = render(expose(m, "opd-sd1"));
+      expect(text).toContain("State requested of Call is initial.");
+      // Danger Status is a feature of Driver — state descriptions include the exhibitor form
+      expect(text).toContain("State safe of Danger Status of Driver is final.");
+      expect(text).toContain("State endangered of Danger Status of Driver is initial.");
+    });
+
+    it('renders exhibition feature with "of Exhibitor" form (GAP-OPL-07)', () => {
+      const m = loadDriverRescuingModel();
+      const doc = expose(m, "opd-sd1");
+      const text = render(doc);
+      expect(text).toContain("Danger Status of Driver");
+    });
   });
 
   // === Simulation — in-zoom expansion ===
