@@ -559,7 +559,7 @@ export function PropertiesPanel({ model, thingId, opdId, dispatch }: Props) {
                             onClick={() => dispatch({ tag: "removeModifier", modifierId: mod.id })}>×</button>
                         </div>
                       ))}
-                      {mods.length === 0 && (
+                      {mods.length === 0 && !["aggregation", "exhibition", "generalization", "classification", "tagged"].includes(l.type) && (
                         <div style={{ display: "flex", gap: 4, marginTop: 2 }}>
                           <button style={{ fontSize: 8, cursor: "pointer", color: "#d69e2e" }}
                             onClick={() => dispatch({ tag: "addModifier", modifier: { id: genId("mod"), over: l.id, type: "event" } })}>
