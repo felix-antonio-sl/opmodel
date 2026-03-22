@@ -14,9 +14,10 @@ interface Props {
   selectedThing: string | null;
   dispatch: (cmd: Command) => boolean;
   nlPipeline?: NlPipeline;
+  lastError?: string | null;
 }
 
-export function OplPanel({ model, opdId, selectedThing, dispatch, nlPipeline }: Props) {
+export function OplPanel({ model, opdId, selectedThing, dispatch, nlPipeline, lastError }: Props) {
   const [activeTab, setActiveTab] = useState<OplTab>("sentences");
   const opd = model.opds.get(opdId);
 
@@ -43,7 +44,7 @@ export function OplPanel({ model, opdId, selectedThing, dispatch, nlPipeline }: 
         <OplTextView model={model} opdId={opdId} />
       )}
       {activeTab === "editor" && (
-        <OplEditorView model={model} opdId={opdId} dispatch={dispatch} nlPipeline={nlPipeline} />
+        <OplEditorView model={model} opdId={opdId} dispatch={dispatch} nlPipeline={nlPipeline} lastError={lastError} />
       )}
     </aside>
   );

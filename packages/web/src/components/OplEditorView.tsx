@@ -9,6 +9,7 @@ interface Props {
   opdId: string;
   dispatch: (cmd: Command) => boolean;
   nlPipeline?: NlPipeline;
+  lastError?: string | null;
 }
 
 interface EditorFormState {
@@ -53,8 +54,8 @@ const ACTIONS: { value: OplEdit["kind"]; label: string }[] = [
 ];
 
 const LINK_TYPES: LinkType[] = [
-  "agent", "instrument", "effect", "consumption", "result",
-  "input", "output", "aggregation", "exhibition",
+  "agent", "instrument", "effect", "consumption", "result", "input", "output",
+  "aggregation", "exhibition",
   "generalization", "classification", "tagged", "invocation", "exception",
 ];
 
@@ -206,7 +207,7 @@ function getPreviewText(form: EditorFormState, model: Model, doc: OplDocument): 
   return "";
 }
 
-export function OplEditorView({ model, opdId, dispatch, nlPipeline }: Props) {
+export function OplEditorView({ model, opdId, dispatch, nlPipeline, lastError: storeError }: Props) {
   const [form, setForm] = useState<EditorFormState>(INITIAL_FORM);
   const [error, setError] = useState<string | null>(null);
 
@@ -282,7 +283,7 @@ export function OplEditorView({ model, opdId, dispatch, nlPipeline }: Props) {
       setForm({ ...INITIAL_FORM, action: form.action });
       setError(null);
     } else {
-      setError("Edit rejected by model invariants");
+      setError(storeError ?? "Edit rejected by model invariants");
     }
   };
 
