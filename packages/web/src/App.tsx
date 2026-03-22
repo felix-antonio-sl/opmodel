@@ -13,7 +13,12 @@ import { NlSettingsModal } from "./components/NlSettingsModal";
 
 const STORAGE_KEY = "opmodel:current";
 
-function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel: Model; onNew: () => void; onLoadExample: () => void; onImport: (model: Model) => void }) {
+const EXAMPLES = [
+  { name: "Coffee Making", file: "coffee-making.opmodel" },
+  { name: "OnStar Driver Rescuing", file: "driver-rescuing.opmodel" },
+];
+
+function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel: Model; onNew: () => void; onLoadExample: (file: string) => void; onImport: (model: Model) => void }) {
   const store = useModelStore(initialModel);
   const { model, ui, dispatch, doUndo, doRedo, canUndo, canRedo, lastError, save, saveStatus } = store;
 
@@ -123,9 +128,17 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
           <button className="header__action" onClick={onNew} title="New Model">
             +
           </button>
-          <button className="header__action" onClick={onLoadExample} title="Load Example">
-            ☰
-          </button>
+          <select
+            className="header__action header__select"
+            value=""
+            onChange={(e) => { if (e.target.value) onLoadExample(e.target.value); }}
+            title="Load Example"
+          >
+            <option value="">☰ Examples</option>
+            {EXAMPLES.map((ex) => (
+              <option key={ex.file} value={ex.file}>{ex.name}</option>
+            ))}
+          </select>
           <label className="header__action" title="Import .opmodel" style={{ cursor: "pointer" }}>
             ⇧
             <input
@@ -196,7 +209,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
             />
           )
         )}
-        <OplPanel model={model} opdId={ui.currentOpd} selectedThing={ui.selectedThing} dispatch={dispatch} nlPipeline={nlPipeline} />
+        <OplPanel model={model} opdId={ui.currentOpd} selectedThing={ui.selectedThing} dispatch={dispatch} nlPipeline={nlPipeline} lastError={lastError} />
       </aside>
 
       {/* Status Bar */}
@@ -271,8 +284,8 @@ function loadFromStorage(): Model | null {
   }
 }
 
-function loadExample(): Promise<Model> {
-  return fetch("/coffee-making.opmodel")
+function loadExample(file = "coffee-making.opmodel"): Promise<Model> {
+  return fetch(`/${file}`)
     .then((r) => {
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       return r.text();
@@ -309,8 +322,8 @@ export function App() {
     setEditorKey((k) => k + 1);
   }, []);
 
-  const handleLoadExample = useCallback(() => {
-    loadExample()
+  const handleLoadExample = useCallback((file: string) => {
+    loadExample(file)
       .then((m) => {
         setInitialModel(m);
         setEditorKey((k) => k + 1);

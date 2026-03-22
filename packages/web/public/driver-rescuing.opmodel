@@ -1,0 +1,98 @@
+{
+  "opmodel": "1.1.0",
+  "meta": {
+    "created": "2026-03-15T22:00:00Z",
+    "description": "OnStar Driver Rescuing System — OPM model with aggregation, exhibition, tagged structural, state-conditioned instruments, and in-zoom decomposition",
+    "modified": "2026-03-15T22:00:00Z",
+    "name": "OnStar Driver Rescuing System",
+    "system_type": "artificial"
+  },
+  "settings": {
+    "autosave_interval_s": 300,
+    "methodology_coaching": true,
+    "opl_language": "en",
+    "primary_essence": "physical"
+  },
+  "things": [
+    {"affiliation": "systemic", "essence": "physical", "id": "obj-call", "kind": "object", "name": "Call"},
+    {"affiliation": "systemic", "essence": "physical", "id": "obj-cellular-network", "kind": "object", "name": "Cellular Network"},
+    {"affiliation": "systemic", "essence": "informatical", "id": "obj-danger-status", "kind": "object", "name": "Danger Status"},
+    {"affiliation": "environmental", "essence": "physical", "id": "obj-driver", "kind": "object", "name": "Driver"},
+    {"affiliation": "systemic", "essence": "physical", "id": "obj-gps", "kind": "object", "name": "GPS"},
+    {"affiliation": "systemic", "essence": "physical", "id": "obj-onstar-advisor", "kind": "object", "name": "OnStar Advisor"},
+    {"affiliation": "systemic", "essence": "physical", "id": "obj-onstar-console", "kind": "object", "name": "OnStar Console"},
+    {"affiliation": "systemic", "essence": "physical", "id": "obj-onstar-system", "kind": "object", "name": "OnStar System"},
+    {"affiliation": "systemic", "essence": "physical", "id": "obj-vcim", "kind": "object", "name": "VCIM"},
+    {"affiliation": "systemic", "essence": "physical", "id": "obj-vehicle-location", "kind": "object", "name": "Vehicle Location"},
+    {"affiliation": "systemic", "essence": "physical", "id": "proc-call-handling", "kind": "process", "name": "Call Handling"},
+    {"affiliation": "systemic", "essence": "physical", "id": "proc-call-making", "kind": "process", "name": "Call Making"},
+    {"affiliation": "systemic", "essence": "physical", "id": "proc-call-transmitting", "kind": "process", "name": "Call Transmitting"},
+    {"affiliation": "systemic", "essence": "physical", "id": "proc-driver-rescuing", "kind": "process", "name": "Driver Rescuing"},
+    {"affiliation": "systemic", "essence": "physical", "id": "proc-vehicle-location-calc", "kind": "process", "name": "Vehicle Location Calculating"}
+  ],
+  "states": [
+    {"current": true, "default": false, "final": false, "id": "state-call-requested", "initial": true, "name": "requested", "parent": "obj-call"},
+    {"current": false, "default": false, "final": false, "id": "state-call-online", "initial": false, "name": "online", "parent": "obj-call"},
+    {"current": true, "default": false, "final": false, "id": "state-danger-endangered", "initial": true, "name": "endangered", "parent": "obj-danger-status"},
+    {"current": false, "default": false, "final": true, "id": "state-danger-safe", "initial": false, "name": "safe", "parent": "obj-danger-status"}
+  ],
+  "opds": [
+    {"id": "opd-sd", "name": "SD", "opd_type": "hierarchical", "parent_opd": null},
+    {"id": "opd-sd1", "name": "SD1", "opd_type": "hierarchical", "parent_opd": "opd-sd", "refines": "proc-driver-rescuing", "refinement_type": "in-zoom"}
+  ],
+  "links": [
+    {"id": "lnk-advisor-agent-callhandling", "source": "obj-onstar-advisor", "target": "proc-call-handling", "type": "agent"},
+    {"id": "lnk-advisor-agent-rescuing", "source": "obj-onstar-advisor", "target": "proc-driver-rescuing", "type": "agent"},
+    {"id": "lnk-callhandling-effect-danger", "source": "proc-call-handling", "target": "obj-danger-status", "source_state": "state-danger-endangered", "target_state": "state-danger-safe", "type": "effect"},
+    {"id": "lnk-callhandling-instr-location", "source": "obj-vehicle-location", "target": "proc-call-handling", "type": "instrument"},
+    {"id": "lnk-callmaking-instr-console", "source": "obj-onstar-console", "target": "proc-call-making", "type": "instrument"},
+    {"id": "lnk-callmaking-result-call", "source": "proc-call-making", "target": "obj-call", "type": "result"},
+    {"id": "lnk-calltrans-effect-call", "source": "proc-call-transmitting", "target": "obj-call", "source_state": "state-call-requested", "target_state": "state-call-online", "type": "effect"},
+    {"id": "lnk-calltrans-instr-cellular", "source": "obj-cellular-network", "target": "proc-call-transmitting", "type": "instrument"},
+    {"id": "lnk-driver-agent-callhandling", "source": "obj-driver", "target": "proc-call-handling", "type": "agent"},
+    {"id": "lnk-driver-agent-callmaking", "source": "obj-driver", "target": "proc-call-making", "type": "agent"},
+    {"id": "lnk-driver-exhibits-danger", "source": "obj-danger-status", "target": "obj-driver", "type": "exhibition"},
+    {"id": "lnk-driver-tagged-console", "direction": "unidirectional", "source": "obj-driver", "tag": "communicates via", "target": "obj-onstar-console", "type": "tagged"},
+    {"id": "lnk-rescuing-effect-driver", "source": "proc-driver-rescuing", "target": "obj-driver", "type": "effect"},
+    {"id": "lnk-rescuing-instrument-system", "source": "obj-onstar-system", "target": "proc-driver-rescuing", "type": "instrument"},
+    {"id": "lnk-system-agg-cellular", "source": "obj-onstar-system", "target": "obj-cellular-network", "type": "aggregation"},
+    {"id": "lnk-system-agg-console", "source": "obj-onstar-system", "target": "obj-onstar-console", "type": "aggregation"},
+    {"id": "lnk-system-agg-gps", "source": "obj-onstar-system", "target": "obj-gps", "type": "aggregation"},
+    {"id": "lnk-system-agg-vcim", "source": "obj-onstar-system", "target": "obj-vcim", "type": "aggregation"},
+    {"id": "lnk-vehcalc-instr-call", "source": "obj-call", "source_state": "state-call-online", "target": "proc-vehicle-location-calc", "type": "instrument"},
+    {"id": "lnk-vehcalc-instr-gps", "source": "obj-gps", "target": "proc-vehicle-location-calc", "type": "instrument"},
+    {"id": "lnk-vehcalc-result-location", "source": "proc-vehicle-location-calc", "target": "obj-vehicle-location", "type": "result"}
+  ],
+  "modifiers": [],
+  "appearances": [
+    {"h": 50, "opd": "opd-sd", "thing": "obj-cellular-network", "w": 140, "x": 500, "y": 200},
+    {"h": 50, "opd": "opd-sd", "thing": "obj-driver", "w": 120, "x": 50, "y": 50},
+    {"h": 50, "opd": "opd-sd", "thing": "obj-gps", "w": 100, "x": 500, "y": 130},
+    {"h": 80, "opd": "opd-sd", "thing": "obj-onstar-advisor", "w": 120, "x": 50, "y": 250},
+    {"h": 50, "opd": "opd-sd", "thing": "obj-onstar-console", "w": 140, "x": 500, "y": 350},
+    {"h": 50, "opd": "opd-sd", "thing": "obj-onstar-system", "w": 140, "x": 400, "y": 50},
+    {"h": 80, "opd": "opd-sd", "thing": "obj-vcim", "w": 140, "x": 500, "y": 270},
+    {"h": 80, "opd": "opd-sd", "thing": "proc-driver-rescuing", "w": 180, "x": 220, "y": 130},
+    {"h": 50, "internal": false, "opd": "opd-sd1", "thing": "obj-cellular-network", "w": 140, "x": 700, "y": 230},
+    {"h": 50, "internal": true, "opd": "opd-sd1", "thing": "obj-call", "w": 100, "x": 300, "y": 170},
+    {"h": 60, "internal": true, "opd": "opd-sd1", "thing": "obj-danger-status", "w": 120, "x": 100, "y": 370},
+    {"h": 50, "internal": false, "opd": "opd-sd1", "thing": "obj-driver", "w": 120, "x": 250, "y": 10},
+    {"h": 50, "internal": false, "opd": "opd-sd1", "thing": "obj-gps", "w": 100, "x": 700, "y": 300},
+    {"h": 50, "internal": false, "opd": "opd-sd1", "thing": "obj-onstar-advisor", "w": 120, "x": 100, "y": 450},
+    {"h": 50, "internal": false, "opd": "opd-sd1", "thing": "obj-onstar-console", "w": 140, "x": 700, "y": 100},
+    {"h": 50, "internal": true, "opd": "opd-sd1", "thing": "obj-vehicle-location", "w": 140, "x": 400, "y": 340},
+    {"h": 500, "internal": true, "opd": "opd-sd1", "thing": "proc-driver-rescuing", "w": 500, "x": 150, "y": 40},
+    {"h": 60, "internal": true, "opd": "opd-sd1", "thing": "proc-call-handling", "w": 140, "x": 350, "y": 400},
+    {"h": 60, "internal": true, "opd": "opd-sd1", "thing": "proc-call-making", "w": 140, "x": 350, "y": 100},
+    {"h": 60, "internal": true, "opd": "opd-sd1", "thing": "proc-call-transmitting", "w": 140, "x": 300, "y": 200},
+    {"h": 60, "internal": true, "opd": "opd-sd1", "thing": "proc-vehicle-location-calc", "w": 180, "x": 450, "y": 300}
+  ],
+  "fans": [],
+  "scenarios": [],
+  "assertions": [
+    {"category": "correctness", "enabled": true, "id": "ast-danger-safe", "predicate": "after Driver Rescuing, Danger Status is safe", "target": "proc-driver-rescuing"}
+  ],
+  "requirements": [],
+  "stereotypes": [],
+  "sub_models": []
+}
