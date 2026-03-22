@@ -6,7 +6,7 @@
    into Model mutations or UI state transitions.
    ═══════════════════════════════════════════════════ */
 
-import type { Model, Thing, Link, State, Fan, InvariantError, RefinementType, OplEdit, SimulationTrace } from "@opmodel/core";
+import type { Model, Thing, Link, State, Fan, Modifier, InvariantError, RefinementType, OplEdit, SimulationTrace } from "@opmodel/core";
 import {
   updateAppearance,
   updateThing,
@@ -23,6 +23,9 @@ import {
   addFan,
   removeFan,
   updateFan,
+  addModifier,
+  removeModifier,
+  updateModifier,
   refineThing,
   applyOplEdit,
   isOk,
@@ -72,6 +75,10 @@ export type Command =
   | { tag: "addFan"; fan: Fan }
   | { tag: "removeFan"; fanId: string }
   | { tag: "updateFan"; fanId: string; patch: Partial<Omit<Fan, "id">> }
+  /* ─── Modifier Commands ─── */
+  | { tag: "addModifier"; modifier: Modifier }
+  | { tag: "removeModifier"; modifierId: string }
+  | { tag: "updateModifier"; modifierId: string; patch: Partial<Omit<Modifier, "id">> }
   /* ─── Simulation Commands ─── */
   | { tag: "startSimulation" }
   | { tag: "stepSimulation"; direction: 1 | -1 }
@@ -243,6 +250,26 @@ export function interpret(cmd: Command): Effect {
       return {
         type: "modelMutation",
         apply: (m) => updateFan(m, cmd.fanId, cmd.patch),
+      };
+
+    /* ─── Modifier ─── */
+
+    case "addModifier":
+      return {
+        type: "modelMutation",
+        apply: (m) => addModifier(m, cmd.modifier),
+      };
+
+    case "removeModifier":
+      return {
+        type: "modelMutation",
+        apply: (m) => removeModifier(m, cmd.modifierId),
+      };
+
+    case "updateModifier":
+      return {
+        type: "modelMutation",
+        apply: (m) => updateModifier(m, cmd.modifierId, cmd.patch),
       };
 
     /* ─── Simulation ─── */

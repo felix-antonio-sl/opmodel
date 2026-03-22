@@ -1,4 +1,4 @@
-import type { Model, Thing, State, Link, LinkType, FanType, RefinementType, OPD } from "@opmodel/core";
+import type { Model, Thing, State, Link, LinkType, FanType, ModifierType, RefinementType, OPD } from "@opmodel/core";
 import type { Command } from "../lib/commands";
 import { genId } from "../lib/ids";
 
@@ -523,6 +523,57 @@ export function PropertiesPanel({ model, thingId, opdId, dispatch }: Props) {
                     </select>
                   )}
                 </div>
+                {/* Modifiers (event/condition) */}
+                {(() => {
+                  const mods = [...model.modifiers.values()].filter(m => m.over === l.id);
+                  return (
+                    <div style={{ marginTop: 2 }}>
+                      {mods.map(mod => (
+                        <div key={mod.id} style={{ display: "flex", gap: 4, alignItems: "center", fontSize: 9, marginTop: 2 }}>
+                          <span style={{
+                            display: "inline-block", width: 14, height: 14, borderRadius: "50%", textAlign: "center", lineHeight: "14px",
+                            color: "white", fontWeight: "bold", fontSize: 8,
+                            background: mod.type === "event" ? "#d69e2e" : mod.condition_mode === "skip" ? "#c05621" : "#3182ce",
+                          }}>
+                            {mod.type === "event" ? "e" : "c"}
+                          </span>
+                          {mod.type === "condition" && (
+                            <select
+                              className="props-panel__select"
+                              style={{ fontSize: 9, minWidth: 50 }}
+                              value={mod.condition_mode ?? "wait"}
+                              onChange={(e) =>
+                                dispatch({ tag: "updateModifier", modifierId: mod.id, patch: { condition_mode: e.target.value as "skip" | "wait" } })
+                              }
+                            >
+                              <option value="wait">wait</option>
+                              <option value="skip">skip</option>
+                            </select>
+                          )}
+                          <label style={{ display: "flex", alignItems: "center", gap: 2 }}>
+                            <input type="checkbox" checked={mod.negated ?? false}
+                              onChange={(e) => dispatch({ tag: "updateModifier", modifierId: mod.id, patch: { negated: e.target.checked || undefined } })} />
+                            neg
+                          </label>
+                          <button className="props-panel__remove-btn"
+                            onClick={() => dispatch({ tag: "removeModifier", modifierId: mod.id })}>×</button>
+                        </div>
+                      ))}
+                      {mods.length === 0 && (
+                        <div style={{ display: "flex", gap: 4, marginTop: 2 }}>
+                          <button style={{ fontSize: 8, cursor: "pointer", color: "#d69e2e" }}
+                            onClick={() => dispatch({ tag: "addModifier", modifier: { id: genId("mod"), over: l.id, type: "event" } })}>
+                            +event
+                          </button>
+                          <button style={{ fontSize: 8, cursor: "pointer", color: "#3182ce" }}
+                            onClick={() => dispatch({ tag: "addModifier", modifier: { id: genId("mod"), over: l.id, type: "condition", condition_mode: "wait" } })}>
+                            +condition
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             );
           })}

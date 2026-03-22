@@ -164,6 +164,11 @@ export function SimulationPanel({ model, simulation, dispatch }: Props) {
                 Step {step.step}: {step.parentProcessId
                   ? `${model.things.get(step.parentProcessId)?.name} > ${step.processName}`
                   : step.processName ?? "—"}
+                {step.invokedBy && (
+                  <span style={{ fontSize: 9, color: "var(--text-muted)", marginLeft: 4 }}>
+                    (invoked by {model.things.get(step.invokedBy)?.name ?? step.invokedBy})
+                  </span>
+                )}
               </div>
               <StepEffects step={step} model={model} />
             </li>

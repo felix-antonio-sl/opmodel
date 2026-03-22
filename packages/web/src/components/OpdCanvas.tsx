@@ -544,10 +544,28 @@ function LinkLine({
 }) {
   const srcCenter = center(sourceRect);
   const tgtCenter = center(targetRect);
+  const color = LINK_COLORS[link.type] ?? "#505878";
+
+  // Self-loop (invocation self-invocation): bezier arc above the process
+  if (link.type === "invocation" && sourceRect.x === targetRect.x && sourceRect.y === targetRect.y) {
+    const cx = srcCenter.x;
+    const topY = sourceRect.y;
+    const loopH = 35;
+    const loopW = 25;
+    const d = `M ${cx - loopW},${topY} C ${cx - loopW},${topY - loopH * 2} ${cx + loopW},${topY - loopH * 2} ${cx + loopW},${topY}`;
+    return (
+      <g>
+        <path className="link-line" d={d} fill="none" stroke={color} markerEnd="url(#arrow-control)" />
+        <text className="link-label" x={cx} y={topY - loopH * 1.6} textAnchor="middle">
+          self-invocation
+        </text>
+      </g>
+    );
+  }
+
   const p1 = edgePoint(sourceKind, sourceRect, tgtCenter);
   const p2 = edgePoint(targetKind, targetRect, srcCenter);
   const mid = midpoint(p1, p2);
-  const color = LINK_COLORS[link.type] ?? "#505878";
 
   // ISO 19450 marker assignment per link type
   let markerEnd: string | undefined;
@@ -657,11 +675,26 @@ function LinkLine({
       <text className="link-label" x={mid.x} y={mid.y - 7}>
         {labelOverride ?? (link.type === "tagged" && link.tag ? link.tag : link.type)}
       </text>
-      {modifier && (
-        <text className="modifier-badge" x={mid.x} y={mid.y + 8}>
-          {modifier.type === "event" ? "e" : "c"}
-        </text>
-      )}
+      {modifier && (() => {
+        const isEvent = modifier.type === "event";
+        const isSkip = !isEvent && modifier.condition_mode === "skip";
+        const badgeColor = isEvent ? "#d69e2e" : isSkip ? "#c05621" : "#3182ce";
+        const bx = mid.x + 12;
+        const by = mid.y + 2;
+        return (
+          <g>
+            <circle cx={bx} cy={by} r={8} fill={badgeColor} stroke="white" strokeWidth={1} />
+            <text x={bx} y={by + 1} textAnchor="middle" dominantBaseline="central"
+              fill="white" fontSize={10} fontWeight="bold">
+              {isEvent ? "e" : "c"}
+            </text>
+            {isSkip && (
+              <line x1={bx - 3} y1={by + 4} x2={bx + 3} y2={by - 4}
+                stroke="white" strokeWidth={1.5} />
+            )}
+          </g>
+        );
+      })()}
     </g>
   );
 }
@@ -1328,7 +1361,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
                       if (!linkSource) {
                         setLinkSource(thingId);
                         dispatch({ tag: "selectThing", thingId });
-                      } else if (linkSource !== thingId) {
+                      } else if (linkSource !== thingId || linkType === "invocation") {
                         let resolvedType: string;
                         if (linkType === "auto") {
                           const srcThing = model.things.get(linkSource);
