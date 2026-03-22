@@ -7,8 +7,8 @@ const VALID_KINDS = [
 ] as const;
 
 const VALID_LINK_TYPES = [
-  "agent", "instrument", "effect", "consumption", "result",
-  "input", "output", "aggregation", "exhibition",
+  "agent", "instrument", "effect", "consumption", "result", "input", "output",
+  "aggregation", "exhibition",
   "generalization", "classification", "tagged", "invocation", "exception",
 ];
 

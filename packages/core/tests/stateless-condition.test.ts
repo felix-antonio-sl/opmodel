@@ -102,7 +102,7 @@ describe("I-STATELESS-EFFECT", () => {
     // Directly mutate obj-x to stateless (bypass updateThing guard)
     m = { ...m, things: new Map(m.things).set("obj-x", { ...m.things.get("obj-x")!, stateful: false }) };
     const r = addLink(m, {
-      id: "lnk-1", type: "input", source: "proc-p", target: "obj-x",
+      id: "lnk-1", type: "effect", source: "proc-p", target: "obj-x",
       source_state: "state-a",
     });
     expect(isErr(r)).toBe(true);

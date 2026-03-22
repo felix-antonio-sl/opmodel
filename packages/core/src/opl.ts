@@ -371,8 +371,8 @@ function renderLinkSentence(s: OplLinkSentence): string {
       }
       return `${s.sourceName} yields ${s.targetName}.`;
     }
-    case "input": return `${s.sourceName} requires ${s.targetName}.`;
-    case "output": return `${s.sourceName} outputs ${s.targetName}.`;
+    case "input": return `${processName} changes ${objectName} from ${s.sourceStateName ?? "unspecified state"}.`;
+    case "output": return `${processName} changes ${objectName} to ${s.targetStateName ?? "unspecified state"}.`;
     case "aggregation": {
       // Incomplete aggregation
       if (s.incomplete) {
@@ -419,11 +419,11 @@ function renderModifierSentence(s: OplModifierSentence): string {
   // Determine process/object names based on link direction convention:
   // Enabling links (agent, instrument): source=object, target=process
   // Consumption (ISO): source=object, target=process
-  // Other transforming (effect, result, input, output): source=process, target=object
+  // Other transforming (effect, result): source=process, target=object
   const isEnabling = ["agent", "instrument"].includes(s.linkType);
   const isConsumption = s.linkType === "consumption";
   // For enabling and consumption: source=object, target=process
-  // For other transforming (effect, result, input, output): source=process, target=object
+  // For other transforming (effect, result): source=process, target=object
   const objectIsSource = isEnabling || isConsumption;
   const processName = objectIsSource ? s.targetName : s.sourceName;
   const objectName = objectIsSource ? s.sourceName : s.targetName;

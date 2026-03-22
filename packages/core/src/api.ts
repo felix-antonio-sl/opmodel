@@ -300,7 +300,7 @@ export function addLink(
 
   // I-16: Transform exclusivity — effect/consumption/result mutually exclusive per (P,O) pair
   // Exception: consumption + result on same (P,O) is valid — object destroyed then recreated (ISO §9.3.1 + §9.3.2)
-  const transformingTypesEager = new Set(["effect", "consumption", "result"]);
+  const transformingTypesEager = new Set(["effect", "consumption", "result", "input", "output"]);
   if (transformingTypesEager.has(link.type)) {
     const procId = source.kind === "process" ? link.source : link.target;
     const objId = source.kind === "object" ? link.source : link.target;
@@ -1341,7 +1341,7 @@ export function validate(model: Model): InvariantError[] {
   // Transforming links (effect/consumption/result) are mutually exclusive EXCEPT:
   // consumption + result on same (process, object) is valid — object is destroyed
   // (consumption) and a new instance created (result). NOT equivalent to effect/state-change.
-  const transformingTypes = new Set(["effect", "consumption", "result"]);
+  const transformingTypes = new Set(["effect", "consumption", "result", "input", "output"]);
   const proceduralPairs = new Map<string, { type: string; id: string }>();
   for (const [id, link] of model.links) {
     if (transformingTypes.has(link.type)) {

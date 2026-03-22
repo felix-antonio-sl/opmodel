@@ -89,7 +89,7 @@ describe("P-02: removeState cascades to link state references", () => {
       source_state: undefined, target_state: "state-hot",
     }));
     m = unwrap(addLink(m, {
-      id: "lnk-inp", type: "input", source: "obj-water", target: "proc-heat",
+      id: "lnk-inp", type: "instrument", source: "obj-water", target: "proc-heat",
       source_state: "state-cold", target_state: undefined,
     }));
     return m;

@@ -7,7 +7,7 @@ const LINK_TYPES: { value: LinkTypeChoice; label: string; group: string }[] = [
   { value: "effect", label: "Effect", group: "Transforming" },
   { value: "result", label: "Result", group: "Transforming" },
   { value: "consumption", label: "Consumption", group: "Transforming" },
-  { value: "input", label: "Input", group: "Enabling" },
+  { value: "input", label: "Input", group: "Transforming" },
   { value: "output", label: "Output", group: "Transforming" },
   { value: "aggregation", label: "Aggregation", group: "Structural" },
   { value: "exhibition", label: "Exhibition", group: "Structural" },
