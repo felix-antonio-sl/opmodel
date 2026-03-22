@@ -19,6 +19,16 @@ function getEntityIds(sentence: OplSentence): string[] {
       return [sentence.linkId, sentence.sourceId, sentence.targetId];
     case "modifier":
       return [sentence.modifierId, sentence.linkId];
+    case "state-description":
+      return [sentence.thingId, sentence.stateId];
+    case "grouped-structural":
+      return [sentence.parentId, ...sentence.childIds];
+    case "in-zoom-sequence":
+      return [sentence.parentId, ...sentence.steps.flatMap(s => s.thingIds)];
+    case "attribute-value":
+      return [sentence.thingId, sentence.exhibitorId];
+    case "fan":
+      return [sentence.fanId];
   }
 }
 
@@ -27,8 +37,13 @@ function sentenceCategory(sentence: OplSentence): "thing" | "link" | "modifier" 
     case "thing-declaration":
     case "state-enumeration":
     case "duration":
+    case "state-description":
+    case "attribute-value":
       return "thing";
     case "link":
+    case "grouped-structural":
+    case "in-zoom-sequence":
+    case "fan":
       return "link";
     case "modifier":
       return "modifier";
@@ -56,10 +71,17 @@ export function OplSentencesView({ model, opdId, selectedThing }: Props) {
     (s): s is OplSentence =>
       s.kind === "thing-declaration" ||
       s.kind === "state-enumeration" ||
-      s.kind === "duration"
+      s.kind === "duration" ||
+      s.kind === "state-description" ||
+      s.kind === "attribute-value"
   );
   const linkSentences = doc.sentences.filter(
-    (s): s is OplSentence => s.kind === "link" || s.kind === "modifier"
+    (s): s is OplSentence =>
+      s.kind === "link" ||
+      s.kind === "modifier" ||
+      s.kind === "grouped-structural" ||
+      s.kind === "in-zoom-sequence" ||
+      s.kind === "fan"
   );
 
   return (

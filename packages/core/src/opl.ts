@@ -5,6 +5,7 @@ import type {
   OplDocument, OplEdit, OplSentence,
   OplThingDeclaration, OplLinkSentence, OplModifierSentence, OplRenderSettings,
   OplStateDescription, OplGroupedStructuralSentence, OplInZoomSequence, OplAttributeValue,
+  OplFanSentence,
 } from "./opl-types";
 import { ok, err, isOk } from "./result";
 import { collectAllIds } from "./helpers";
@@ -231,8 +232,60 @@ export function expose(model: Model, opdId: string): OplDocument {
     } as OplGroupedStructuralSentence);
   }
 
-  // Non-structural links: emit individually (unchanged)
+  // Build set of link IDs that are members of XOR/OR fans (suppressed from individual rendering)
+  const fanSuppressed = new Set<string>();
+  const nonStructuralLinkIds = new Set(nonStructuralLinks.map(l => l.id));
+  for (const fan of model.fans.values()) {
+    if (fan.type === "and") continue; // AND = default behavior, no suppression
+    const allVisible = fan.members.every(mid => nonStructuralLinkIds.has(mid));
+    if (!allVisible) continue;
+    for (const mid of fan.members) fanSuppressed.add(mid);
+
+    // Determine direction: shared source → diverging, shared target → converging
+    const memberLinks = fan.members.map(mid => model.links.get(mid)!);
+    const allSameSource = memberLinks.every(l => l.source === memberLinks[0]!.source);
+    const allSameTarget = memberLinks.every(l => l.target === memberLinks[0]!.target);
+    const direction = fan.direction ?? (allSameSource ? "diverging" : "converging");
+
+    // Shared endpoint and member endpoints
+    const firstLink = memberLinks[0]!;
+    const sharedId = direction === "converging" ? firstLink.target : firstLink.source;
+    const memberIds = direction === "converging"
+      ? memberLinks.map(l => l.source)
+      : memberLinks.map(l => l.target);
+
+    // For consumption/agent/instrument the naming convention differs:
+    // consumption: source=object, target=process — converging means shared=process, members=objects
+    // For enabling (agent/instrument): source=object, target=process — same pattern
+    // For others (effect/result/invocation): source=process, target=object — converging means shared=object, members=processes
+
+    const memberNames = memberIds.map(id => model.things.get(id)?.name ?? id);
+
+    // State qualifiers per member
+    const memberSourceStateNames = memberLinks.map(l =>
+      l.source_state ? model.states.get(l.source_state)?.name : undefined
+    );
+    const memberTargetStateNames = memberLinks.map(l =>
+      l.target_state ? model.states.get(l.target_state)?.name : undefined
+    );
+
+    const fanSentence: OplFanSentence = {
+      kind: "fan",
+      fanId: fan.id,
+      fanType: fan.type,
+      direction,
+      linkType: firstLink.type,
+      sharedEndpointName: model.things.get(sharedId)?.name ?? sharedId,
+      memberNames,
+      memberSourceStateNames,
+      memberTargetStateNames,
+    };
+    sentences.push(fanSentence);
+  }
+
+  // Non-structural links: emit individually (skip fan-suppressed)
   for (const link of nonStructuralLinks) {
+    if (fanSuppressed.has(link.id)) continue;
     const sentence: OplLinkSentence = {
       kind: "link",
       linkId: link.id,
@@ -518,6 +571,96 @@ function renderGroupedStructural(s: OplGroupedStructuralSentence): string {
   }
 }
 
+function formatFanList(names: string[], stateNames?: (string | undefined)[]): string {
+  const qualified = names.map((name, i) => {
+    const st = stateNames?.[i];
+    return st ? `${st} ${name}` : name;
+  });
+  if (qualified.length === 1) return qualified[0]!;
+  if (qualified.length === 2) return `${qualified[0]} or ${qualified[1]}`;
+  const last = qualified[qualified.length - 1]!;
+  const rest = qualified.slice(0, -1);
+  return `${rest.join(", ")}, or ${last}`;
+}
+
+function renderFanSentence(s: OplFanSentence): string {
+  const quantifier = s.fanType === "xor" ? "exactly one of" : "at least one of";
+  const list = formatFanList(
+    s.memberNames,
+    // For converging fans, member = source side → use source state names
+    // For diverging fans, member = target side → use target state names
+    s.direction === "converging" ? s.memberSourceStateNames : s.memberTargetStateNames,
+  );
+
+  // Converging: shared endpoint is the process/object all links point TO
+  // "SharedName VERB quantifier list."
+  // Diverging: shared endpoint is the thing all links come FROM
+  // "quantifier list VERB SharedName."  (capitalized quantifier)
+
+  switch (s.linkType) {
+    case "consumption":
+      // consumption: source=object, target=process
+      // converging (shared=process, members=objects): "Process consumes quantifier A, B, or C."
+      // diverging (shared=object, members=processes): "Quantifier P, Q, or R consumes Object."
+      if (s.direction === "converging") {
+        return `${s.sharedEndpointName} consumes ${quantifier} ${list}.`;
+      }
+      return `${capitalize(quantifier)} ${list} consumes ${s.sharedEndpointName}.`;
+
+    case "result":
+      // result: source=process, target=object
+      // diverging (shared=process, members=objects): "Process yields quantifier A, B, or C."
+      // converging (shared=object, members=processes): "Quantifier P, Q, or R yields Object."
+      if (s.direction === "diverging") {
+        return `${s.sharedEndpointName} yields ${quantifier} ${list}.`;
+      }
+      return `${capitalize(quantifier)} ${list} yields ${s.sharedEndpointName}.`;
+
+    case "effect":
+      // effect: source=process, target=object
+      // diverging (shared=process, members=objects): "Process affects quantifier A, B, or C."
+      // converging (shared=object, members=processes): "Quantifier P, Q, or R affects Object."
+      if (s.direction === "diverging") {
+        return `${s.sharedEndpointName} affects ${quantifier} ${list}.`;
+      }
+      return `${capitalize(quantifier)} ${list} affects ${s.sharedEndpointName}.`;
+
+    case "agent":
+      // agent: source=object, target=process
+      // converging (shared=process, members=objects): "Quantifier A, B, or C handles Process."
+      // diverging (shared=object, members=processes): "Object handles quantifier P, Q, or R."
+      if (s.direction === "converging") {
+        return `${capitalize(quantifier)} ${list} handles ${s.sharedEndpointName}.`;
+      }
+      return `${s.sharedEndpointName} handles ${quantifier} ${list}.`;
+
+    case "instrument":
+      // instrument: source=object, target=process
+      // converging (shared=process, members=objects): "Process requires quantifier A, B, or C."
+      // diverging (shared=object, members=processes): "Quantifier P, Q, or R requires Object."
+      if (s.direction === "converging") {
+        return `${s.sharedEndpointName} requires ${quantifier} ${list}.`;
+      }
+      return `${capitalize(quantifier)} ${list} requires ${s.sharedEndpointName}.`;
+
+    case "invocation":
+      // invocation: source=invoker, target=invoked
+      // diverging (shared=invoker, members=invoked): "Process invokes quantifier Q, R."
+      // converging (shared=invoked, members=invokers): "Quantifier P, Q invokes Process."
+      if (s.direction === "diverging") {
+        return `${s.sharedEndpointName} invokes ${quantifier} ${list}.`;
+      }
+      return `${capitalize(quantifier)} ${list} invokes ${s.sharedEndpointName}.`;
+
+    default:
+      return `${s.sharedEndpointName} links to ${quantifier} ${list}.`;
+  }
+}
+
+function capitalize(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 function renderSentence(s: OplSentence, settings: OplRenderSettings): string {
   switch (s.kind) {
     case "thing-declaration": {
@@ -568,6 +711,8 @@ function renderSentence(s: OplSentence, settings: OplRenderSettings): string {
       return `${s.thingName} of ${s.exhibitorName} is ${s.valueName}.`;
     case "grouped-structural":
       return renderGroupedStructural(s);
+    case "fan":
+      return renderFanSentence(s);
     case "in-zoom-sequence": {
       const allNames = s.steps.flatMap(step =>
         step.parallel
@@ -774,6 +919,7 @@ export function editsFrom(doc: OplDocument): OplEdit[] {
       case "state-description":
       case "in-zoom-sequence":
       case "attribute-value":
+      case "fan":
         break; // Stub — implemented in subsequent tasks
       case "grouped-structural": {
         const directionMap: Record<string, "source" | "target"> = {

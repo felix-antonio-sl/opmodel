@@ -1,4 +1,4 @@
-import type { Model, Thing, State, Link, LinkType, RefinementType, OPD } from "@opmodel/core";
+import type { Model, Thing, State, Link, LinkType, FanType, RefinementType, OPD } from "@opmodel/core";
 import type { Command } from "../lib/commands";
 import { genId } from "../lib/ids";
 
@@ -117,6 +117,124 @@ function isInOwnRefinementTree(model: Model, thingId: string, opdId: string): bo
     id = opd.parent_opd;
   }
   return false;
+}
+
+const FAN_TYPES: FanType[] = ["xor", "or", "and"];
+
+function FanSection({
+  model, thingId, links, dispatch,
+}: {
+  model: Model; thingId: string; links: Link[];
+  dispatch: (cmd: Command) => boolean;
+}) {
+  // Find fans that involve links of this thing
+  const thingLinkIds = new Set(links.map(l => l.id));
+  const fansForThing = [...model.fans.values()].filter(
+    f => f.members.some(mid => thingLinkIds.has(mid))
+  );
+
+  // Detect fan-eligible groups: 2+ links of same type sharing an endpoint
+  // Group by (linkType, sharedEndpoint) where sharedEndpoint can be thingId itself
+  // (converging: multiple objects → this process) or otherEnd (diverging: this process → multiple objects)
+  const linkGroups = new Map<string, Link[]>();
+  for (const l of links) {
+    // Two grouping modes: by source (all share source) or by target (all share target)
+    const keySrc = `${l.type}::src::${l.source}`;
+    const keyTgt = `${l.type}::tgt::${l.target}`;
+    if (!linkGroups.has(keySrc)) linkGroups.set(keySrc, []);
+    linkGroups.get(keySrc)!.push(l);
+    if (keySrc !== keyTgt) {
+      if (!linkGroups.has(keyTgt)) linkGroups.set(keyTgt, []);
+      linkGroups.get(keyTgt)!.push(l);
+    }
+  }
+  // Deduplicate: a link may appear in both src and tgt groups. Keep only groups with 2+ unique links.
+  const seenLinkSets = new Set<string>();
+  const candidates = [...linkGroups.entries()]
+    .filter(([, group]) => group.length >= 2)
+    .filter(([, group]) => {
+      // Deduplicate by sorted member IDs
+      const sig = group.map(l => l.id).sort().join(",");
+      if (seenLinkSets.has(sig)) return false;
+      seenLinkSets.add(sig);
+      return true;
+    })
+    .filter(([, group]) => {
+      // Exclude groups already in a fan
+      const memberIds = new Set(group.map(l => l.id));
+      return !fansForThing.some(f => {
+        const fanMemberSet = new Set(f.members);
+        // Check if this fan covers these exact links
+        return group.every(l => fanMemberSet.has(l.id));
+      });
+    });
+
+  if (fansForThing.length === 0 && candidates.length === 0) return null;
+
+  return (
+    <div className="props-panel__section">
+      <span className="props-panel__label">Fans</span>
+      {fansForThing.map(f => {
+        const memberNames = f.members.map(mid => {
+          const link = model.links.get(mid);
+          if (!link) return mid;
+          const otherId = link.source === thingId ? link.target : link.source;
+          return model.things.get(otherId)?.name ?? otherId;
+        });
+        return (
+          <div key={f.id} style={{ padding: "4px 0", borderBottom: "1px solid var(--border)" }}>
+            <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+              <select
+                className="props-panel__select"
+                style={{ fontSize: 10, minWidth: 50 }}
+                value={f.type}
+                onChange={(e) =>
+                  dispatch({ tag: "updateFan", fanId: f.id, patch: { type: e.target.value as FanType } })
+                }
+              >
+                {FAN_TYPES.map(t => (
+                  <option key={t} value={t}>{t.toUpperCase()}</option>
+                ))}
+              </select>
+              <span style={{ fontSize: 9, color: "var(--text-muted)", flex: 1 }}>
+                {memberNames.join(", ")}
+              </span>
+              <button
+                className="props-panel__remove-btn"
+                onClick={() => dispatch({ tag: "removeFan", fanId: f.id })}
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        );
+      })}
+      {candidates.map(([key, group]) => {
+        const firstLink = group[0]!;
+        const memberNames = group.map(l => {
+          const otherId = l.source === thingId ? l.target : l.source;
+          return model.things.get(otherId)?.name ?? otherId;
+        });
+        return (
+          <div key={key} style={{ padding: "2px 0" }}>
+            <button
+              style={{ fontSize: 9, cursor: "pointer", color: "var(--text-link)" }}
+              onClick={() => dispatch({
+                tag: "addFan",
+                fan: {
+                  id: genId("fan"),
+                  type: "xor",
+                  members: group.map(l => l.id),
+                },
+              })}
+            >
+              + Fan {firstLink.type} ({memberNames.join(", ")})
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 function RefineSection({
@@ -410,6 +528,9 @@ export function PropertiesPanel({ model, thingId, opdId, dispatch }: Props) {
           })}
         </div>
       )}
+
+      {/* Fans — group links into XOR/OR/AND */}
+      <FanSection model={model} thingId={thingId} links={links} dispatch={dispatch} />
 
       {/* Refinement section */}
       <RefineSection model={model} thingId={thingId} opdId={opdId} thing={thing} dispatch={dispatch} />

@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback, useMemo, useEffect } from "react";
-import type { Model, Thing, State, Link, Appearance, Modifier, OPD } from "@opmodel/core";
+import type { Model, Thing, State, Link, Appearance, Modifier, OPD, Fan } from "@opmodel/core";
 import { createInitialState, resolveLinksForOpd, findConsumptionResultPairs, transformingMode, type ModelState } from "@opmodel/core";
 import type { Command, EditorMode, LinkTypeChoice, SimulationUIState } from "../lib/commands";
 import { genId } from "../lib/ids";
@@ -727,6 +727,69 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
     return adjustEffectEndpoints(filtered, model);
   }, [model, opdId]);
 
+  // Fan arcs: compute points along each link line at fixed distance from shared endpoint edge.
+  // ISO 19450: "dashed arc across links of the fan, focal point at convergent endpoint"
+  const ARC_DIST = 65; // distance along each link line from the edge point
+  const visibleFans = useMemo(() => {
+    const visibleLinkIds = new Set(visibleLinks.map(vl => vl.link.id));
+    const result: Array<{
+      fan: Fan;
+      arcPoints: Point[]; // points on the link lines where the arc crosses
+      sharedCenter: Point;
+    }> = [];
+
+    for (const fan of model.fans.values()) {
+      if (fan.type === "and") continue;
+      const allVisible = fan.members.every(mid => visibleLinkIds.has(mid));
+      if (!allVisible) continue;
+
+      const memberLinks = fan.members.map(mid => model.links.get(mid)!).filter(Boolean);
+      if (memberLinks.length < 2) continue;
+      const allSameSource = memberLinks.every(l => l.source === memberLinks[0]!.source);
+      const direction = fan.direction ?? (allSameSource ? "diverging" : "converging");
+      const sharedId = direction === "converging"
+        ? memberLinks[0]!.target
+        : memberLinks[0]!.source;
+
+      const sharedApp = appearances.get(sharedId);
+      const sharedThing = model.things.get(sharedId);
+      if (!sharedApp || !sharedThing) continue;
+
+      const sharedRect: Rect = { x: sharedApp.x, y: sharedApp.y, w: sharedApp.w, h: sharedApp.h };
+      const sharedCtr = center(sharedRect);
+
+      // For each member link, compute a point on the link line at ARC_DIST from the edge
+      const arcPoints: Point[] = [];
+      for (const ml of memberLinks) {
+        const otherId = direction === "converging" ? ml.source : ml.target;
+        const otherApp = appearances.get(otherId);
+        const otherThing = model.things.get(otherId);
+        if (!otherApp || !otherThing) continue;
+        const otherRect: Rect = { x: otherApp.x, y: otherApp.y, w: otherApp.w, h: otherApp.h };
+        const otherCtr = center(otherRect);
+
+        // Edge point on shared endpoint contour toward the other thing
+        const ep = edgePoint(sharedThing.kind, sharedRect, otherCtr);
+
+        // Direction vector from edge toward other thing, normalized
+        const dx = otherCtr.x - ep.x;
+        const dy = otherCtr.y - ep.y;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        if (len < 1) continue;
+
+        // Point on the link line at ARC_DIST from edge
+        arcPoints.push({
+          x: ep.x + (dx / len) * ARC_DIST,
+          y: ep.y + (dy / len) * ARC_DIST,
+        });
+      }
+      if (arcPoints.length < 2) continue;
+
+      result.push({ fan, arcPoints, sharedCenter: sharedCtr });
+    }
+    return result;
+  }, [model, visibleLinks, appearances]);
+
   // Convert client coords to SVG model coords
   const clientToModel = useCallback(
     (clientX: number, clientY: number): Point => {
@@ -1067,6 +1130,71 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
                   isInputHalf={isInputHalf}
                   isOutputHalf={isOutputHalf}
                 />
+              </g>
+            );
+          })}
+
+          {/* Fan arcs (XOR=single dashed, OR=double dashed) — across link lines.
+              ISO: "dashed arc across links, focal point at convergent endpoint."
+              Implementation: circular arc centered on sharedCenter, radius = avg distance to crossing points. */}
+          {visibleFans.map(({ fan, arcPoints, sharedCenter }) => {
+            if (arcPoints.length < 2) return null;
+
+            const color = LINK_COLORS[fan.members[0] ? model.links.get(fan.members[0])?.type ?? "effect" : "effect"] ?? "#666";
+
+            // Convert arc crossing points to polar (angle, radius) relative to sharedCenter
+            const polar = arcPoints.map(p => ({
+              angle: Math.atan2(p.y - sharedCenter.y, p.x - sharedCenter.x),
+              r: Math.sqrt((p.x - sharedCenter.x) ** 2 + (p.y - sharedCenter.y) ** 2),
+            }));
+            polar.sort((a, b) => a.angle - b.angle);
+
+            // Find the largest angular gap — that's the region WITHOUT links (outside the arc).
+            // The arc spans everything EXCEPT that gap.
+            let maxGap = 0, maxGapIdx = 0;
+            for (let i = 0; i < polar.length; i++) {
+              const next = (i + 1) % polar.length;
+              let gap = polar[next]!.angle - polar[i]!.angle;
+              if (gap <= 0) gap += 2 * Math.PI;
+              if (gap > maxGap) { maxGap = gap; maxGapIdx = i; }
+            }
+
+            // Rebuild array starting AFTER the largest gap, with monotonically increasing angles
+            const startIdx = (maxGapIdx + 1) % polar.length;
+            const ordered: Array<{ angle: number; r: number }> = [];
+            for (let i = 0; i < polar.length; i++) {
+              const idx = (startIdx + i) % polar.length;
+              let angle = polar[idx]!.angle;
+              if (ordered.length > 0 && angle < ordered[ordered.length - 1]!.angle) {
+                angle += 2 * Math.PI;
+              }
+              ordered.push({ angle, r: polar[idx]!.r });
+            }
+
+            const avgR = ordered.reduce((s, p) => s + p.r, 0) / ordered.length;
+            const minAngle = ordered[0]!.angle;
+            const maxAngle = ordered[ordered.length - 1]!.angle;
+
+            // Generate arc as polyline points on circle centered at sharedCenter
+            const N = 30;
+            function arcPath(radius: number): string {
+              const points: string[] = [];
+              for (let i = 0; i <= N; i++) {
+                const a = minAngle + (maxAngle - minAngle) * i / N;
+                const x = sharedCenter.x + radius * Math.cos(a);
+                const y = sharedCenter.y + radius * Math.sin(a);
+                points.push(`${x},${y}`);
+              }
+              return `M ${points.join(" L ")}`;
+            }
+
+            const d = arcPath(avgR);
+            const d2 = fan.type === "or" ? arcPath(avgR + 6) : null;
+
+            return (
+              <g key={fan.id}>
+                <path d={d} fill="none" stroke={color} strokeWidth={1.5} strokeDasharray="5,3" />
+                {d2 && <path d={d2} fill="none" stroke={color} strokeWidth={1.5} strokeDasharray="5,3" />}
               </g>
             );
           })}

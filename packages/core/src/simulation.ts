@@ -2,7 +2,7 @@
 // Motor de Simulación ECA (Event-Condition-Action) como Coalgebra
 // Según DA-5: c: ModelState → Event × (Precond → ModelState + 1)
 
-import type { Model, Thing, State, Link, Modifier, OPD } from "./types";
+import type { Model, Thing, State, Link, Modifier, OPD, Fan } from "./types";
 import type { InvariantError, Result } from "./result";
 import { ok, err } from "./result";
 
@@ -377,10 +377,101 @@ function getResponse(model: Model, linkId: string): "lost" | "skip" | "wait" {
   return "lost";
 }
 
+/** Build lookup: linkId → Fan for XOR/OR fans (AND fans use default all-must-pass logic) */
+function buildFanLookup(model: Model): Map<string, Fan> {
+  const lookup = new Map<string, Fan>();
+  for (const fan of model.fans.values()) {
+    if (fan.type === "and") continue;
+    for (const mid of fan.members) {
+      lookup.set(mid, fan);
+    }
+  }
+  return lookup;
+}
+
+/** Check if a single link's precondition is individually satisfied */
+function checkLinkPrecondition(
+  model: Model,
+  state: ModelState,
+  link: Link,
+  processId: string,
+): PreconditionResult {
+  if (["consumption", "effect", "input", "output"].includes(link.type)) {
+    const srcThing = model.things.get(link.source);
+    const processEnd = srcThing?.kind === "process" ? link.source : link.target;
+    const objectEnd = srcThing?.kind === "object" ? link.source : link.target;
+    if (processEnd !== processId) return { satisfied: true };
+    const objState = state.objects.get(objectEnd);
+    if (!objState?.exists) {
+      return { satisfied: false, reason: `Object ${objectEnd} does not exist`, response: getResponse(model, link.id) };
+    }
+    const stateRef = link.type === "effect" ? link.source_state : (link.source_state || link.target_state);
+    if (stateRef) {
+      const requiredState = model.states.get(stateRef);
+      if (requiredState && objState.currentState !== stateRef) {
+        return { satisfied: false, reason: `Object ${objectEnd} not in required state ${requiredState.name}`, response: getResponse(model, link.id) };
+      }
+    }
+  }
+  if (["agent", "instrument"].includes(link.type)) {
+    if (link.target !== processId) return { satisfied: true };
+    const objectId = link.source;
+    const objState = state.objects.get(objectId);
+    if (!objState?.exists) {
+      return { satisfied: false, reason: `${link.type} ${objectId} does not exist`, response: getResponse(model, link.id) };
+    }
+    if (link.source_state) {
+      const requiredState = model.states.get(link.source_state);
+      if (requiredState && objState.currentState !== link.source_state) {
+        return { satisfied: false, reason: `${link.type} ${objectId} not in required state ${requiredState.name}`, response: getResponse(model, link.id) };
+      }
+    }
+  }
+  return { satisfied: true };
+}
+
+/**
+ * Choose which fan member links are active for postcondition application.
+ * XOR: exactly 1 (probability-weighted or uniform).
+ * OR: at least 1 (each member independently included, guarantee >= 1).
+ */
+export function chooseFanBranch(model: Model, fan: Fan, rng: () => number = Math.random): string[] {
+  if (fan.type === "xor") {
+    const memberLinks = fan.members.map(mid => model.links.get(mid)!);
+    const hasProbs = memberLinks.every(l => l.probability != null);
+    if (hasProbs) {
+      const r = rng();
+      let cumulative = 0;
+      for (const l of memberLinks) {
+        cumulative += l.probability!;
+        if (r < cumulative) return [l.id];
+      }
+      return [memberLinks[memberLinks.length - 1]!.id];
+    }
+    // Uniform selection
+    const idx = Math.floor(rng() * fan.members.length);
+    return [fan.members[idx]!];
+  }
+  if (fan.type === "or") {
+    // Each member included with 50% chance, guarantee at least 1
+    const selected: string[] = [];
+    for (const mid of fan.members) {
+      if (rng() < 0.5) selected.push(mid);
+    }
+    if (selected.length === 0) {
+      const idx = Math.floor(rng() * fan.members.length);
+      selected.push(fan.members[idx]!);
+    }
+    return selected;
+  }
+  // AND: all members
+  return [...fan.members];
+}
+
 /**
  * Evaluar precondición de un proceso — versión trivalent (C2)
- * Precond = preprocess object set satisfecho
- * Unsatisfied branch carries response: "lost" | "skip" | "wait"
+ * Fan-aware: XOR/OR fans require at least 1 member satisfied.
+ * AND fans / no fan: all must be satisfied (default behavior).
  */
 export function evaluatePrecondition(
   model: Model,
@@ -390,57 +481,40 @@ export function evaluatePrecondition(
   const links = [...model.links.values()].filter(
     l => l.target === processId || l.source === processId
   );
+  const fanLookup = buildFanLookup(model);
+
+  // Group fan member links by fanId to evaluate as groups
+  const evaluatedFans = new Set<string>();
 
   for (const link of links) {
-    // Para transforming links, verificar que los objetos existan
-    if (["consumption", "effect", "input", "output"].includes(link.type)) {
-      // Detect process/object endpoints by kind (direction-agnostic)
-      const srcThing = model.things.get(link.source);
-      const tgtThing = model.things.get(link.target);
-      const processEnd = srcThing?.kind === "process" ? link.source : link.target;
-      const objectEnd = srcThing?.kind === "object" ? link.source : link.target;
-      if (processEnd !== processId) continue;
-      const objectId = objectEnd;
-      const objState = state.objects.get(objectId);
+    const fan = fanLookup.get(link.id);
+    if (fan) {
+      // XOR/OR fan: evaluate as group (skip if already evaluated)
+      if (evaluatedFans.has(fan.id)) continue;
+      evaluatedFans.add(fan.id);
 
-      if (!objState?.exists) {
-        return { satisfied: false, reason: `Object ${objectId} does not exist`, response: getResponse(model, link.id) };
-      }
+      const memberLinks = fan.members
+        .map(mid => model.links.get(mid))
+        .filter((l): l is Link => l != null);
 
-      // State-specified precondition: for effect links, only source_state is a precondition
-      // (target_state is the postcondition — the TO state). For other transforming links,
-      // use whichever state field is populated on the object endpoint.
-      const stateRef = link.type === "effect" ? link.source_state : (link.source_state || link.target_state);
-      if (stateRef) {
-        const requiredState = model.states.get(stateRef);
-        if (requiredState && objState.currentState !== stateRef) {
-          return { satisfied: false, reason: `Object ${objectId} not in required state ${requiredState.name}`, response: getResponse(model, link.id) };
+      // At least one member must be satisfied
+      let anySatisfied = false;
+      let lastFailure: PreconditionResult | null = null;
+      for (const ml of memberLinks) {
+        const result = checkLinkPrecondition(model, state, ml, processId);
+        if (result.satisfied) {
+          anySatisfied = true;
+          break;
         }
+        lastFailure = result;
       }
-    }
-
-    // Para enabling links (agent, instrument), verificar existencia
-    if (["agent", "instrument"].includes(link.type)) {
-      // Direction: source=object, target=process for enabling links
-      if (link.target !== processId) continue;
-      const objectId = link.source;
-      const objState = state.objects.get(objectId);
-
-      if (!objState?.exists) {
-        return { satisfied: false, reason: `${link.type} ${objectId} does not exist`, response: getResponse(model, link.id) };
+      if (!anySatisfied && lastFailure) {
+        return lastFailure;
       }
-
-      // State-specified enabling
-      if (link.source_state) {
-        const requiredState = model.states.get(link.source_state);
-        if (requiredState && objState.currentState !== link.source_state) {
-          return {
-            satisfied: false,
-            reason: `${link.type} ${objectId} not in required state ${requiredState.name}`,
-            response: getResponse(model, link.id),
-          };
-        }
-      }
+    } else {
+      // Non-fan link: evaluate individually (AND semantics)
+      const result = checkLinkPrecondition(model, state, link, processId);
+      if (!result.satisfied) return result;
     }
   }
 
@@ -454,7 +528,8 @@ export function evaluatePrecondition(
 export function simulationStep(
   model: Model,
   state: ModelState,
-  event: SimulationEvent
+  event: SimulationEvent,
+  rng: () => number = Math.random,
 ): SimulationStep {
   const step: SimulationStep = {
     step: state.step + 1,
@@ -516,9 +591,32 @@ export function simulationStep(
   // Phase ordering: consumption (destroy) → effect (state change) → result (create)
   const links = [...model.links.values()].filter(l => l.target === processId || l.source === processId);
 
+  // Fan-aware link filtering: for XOR/OR fans, choose active branches
+  const activeFanLinks = new Set<string>();
+  const suppressedFanLinks = new Set<string>();
+  const fanLookup = buildFanLookup(model);
+  const resolvedFans = new Set<string>();
+  for (const link of links) {
+    const fan = fanLookup.get(link.id);
+    if (!fan || resolvedFans.has(fan.id)) continue;
+    resolvedFans.add(fan.id);
+    const chosen = chooseFanBranch(model, fan, rng);
+    const chosenSet = new Set(chosen);
+    for (const mid of fan.members) {
+      if (chosenSet.has(mid)) activeFanLinks.add(mid);
+      else suppressedFanLinks.add(mid);
+    }
+  }
+
+  function isLinkActive(linkId: string): boolean {
+    if (suppressedFanLinks.has(linkId)) return false;
+    return true;
+  }
+
   // Phase 1: Consumption — objeto deja de existir
   for (const link of links) {
     if (link.type !== "consumption") continue;
+    if (!isLinkActive(link.id)) continue;
     const srcThing = model.things.get(link.source);
     const objId = srcThing?.kind === "object" ? link.source : link.target;
     const obj = step.newState.objects.get(objId);
@@ -531,6 +629,7 @@ export function simulationStep(
   // Phase 2: Effect — cambio de estado (bidirectional per ISO, detect object by kind)
   for (const link of links) {
     if (link.type !== "effect") continue;
+    if (!isLinkActive(link.id)) continue;
     const srcThing = model.things.get(link.source);
     const objId = srcThing?.kind === "object" ? link.source : link.target;
     const obj = step.newState.objects.get(objId);
@@ -544,6 +643,7 @@ export function simulationStep(
   // Phase 3: Result — objeto comienza a existir
   for (const link of links) {
     if (link.type !== "result") continue;
+    if (!isLinkActive(link.id)) continue;
     const objId = link.target;
     let obj = step.newState.objects.get(objId);
     if (!obj) {

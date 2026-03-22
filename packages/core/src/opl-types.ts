@@ -1,6 +1,6 @@
 // packages/core/src/opl-types.ts
 import type {
-  Kind, Essence, Affiliation, TimeUnit, LinkType, ModifierType,
+  Kind, Essence, Affiliation, TimeUnit, LinkType, ModifierType, FanType,
   OplEssenceVisibility, OplUnitsVisibility,
   Thing, State, Link, Modifier, Position,
 } from "./types";
@@ -110,6 +110,18 @@ export interface OplAttributeValue {
   valueName: string;
 }
 
+export interface OplFanSentence {
+  kind: "fan";
+  fanId: string;
+  fanType: FanType;
+  direction: "converging" | "diverging";
+  linkType: LinkType;
+  sharedEndpointName: string;
+  memberNames: string[];
+  memberSourceStateNames?: (string | undefined)[];
+  memberTargetStateNames?: (string | undefined)[];
+}
+
 export type OplSentence =
   | OplThingDeclaration
   | OplStateEnumeration
@@ -119,7 +131,8 @@ export type OplSentence =
   | OplStateDescription
   | OplGroupedStructuralSentence
   | OplInZoomSequence
-  | OplAttributeValue;
+  | OplAttributeValue
+  | OplFanSentence;
 
 export interface OplRenderSettings {
   essenceVisibility: OplEssenceVisibility;

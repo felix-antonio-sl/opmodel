@@ -32,12 +32,14 @@ export type {
   OplSentence, OplThingDeclaration, OplStateEnumeration, OplDuration,
   OplLinkSentence, OplModifierSentence, OplDocument, OplEdit, OplRenderSettings,
   OplStateDescription, OplGroupedStructuralSentence, OplInZoomSequence, OplAttributeValue,
+  OplFanSentence,
 } from "./opl-types";
 export {
   createInitialState,
   evaluatePrecondition,
   simulationStep,
   runSimulation,
+  chooseFanBranch,
   getPreprocessSet,
   getPostprocessSet,
   getExecutableProcesses,
