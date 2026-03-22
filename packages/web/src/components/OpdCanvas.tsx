@@ -44,7 +44,7 @@ const LINK_COLORS: Record<string, string> = {
   consumption: "#16794a",
   effect: "#16794a",
   result: "#16794a",
-  input: "#2b6cb0",
+  input: "#16794a",
   output: "#16794a",
   aggregation: "#6b5fad",
   exhibition: "#6b5fad",
@@ -121,6 +121,7 @@ function adjustEffectEndpoints(
           {
             ...entry,
             link: { ...entry.link },
+            labelOverride: "input",
             visualSource: objectId,
             visualTarget: processId,
             isInputHalf: true as const,
@@ -128,6 +129,7 @@ function adjustEffectEndpoints(
           {
             ...entry,
             link: { ...entry.link, source_state: undefined },
+            labelOverride: "output",
             visualSource: processId,
             visualTarget: objectId,
             isOutputHalf: true as const,
@@ -139,6 +141,7 @@ function adjustEffectEndpoints(
           {
             ...entry,
             link: { ...entry.link, target_state: undefined },
+            labelOverride: "input",
             visualSource: objectId,
             visualTarget: processId,
             isInputHalf: true as const,
@@ -146,6 +149,7 @@ function adjustEffectEndpoints(
           {
             ...entry,
             link: { ...entry.link },
+            labelOverride: "output",
             visualSource: processId,
             visualTarget: objectId,
             isOutputHalf: true as const,
@@ -157,6 +161,7 @@ function adjustEffectEndpoints(
           {
             ...entry,
             link: { ...entry.link, target_state: undefined },
+            labelOverride: "input",
             visualSource: objectId,
             visualTarget: processId,
             isInputHalf: true as const,
@@ -164,6 +169,7 @@ function adjustEffectEndpoints(
           {
             ...entry,
             link: { ...entry.link, source_state: undefined },
+            labelOverride: "output",
             visualSource: processId,
             visualTarget: objectId,
             isOutputHalf: true as const,
@@ -550,8 +556,6 @@ function LinkLine({
       break;
     }
     case "input":
-      markerEnd = "url(#arrow-proc)";
-      break;
     case "output":
       markerEnd = "url(#arrow-proc)";
       break;
