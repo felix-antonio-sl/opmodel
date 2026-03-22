@@ -1,0 +1,19 @@
+services:
+  opmodel-dev:
+    build: .
+    container_name: opmodel-dev
+    restart: unless-stopped
+    volumes:
+      - /home/felix/projects/opmodel:/app
+    networks:
+      - web
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.opmodel.rule=Host(`opmodel.sanixai.com`)"
+      - "traefik.http.routers.opmodel.entrypoints=websecure"
+      - "traefik.http.routers.opmodel.tls.certresolver=letsencrypt"
+      - "traefik.http.services.opmodel.loadbalancer.server.port=5173"
+
+networks:
+  web:
+    external: true
