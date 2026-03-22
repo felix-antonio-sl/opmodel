@@ -486,6 +486,9 @@ function renderModifierSentence(s: OplModifierSentence): string {
     if (s.negated && stateName) {
       return `non-${stateName} ${objectName} triggers ${processName}.`;
     }
+    if (s.negated) {
+      return `absence of ${objectName} triggers ${processName}.`;
+    }
     if (stateName) {
       return `${stateName} ${objectName} triggers ${processName}.`;
     }
@@ -499,6 +502,9 @@ function renderModifierSentence(s: OplModifierSentence): string {
       if (s.negated && stateName) {
         return `${processName} requires ${objectName} not to be ${stateName}.`;
       }
+      if (s.negated) {
+        return `${processName} requires ${objectName} not to exist.`;
+      }
       if (stateName) {
         return `${processName} requires ${stateName} ${objectName}.`;
       }
@@ -508,6 +514,9 @@ function renderModifierSentence(s: OplModifierSentence): string {
     if (mode === "skip") {
       if (s.negated && stateName) {
         return `${processName} occurs if ${objectName} is not ${stateName}, otherwise ${processName} is skipped.`;
+      }
+      if (s.negated) {
+        return `${processName} occurs if ${objectName} does not exist, otherwise ${processName} is skipped.`;
       }
       if (stateName) {
         return `${processName} occurs if ${objectName} is ${stateName}, otherwise ${processName} is skipped.`;
