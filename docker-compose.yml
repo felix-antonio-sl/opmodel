@@ -11,7 +11,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.opmodel.rule=Host(`opmodel.sanixai.com`)"
       - "traefik.http.routers.opmodel.entrypoints=websecure"
-      - "traefik.http.routers.opmodel.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.opmodel.tls.certresolver=myresolver"
       - "traefik.http.services.opmodel.loadbalancer.server.port=5173"
 
 networks:
