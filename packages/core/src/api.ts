@@ -1,5 +1,5 @@
 import type {
-  Model, Thing, State, Link, OPD, Appearance,
+  Model, Thing, State, Link, OPD, Appearance, Kind,
   Modifier, Fan, Assertion, Requirement, Stereotype,
   SubModel, Scenario, Meta, Settings, RefinementType,
 } from "./types";
@@ -1150,6 +1150,47 @@ export function updateLink(
   }
 
   return ok(touch({ ...model, things, links: new Map(model.links).set(id, updated) }));
+}
+
+// ── Semi-fold Query ───────────────────────────────────────────────────
+
+export interface SemiFoldEntry {
+  thingId: string;
+  name: string;
+  kind: Kind;
+  linkType: "aggregation" | "exhibition";
+}
+
+/**
+ * Get parts (aggregation) and features (exhibition) of a thing for semi-fold display.
+ * Returns at most maxVisible items, plus count of remaining hidden items.
+ */
+export function getSemiFoldedParts(
+  model: Model,
+  thingId: string,
+  maxVisible: number = 5,
+): { visible: SemiFoldEntry[]; hiddenCount: number } {
+  const thing = model.things.get(thingId);
+  if (!thing || thing.kind !== "object") return { visible: [], hiddenCount: 0 };
+
+  const entries: SemiFoldEntry[] = [];
+  for (const link of model.links.values()) {
+    // aggregation: source=whole, target=part → collect parts
+    if (link.type === "aggregation" && link.source === thingId) {
+      const part = model.things.get(link.target);
+      if (part) entries.push({ thingId: link.target, name: part.name, kind: part.kind, linkType: "aggregation" });
+    }
+    // exhibition: source=feature, target=exhibitor → collect features
+    if (link.type === "exhibition" && link.target === thingId) {
+      const feature = model.things.get(link.source);
+      if (feature) entries.push({ thingId: link.source, name: feature.name, kind: feature.kind, linkType: "exhibition" });
+    }
+  }
+
+  entries.sort((a, b) => a.name.localeCompare(b.name));
+
+  if (entries.length <= maxVisible) return { visible: entries, hiddenCount: 0 };
+  return { visible: entries.slice(0, maxVisible), hiddenCount: entries.length - maxVisible };
 }
 
 // ── Batch Validate ─────────────────────────────────────────────────────

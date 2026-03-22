@@ -19,7 +19,9 @@ export {
   updateMeta, updateSettings,
   validate,
   findConsumptionResultPairs,
+  getSemiFoldedParts,
   type ConsumptionResultPair,
+  type SemiFoldEntry,
 } from "./api";
 export {
   type History,

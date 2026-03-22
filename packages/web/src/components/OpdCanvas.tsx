@@ -1,6 +1,6 @@
 import { useRef, useState, useCallback, useMemo, useEffect } from "react";
 import type { Model, Thing, State, Link, Appearance, Modifier, OPD, Fan } from "@opmodel/core";
-import { createInitialState, resolveLinksForOpd, findConsumptionResultPairs, transformingMode, type ModelState } from "@opmodel/core";
+import { createInitialState, resolveLinksForOpd, findConsumptionResultPairs, transformingMode, getSemiFoldedParts, type ModelState } from "@opmodel/core";
 import type { Command, EditorMode, LinkTypeChoice, SimulationUIState } from "../lib/commands";
 import { genId } from "../lib/ids";
 import {
@@ -348,6 +348,8 @@ function ThingNode({
   dragDelta,
   simFilter,
   simStatePillOverride,
+  semiFoldEntries,
+  semiFoldHidden,
   onMouseDown,
   onSelect,
   onDoubleClick,
@@ -363,6 +365,8 @@ function ThingNode({
   dragDelta: Point;
   simFilter?: string;
   simStatePillOverride?: string;
+  semiFoldEntries?: Array<{ name: string; linkType: string }>;
+  semiFoldHidden?: number;
   onMouseDown: (e: React.MouseEvent) => void;
   onSelect: () => void;
   onDoubleClick: () => void;
@@ -373,7 +377,9 @@ function ThingNode({
   const y = appearance.y + oy;
   const { w, h } = appearance;
   const hasStates = states.length > 0;
-  const extraH = hasStates ? 24 : 0;
+  const hasSemiFold = semiFoldEntries && semiFoldEntries.length > 0;
+  const semiFoldH = hasSemiFold ? semiFoldEntries.length * 14 + (semiFoldHidden ? 14 : 0) + 8 : 0;
+  const extraH = (hasStates ? 24 : 0) + semiFoldH;
   const totalH = h + extraH;
 
   // ISO 19450: color always follows kind (object=green, process=blue), regardless of external/container
@@ -448,6 +454,25 @@ function ThingNode({
       </text>
       {isExternal && (
         <text className="thing-badge-external" x={x + w - 8} y={y + 12}>↑</text>
+      )}
+
+      {hasSemiFold && (
+        <g>
+          <line x1={x + 8} y1={y + h - 2} x2={x + w - 8} y2={y + h - 2}
+            stroke="var(--border)" strokeWidth={0.5} />
+          {semiFoldEntries!.map((entry, i) => (
+            <text key={i} x={x + 12} y={y + h + 10 + i * 14}
+              fontSize={9} fill="var(--text-muted)" textAnchor="start" dominantBaseline="middle">
+              {entry.linkType === "aggregation" ? "◇ " : "◈ "}{entry.name}
+            </text>
+          ))}
+          {semiFoldHidden! > 0 && (
+            <text x={x + 12} y={y + h + 10 + semiFoldEntries!.length * 14}
+              fontSize={9} fill="var(--text-muted)" fontStyle="italic" textAnchor="start" dominantBaseline="middle">
+              + {semiFoldHidden} more
+            </text>
+          )}
+        </g>
       )}
 
       {hasStates && (
@@ -588,18 +613,47 @@ function LinkLine({
       markerEnd = "url(#arrow-proc)";
   }
 
-  return (
-    <g>
+  // Invocation links: ISO "lightning jagged line with arrowhead"
+  const isLightning = link.type === "invocation";
+
+  let linkElement: React.ReactNode;
+  if (isLightning) {
+    // Zigzag path from p1 to p2
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    const segments = Math.max(3, Math.round(len / 30));
+    // Perpendicular unit vector
+    const px = -dy / len;
+    const py = dx / len;
+    const amp = 7; // zigzag amplitude
+    let d = `M ${p1.x},${p1.y}`;
+    for (let i = 1; i < segments; i++) {
+      const t = i / segments;
+      const bx = p1.x + dx * t;
+      const by = p1.y + dy * t;
+      const offset = (i % 2 === 1 ? amp : -amp);
+      d += ` L ${bx + px * offset},${by + py * offset}`;
+    }
+    d += ` L ${p2.x},${p2.y}`;
+    linkElement = (
+      <path className="link-line" d={d} fill="none" stroke={color} markerEnd={markerEnd} />
+    );
+  } else {
+    linkElement = (
       <line
         className="link-line"
-        x1={p1.x}
-        y1={p1.y}
-        x2={p2.x}
-        y2={p2.y}
+        x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y}
         stroke={color}
         markerEnd={markerEnd}
         markerStart={markerStart}
       />
+    );
+  }
+
+  return (
+    <g>
+      {linkElement}
       <text className="link-label" x={mid.x} y={mid.y - 7}>
         {labelOverride ?? (link.type === "tagged" && link.tag ? link.tag : link.type)}
       </text>
@@ -955,14 +1009,21 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
     (thingId: string): Rect | null => {
       const app = appearances.get(thingId);
       if (!app) return null;
+      const thing = model.things.get(thingId);
       const states = statesForThing(model, thingId);
       const ox = draggedThings.has(thingId) ? dragDelta.x : 0;
       const oy = draggedThings.has(thingId) ? dragDelta.y : 0;
+      let extraH = states.length > 0 ? 24 : 0;
+      if (app.semi_folded && thing?.kind === "object") {
+        const sf = getSemiFoldedParts(model, thingId);
+        const count = sf.visible.length + (sf.hiddenCount > 0 ? 1 : 0);
+        extraH += count * 14 + 8;
+      }
       return {
         x: app.x + ox,
         y: app.y + oy,
         w: app.w,
-        h: app.h + (states.length > 0 ? 24 : 0),
+        h: app.h + extraH,
       };
     },
     [appearances, model, draggedThings, dragDelta],
@@ -1257,6 +1318,10 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
                   dragDelta={isDragging ? dragDelta : { x: 0, y: 0 }}
                   simFilter={simFilter}
                   simStatePillOverride={simModelState && thing.kind === "object" ? simModelState.objects.get(thingId)?.currentState : undefined}
+                  {...(app.semi_folded && thing.kind === "object" ? (() => {
+                    const sf = getSemiFoldedParts(model, thingId);
+                    return { semiFoldEntries: sf.visible, semiFoldHidden: sf.hiddenCount };
+                  })() : {})}
                   onMouseDown={(e) => onThingMouseDown(thingId, e)}
                   onSelect={() => {
                     if (mode === "addLink") {

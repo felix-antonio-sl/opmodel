@@ -532,6 +532,34 @@ export function PropertiesPanel({ model, thingId, opdId, dispatch }: Props) {
       {/* Fans — group links into XOR/OR/AND */}
       <FanSection model={model} thingId={thingId} links={links} dispatch={dispatch} />
 
+      {/* Semi-fold toggle — only for objects with structural children */}
+      {thing.kind === "object" && (() => {
+        const hasStructural = links.some(l =>
+          (l.type === "aggregation" && l.source === thingId) ||
+          (l.type === "exhibition" && l.target === thingId)
+        );
+        if (!hasStructural) return null;
+        return (
+          <div className="props-panel__section">
+            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11 }}>
+              <input
+                type="checkbox"
+                checked={appearance?.semi_folded ?? false}
+                onChange={(e) =>
+                  dispatch({
+                    tag: "updateAppearance",
+                    thingId,
+                    opdId,
+                    patch: { semi_folded: e.target.checked || undefined },
+                  })
+                }
+              />
+              Semi-fold
+            </label>
+          </div>
+        );
+      })()}
+
       {/* Refinement section */}
       <RefineSection model={model} thingId={thingId} opdId={opdId} thing={thing} dispatch={dispatch} />
 
