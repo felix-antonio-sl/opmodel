@@ -1691,3 +1691,20 @@ body,
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
 }
+
+/* ─── File Menu ─── */
+.file-menu__item {
+  display: block;
+  width: 100%;
+  padding: 6px 12px;
+  text-align: left;
+  background: none;
+  border: none;
+  font-size: 12px;
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.file-menu__item:hover {
+  background: var(--bg-hover);
+}

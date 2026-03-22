@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { loadModel, createModel, isOk, validate, type Model } from "@opmodel/core";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { loadModel, createModel, isOk, validate, saveModel, expose, render, type Model } from "@opmodel/core";
 import { useModelStore } from "./hooks/useModelStore";
 import { OpdTree } from "./components/OpdTree";
 import { OpdCanvas } from "./components/OpdCanvas";
@@ -17,6 +17,153 @@ const EXAMPLES = [
   { name: "Coffee Making", file: "coffee-making.opmodel" },
   { name: "OnStar Driver Rescuing", file: "driver-rescuing.opmodel" },
 ];
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function FileMenu({ model, onNew, onLoadExample, onImport, onSave }: {
+  model: Model;
+  onNew: () => void;
+  onLoadExample: (file: string) => void;
+  onImport: (model: Model) => void;
+  onSave: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const baseName = model.meta.name.toLowerCase().replace(/\s+/g, "-");
+
+  const handleOpen = () => {
+    fileInputRef.current?.click();
+    setOpen(false);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    file.text().then((json) => {
+      const result = loadModel(json);
+      if (isOk(result)) onImport(result.value);
+      else alert(`Open failed: ${result.error.message}`);
+    });
+    e.target.value = "";
+  };
+
+  const exportOpl = () => {
+    const lines: string[] = [];
+    for (const opd of model.opds.values()) {
+      const doc = expose(model, opd.id);
+      const text = render(doc);
+      if (text) {
+        if (lines.length > 0) lines.push("");
+        lines.push(`=== ${opd.name} ===`);
+        lines.push(text);
+      }
+    }
+    downloadBlob(new Blob([lines.join("\n")], { type: "text/plain" }), `${baseName}.opl.txt`);
+    setOpen(false);
+  };
+
+  const exportSvg = () => {
+    const svg = document.querySelector(".opd-canvas svg") as SVGSVGElement | null;
+    if (!svg) return;
+    const clone = svg.cloneNode(true) as SVGSVGElement;
+    // Remove grid and set viewBox to content
+    const grid = clone.querySelector("rect[fill='url(#grid-dots)']");
+    grid?.remove();
+    const bbox = svg.getBBox();
+    const pad = 20;
+    clone.setAttribute("viewBox", `${bbox.x - pad} ${bbox.y - pad} ${bbox.width + pad * 2} ${bbox.height + pad * 2}`);
+    clone.setAttribute("width", String(bbox.width + pad * 2));
+    clone.setAttribute("height", String(bbox.height + pad * 2));
+    clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+    const serializer = new XMLSerializer();
+    downloadBlob(new Blob([serializer.serializeToString(clone)], { type: "image/svg+xml" }), `${baseName}.svg`);
+    setOpen(false);
+  };
+
+  const exportPng = () => {
+    const svg = document.querySelector(".opd-canvas svg") as SVGSVGElement | null;
+    if (!svg) return;
+    const clone = svg.cloneNode(true) as SVGSVGElement;
+    const grid = clone.querySelector("rect[fill='url(#grid-dots)']");
+    grid?.remove();
+    const bbox = svg.getBBox();
+    const pad = 20;
+    const w = bbox.width + pad * 2;
+    const h = bbox.height + pad * 2;
+    clone.setAttribute("viewBox", `${bbox.x - pad} ${bbox.y - pad} ${w} ${h}`);
+    clone.setAttribute("width", String(w * 2));
+    clone.setAttribute("height", String(h * 2));
+    clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+    const svgStr = new XMLSerializer().serializeToString(clone);
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = w * 2;
+      canvas.height = h * 2;
+      const ctx = canvas.getContext("2d")!;
+      ctx.fillStyle = "#f0f2f5";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0);
+      canvas.toBlob((blob) => {
+        if (blob) downloadBlob(blob, `${baseName}.png`);
+      }, "image/png");
+    };
+    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgStr);
+    setOpen(false);
+  };
+
+  return (
+    <div className="header__actions" ref={menuRef} style={{ position: "relative" }}>
+      <button className="header__action" onClick={() => setOpen(!open)}>
+        File
+      </button>
+      <input ref={fileInputRef} type="file" accept=".opmodel,.json" style={{ display: "none" }} onChange={handleFileChange} />
+      {open && (
+        <div style={{
+          position: "absolute", top: "100%", left: 0, zIndex: 100,
+          background: "var(--bg-panel)", border: "1px solid var(--border)",
+          borderRadius: 4, boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+          minWidth: 160, padding: "4px 0",
+        }}>
+          <button className="file-menu__item" onClick={() => { onNew(); setOpen(false); }}>New Model</button>
+          <button className="file-menu__item" onClick={handleOpen}>Open...</button>
+          <button className="file-menu__item" onClick={() => { onSave(); setOpen(false); }}>Save .opmodel</button>
+          <div style={{ borderTop: "1px solid var(--border)", margin: "4px 0" }} />
+          {EXAMPLES.map(ex => (
+            <button key={ex.file} className="file-menu__item" onClick={() => { onLoadExample(ex.file); setOpen(false); }}>
+              {ex.name}
+            </button>
+          ))}
+          <div style={{ borderTop: "1px solid var(--border)", margin: "4px 0" }} />
+          <button className="file-menu__item" onClick={exportOpl}>Export OPL text</button>
+          <button className="file-menu__item" onClick={exportSvg}>Export SVG</button>
+          <button className="file-menu__item" onClick={exportPng}>Export PNG</button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel: Model; onNew: () => void; onLoadExample: (file: string) => void; onImport: (model: Model) => void }) {
   const store = useModelStore(initialModel);
@@ -124,46 +271,13 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
           </button>
         </div>
         <div className="header__sep" />
-        <div className="header__actions">
-          <button className="header__action" onClick={onNew} title="New Model">
-            +
-          </button>
-          <select
-            className="header__action header__select"
-            value=""
-            onChange={(e) => { if (e.target.value) onLoadExample(e.target.value); }}
-            title="Load Example"
-          >
-            <option value="">☰ Examples</option>
-            {EXAMPLES.map((ex) => (
-              <option key={ex.file} value={ex.file}>{ex.name}</option>
-            ))}
-          </select>
-          <label className="header__action" title="Import .opmodel" style={{ cursor: "pointer" }}>
-            ⇧
-            <input
-              type="file"
-              accept=".opmodel,.json"
-              style={{ display: "none" }}
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                file.text().then((json) => {
-                  const result = loadModel(json);
-                  if (isOk(result)) {
-                    onImport(result.value);
-                  } else {
-                    alert(`Import failed: ${result.error.message}`);
-                  }
-                });
-                e.target.value = "";
-              }}
-            />
-          </label>
-          <button className="header__action" onClick={save} title="Export .opmodel (Ctrl+S)">
-            ⤓
-          </button>
-        </div>
+        <FileMenu
+          model={model}
+          onNew={onNew}
+          onLoadExample={onLoadExample}
+          onImport={onImport}
+          onSave={save}
+        />
         <div className="header__sep" />
         <div className="header__badge">v{model.opmodel}</div>
         <button
