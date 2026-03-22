@@ -523,6 +523,31 @@ export function PropertiesPanel({ model, thingId, opdId, dispatch }: Props) {
                     </select>
                   )}
                 </div>
+                {/* Multiplicity */}
+                <div style={{ display: "flex", gap: 4, marginTop: 2, alignItems: "center" }}>
+                  <span style={{ fontSize: 9, color: "var(--text-muted)" }}>mult</span>
+                  <input
+                    className="props-panel__input"
+                    style={{ width: 36, fontSize: 9 }}
+                    placeholder="src"
+                    title="Source multiplicity (?, *, +, m..n)"
+                    value={l.multiplicity_source ?? ""}
+                    onChange={(e) =>
+                      dispatch({ tag: "updateLink", linkId: l.id, patch: { multiplicity_source: e.target.value || undefined } })
+                    }
+                  />
+                  <span style={{ fontSize: 9, color: "var(--text-muted)" }}>→</span>
+                  <input
+                    className="props-panel__input"
+                    style={{ width: 36, fontSize: 9 }}
+                    placeholder="tgt"
+                    title="Target multiplicity (?, *, +, m..n)"
+                    value={l.multiplicity_target ?? ""}
+                    onChange={(e) =>
+                      dispatch({ tag: "updateLink", linkId: l.id, patch: { multiplicity_target: e.target.value || undefined } })
+                    }
+                  />
+                </div>
                 {/* Modifiers (event/condition) */}
                 {(() => {
                   const mods = [...model.modifiers.values()].filter(m => m.over === l.id);

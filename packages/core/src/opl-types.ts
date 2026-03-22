@@ -62,6 +62,8 @@ export interface OplLinkSentence {
   incomplete?: boolean;
   sourceKind?: Kind;
   targetKind?: Kind;
+  multiplicitySource?: string;
+  multiplicityTarget?: string;
 }
 
 export interface OplModifierSentence {
@@ -87,6 +89,7 @@ export interface OplGroupedStructuralSentence {
   childIds: string[];
   childNames: string[];
   childKinds: Kind[];
+  childMultiplicities?: (string | undefined)[];
   incomplete: boolean;
 }
 

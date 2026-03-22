@@ -219,6 +219,10 @@ export function expose(model: Model, opdId: string): OplDocument {
     const childIds = group.links.map(l => l.type === "exhibition" ? l.source : l.target);
     const childNames = childIds.map(id => model.things.get(id)?.name ?? id);
     const childKinds = childIds.map(id => model.things.get(id)?.kind ?? "object" as const);
+    // Multiplicity: for aggregation target=part, for exhibition source=feature
+    const childMultiplicities = group.links.map(l =>
+      l.type === "exhibition" ? l.multiplicity_source : l.multiplicity_target
+    );
     sentences.push({
       kind: "grouped-structural",
       linkType: group.linkType,
@@ -228,6 +232,7 @@ export function expose(model: Model, opdId: string): OplDocument {
       childIds,
       childNames,
       childKinds,
+      childMultiplicities,
       incomplete: group.links.some(l => l.incomplete),
     } as OplGroupedStructuralSentence);
   }
@@ -310,6 +315,12 @@ export function expose(model: Model, opdId: string): OplDocument {
     if (link.direction) {
       sentence.direction = link.direction;
     }
+    if (link.multiplicity_source) {
+      sentence.multiplicitySource = link.multiplicity_source;
+    }
+    if (link.multiplicity_target) {
+      sentence.multiplicityTarget = link.multiplicity_target;
+    }
     sentences.push(sentence);
   }
 
@@ -373,6 +384,31 @@ const INCOMPLETE_PHRASES: Record<string, string> = {
   classification: "at least one other instance",
 };
 
+/** Convert ISO 19450 multiplicity symbol to OPL phrase. Returns null for default (1). */
+function multiplicityPhrase(mult: string | undefined): string | null {
+  if (!mult || mult === "1") return null;
+  switch (mult) {
+    case "?": return "an optional";
+    case "*": return "zero or more";
+    case "+": return "at least one";
+    default: {
+      const match = mult.match(/^(\d+)\.\.(\d+|\*)$/);
+      if (match) {
+        const [, min, max] = match;
+        if (max === "*") return `${min} or more`;
+        return `${min} to ${max}`;
+      }
+      return mult; // fallback: raw value
+    }
+  }
+}
+
+/** Apply multiplicity phrase to a name: "at least one Wheel" or just "Wheel" */
+function withMultiplicity(name: string, mult: string | undefined): string {
+  const phrase = multiplicityPhrase(mult);
+  return phrase ? `${phrase} ${name}` : name;
+}
+
 function renderLinkSentence(s: OplLinkSentence): string {
   const processName = s.sourceName; // For transforming links, source is process
   const objectName = s.targetName; // For transforming links, target is object
@@ -398,7 +434,7 @@ function renderLinkSentence(s: OplLinkSentence): string {
       if (s.sourceStateName) {
         return `${s.targetName} consumes ${s.sourceStateName} ${s.sourceName}.`;
       }
-      return `${s.targetName} consumes ${s.sourceName}.`;
+      return `${s.targetName} consumes ${withMultiplicity(s.sourceName, s.multiplicitySource)}.`;
     }
     case "effect": {
       // State-specified effect (ISO 19450 9.3.3)
@@ -427,19 +463,21 @@ function renderLinkSentence(s: OplLinkSentence): string {
     case "input": return `${processName} changes ${objectName} from ${s.sourceStateName ?? "unspecified state"}.`;
     case "output": return `${processName} changes ${objectName} to ${s.targetStateName ?? "unspecified state"}.`;
     case "aggregation": {
-      // Incomplete aggregation
+      // aggregation: source=whole, target=part. Multiplicity on target = part count.
+      const partName = withMultiplicity(s.targetName, s.multiplicityTarget);
       if (s.incomplete) {
-        return `${s.sourceName} consists of ${s.targetName} and at least one other part.`;
+        return `${s.sourceName} consists of ${partName} and at least one other part.`;
       }
-      return `${s.sourceName} consists of ${s.targetName}.`;
+      return `${s.sourceName} consists of ${partName}.`;
     }
     case "exhibition": {
       // Convention: source=Feature (informatical, I-19), target=Exhibitor
       // OPL: "Exhibitor exhibits Feature" → targetName exhibits sourceName
+      const featureName = withMultiplicity(s.sourceName, s.multiplicitySource);
       if (s.incomplete) {
-        return `${s.targetName} exhibits ${s.sourceName} and at least one other feature.`;
+        return `${s.targetName} exhibits ${featureName} and at least one other feature.`;
       }
-      return `${s.targetName} exhibits ${s.sourceName}.`;
+      return `${s.targetName} exhibits ${featureName}.`;
     }
     case "generalization": {
       if (s.incomplete) {
@@ -534,12 +572,19 @@ function renderGroupedStructural(s: OplGroupedStructuralSentence): string {
   const phrase = INCOMPLETE_PHRASES[s.linkType] ?? "at least one other";
 
   switch (s.linkType) {
-    case "aggregation":
-      return `${s.parentName} consists of ${formatList(s.childNames, s.incomplete, phrase)}.`;
+    case "aggregation": {
+      const qualifiedNames = s.childNames.map((name, i) =>
+        withMultiplicity(name, s.childMultiplicities?.[i])
+      );
+      return `${s.parentName} consists of ${formatList(qualifiedNames, s.incomplete, phrase)}.`;
+    }
 
     case "exhibition": {
-      const attrs = s.childNames.filter((_, i) => s.childKinds[i] === "object");
-      const ops = s.childNames.filter((_, i) => s.childKinds[i] === "process");
+      const qualifiedNames = s.childNames.map((name, i) =>
+        withMultiplicity(name, s.childMultiplicities?.[i])
+      );
+      const attrs = qualifiedNames.filter((_, i) => s.childKinds[i] === "object");
+      const ops = qualifiedNames.filter((_, i) => s.childKinds[i] === "process");
       const isObjectExhibitor = s.parentKind === "object";
       const first = isObjectExhibitor ? attrs : ops;
       const second = isObjectExhibitor ? ops : attrs;

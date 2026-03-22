@@ -675,6 +675,20 @@ function LinkLine({
       <text className="link-label" x={mid.x} y={mid.y - 7}>
         {labelOverride ?? (link.type === "tagged" && link.tag ? link.tag : link.type)}
       </text>
+      {link.multiplicity_source && (
+        <text fontSize={9} fill="#666" fontWeight="bold"
+          x={p1.x + (p2.x - p1.x) * 0.12} y={p1.y + (p2.y - p1.y) * 0.12 - 6}
+          textAnchor="middle">
+          {link.multiplicity_source}
+        </text>
+      )}
+      {link.multiplicity_target && (
+        <text fontSize={9} fill="#666" fontWeight="bold"
+          x={p1.x + (p2.x - p1.x) * 0.88} y={p1.y + (p2.y - p1.y) * 0.88 - 6}
+          textAnchor="middle">
+          {link.multiplicity_target}
+        </text>
+      )}
       {modifier && (() => {
         const isEvent = modifier.type === "event";
         const isSkip = !isEvent && modifier.condition_mode === "skip";
