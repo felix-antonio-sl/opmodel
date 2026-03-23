@@ -585,13 +585,13 @@ export function refineThing(
   const appearances = new Map(model.appearances);
   appearances.set(appearanceKey(thingId, childOpdId), {
     thing: thingId, opd: childOpdId,
-    x: 0, y: 0, w: 200, h: 150, internal: true,
+    x: 200, y: 30, w: 200, h: 150, internal: true,
   });
   let index = 0;
   for (const extThingId of externalThings) {
     appearances.set(appearanceKey(extThingId, childOpdId), {
       thing: extThingId, opd: childOpdId,
-      x: 50 + index * 150, y: 50, w: 120, h: 60, internal: false,
+      x: 50 + index * 170, y: 250, w: 120, h: 60, internal: false,
     });
     index++;
   }
