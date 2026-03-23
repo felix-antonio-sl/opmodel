@@ -351,65 +351,30 @@ describe("I-29: fan member type consistency", () => {
   });
 });
 
-// === I-30: OPD refines process (in-zoom) or object (unfold) ===
+// === I-30: removed — ISO 19450 §14.2/§14.3 allows in-zoom and unfold on both objects and processes ===
 
-describe("I-30: OPD refinement type consistency", () => {
-  it("flags in-zoom that refines an object (validate)", () => {
-    let m = createModel("Test");
-    m = (addThing(m, obj("obj-water", "Water")) as any).value;
-    m = { ...m, opds: new Map(m.opds).set("opd-child", {
-      id: "opd-child", name: "Water Detail", opd_type: "hierarchical",
-      parent_opd: "opd-sd", refines: "obj-water", refinement_type: "in-zoom",
-    }) };
-    const errors = errorsOf(m, "I-30");
-    expect(errors.length).toBeGreaterThanOrEqual(1);
-  });
-
-  it("flags unfold that refines a process (validate)", () => {
-    let m = createModel("Test");
-    m = (addThing(m, proc("proc-boil", "Boiling")) as any).value;
-    m = { ...m, opds: new Map(m.opds).set("opd-child", {
-      id: "opd-child", name: "Boiling Unfold", opd_type: "hierarchical",
-      parent_opd: "opd-sd", refines: "proc-boil", refinement_type: "unfold",
-    }) };
-    const errors = errorsOf(m, "I-30");
-    expect(errors.length).toBeGreaterThanOrEqual(1);
-  });
-
-  it("passes in-zoom refining a process (validate)", () => {
-    let m = createModel("Test");
-    m = (addThing(m, proc("proc-boil", "Boiling")) as any).value;
-    m = { ...m, opds: new Map(m.opds).set("opd-child", {
-      id: "opd-child", name: "Boiling Detail", opd_type: "hierarchical",
-      parent_opd: "opd-sd", refines: "proc-boil", refinement_type: "in-zoom",
-    }) };
-    const errors = errorsOf(m, "I-30");
-    expect(errors).toHaveLength(0);
-  });
-
-  it("rejects addOPD with in-zoom refining an object (I-30 eager)", () => {
+describe("I-30 removed: both refinement types work on both kinds", () => {
+  it("allows in-zoom on an object (ISO §14.2)", () => {
     let m = createModel("Test");
     m = (addThing(m, obj("obj-water", "Water")) as any).value;
     const r = addOPD(m, {
       id: "opd-child", name: "Water Detail", opd_type: "hierarchical",
       parent_opd: "opd-sd", refines: "obj-water", refinement_type: "in-zoom",
     });
-    expect(isErr(r)).toBe(true);
-    if (isErr(r)) expect(r.error.code).toBe("I-30");
+    expect(isOk(r)).toBe(true);
   });
 
-  it("rejects addOPD with unfold refining a process (I-30 eager)", () => {
+  it("allows unfold on a process (ISO §14.3)", () => {
     let m = createModel("Test");
     m = (addThing(m, proc("proc-boil", "Boiling")) as any).value;
     const r = addOPD(m, {
       id: "opd-child", name: "Boil Unfold", opd_type: "hierarchical",
       parent_opd: "opd-sd", refines: "proc-boil", refinement_type: "unfold",
     });
-    expect(isErr(r)).toBe(true);
-    if (isErr(r)) expect(r.error.code).toBe("I-30");
+    expect(isOk(r)).toBe(true);
   });
 
-  it("allows addOPD with in-zoom refining a process (I-30 eager valid)", () => {
+  it("allows in-zoom on a process", () => {
     let m = createModel("Test");
     m = (addThing(m, proc("proc-boil", "Boiling")) as any).value;
     const r = addOPD(m, {
@@ -419,16 +384,25 @@ describe("I-30: OPD refinement type consistency", () => {
     expect(isOk(r)).toBe(true);
   });
 
-  it("rejects updateOPD changing to invalid refinement (I-30 eager)", () => {
+  it("allows unfold on an object", () => {
     let m = createModel("Test");
-    m = (addThing(m, proc("proc-boil", "Boiling")) as any).value;
-    m = (addOPD(m, {
-      id: "opd-child", name: "Boil Detail", opd_type: "hierarchical",
-      parent_opd: "opd-sd", refines: "proc-boil", refinement_type: "in-zoom",
-    }) as any).value;
-    const r = updateOPD(m, "opd-child", { refinement_type: "unfold" });
-    expect(isErr(r)).toBe(true);
-    if (isErr(r)) expect(r.error.code).toBe("I-30");
+    m = (addThing(m, obj("obj-water", "Water")) as any).value;
+    const r = addOPD(m, {
+      id: "opd-child", name: "Water Unfold", opd_type: "hierarchical",
+      parent_opd: "opd-sd", refines: "obj-water", refinement_type: "unfold",
+    });
+    expect(isOk(r)).toBe(true);
+  });
+
+  it("no I-30 errors in validate for cross-kind refinement", () => {
+    let m = createModel("Test");
+    m = (addThing(m, obj("obj-water", "Water")) as any).value;
+    m = { ...m, opds: new Map(m.opds).set("opd-child", {
+      id: "opd-child", name: "Water Detail", opd_type: "hierarchical",
+      parent_opd: "opd-sd", refines: "obj-water", refinement_type: "in-zoom",
+    }) };
+    const errors = errorsOf(m, "I-30");
+    expect(errors).toHaveLength(0);
   });
 });
 

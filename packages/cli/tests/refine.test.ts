@@ -70,8 +70,11 @@ describe("executeRefine", () => {
     expect(() => executeRefine("proc-nonexistent", { opd: "opd-sd", type: "in-zoom", file: TEST_FILE })).toThrow();
   });
 
-  it("throws on invalid refinement type", () => {
-    // Unfold on process should fail
-    expect(() => executeRefine("proc-heat", { opd: "opd-sd", type: "unfold", file: TEST_FILE })).toThrow();
+  it("allows unfold on process (ISO §14.3)", () => {
+    // ISO 19450: unfold applies to both objects and processes
+    executeRefine("proc-heat", { opd: "opd-sd", type: "unfold", file: TEST_FILE });
+    const { model } = readModel(TEST_FILE);
+    const unfold = [...model.opds.values()].find(o => o.refinement_type === "unfold");
+    expect(unfold).toBeDefined();
   });
 });

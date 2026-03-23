@@ -433,18 +433,7 @@ export function addOPD(
   if (hasRefines !== hasRefinementType) {
     return err({ code: "INCONSISTENT_REFINEMENT", message: `OPD ${opd.id} has refines without refinement_type or vice versa`, entity: opd.id });
   }
-  // I-30: in-zoom must refine a process, unfold must refine an object
-  if (opd.refines !== undefined && opd.refinement_type !== undefined) {
-    const refinesThing = model.things.get(opd.refines);
-    if (refinesThing) {
-      if (opd.refinement_type === "in-zoom" && refinesThing.kind !== "process") {
-        return err({ code: "I-30", message: `In-zoom OPD must refine a process, not ${refinesThing.kind}`, entity: opd.id });
-      }
-      if (opd.refinement_type === "unfold" && refinesThing.kind !== "object") {
-        return err({ code: "I-30", message: `Unfold OPD must refine an object, not ${refinesThing.kind}`, entity: opd.id });
-      }
-    }
-  }
+  // I-30: removed — ISO 19450 §14.2/§14.3 allows in-zoom and unfold on both objects and processes
   return ok(touch({ ...model, opds: new Map(model.opds).set(opd.id, opd) }));
 }
 
@@ -503,9 +492,7 @@ export function refineThing(
   if (!model.appearances.has(thingAppKey)) {
     return err({ code: "NOT_FOUND", message: `Thing ${thingId} has no appearance in OPD ${parentOpdId}`, entity: thingId });
   }
-  if (refinementType === "unfold" && thing.kind !== "object") {
-    return err({ code: "INVALID_REFINEMENT", message: `Unfold only applies to objects, not processes: ${thingId}`, entity: thingId });
-  }
+  // ISO 19450 §14.2/§14.3: both in-zoom and unfold apply to objects and processes
   // I-REFINE-EXT: cannot refine pullback projections (external appearances)
   const thingApp = model.appearances.get(thingAppKey)!;
   if (thingApp.internal === false) {
@@ -936,18 +923,7 @@ export function updateOPD(
   if (hasRefines !== hasRefinementType) {
     return err({ code: "INCONSISTENT_REFINEMENT", message: `OPD ${id} has refines without refinement_type or vice versa`, entity: id });
   }
-  // I-30: in-zoom must refine a process, unfold must refine an object
-  if (updated.refines !== undefined && updated.refinement_type !== undefined) {
-    const refinesThing = model.things.get(updated.refines);
-    if (refinesThing) {
-      if (updated.refinement_type === "in-zoom" && refinesThing.kind !== "process") {
-        return err({ code: "I-30", message: `In-zoom OPD must refine a process, not ${refinesThing.kind}`, entity: id });
-      }
-      if (updated.refinement_type === "unfold" && refinesThing.kind !== "object") {
-        return err({ code: "I-30", message: `Unfold OPD must refine an object, not ${refinesThing.kind}`, entity: id });
-      }
-    }
-  }
+  // I-30: removed — ISO 19450 §14.2/§14.3 allows in-zoom and unfold on both objects and processes
   return ok(touch({ ...model, opds: new Map(model.opds).set(id, updated) }));
 }
 
@@ -1659,20 +1635,7 @@ export function validate(model: Model): InvariantError[] {
   }
 
   // I-30: OPD refines must be process (for in-zoom) or object (for unfold)
-  for (const [id, opd] of model.opds) {
-    if (opd.refines !== undefined) {
-      const refinesThing = model.things.get(opd.refines);
-      if (refinesThing) {
-        // For hierarchical OPDs, refines must match the OPD type
-        if (opd.opd_type === "hierarchical" && opd.refinement_type === "in-zoom" && refinesThing.kind !== "process") {
-          errors.push({ code: "I-30", message: `OPD ${id} in-zoom refines must be a process`, entity: id });
-        }
-        if (opd.opd_type === "hierarchical" && opd.refinement_type === "unfold" && refinesThing.kind !== "object") {
-          errors.push({ code: "I-30", message: `OPD ${id} unfold refines must be an object`, entity: id });
-        }
-      }
-    }
-  }
+  // I-30: removed — ISO 19450 §14.2/§14.3 allows in-zoom and unfold on both objects and processes
 
   // I-STATELESS-STATES: stateless objects cannot have states
   for (const [id, state] of model.states) {

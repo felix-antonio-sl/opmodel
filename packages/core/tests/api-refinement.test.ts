@@ -115,11 +115,10 @@ describe("refineThing", () => {
       expect((result as any).error.code).toBe("INVALID_REFINEMENT");
     });
 
-    it("rejects unfold on process (only objects)", () => {
+    it("allows unfold on process (ISO §14.3)", () => {
       const m = buildTestModel();
       const result = refineThing(m, "proc-make-coffee", "opd-sd", "unfold", "opd-sd1", "SD1");
-      expect(result.ok).toBe(false);
-      expect((result as any).error.code).toBe("INVALID_REFINEMENT");
+      expect(result.ok).toBe(true);
     });
 
     it("I-REFINE-EXT: rejects refining external appearance (pullback projection)", () => {
