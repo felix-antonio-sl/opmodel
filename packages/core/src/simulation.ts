@@ -2,7 +2,7 @@
 // Motor de Simulación ECA (Event-Condition-Action) como Coalgebra
 // Según DA-5: c: ModelState → Event × (Precond → ModelState + 1)
 
-import type { Model, Thing, State, Link, Modifier, OPD, Fan } from "./types";
+import type { Model, Thing, State, Link, Modifier, OPD, Fan, Appearance } from "./types";
 import type { InvariantError, Result } from "./result";
 import { ok, err } from "./result";
 
@@ -175,6 +175,22 @@ export interface ResolvedLink {
   visualSource: string;
   visualTarget: string;
   aggregated: boolean;
+}
+
+// === DA-9: Fiber (derived OPD view) ===
+
+/** Entry in a computed OPD fiber — explicit (stored appearance) or implicit (derived) */
+export interface FiberEntry {
+  thing: Thing;
+  appearance: Appearance;
+  implicit: boolean;  // true = derived from link connectivity, no stored appearance
+}
+
+/** Computed fiber for an OPD: the full derived view over the model graph */
+export interface OpdFiber {
+  things: Map<string, FiberEntry>;  // key: thing ID
+  links: ResolvedLink[];
+  suppressedStates: Map<string, Set<string>>;  // key: thing ID → suppressed state IDs
 }
 
 /**
@@ -383,6 +399,115 @@ export function resolveLinksForOpd(model: Model, opdId: string): ResolvedLink[] 
     if (directParticipants.has(`${rl.visualSource}|${rl.visualTarget}`)) return false;
     return true;
   });
+}
+
+/**
+ * Compute the derived fiber for an OPD (DA-9).
+ * The Model is the "god diagram" (Grothendieck colimit ∫ M).
+ * Each OPD is a fiber π⁻¹(OPD_i) — a computed view over the total graph.
+ *
+ * Returns:
+ *   - things: explicit (with stored appearance) + implicit (connected via link, 1-hop)
+ *   - links: resolved links (delegates to resolveLinksForOpd)
+ *   - suppressedStates: derived state suppression from child in-zoom OPDs
+ */
+export function resolveOpdFiber(model: Model, opdId: string): OpdFiber {
+  // 1. Explicit things: those with appearances in this OPD
+  const things = new Map<string, FiberEntry>();
+  for (const app of model.appearances.values()) {
+    if (app.opd === opdId) {
+      const thing = model.things.get(app.thing);
+      if (thing) {
+        things.set(app.thing, { thing, appearance: app, implicit: false });
+      }
+    }
+  }
+
+  // 2. Resolved links (C-01 distribution, dedup, etc.)
+  const links = resolveLinksForOpd(model, opdId);
+
+  // 3. Implicit things: connected via link to an explicit thing, no appearance in this OPD.
+  //    Only 1-hop from explicit — no cascading.
+  const explicitIds = new Set(things.keys());
+  let implicitIndex = 0;
+  for (const link of model.links.values()) {
+    addImplicit(link.source, link.target);
+    addImplicit(link.target, link.source);
+  }
+
+  function addImplicit(anchorId: string, candidateId: string): void {
+    if (!explicitIds.has(anchorId)) return;
+    if (things.has(candidateId)) return;
+    const thing = model.things.get(candidateId);
+    if (!thing) return;
+    things.set(candidateId, {
+      thing,
+      appearance: {
+        thing: candidateId,
+        opd: opdId,
+        x: 600 + (implicitIndex % 3) * 150,
+        y: 50 + Math.floor(implicitIndex / 3) * 100,
+        w: thing.kind === "process" ? 140 : 120,
+        h: 60,
+      },
+      implicit: true,
+    });
+    implicitIndex++;
+  }
+
+  // 4. State suppression — derived from child in-zoom OPDs (replaces stored C-04)
+  const suppressedStates = computeStateSuppression(model, opdId);
+
+  return { things, links, suppressedStates };
+}
+
+/**
+ * Compute state suppression for an OPD from its child in-zoom refinements.
+ * A state s is suppressed in OPD_i when:
+ *   ∃ child in-zoom OPD refining thing T:
+ *     s.parent is an external thing in child OPD ∧
+ *     ∃ link between s.parent and T referencing s
+ */
+function computeStateSuppression(
+  model: Model,
+  opdId: string,
+): Map<string, Set<string>> {
+  const result = new Map<string, Set<string>>();
+
+  for (const opd of model.opds.values()) {
+    if (opd.parent_opd !== opdId) continue;
+    if (opd.refinement_type !== "in-zoom") continue;
+    if (!opd.refines) continue;
+
+    const refinedThingId = opd.refines;
+
+    // External things in the child OPD: have appearance, not internal, not the container
+    for (const app of model.appearances.values()) {
+      if (app.opd !== opd.id) continue;
+      if (app.thing === refinedThingId) continue;
+      if (app.internal) continue;
+
+      const extThingId = app.thing;
+
+      for (const link of model.links.values()) {
+        const connects =
+          (link.source === extThingId && link.target === refinedThingId) ||
+          (link.target === extThingId && link.source === refinedThingId);
+        if (!connects) continue;
+
+        if (link.source_state) {
+          if (!result.has(extThingId)) result.set(extThingId, new Set());
+          result.get(extThingId)!.add(link.source_state);
+        }
+        if (link.target_state) {
+          if (!result.has(extThingId)) result.set(extThingId, new Set());
+          result.get(extThingId)!.add(link.target_state);
+        }
+      }
+    }
+  }
+
+  return result;
 }
 
 // === Coalgebra: c: ModelState → Event × (Precond → ModelState + 1) ===

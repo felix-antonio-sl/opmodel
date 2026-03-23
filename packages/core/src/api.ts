@@ -582,29 +582,8 @@ export function refineThing(
     index++;
   }
 
-  // C-04: Auto state suppression (ISO §14.2.1)
-  // For in-zoom: suppress states in parent appearance that are referenced by links to the refined process.
-  if (refinementType === "in-zoom") {
-    for (const extThingId of externalThings) {
-      const parentKey = appearanceKey(extThingId, parentOpdId);
-      const parentApp = model.appearances.get(parentKey);
-      if (!parentApp) continue;
-      // Collect state IDs referenced in links between this external thing and the refined process
-      const stateIds = new Set<string>();
-      for (const link of model.links.values()) {
-        const connects = (link.source === extThingId && link.target === thingId)
-          || (link.target === extThingId && link.source === thingId);
-        if (!connects) continue;
-        if (link.source_state) stateIds.add(link.source_state);
-        if (link.target_state) stateIds.add(link.target_state);
-      }
-      if (stateIds.size > 0) {
-        const existing = new Set(parentApp.suppressed_states ?? []);
-        for (const sid of stateIds) existing.add(sid);
-        appearances.set(parentKey, { ...parentApp, suppressed_states: [...existing] });
-      }
-    }
-  }
+  // C-04: State suppression is now computed by resolveOpdFiber() (DA-9).
+  // No longer stored in Appearance.suppressed_states.
 
   return ok(touch({ ...model, opds, appearances }));
 }
@@ -1891,4 +1870,84 @@ export function findStructuralForks(resolvedLinks: ResolvedLink[], minChildren: 
   }
 
   return [...groups.values()].filter(g => g.children.length >= minChildren);
+}
+
+// ── DA-9: Bring Connected Things ──────────────────────────────────────
+
+const PROCEDURAL_TYPES = new Set<string>([
+  "effect", "consumption", "result", "input", "output",
+  "agent", "instrument", "invocation", "exception",
+]);
+
+/**
+ * Materialize implicit things as explicit appearances in an OPD.
+ * For each thing T' connected to `thingId` via link (matching filter),
+ * that does NOT already have an appearance in `opdId`, create one.
+ *
+ * This is the DA-9 pullback π*(T, OPD_i) materialized.
+ */
+export function bringConnectedThings(
+  model: Model,
+  thingId: string,
+  opdId: string,
+  filter: "procedural" | "structural" | "all" = "all",
+): Result<Model, InvariantError> {
+  if (!model.things.has(thingId)) {
+    return err({ code: "NOT_FOUND", message: `Thing not found: ${thingId}`, entity: thingId });
+  }
+  if (!model.opds.has(opdId)) {
+    return err({ code: "NOT_FOUND", message: `OPD not found: ${opdId}`, entity: opdId });
+  }
+
+  // Collect existing appearances in this OPD
+  const existing = new Set<string>();
+  for (const app of model.appearances.values()) {
+    if (app.opd === opdId) existing.add(app.thing);
+  }
+
+  // Find connected things via links, filtered by type
+  const connected = new Set<string>();
+  for (const link of model.links.values()) {
+    const isProcedural = PROCEDURAL_TYPES.has(link.type);
+    const isStructural = STRUCTURAL_TYPES.has(link.type);
+    if (filter === "procedural" && !isProcedural) continue;
+    if (filter === "structural" && !isStructural) continue;
+
+    if (link.source === thingId && !existing.has(link.target)) {
+      connected.add(link.target);
+    }
+    if (link.target === thingId && !existing.has(link.source)) {
+      connected.add(link.source);
+    }
+  }
+
+  if (connected.size === 0) {
+    return ok(model); // nothing to materialize
+  }
+
+  // Get anchor thing appearance for positioning
+  const anchorKey = appearanceKey(thingId, opdId);
+  const anchorApp = model.appearances.get(anchorKey);
+  const baseX = anchorApp ? anchorApp.x + anchorApp.w + 50 : 50;
+  const baseY = anchorApp ? anchorApp.y : 50;
+
+  const appearances = new Map(model.appearances);
+  let index = 0;
+  for (const connId of connected) {
+    const thing = model.things.get(connId);
+    if (!thing) continue;
+    const key = appearanceKey(connId, opdId);
+    if (appearances.has(key)) continue; // double check
+    appearances.set(key, {
+      thing: connId,
+      opd: opdId,
+      x: baseX + (index % 3) * 150,
+      y: baseY + Math.floor(index / 3) * 100,
+      w: thing.kind === "process" ? 140 : 120,
+      h: 60,
+    });
+    index++;
+  }
+
+  return ok(touch({ ...model, appearances }));
 }

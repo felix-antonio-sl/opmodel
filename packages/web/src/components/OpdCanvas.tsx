@@ -1,6 +1,6 @@
 import { useRef, useState, useCallback, useMemo, useEffect } from "react";
 import type { Model, Thing, State, Link, Appearance, Modifier, OPD, Fan } from "@opmodel/core";
-import { createInitialState, resolveLinksForOpd, findConsumptionResultPairs, findStructuralForks, transformingMode, getSemiFoldedParts, type ModelState, type StructuralFork } from "@opmodel/core";
+import { createInitialState, resolveOpdFiber, findConsumptionResultPairs, findStructuralForks, transformingMode, getSemiFoldedParts, type ModelState, type StructuralFork, type OpdFiber } from "@opmodel/core";
 import type { Command, EditorMode, LinkTypeChoice, SimulationUIState } from "../lib/commands";
 import { genId } from "../lib/ids";
 import {
@@ -877,18 +877,36 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
     if (mode !== "addLink") setLinkSource(null);
   }, [mode]);
 
-  // Collect appearances for this OPD
+  // DA-9: Compute fiber (derived OPD view)
+  const fiber = useMemo(() => resolveOpdFiber(model, opdId), [model, opdId]);
+
+  // Derive appearances map from fiber (explicit only — implicit things rendered separately)
   const appearances = useMemo(() => {
     const map = new Map<string, Appearance>();
-    for (const app of model.appearances.values()) {
-      if (app.opd === opdId) map.set(app.thing, app);
+    for (const [id, entry] of fiber.things) {
+      if (!entry.implicit) map.set(id, entry.appearance);
     }
     return map;
-  }, [model, opdId]);
+  }, [fiber]);
+
+  // Implicit things set (DA-9: connected but no stored appearance)
+  const implicitThings = useMemo(() => {
+    const set = new Set<string>();
+    for (const [id, entry] of fiber.things) {
+      if (entry.implicit) set.add(id);
+    }
+    return set;
+  }, [fiber]);
+
+  // DA-9: filter suppressed states via fiber (computed, not stored)
+  const visibleStatesFor = useCallback((allStates: State[], thingId: string) => {
+    const suppressed = fiber.suppressedStates.get(thingId);
+    return suppressed ? allStates.filter(s => !suppressed.has(s.id)) : allStates;
+  }, [fiber.suppressedStates]);
 
   // Collect visible links (with endpoint resolution for in-zoom containers)
   const visibleLinks = useMemo(() => {
-    const resolved = resolveLinksForOpd(model, opdId);
+    const resolved = fiber.links;
     const entries = resolved.map(rl => ({
       link: rl.link,
       modifier: [...model.modifiers.values()].find((m) => m.over === rl.link.id),
@@ -1391,9 +1409,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
                   const oy = draggedThings.has(objectEnd) ? dragDelta.y : 0;
                   const adj = { x: objApp.x + ox, y: objApp.y + oy, w: objApp.w, h: objApp.h };
                   const allObjStates = statesForThing(model, objectEnd);
-                  const visObjStates = objApp.suppressed_states
-                    ? allObjStates.filter((s) => !objApp.suppressed_states!.includes(s.id))
-                    : allObjStates;
+                  const visObjStates = visibleStatesFor(allObjStates, objectEnd);
                   const pill = statePillRect(adj, visObjStates, link.source_state);
                   if (pill) {
                     if (objectEnd === visualSource) { srcRect = pill; srcKindOverride = "object"; }
@@ -1409,9 +1425,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
                   const oy = draggedThings.has(objectEnd) ? dragDelta.y : 0;
                   const adj = { x: objApp.x + ox, y: objApp.y + oy, w: objApp.w, h: objApp.h };
                   const allObjStates = statesForThing(model, objectEnd);
-                  const visObjStates = objApp.suppressed_states
-                    ? allObjStates.filter((s) => !objApp.suppressed_states!.includes(s.id))
-                    : allObjStates;
+                  const visObjStates = visibleStatesFor(allObjStates, objectEnd);
                   const pill = statePillRect(adj, visObjStates, link.target_state);
                   if (pill) {
                     if (objectEnd === visualTarget) { tgtRect = pill; tgtKindOverride = "object"; }
@@ -1428,9 +1442,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
                   const oy = draggedThings.has(visualSource) ? dragDelta.y : 0;
                   const adj = { x: srcApp.x + ox, y: srcApp.y + oy, w: srcApp.w, h: srcApp.h };
                   const allSrcStates = statesForThing(model, visualSource);
-                  const visSrcStates = srcApp.suppressed_states
-                    ? allSrcStates.filter((s) => !srcApp.suppressed_states!.includes(s.id))
-                    : allSrcStates;
+                  const visSrcStates = visibleStatesFor(allSrcStates, visualSource);
                   const pill = statePillRect(adj, visSrcStates, link.source_state);
                   if (pill) { srcRect = pill; srcKindOverride = "object"; }
                 }
@@ -1442,9 +1454,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
                   const oy = draggedThings.has(visualTarget) ? dragDelta.y : 0;
                   const adj = { x: tgtApp.x + ox, y: tgtApp.y + oy, w: tgtApp.w, h: tgtApp.h };
                   const allTgtStates = statesForThing(model, visualTarget);
-                  const visTgtStates = tgtApp.suppressed_states
-                    ? allTgtStates.filter((s) => !tgtApp.suppressed_states!.includes(s.id))
-                    : allTgtStates;
+                  const visTgtStates = visibleStatesFor(allTgtStates, visualTarget);
                   const pill = statePillRect(adj, visTgtStates, link.target_state);
                   if (pill) { tgtRect = pill; tgtKindOverride = "object"; }
                 }
@@ -1690,9 +1700,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
             const thing = model.things.get(thingId);
             if (!thing) return null;
             const allStates = statesForThing(model, thingId);
-            const states = app.suppressed_states
-              ? allStates.filter(s => !app.suppressed_states!.includes(s.id))
-              : allStates;
+            const states = visibleStatesFor(allStates, thingId);
             const isDragging = draggedThings.has(thingId);
             const isLinkSource = linkSource === thingId;
             const isAppExternal = app.internal === false;
@@ -1788,9 +1796,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
             const thing = model.things.get(selectedThing);
             if (!thing) return null;
             const allStates = statesForThing(model, selectedThing);
-            const visStates = app.suppressed_states
-              ? allStates.filter(s => !app.suppressed_states!.includes(s.id))
-              : allStates;
+            const visStates = visibleStatesFor(allStates, selectedThing);
             const extraH = visStates.length > 0 ? 24 : 0;
             const rx = resizeTarget === selectedThing ? resizeDelta.x : 0;
             const ry = resizeTarget === selectedThing ? resizeDelta.y : 0;

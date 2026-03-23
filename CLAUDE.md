@@ -10,7 +10,7 @@ All documentation follows OPM (ISO 19450) guidelines and KODA Framework architec
 
 ## Repository Structure
 
-- **packages/core/** — Domain Engine (TypeScript, zero dependencies). Types, Result monad, createModel, serialization, CRUD API, 37 invariant guards, OPL lens, simulation engine (with in-zoom recursion). 320+ tests.
+- **packages/core/** — Domain Engine (TypeScript, zero dependencies). Types, Result monad, createModel, serialization, CRUD API, 37 invariant guards, OPL lens, simulation engine (with in-zoom recursion), OPD fiber computation (DA-9). 550+ tests.
 - **packages/cli/** — CLI `opmod` command (9 commands: new, add, remove, list, show, validate, update, refine, opl). 90+ tests.
 - **packages/web/** — Web editor (React, full CRUD, OPL panel with 3 tabs, undo/redo, import/export).
 - **docs/superpowers/specs/** — Product specifications and requirements. Central artifacts: `opm-modeling-app-backlog-lean.md`, `opm-data-model.md` (Rev.3), `opm-json-schema.json`.
@@ -40,10 +40,12 @@ All documentation follows OPM (ISO 19450) guidelines and KODA Framework architec
 | DA-6 | OPL Engine as Bidirectional Lens | Implemented (expose/applyOplEdit/render/editsFrom, PutGet+GetPut verified) |
 | DA-7 | Link Refinement Fibration (consumption+result visual merge) | Implemented (Opción D: compute on demand, zero schema change, `findConsumptionResultPairs`) |
 | DA-8 | Effect Fibration (effect ≅ 4 visual modes via transformingMode) | Implemented (`transformingMode` functor, `adjustEffectEndpoints`, per-mode markers+routing) |
+| DA-9 | Vistas Derivadas — God Diagram + Computed Fibers | Implemented (`resolveOpdFiber`, `bringConnectedThings`, derived state suppression, OpdCanvas consumes fiber) |
 
 ## Key Domain Concepts
 
 - **OPM (Object Process Methodology):** ISO 19450 standard for systems modeling using Things (objects/processes), Links, States, and OPDs (Object Process Diagrams).
+- **God Diagram (DA-9):** The Model is the Grothendieck colimit `∫ M` — a single total graph containing ALL things, links, and states. OPDs are computed fibers `π⁻¹(OPD_i)` over this graph. Appearances are positioning hints, not the source of truth for visibility. `resolveOpdFiber()` computes the derived view; `bringConnectedThings()` materializes implicit things as explicit.
 - **OPD Tree:** Hierarchical diagram structure forming a fibration π: C_opm → C_opd_tree.
 - **Bimodality:** OPM models have dual graphical (OPD) and textual (OPL) representations that must stay synchronized (lens laws: PutGet, GetPut).
 - **ECA (Event-Condition-Action):** Simulation engine modeled as coalgebra S → F(S).
@@ -61,7 +63,7 @@ L-M1-02 → L-M1-07 (In-zoom)
 ## Development
 
 - **Runtime:** Bun v1.3.10 (`~/.bun/bin/bun`). Requiere: `export BUN_INSTALL="$HOME/.bun" && export PATH="$BUN_INSTALL/bin:$PATH"`
-- **Tests:** `bunx vitest run` (all 551 tests from root). Single file: `bunx vitest run packages/core/tests/api.test.ts`
+- **Tests:** `bunx vitest run` (all 757 tests from root). Single file: `bunx vitest run packages/core/tests/api.test.ts`
 - **Type check:** `cd packages/core && bunx tsc --noEmit` (7 pre-existing TS2532 in test files — known, vitest passes)
 - **Monorepo:** Bun workspaces (root `package.json`)
 - **Pattern:** Immutable Model — funciones puras retornan `Result<Model, InvariantError>`, Maps para O(1) lookups

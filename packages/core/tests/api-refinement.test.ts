@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { createModel } from "../src/model";
 import { addThing, addOPD, addAppearance, addLink, addState, updateLink, refineThing, removeThing, validate } from "../src/api";
 import { appearanceKey } from "../src/helpers";
+import { resolveOpdFiber } from "../src/simulation";
 
 function unwrap<T, E>(result: { ok: boolean; value?: T; error?: E }): T {
   if (!result.ok) throw new Error(`Expected ok, got error: ${JSON.stringify((result as any).error)}`);
@@ -380,31 +381,30 @@ describe("validate() I-CONTOUR-RESTRICT (C-02)", () => {
   });
 });
 
-describe("auto state suppression C-04", () => {
-  it("in-zoom suppresses states referenced in links to refined process", () => {
+describe("auto state suppression C-04 (DA-9: computed by fiber)", () => {
+  it("refineThing no longer stores suppressed_states — fiber computes them", () => {
     let m = buildTestModel();
-    // buildTestModel has lnk-1: effect, source=obj-water, target=proc-make-coffee
     m = unwrap(addState(m, { id: "st-cold", parent: "obj-water", name: "cold", initial: true, final: false, default: true }));
     m = unwrap(addState(m, { id: "st-hot", parent: "obj-water", name: "hot", initial: false, final: true, default: false }));
-    // source_state belongs to source (obj-water) — valid
     m = unwrap(updateLink(m, "lnk-1", { source_state: "st-cold" }));
     m = unwrap(refineThing(m, "proc-make-coffee", "opd-sd", "in-zoom", "opd-sd1", "SD1"));
     const parentApp = m.appearances.get(appearanceKey("obj-water", "opd-sd"));
     expect(parentApp).toBeDefined();
-    expect(parentApp!.suppressed_states).toBeDefined();
-    expect(parentApp!.suppressed_states).toContain("st-cold");
+    // DA-9: suppressed_states is NOT stored in appearance anymore
+    expect(parentApp!.suppressed_states).toBeUndefined();
+    // Instead, fiber computes it
+    const fiber = resolveOpdFiber(m, "opd-sd");
+    expect(fiber.suppressedStates.get("obj-water")?.has("st-cold")).toBe(true);
   });
 
-  it("does NOT suppress states not referenced in links", () => {
+  it("fiber does NOT suppress states not referenced in links", () => {
     let m = buildTestModel();
     m = unwrap(addState(m, { id: "st-cold", parent: "obj-water", name: "cold", initial: true, final: false, default: true }));
     m = unwrap(addState(m, { id: "st-hot", parent: "obj-water", name: "hot", initial: false, final: true, default: false }));
-    // lnk-1 is effect WITHOUT state references
     m = unwrap(refineThing(m, "proc-make-coffee", "opd-sd", "in-zoom", "opd-sd1", "SD1"));
-    const parentApp = m.appearances.get(appearanceKey("obj-water", "opd-sd"));
-    expect(parentApp).toBeDefined();
+    const fiber = resolveOpdFiber(m, "opd-sd");
     // No state-specified links → no suppression
-    expect(parentApp!.suppressed_states).toBeUndefined();
+    expect(fiber.suppressedStates.has("obj-water")).toBe(false);
   });
 
   it("unfold does NOT auto-suppress", () => {
@@ -417,27 +417,7 @@ describe("auto state suppression C-04", () => {
     m = unwrap(addState(m, { id: "st-on", parent: "obj-engine", name: "on", initial: true, final: false, default: true }));
     m = unwrap(addState(m, { id: "st-off", parent: "obj-engine", name: "off", initial: false, final: true, default: false }));
     m = unwrap(refineThing(m, "obj-car", "opd-sd", "unfold", "opd-unfold", "SD-unfold"));
-    const parentApp = m.appearances.get(appearanceKey("obj-engine", "opd-sd"));
-    expect(parentApp).toBeDefined();
-    expect(parentApp!.suppressed_states).toBeUndefined();
-  });
-
-  it("preserves existing manual suppression", () => {
-    let m = buildTestModel();
-    m = unwrap(addState(m, { id: "st-cold", parent: "obj-water", name: "cold", initial: true, final: false, default: true }));
-    m = unwrap(addState(m, { id: "st-hot", parent: "obj-water", name: "hot", initial: false, final: true, default: false }));
-    m = unwrap(addState(m, { id: "st-warm", parent: "obj-water", name: "warm", initial: false, final: false, default: false }));
-    // Manually suppress st-warm before refining
-    const key = appearanceKey("obj-water", "opd-sd");
-    const app = m.appearances.get(key)!;
-    const appearances = new Map(m.appearances);
-    appearances.set(key, { ...app, suppressed_states: ["st-warm"] });
-    m = { ...m, appearances };
-    // Update existing effect link lnk-1 with source_state
-    m = unwrap(updateLink(m, "lnk-1", { source_state: "st-cold" }));
-    m = unwrap(refineThing(m, "proc-make-coffee", "opd-sd", "in-zoom", "opd-sd1", "SD1"));
-    const parentApp = m.appearances.get(key);
-    expect(parentApp!.suppressed_states).toContain("st-warm"); // preserved
-    expect(parentApp!.suppressed_states).toContain("st-cold"); // auto-added
+    const fiber = resolveOpdFiber(m, "opd-sd");
+    expect(fiber.suppressedStates.size).toBe(0);
   });
 });
