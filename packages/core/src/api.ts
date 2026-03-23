@@ -7,6 +7,7 @@ import type { InvariantError } from "./result";
 import { ok, err, type Result } from "./result";
 import { collectAllIds, touch, cleanPatch, appearanceKey } from "./helpers";
 import type { ResolvedLink } from "./simulation";
+import { STRUCTURAL_TYPES, structuralParentEnd, getStructuralChildren } from "./structural";
 
 export function addThing(
   model: Model,
@@ -547,27 +548,12 @@ export function refineThing(
     }
   }
 
-  // Unfold: collect structural children (parts/features) of thingId.
-  // Convention detection: count structural links per direction to determine
-  // whether thingId is parent-as-source (canvas) or parent-as-target (old).
+  // Unfold: collect structural children via centralized utility.
   if (refinementType === "unfold") {
-    let asSource = 0, asTarget = 0;
-    for (const link of model.links.values()) {
-      if (link.type !== "aggregation" && link.type !== "exhibition") continue;
-      if (link.source === thingId) asSource++;
-      if (link.target === thingId) asTarget++;
-    }
-    for (const link of model.links.values()) {
-      if (link.type !== "aggregation" && link.type !== "exhibition") continue;
-      // If thingId appears more as source → canvas convention (source=parent)
-      if (asSource > asTarget && link.source === thingId &&
-          thingsInFiber.has(link.target) && link.target !== thingId) {
-        externalThings.add(link.target);
-      }
-      // If thingId appears more as target → old convention (target=parent)
-      if (asTarget >= asSource && link.target === thingId &&
-          thingsInFiber.has(link.source) && link.source !== thingId) {
-        externalThings.add(link.source);
+    const children = getStructuralChildren(model, thingId, new Set(["aggregation", "exhibition"]));
+    for (const { childId } of children) {
+      if (thingsInFiber.has(childId) && childId !== thingId) {
+        externalThings.add(childId);
       }
     }
   }
@@ -1192,23 +1178,10 @@ export function getSemiFoldedParts(
   if (!thing || thing.kind !== "object") return { visible: [], hiddenCount: 0 };
 
   const entries: SemiFoldEntry[] = [];
-  for (const link of model.links.values()) {
-    // aggregation: source=whole, target=part → collect parts
-    if (link.type === "aggregation" && link.source === thingId) {
-      const part = model.things.get(link.target);
-      if (part) entries.push({ thingId: link.target, name: part.name, kind: part.kind, linkType: "aggregation" });
-    }
-    // exhibition: direction-agnostic — handles both source=feature/target=exhibitor
-    // and canvas-created source=exhibitor/target=feature
-    if (link.type === "exhibition") {
-      if (link.target === thingId && link.source !== thingId) {
-        const feature = model.things.get(link.source);
-        if (feature) entries.push({ thingId: link.source, name: feature.name, kind: feature.kind, linkType: "exhibition" });
-      } else if (link.source === thingId && link.target !== thingId) {
-        const feature = model.things.get(link.target);
-        if (feature) entries.push({ thingId: link.target, name: feature.name, kind: feature.kind, linkType: "exhibition" });
-      }
-    }
+  const children = getStructuralChildren(model, thingId, new Set(["aggregation", "exhibition"]));
+  for (const { childId, link } of children) {
+    const child = model.things.get(childId);
+    if (child) entries.push({ thingId: childId, name: child.name, kind: child.kind, linkType: link.type as "aggregation" | "exhibition" });
   }
 
   entries.sort((a, b) => a.name.localeCompare(b.name));
@@ -1846,40 +1819,31 @@ export interface StructuralFork {
  * in either direction (source=feature→target=exhibitor or vice versa).
  */
 export function findStructuralForks(resolvedLinks: ResolvedLink[], minChildren: number = 2): StructuralFork[] {
-  const STRUCTURAL = new Set(["aggregation", "exhibition", "generalization", "classification"]);
   const groups = new Map<string, StructuralFork>();
+
+  // Detect convention per type using all resolved links
+  const conventions = new Map<string, "source" | "target">();
+  for (const type of STRUCTURAL_TYPES) {
+    conventions.set(type, structuralParentEnd(resolvedLinks.map(rl => ({
+      type: rl.link.type, source: rl.visualSource, target: rl.visualTarget,
+    })), type));
+  }
 
   for (const rl of resolvedLinks) {
     const type = rl.link.type;
-    if (!STRUCTURAL.has(type)) continue;
+    if (!STRUCTURAL_TYPES.has(type)) continue;
     const sType = type as StructuralFork["type"];
+    const parentEnd = conventions.get(type)!;
+    const parentId = parentEnd === "source" ? rl.visualSource : rl.visualTarget;
+    const childId = parentEnd === "source" ? rl.visualTarget : rl.visualSource;
+    const childIsTarget = parentEnd === "source";
 
-    // Group by source as parent
-    const srcKey = `src::${type}::${rl.visualSource}`;
-    if (!groups.has(srcKey)) {
-      groups.set(srcKey, { type: sType, parentId: rl.visualSource, children: [] });
+    const key = `${type}::${parentId}`;
+    if (!groups.has(key)) {
+      groups.set(key, { type: sType, parentId, children: [] });
     }
-    groups.get(srcKey)!.children.push({ link: rl.link, childId: rl.visualTarget, childIsTarget: true });
-
-    // Group by target as parent
-    const tgtKey = `tgt::${type}::${rl.visualTarget}`;
-    if (!groups.has(tgtKey)) {
-      groups.set(tgtKey, { type: sType, parentId: rl.visualTarget, children: [] });
-    }
-    groups.get(tgtKey)!.children.push({ link: rl.link, childId: rl.visualSource, childIsTarget: false });
+    groups.get(key)!.children.push({ link: rl.link, childId, childIsTarget });
   }
 
-  // Pick largest non-overlapping forks (prevent a link from appearing in two forks)
-  const candidates = [...groups.values()]
-    .filter(g => g.children.length >= minChildren)
-    .sort((a, b) => b.children.length - a.children.length);
-
-  const used = new Set<string>();
-  const result: StructuralFork[] = [];
-  for (const fork of candidates) {
-    if (fork.children.some(c => used.has(c.link.id))) continue;
-    result.push(fork);
-    for (const c of fork.children) used.add(c.link.id);
-  }
-  return result;
+  return [...groups.values()].filter(g => g.children.length >= minChildren);
 }

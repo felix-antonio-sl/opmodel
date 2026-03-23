@@ -246,16 +246,21 @@ describe("refineThing", () => {
       expect(model.appearances.get("obj-engine::opd-sd1")!.internal).toBe(false);
     });
 
-    it("unfold works with exhibition in canvas convention (source=exhibitor, target=feature)", () => {
+    it("unfold works with exhibition in both conventions", () => {
+      // Post-fix convention: source=feature, target=exhibitor (2+ links for hub detection)
       let m = createModel("test");
       m = unwrap(addThing(m, { id: "obj-car", kind: "object", name: "Car", essence: "physical", affiliation: "systemic" }));
       m = unwrap(addThing(m, { id: "obj-color", kind: "object", name: "Color", essence: "informatical", affiliation: "systemic" }));
+      m = unwrap(addThing(m, { id: "obj-weight", kind: "object", name: "Weight", essence: "informatical", affiliation: "systemic" }));
       m = unwrap(addAppearance(m, { thing: "obj-car", opd: "opd-sd", x: 100, y: 100, w: 150, h: 80 }));
       m = unwrap(addAppearance(m, { thing: "obj-color", opd: "opd-sd", x: 50, y: 200, w: 120, h: 60 }));
-      // Canvas convention (pre-fix): source=Car(exhibitor), target=Color(feature)
+      m = unwrap(addAppearance(m, { thing: "obj-weight", opd: "opd-sd", x: 200, y: 200, w: 120, h: 60 }));
+      // Canvas convention (pre-fix): source=exhibitor, target=feature (hub = exhibitor with 2+ links)
       m = unwrap(addLink(m, { id: "lnk-exh1", type: "exhibition", source: "obj-car", target: "obj-color" }));
+      m = unwrap(addLink(m, { id: "lnk-exh2", type: "exhibition", source: "obj-car", target: "obj-weight" }));
       const model = unwrap(refineThing(m, "obj-car", "opd-sd", "unfold", "opd-sd1", "SD1"));
       expect(model.appearances.has("obj-color::opd-sd1")).toBe(true);
+      expect(model.appearances.has("obj-weight::opd-sd1")).toBe(true);
       expect(model.appearances.get("obj-color::opd-sd1")!.internal).toBe(false);
     });
   });

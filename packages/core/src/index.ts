@@ -57,3 +57,9 @@ export {
   type ExecutableProcess,
   type ResolvedLink,
 } from "./simulation";
+export {
+  STRUCTURAL_TYPES,
+  structuralParentEnd,
+  getStructuralChildren,
+  getStructuralParent,
+} from "./structural";
