@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { createModel } from "../src/model";
-import { addThing, addOPD, addAppearance, addLink, refineThing, removeThing, validate } from "../src/api";
+import { addThing, addOPD, addAppearance, addLink, addState, updateLink, refineThing, removeThing, validate } from "../src/api";
+import { appearanceKey } from "../src/helpers";
 
 function unwrap<T, E>(result: { ok: boolean; value?: T; error?: E }): T {
   if (!result.ok) throw new Error(`Expected ok, got error: ${JSON.stringify((result as any).error)}`);
@@ -376,5 +377,67 @@ describe("validate() I-CONTOUR-RESTRICT (C-02)", () => {
     // proc-make-coffee not yet in-zoomed
     const errors = validate(m);
     expect(errors.some(e => e.code === "I-CONTOUR-RESTRICT")).toBe(false);
+  });
+});
+
+describe("auto state suppression C-04", () => {
+  it("in-zoom suppresses states referenced in links to refined process", () => {
+    let m = buildTestModel();
+    // buildTestModel has lnk-1: effect, source=obj-water, target=proc-make-coffee
+    m = unwrap(addState(m, { id: "st-cold", parent: "obj-water", name: "cold", initial: true, final: false, default: true }));
+    m = unwrap(addState(m, { id: "st-hot", parent: "obj-water", name: "hot", initial: false, final: true, default: false }));
+    // source_state belongs to source (obj-water) — valid
+    m = unwrap(updateLink(m, "lnk-1", { source_state: "st-cold" }));
+    m = unwrap(refineThing(m, "proc-make-coffee", "opd-sd", "in-zoom", "opd-sd1", "SD1"));
+    const parentApp = m.appearances.get(appearanceKey("obj-water", "opd-sd"));
+    expect(parentApp).toBeDefined();
+    expect(parentApp!.suppressed_states).toBeDefined();
+    expect(parentApp!.suppressed_states).toContain("st-cold");
+  });
+
+  it("does NOT suppress states not referenced in links", () => {
+    let m = buildTestModel();
+    m = unwrap(addState(m, { id: "st-cold", parent: "obj-water", name: "cold", initial: true, final: false, default: true }));
+    m = unwrap(addState(m, { id: "st-hot", parent: "obj-water", name: "hot", initial: false, final: true, default: false }));
+    // lnk-1 is effect WITHOUT state references
+    m = unwrap(refineThing(m, "proc-make-coffee", "opd-sd", "in-zoom", "opd-sd1", "SD1"));
+    const parentApp = m.appearances.get(appearanceKey("obj-water", "opd-sd"));
+    expect(parentApp).toBeDefined();
+    // No state-specified links → no suppression
+    expect(parentApp!.suppressed_states).toBeUndefined();
+  });
+
+  it("unfold does NOT auto-suppress", () => {
+    let m = createModel("test");
+    m = unwrap(addThing(m, { id: "obj-car", kind: "object", name: "Car", essence: "physical", affiliation: "systemic" }));
+    m = unwrap(addThing(m, { id: "obj-engine", kind: "object", name: "Engine", essence: "physical", affiliation: "systemic" }));
+    m = unwrap(addAppearance(m, { thing: "obj-car", opd: "opd-sd", x: 100, y: 100, w: 120, h: 60 }));
+    m = unwrap(addAppearance(m, { thing: "obj-engine", opd: "opd-sd", x: 100, y: 200, w: 120, h: 60 }));
+    m = unwrap(addLink(m, { id: "lnk-agg", type: "aggregation", source: "obj-car", target: "obj-engine" }));
+    m = unwrap(addState(m, { id: "st-on", parent: "obj-engine", name: "on", initial: true, final: false, default: true }));
+    m = unwrap(addState(m, { id: "st-off", parent: "obj-engine", name: "off", initial: false, final: true, default: false }));
+    m = unwrap(refineThing(m, "obj-car", "opd-sd", "unfold", "opd-unfold", "SD-unfold"));
+    const parentApp = m.appearances.get(appearanceKey("obj-engine", "opd-sd"));
+    expect(parentApp).toBeDefined();
+    expect(parentApp!.suppressed_states).toBeUndefined();
+  });
+
+  it("preserves existing manual suppression", () => {
+    let m = buildTestModel();
+    m = unwrap(addState(m, { id: "st-cold", parent: "obj-water", name: "cold", initial: true, final: false, default: true }));
+    m = unwrap(addState(m, { id: "st-hot", parent: "obj-water", name: "hot", initial: false, final: true, default: false }));
+    m = unwrap(addState(m, { id: "st-warm", parent: "obj-water", name: "warm", initial: false, final: false, default: false }));
+    // Manually suppress st-warm before refining
+    const key = appearanceKey("obj-water", "opd-sd");
+    const app = m.appearances.get(key)!;
+    const appearances = new Map(m.appearances);
+    appearances.set(key, { ...app, suppressed_states: ["st-warm"] });
+    m = { ...m, appearances };
+    // Update existing effect link lnk-1 with source_state
+    m = unwrap(updateLink(m, "lnk-1", { source_state: "st-cold" }));
+    m = unwrap(refineThing(m, "proc-make-coffee", "opd-sd", "in-zoom", "opd-sd1", "SD1"));
+    const parentApp = m.appearances.get(key);
+    expect(parentApp!.suppressed_states).toContain("st-warm"); // preserved
+    expect(parentApp!.suppressed_states).toContain("st-cold"); // auto-added
   });
 });

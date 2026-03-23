@@ -582,6 +582,30 @@ export function refineThing(
     index++;
   }
 
+  // C-04: Auto state suppression (ISO §14.2.1)
+  // For in-zoom: suppress states in parent appearance that are referenced by links to the refined process.
+  if (refinementType === "in-zoom") {
+    for (const extThingId of externalThings) {
+      const parentKey = appearanceKey(extThingId, parentOpdId);
+      const parentApp = model.appearances.get(parentKey);
+      if (!parentApp) continue;
+      // Collect state IDs referenced in links between this external thing and the refined process
+      const stateIds = new Set<string>();
+      for (const link of model.links.values()) {
+        const connects = (link.source === extThingId && link.target === thingId)
+          || (link.target === extThingId && link.source === thingId);
+        if (!connects) continue;
+        if (link.source_state) stateIds.add(link.source_state);
+        if (link.target_state) stateIds.add(link.target_state);
+      }
+      if (stateIds.size > 0) {
+        const existing = new Set(parentApp.suppressed_states ?? []);
+        for (const sid of stateIds) existing.add(sid);
+        appearances.set(parentKey, { ...parentApp, suppressed_states: [...existing] });
+      }
+    }
+  }
+
   return ok(touch({ ...model, opds, appearances }));
 }
 
