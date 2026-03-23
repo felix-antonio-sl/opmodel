@@ -26,7 +26,9 @@ Fiber = π⁻¹(OPD_i) computada                      ← vista derivada
 4. `bringConnectedThings()` es el pullback `π*(T, OPD_i)` materializado
 5. La retraccion `fold ∘ inzoom = id` se preserva porque no hay mutacion de grafo
 
-## Commits (5 incrementos)
+## Commits
+
+### c3d3964 — feat(core): DA-9 God Diagram (5 incrementos)
 
 | Incremento | Archivos | Tests | Descripcion |
 |-----------|----------|-------|-------------|
@@ -36,13 +38,24 @@ Fiber = π⁻¹(OPD_i) computada                      ← vista derivada
 | Inc 4 | api.ts, index.ts, bring-connected.test.ts | +9 | `bringConnectedThings(filter)` API |
 | Inc 5 | api.ts, api-refinement.test.ts | -1 | Deprecar C-04 stored suppression, tests migrados a fiber |
 
+### c929308 — feat(web): DA-9 polish (3 items)
+
+| Item | Archivos | Descripcion |
+|------|----------|-------------|
+| Polish 1 | OpdCanvas.tsx | Implicit things: opacity 0.4, dashed border (strokeDasharray "4,3"), `isImplicit` prop en ThingNode |
+| Polish 2 | PropertiesPanel.tsx, commands.ts | Boton "Bring Connected (N)" invoca `bringConnectedThings(filter: "all")` |
+| Polish 3 | serialization.ts, OpdCanvas.tsx | `saveModel()` strip `suppressed_states`. `visibleStatesFor()` merge fiber + stored suppression |
+
 ## Archivos clave
 
 | Archivo | Funcion |
 |---------|---------|
 | `packages/core/src/simulation.ts` | `resolveOpdFiber()`, `computeStateSuppression()`, `FiberEntry`, `OpdFiber` |
 | `packages/core/src/api.ts` | `bringConnectedThings()` |
-| `packages/web/src/components/OpdCanvas.tsx` | Consume fiber como fuente de datos |
+| `packages/core/src/serialization.ts` | `saveModel()` strip `suppressed_states` on save |
+| `packages/web/src/components/OpdCanvas.tsx` | Consume fiber, renders implicit things, `visibleStatesFor()` |
+| `packages/web/src/components/PropertiesPanel.tsx` | "Bring Connected" button |
+| `packages/web/src/lib/commands.ts` | `bringConnected` command |
 | `docs/superpowers/specs/2026-03-23-da9-vistas-derivadas-design.md` | Spec original DA-9 |
 
 ## Estado del proyecto
@@ -59,11 +72,6 @@ Fiber = π⁻¹(OPD_i) computada                      ← vista derivada
 | DAs implementadas | 5 (DA-5..DA-8) | 6 (+DA-9) |
 
 ## Pendientes para sesion 15
-
-### Prioridad alta — DA-9 polish
-1. **Rendering visual de implicit things**: opacidad reducida + borde punteado en ThingNode (prop `isImplicit`)
-2. **Boton "Bring Connected" en PropertiesPanel**: invoca `bringConnectedThings()` con filtro
-3. **Backwards compat serialization**: limpiar `suppressed_states` al cargar modelos existentes (o ignorar en fiber)
 
 ### Prioridad media — WP-4 Validation + Quality
 - Panel de validacion continua en web
