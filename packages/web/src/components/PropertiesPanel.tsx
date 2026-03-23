@@ -1,6 +1,246 @@
-import type { Model, Thing, State, Link, LinkType, FanType, ModifierType, RefinementType, OPD } from "@opmodel/core";
+import type { Model, Thing, State, Link, LinkType, FanType, ModifierType, RefinementType, OPD, Duration, TimeUnit, ValueType, FunctionType, ComputationalObject, ComputationalProcess } from "@opmodel/core";
 import type { Command } from "../lib/commands";
 import { genId } from "../lib/ids";
+
+const TIME_UNITS: TimeUnit[] = ["ms", "s", "min", "h", "d"];
+
+function formatDuration(d: Duration): string {
+  const parts: string[] = [];
+  if (d.min != null) parts.push(String(d.min));
+  parts.push(String(d.nominal));
+  if (d.max != null) parts.push(String(d.max));
+  return parts.join("–") + " " + d.unit;
+}
+
+function DurationSection({
+  thing, dispatch,
+}: {
+  thing: Thing;
+  dispatch: (cmd: Command) => boolean;
+}) {
+  const dur = thing.duration;
+
+  const setDuration = (patch: Partial<Duration>) => {
+    const current = thing.duration ?? { nominal: 1, unit: "min" as TimeUnit };
+    dispatch({
+      tag: "updateThingProps",
+      thingId: thing.id,
+      patch: { duration: { ...current, ...patch } },
+    });
+  };
+
+  const removeDuration = () => {
+    dispatch({
+      tag: "updateThingProps",
+      thingId: thing.id,
+      patch: { duration: null } as any,
+    });
+  };
+
+  if (!dur) {
+    return (
+      <div className="props-panel__section">
+        <button
+          className="props-panel__add-btn"
+          onClick={() => setDuration({ nominal: 1, unit: "min" })}
+        >
+          + Duration
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="props-panel__section">
+      <div className="props-panel__states-header">
+        <span className="props-panel__label">Duration</span>
+        <button className="props-panel__remove-btn" onClick={removeDuration}>×</button>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "auto 1fr auto 1fr auto 1fr auto", gap: 3, alignItems: "center", marginTop: 2 }}>
+        <span style={{ fontSize: 8, color: "var(--text-muted)" }}>mn</span>
+        <input
+          className="props-panel__input"
+          style={{ width: "100%", fontSize: 10 }}
+          type="number"
+          step="any"
+          min={0}
+          title="Minimum duration"
+          value={dur.min ?? ""}
+          onChange={(e) => setDuration({ min: e.target.value ? Number(e.target.value) : undefined })}
+        />
+        <span style={{ fontSize: 8, color: "var(--text-muted)" }}>nom</span>
+        <input
+          className="props-panel__input"
+          style={{ width: "100%", fontSize: 10 }}
+          type="number"
+          step="any"
+          min={0}
+          title="Nominal duration"
+          value={dur.nominal}
+          onChange={(e) => setDuration({ nominal: Number(e.target.value) || 0 })}
+        />
+        <span style={{ fontSize: 8, color: "var(--text-muted)" }}>mx</span>
+        <input
+          className="props-panel__input"
+          style={{ width: "100%", fontSize: 10 }}
+          type="number"
+          step="any"
+          min={0}
+          title="Maximum duration"
+          value={dur.max ?? ""}
+          onChange={(e) => setDuration({ max: e.target.value ? Number(e.target.value) : undefined })}
+        />
+        <select
+          className="props-panel__select"
+          style={{ fontSize: 10, minWidth: 36 }}
+          value={dur.unit}
+          onChange={(e) => setDuration({ unit: e.target.value as TimeUnit })}
+        >
+          {TIME_UNITS.map((u) => (
+            <option key={u} value={u}>{u}</option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
+}
+
+const VALUE_TYPES: ValueType[] = ["integer", "float", "string", "character", "boolean"];
+const FUNCTION_TYPES: FunctionType[] = ["predefined", "user_defined"];
+
+function ComputationalSection({
+  thing, dispatch,
+}: {
+  thing: Thing;
+  dispatch: (cmd: Command) => boolean;
+}) {
+  const comp = thing.computational;
+  const isObject = thing.kind === "object";
+
+  const setComputational = (val: ComputationalObject | ComputationalProcess) => {
+    dispatch({
+      tag: "updateThingProps",
+      thingId: thing.id,
+      patch: { computational: val },
+    });
+  };
+
+  const removeComputational = () => {
+    dispatch({
+      tag: "updateThingProps",
+      thingId: thing.id,
+      patch: { computational: null } as any,
+    });
+  };
+
+  if (!comp) {
+    return (
+      <div className="props-panel__section">
+        <button
+          className="props-panel__add-btn"
+          onClick={() => {
+            if (isObject) {
+              setComputational({ value: 0, value_type: "integer" });
+            } else {
+              setComputational({ function_type: "predefined" });
+            }
+          }}
+        >
+          + Computational
+        </button>
+      </div>
+    );
+  }
+
+  // Discriminate between ComputationalObject and ComputationalProcess
+  const isCompObj = "value_type" in comp;
+
+  if (isCompObj) {
+    const co = comp as ComputationalObject;
+    return (
+      <div className="props-panel__section">
+        <div className="props-panel__states-header">
+          <span className="props-panel__label">Computational</span>
+          <button className="props-panel__remove-btn" onClick={removeComputational}>×</button>
+        </div>
+        <div style={{ display: "flex", gap: 4, alignItems: "center", marginTop: 2 }}>
+          <select
+            className="props-panel__select"
+            style={{ fontSize: 10, minWidth: 60 }}
+            value={co.value_type}
+            onChange={(e) => setComputational({ ...co, value_type: e.target.value as ValueType })}
+          >
+            {VALUE_TYPES.map((t) => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
+          <input
+            className="props-panel__input"
+            style={{ width: 50, fontSize: 10 }}
+            placeholder="value"
+            title="Value"
+            value={co.value != null ? String(co.value) : ""}
+            onChange={(e) => {
+              let v: unknown = e.target.value;
+              if (co.value_type === "integer") v = parseInt(e.target.value) || 0;
+              else if (co.value_type === "float") v = parseFloat(e.target.value) || 0;
+              else if (co.value_type === "boolean") v = e.target.value === "true";
+              setComputational({ ...co, value: v });
+            }}
+          />
+        </div>
+        <div style={{ display: "flex", gap: 4, alignItems: "center", marginTop: 2 }}>
+          <input
+            className="props-panel__input"
+            style={{ width: 50, fontSize: 10 }}
+            placeholder="unit"
+            title="Measurement unit"
+            value={co.unit ?? ""}
+            onChange={(e) => setComputational({ ...co, unit: e.target.value || undefined })}
+          />
+          <input
+            className="props-panel__input"
+            style={{ width: 40, fontSize: 10 }}
+            placeholder="alias"
+            title="Short alias for calculations"
+            value={co.alias ?? ""}
+            onChange={(e) => setComputational({ ...co, alias: e.target.value || undefined })}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // ComputationalProcess
+  const cp = comp as ComputationalProcess;
+  return (
+    <div className="props-panel__section">
+      <div className="props-panel__states-header">
+        <span className="props-panel__label">Computational</span>
+        <button className="props-panel__remove-btn" onClick={removeComputational}>×</button>
+      </div>
+      <div style={{ display: "flex", gap: 4, alignItems: "center", marginTop: 2 }}>
+        <select
+          className="props-panel__select"
+          style={{ fontSize: 10, minWidth: 80 }}
+          value={cp.function_type}
+          onChange={(e) => setComputational({ ...cp, function_type: e.target.value as FunctionType })}
+        >
+          {FUNCTION_TYPES.map((t) => (
+            <option key={t} value={t}>{t}</option>
+          ))}
+        </select>
+        <input
+          className="props-panel__input"
+          style={{ flex: 1, fontSize: 10 }}
+          placeholder="function name"
+          value={cp.function_name ?? ""}
+          onChange={(e) => setComputational({ ...cp, function_name: e.target.value || undefined })}
+        />
+      </div>
+    </div>
+  );
+}
 
 const LINK_TYPES: LinkType[] = [
   "agent", "instrument",
@@ -391,6 +631,14 @@ export function PropertiesPanel({ model, thingId, opdId, dispatch }: Props) {
         </select>
       </div>
 
+      {/* Duration — only for processes */}
+      {thing.kind === "process" && (
+        <DurationSection thing={thing} dispatch={dispatch} />
+      )}
+
+      {/* Computational — objects get value/type/unit, processes get function */}
+      <ComputationalSection thing={thing} dispatch={dispatch} />
+
       {/* States section — only for objects */}
       {thing.kind === "object" && (
         <div className="props-panel__states">
@@ -548,6 +796,61 @@ export function PropertiesPanel({ model, thingId, opdId, dispatch }: Props) {
                     }
                   />
                 </div>
+                {/* Rate — for procedural links */}
+                {["consumption", "result", "effect", "input", "output", "agent", "instrument"].includes(l.type) && (
+                  <div style={{ display: "flex", gap: 4, marginTop: 2, alignItems: "center" }}>
+                    <span style={{ fontSize: 9, color: "var(--text-muted)" }}>rate</span>
+                    <input
+                      className="props-panel__input"
+                      style={{ width: 40, fontSize: 9 }}
+                      type="number"
+                      step="any"
+                      min={0}
+                      placeholder="val"
+                      title="Rate value"
+                      value={l.rate?.value ?? ""}
+                      onChange={(e) => {
+                        const val = e.target.value ? Number(e.target.value) : undefined;
+                        dispatch({
+                          tag: "updateLink", linkId: l.id,
+                          patch: { rate: val != null ? { value: val, unit: l.rate?.unit ?? "/s" } : undefined },
+                        });
+                      }}
+                    />
+                    <input
+                      className="props-panel__input"
+                      style={{ width: 30, fontSize: 9 }}
+                      placeholder="/s"
+                      title="Rate unit"
+                      value={l.rate?.unit ?? ""}
+                      onChange={(e) => {
+                        if (l.rate) {
+                          dispatch({
+                            tag: "updateLink", linkId: l.id,
+                            patch: { rate: { ...l.rate, unit: e.target.value || "/s" } },
+                          });
+                        }
+                      }}
+                    />
+                  </div>
+                )}
+                {/* Exception type — only for exception links */}
+                {l.type === "exception" && (
+                  <div style={{ display: "flex", gap: 4, marginTop: 2, alignItems: "center" }}>
+                    <span style={{ fontSize: 9, color: "var(--text-muted)" }}>exception</span>
+                    <select
+                      className="props-panel__select"
+                      style={{ fontSize: 10, minWidth: 70 }}
+                      value={l.exception_type ?? "overtime"}
+                      onChange={(e) =>
+                        dispatch({ tag: "updateLink", linkId: l.id, patch: { exception_type: e.target.value as "overtime" | "undertime" } })
+                      }
+                    >
+                      <option value="overtime">overtime</option>
+                      <option value="undertime">undertime</option>
+                    </select>
+                  </div>
+                )}
                 {/* Modifiers (event/condition) */}
                 {(() => {
                   const mods = [...model.modifiers.values()].filter(m => m.over === l.id);

@@ -446,6 +446,33 @@ describe("updateThing", () => {
     updateThing(m, "obj-water", { name: "New" });
     expect(m.things.get("obj-water")!.name).toBe(originalName);
   });
+
+  it("null in patch deletes optional field (computational, duration)", () => {
+    let m = createModel("Test");
+    const proc: Thing = { id: "proc-comp", kind: "process", name: "Calc", essence: "informatical", affiliation: "systemic",
+      duration: { nominal: 10, unit: "s" },
+      computational: { function_type: "predefined", function_name: "add" },
+    };
+    m = (addThing(m, proc) as any).value;
+    expect(m.things.get("proc-comp")!.computational).toBeDefined();
+    expect(m.things.get("proc-comp")!.duration).toBeDefined();
+
+    // Remove computational via null
+    const r1 = updateThing(m, "proc-comp", { computational: null } as any);
+    expect(isOk(r1)).toBe(true);
+    if (isOk(r1)) {
+      expect(r1.value.things.get("proc-comp")!.computational).toBeUndefined();
+      expect(r1.value.things.get("proc-comp")!.duration).toBeDefined(); // duration untouched
+    }
+
+    // Remove duration via null
+    const r2 = updateThing(m, "proc-comp", { duration: null } as any);
+    expect(isOk(r2)).toBe(true);
+    if (isOk(r2)) {
+      expect(r2.value.things.get("proc-comp")!.duration).toBeUndefined();
+      expect(r2.value.things.get("proc-comp")!.computational).toBeDefined(); // computational untouched
+    }
+  });
 });
 
 describe("updateLink", () => {

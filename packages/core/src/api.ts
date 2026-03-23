@@ -1005,7 +1005,12 @@ export function updateThing(
   const existing = model.things.get(id);
   if (!existing) return err({ code: "NOT_FOUND", message: `Thing not found: ${id}`, entity: id });
   const cleaned = cleanPatch(patch as Record<string, unknown>);
-  const updated = { ...existing, ...cleaned } as Thing;
+  const merged: Record<string, unknown> = { ...existing, ...cleaned };
+  // null in patch = delete optional field (e.g. computational: null removes computational)
+  for (const [key, value] of Object.entries(cleaned)) {
+    if (value === null) delete merged[key];
+  }
+  const updated = merged as unknown as Thing;
 
   // I-01: if kind changes to process, reject if states exist
   if (cleaned.kind !== undefined && updated.kind === "process") {

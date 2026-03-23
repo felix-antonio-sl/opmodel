@@ -456,8 +456,29 @@ function ThingNode({
       >
         {thing.name}
       </text>
+      {thing.duration && thing.kind === "process" && (
+        <text
+          className="thing-duration"
+          x={x + w / 2}
+          y={isContainer ? y + 28 : y + (hasStates ? h / 2 + 10 : totalH / 2 + 12)}
+        >
+          {thing.duration.min != null && (
+            <tspan className="thing-duration__bound">{thing.duration.min}–</tspan>
+          )}
+          <tspan>{thing.duration.nominal}</tspan>
+          {thing.duration.max != null && (
+            <tspan className="thing-duration__bound">–{thing.duration.max}</tspan>
+          )}
+          <tspan> {thing.duration.unit}</tspan>
+        </text>
+      )}
       {isExternal && (
         <text className="thing-badge-external" x={x + w - 8} y={y + 12}>↑</text>
+      )}
+      {thing.computational && (
+        <text className="thing-badge-computational" x={x + 8} y={y + 12}>
+          {"value_type" in thing.computational ? "d" : "f"}
+        </text>
       )}
       {isRefined && !isContainer && (
         <text fontSize={10} fill="var(--accent)" pointerEvents="none"
@@ -683,6 +704,11 @@ function LinkLine({
       <text className="link-label" x={mid.x} y={mid.y - 7}>
         {labelOverride ?? (link.type === "tagged" && link.tag ? link.tag : link.type)}
       </text>
+      {link.rate && (
+        <text className="link-rate" x={mid.x} y={mid.y + 5}>
+          {link.rate.value}{link.rate.unit}
+        </text>
+      )}
       {link.multiplicity_source && (
         <text fontSize={9} fill="#666" fontWeight="bold"
           x={p1.x + (p2.x - p1.x) * 0.12} y={p1.y + (p2.y - p1.y) * 0.12 - 6}
@@ -713,6 +739,33 @@ function LinkLine({
             {isSkip && (
               <line x1={bx - 3} y1={by + 4} x2={bx + 3} y2={by - 4}
                 stroke="white" strokeWidth={1.5} />
+            )}
+          </g>
+        );
+      })()}
+      {/* ISO §9.5.4: exception bars — 1 bar = overtime, 2 bars = undertime */}
+      {link.type === "exception" && (() => {
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        if (len < 1) return null;
+        // Perpendicular unit vector
+        const px = -dy / len;
+        const py = dx / len;
+        // Position bars at 40% along the link
+        const bx = p1.x + dx * 0.4;
+        const by = p1.y + dy * 0.4;
+        const barLen = 6;
+        const isUndertime = link.exception_type === "undertime";
+        return (
+          <g>
+            <line x1={bx + px * barLen} y1={by + py * barLen}
+                  x2={bx - px * barLen} y2={by - py * barLen}
+                  stroke={color} strokeWidth={2} />
+            {isUndertime && (
+              <line x1={bx + dx / len * 4 + px * barLen} y1={by + dy / len * 4 + py * barLen}
+                    x2={bx + dx / len * 4 - px * barLen} y2={by + dy / len * 4 - py * barLen}
+                    stroke={color} strokeWidth={2} />
             )}
           </g>
         );

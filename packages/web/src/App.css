@@ -532,6 +532,38 @@ body,
   opacity: 0.6;
 }
 
+.thing-duration {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  fill: var(--text-muted);
+  pointer-events: none;
+  dominant-baseline: central;
+  text-anchor: middle;
+}
+.thing-duration__bound {
+  fill: var(--text-secondary);
+}
+
+.thing-badge-computational {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  fill: var(--accent);
+  pointer-events: none;
+  dominant-baseline: central;
+  text-anchor: start;
+  opacity: 0.8;
+}
+
+.link-rate {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  fill: var(--text-muted);
+  pointer-events: none;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
 /* ── SVG States ── */
 
 .state-pill {
