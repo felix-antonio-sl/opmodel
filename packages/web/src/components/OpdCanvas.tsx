@@ -1725,7 +1725,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
                 <ThingNode
                   thing={thing}
                   appearance={app}
-                  states={isAppContainer ? [] : states}
+                  states={(isAppContainer && thing.kind === "process") ? [] : states}
                   isSelected={selectedThing === thingId || multiSelect.has(thingId)}
                   isDragging={isDragging}
                   isLinkSource={isLinkSource}
