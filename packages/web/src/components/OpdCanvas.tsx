@@ -346,6 +346,7 @@ function ThingNode({
   isExternal,
   isContainer,
   isRefined,
+  isImplicit,
   dragDelta,
   simFilter,
   simStatePillOverride,
@@ -364,6 +365,7 @@ function ThingNode({
   isExternal: boolean;
   isContainer: boolean;
   isRefined: boolean;
+  isImplicit?: boolean;
   dragDelta: Point;
   simFilter?: string;
   simStatePillOverride?: string;
@@ -394,7 +396,7 @@ function ThingNode({
   // ISO §14.2: refined things show thick contour in both parent and child OPD
   const baseStroke = isPhysical ? 3.5 : 1.2;
   const strokeWidth = isContainer ? 2.5 : isExternal ? 1.0 : isRefined ? Math.max(baseStroke, 2.5) : baseStroke;
-  const strokeDash = thing.affiliation === "environmental" ? "6,3" : undefined;
+  const strokeDash = isImplicit ? "4,3" : thing.affiliation === "environmental" ? "6,3" : undefined;
 
   const filterStr = isDragging
     ? "url(#glow-drag)"
@@ -898,11 +900,18 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
     return set;
   }, [fiber]);
 
-  // DA-9: filter suppressed states via fiber (computed, not stored)
+  // DA-9: filter suppressed states — merge fiber (auto) + stored (manual)
   const visibleStatesFor = useCallback((allStates: State[], thingId: string) => {
-    const suppressed = fiber.suppressedStates.get(thingId);
-    return suppressed ? allStates.filter(s => !suppressed.has(s.id)) : allStates;
-  }, [fiber.suppressedStates]);
+    const fiberSuppressed = fiber.suppressedStates.get(thingId);
+    const app = fiber.things.get(thingId)?.appearance;
+    const storedSuppressed = app?.suppressed_states;
+    if (!fiberSuppressed && !storedSuppressed) return allStates;
+    return allStates.filter(s => {
+      if (fiberSuppressed?.has(s.id)) return false;
+      if (storedSuppressed?.includes(s.id)) return false;
+      return true;
+    });
+  }, [fiber]);
 
   // Collect visible links (with endpoint resolution for in-zoom containers)
   const visibleLinks = useMemo(() => {
@@ -1784,6 +1793,35 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
                     dispatch({ tag: "selectThing", thingId });
                   }}
                   onDoubleClick={() => onThingDoubleClick(thingId)}
+                />
+              </g>
+            );
+          })}
+
+          {/* DA-9: Implicit things (connected but no stored appearance) — ghosted */}
+          {[...fiber.things.entries()]
+            .filter(([, entry]) => entry.implicit)
+            .map(([thingId, entry]) => {
+            const { thing, appearance: app } = entry;
+            const allStates = statesForThing(model, thingId);
+            const states = visibleStatesFor(allStates, thingId);
+            return (
+              <g key={`implicit-${thingId}`} style={{ opacity: 0.4 }}>
+                <ThingNode
+                  thing={thing}
+                  appearance={app}
+                  states={states}
+                  isSelected={false}
+                  isDragging={false}
+                  isLinkSource={false}
+                  isExternal={false}
+                  isContainer={false}
+                  isRefined={false}
+                  isImplicit={true}
+                  dragDelta={{ x: 0, y: 0 }}
+                  onMouseDown={() => {}}
+                  onSelect={() => dispatch({ tag: "selectThing", thingId })}
+                  onDoubleClick={() => {}}
                 />
               </g>
             );

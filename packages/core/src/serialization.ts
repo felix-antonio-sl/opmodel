@@ -60,7 +60,9 @@ export function saveModel(model: Model): string {
     opds: sortById([...model.opds.values()]),
     links: sortById([...model.links.values()]),
     modifiers: sortById([...model.modifiers.values()]),
-    appearances: sortAppearances([...model.appearances.values()]),
+    appearances: sortAppearances([...model.appearances.values()].map(
+      ({ suppressed_states: _, ...app }) => app // DA-9: strip deprecated field on save
+    )),
     fans: sortById([...model.fans.values()]),
     scenarios: sortById([...model.scenarios.values()]),
     assertions: sortById([...model.assertions.values()]),

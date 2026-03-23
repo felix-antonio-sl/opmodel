@@ -27,6 +27,7 @@ import {
   removeModifier,
   updateModifier,
   refineThing,
+  bringConnectedThings,
   applyOplEdit,
   isOk,
   type Result,
@@ -69,6 +70,7 @@ export type Command =
   | { tag: "refineThing"; thingId: string; opdId: string; refinementType: RefinementType; childOpdId: string; childOpdName: string }
   | { tag: "applyOplEdit"; edit: OplEdit }
   | { tag: "updateAppearance"; thingId: string; opdId: string; patch: Record<string, unknown> }
+  | { tag: "bringConnected"; thingId: string; opdId: string; filter: "procedural" | "structural" | "all" }
   | { tag: "setMode"; mode: EditorMode }
   | { tag: "setLinkType"; linkType: LinkTypeChoice }
   /* ─── Fan Commands ─── */
@@ -218,6 +220,12 @@ export function interpret(cmd: Command): Effect {
       return {
         type: "modelMutation",
         apply: (m) => updateAppearance(m, cmd.thingId, cmd.opdId, cmd.patch as any),
+      };
+
+    case "bringConnected":
+      return {
+        type: "modelMutation",
+        apply: (m) => bringConnectedThings(m, cmd.thingId, cmd.opdId, cmd.filter),
       };
 
     case "applyOplEdit":

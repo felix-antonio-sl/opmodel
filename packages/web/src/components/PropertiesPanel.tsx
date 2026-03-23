@@ -942,6 +942,31 @@ export function PropertiesPanel({ model, thingId, opdId, dispatch }: Props) {
       {/* Refinement section */}
       <RefineSection model={model} thingId={thingId} opdId={opdId} thing={thing} dispatch={dispatch} />
 
+      {/* DA-9: Bring Connected Things */}
+      {(() => {
+        // Count connected things without appearance in this OPD
+        const existingApps = new Set<string>();
+        for (const app of model.appearances.values()) {
+          if (app.opd === opdId) existingApps.add(app.thing);
+        }
+        let connectedCount = 0;
+        for (const link of model.links.values()) {
+          if (link.source === thingId && !existingApps.has(link.target)) connectedCount++;
+          if (link.target === thingId && !existingApps.has(link.source)) connectedCount++;
+        }
+        if (connectedCount === 0) return null;
+        return (
+          <div className="props-panel__section">
+            <button
+              className="props-panel__add-btn"
+              onClick={() => dispatch({ tag: "bringConnected", thingId, opdId, filter: "all" })}
+            >
+              + Bring Connected ({connectedCount})
+            </button>
+          </div>
+        );
+      })()}
+
       <button
         className="props-panel__delete-btn"
         onClick={() => dispatch({ tag: "removeThing", thingId })}
