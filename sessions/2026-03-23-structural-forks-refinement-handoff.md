@@ -1,108 +1,118 @@
-# Handoff: Fork Triangles (C-05) + Refinement Audit + UI
+# Handoff: Sesion 12 — Structural Links, Refinement, Invariante source=parent
 
 **Fecha**: 2026-03-23
-**Sesión**: 12
+**Sesion**: 12
 **Agente**: steipete (dev/steipete)
 
-## Qué se hizo
+## Resumen ejecutivo
 
-Dos ejes de trabajo: (1) fork triangles ISO §6 para structural links, (2) auditoria profunda del sistema de refinamiento que revelo un bug sistematico de direccion de links estructurales.
+Sesion enfocada en 3 ejes: (1) fork triangles ISO §6, (2) auditoria profunda del sistema de refinamiento, (3) invariante estructural `source=parent`. Se descubrio y resolvio un bug sistematico de direccion de links estructurales que afectaba 10+ sitios del codebase. Se establecio un invariante y utility centralizado como solucion arquitectural.
 
-### Eje 1 — Fork Triangles (C-05)
+## Commits (14 en esta sesion)
 
-| Commit | Cambio |
-|--------|--------|
-| `6e828ea` | Fork triangles: shared triangle + trunk + branches para 2+ structural links del mismo tipo compartiendo parent. Direction-agnostic detection. Canvas normaliza exhibition. OPL grouping direction-agnostic. |
-| `1e2ff0b` | Todos los structural links renderizan con fork triangle (incluyendo singles con geometria compacta). Semi-fold y PropertiesPanel toggle direction-agnostic. |
+| Commit | Tipo | Descripcion |
+|--------|------|-------------|
+| `6e828ea` | feat | C-05 fork triangles: shared triangle + trunk + branches |
+| `1e2ff0b` | fix | Todos los structural links con fork geometry + semi-fold bidireccional |
+| `e15c070` | fix | Unfold direction-agnostic + thick contour + double-click nav + badge ⊕ |
+| `4454a77` | fix | Layout mejorado en child OPDs + ocultar badge ↑ en unfold |
+| `99a7f67` | fix | RESOLVE-01: structural links visibles en child OPDs |
+| `198ecab` | fix | OPL: structural links en child OPDs + exhibitorOf direction fix |
+| `a2d583e` | docs | Handoff intermedio |
+| `5038bef` | refactor | Utility centralizado `structural.ts` (structuralParentEnd, getStructuralChildren) |
+| `83fd0f9` | refactor | **Invariante source=parent** para TODOS los structural links. 13 archivos migrados. |
+| `043906f` | fix | Triangulos ISO §6 canonicos: exhibition=nested, classification=circle |
+| `d436050` | fix | OPL exhibition cross-kind: "exhibits , as well as" → "exhibits p4." |
+| `13c51e5` | fix | Triangulos mas grandes y mas cerca del parent |
+| `5970cb9` | fix | Exhibition inner triangle concentrico (mismo centroide, escala 0.55) |
 
-### Eje 2 — Auditoria de Refinamiento
+## Invariante establecido
 
-Auditoria dialectica entre 3 agentes (steipete, opm-specialist, arquitecto-categorico) revelo que el bug de direccion de links estructurales era **sistemico** — afectaba 10 sitios distintos del codebase.
-
-| Commit | Cambio |
-|--------|--------|
-| `e15c070` | Fix unfold selector (convention detection heuristic). Fix partToWhole (bidirectional). Thick contour ISO §14.2 para things refinados. Double-click navigation a OPD hijo. Badge ⊕ de refinamiento. |
-| `4454a77` | Layout mejorado para external things en child OPDs (y=250, debajo del container). Badge ↑ oculto en unfold OPDs. |
-| `99a7f67` | RESOLVE-01 fix: structural links al container ahora visibles en child OPDs (antes se filtraban). Badge ↑ oculto en TODOS los refinement OPDs. |
-| `198ecab` | OPL expose() tenia su PROPIA copia del RESOLVE-01 bug. Fix. exhibitorOf direction-agnostic (link count heuristic). |
-
-## Bug sistematico: direccion de structural links
-
-### Root cause
-
-El codebase tiene DOS convenciones para structural links:
-- **Vieja (P-01)**: source=part, target=whole (aggregation)
-- **Canvas UI**: source=whole(primer click), target=part(segundo click)
-
-Cada componente asumia una convencion distinta. Los tests usaban la vieja y pasaban, enmascarando bugs.
-
-### Los 10 sitios parchados
-
-| # | Archivo | Funcion | Estrategia de fix |
-|---|---------|---------|-------------------|
-| 1 | api.ts | findStructuralForks | Bidireccional, grupo mas grande |
-| 2 | opl.ts | expose() grouping | Bidireccional, grupo mas grande |
-| 3 | api.ts | getSemiFoldedParts | Busca ambas direcciones |
-| 4 | PropertiesPanel.tsx | Semi-fold toggle | Busca ambas direcciones |
-| 5 | OpdCanvas.tsx | Canvas link creation | Normaliza exhibition (swap) |
-| 6 | api.ts | refineThing unfold selector | Convention detection heuristic (majority count) |
-| 7 | simulation.ts | partToWhole map | Bidirectional indexing |
-| 8 | simulation.ts | resolveLinksForOpd RESOLVE-01 | Excluye structural del filtro |
-| 9 | opl.ts | expose() RESOLVE-01 | Excluye structural del filtro |
-| 10 | opl.ts | exhibitorOf | Link count heuristic |
-
-### Deuda tecnica critica
-
-Cada fix usa una estrategia DIFERENTE. Esto no escala. Se necesita un **utility centralizado**:
-
-```typescript
-// packages/core/src/structural.ts
-function getStructuralChildren(model, thingId): Array<{ childId, link, linkType }>
-function getStructuralParent(model, thingId, linkType): { parentId, link } | null
-function isStructuralParent(model, link, thingId): boolean
+```
+PARA TODO structural link:
+  source = parent (primer click)     target = child (segundo click)
+  ─────────────────────────────────────────────────────────────────
+  Aggregation:    source = whole       target = part
+  Exhibition:     source = exhibitor   target = feature
+  Generalization: source = general     target = specialization
+  Classification: source = class      target = instance
 ```
 
-Un solo punto que resuelve la direccion. TODOS los consumidores lo usan. Cero heuristicas duplicadas. **Marcado como blocker para cualquier feature futuro que toque structural links.**
+**Enforcement:**
+- Canvas: `source = linkSource` (primer click), `target = thingId` (segundo click). Sin swap.
+- `structuralParentEnd()` en `structural.ts`: default `"source"`. Hub detection para legacy.
+- I-19: coerce `target` (feature) a informatical
+- I-31: discriminating checks `source` (exhibitor)
+- I-32: discriminatorId = target, generalId = source
+- Todos los tests migrados (13 archivos)
 
-## Estado del proyecto
+## Utility centralizado
 
-- **711 tests** (46 test files), todos green
-- **0 regresiones**
-- **6 commits** en esta sesion
-- **Docker**: `opmodel-dev` container corriendo
+**Archivo**: `packages/core/src/structural.ts`
 
-### Metricas
+```typescript
+STRUCTURAL_TYPES                                    // Set<string>
+structuralParentEnd(links, linkType) → "source"|"target"  // Hub detection
+getStructuralChildren(model, thingId, filterTypes?) → [{childId, link}]
+getStructuralParent(model, thingId, linkType) → {parentId, link} | null
+```
 
-| Metrica | Antes | Despues |
-|---------|-------|---------|
-| Tests | 698 | 711 (+13) |
-| Test files | 42 | 43 (+1) |
+**Consumidores refactorizados** (7 call sites en 3 archivos):
+- `api.ts`: getSemiFoldedParts, refineThing unfold, findStructuralForks
+- `opl.ts`: exhibitorOf, structural grouping
+- `simulation.ts`: partToWhole (bidireccional, complementario)
 
-## Features nuevos
+## Features implementados
 
 | Feature | ISO | Descripcion |
 |---------|-----|-------------|
 | Fork triangles | §6 | Shared triangle (trunk + branches) para structural links con shared parent |
-| Single structural triangles | §6 | Todos los structural links usan fork geometry |
+| Todos los structural con fork geometry | §6 | Singles usan geometria compacta |
+| Triangulos ISO canonicos | §6 | Aggregation=filled, Exhibition=nested, Generalization=open, Classification=circle |
 | Thick contour | §14.2 | Things refinados muestran borde grueso (2.5px) |
 | Double-click navigation | UX | Double-click en thing refinado → navega al OPD hijo |
-| Refinement badge | UX | Icono ⊕ en esquina inferior-derecha de things refinados |
-| Structural links en OPDs hijos | §14 | Exhibition/aggregation links visibles en refinement OPDs |
+| Refinement badge ⊕ | UX | Icono en esquina inferior-derecha |
+| Structural links en child OPDs | §14 | RESOLVE-01 fix: exhibition/aggregation visibles en refinement OPDs |
+| OPL en child OPDs | §14 | Structural sentences ahora se generan en OPDs hijos |
+
+## Bugs corregidos
+
+| Bug | Impacto | Root cause |
+|-----|---------|------------|
+| 10 sitios con logica de direccion distinta | Sistemico | No habia convencion unica. Resuelto con invariante + utility. |
+| RESOLVE-01 filtraba structural links al container | Child OPDs vacios | Filtro no distinguia procedural vs structural |
+| OPL expose() tenia su propio RESOLVE-01 | OPL sin structural sentences en child OPDs | Codigo duplicado |
+| exhibitorOf asumia source=feature | "cosa10 of cosa13" (invertido) | Convencion hardcodeada |
+| Exhibition OPL "exhibits , as well as p4." | Coma fantasma | Split attrs/ops no manejaba first list vacia |
+| I-19 coercia source en vez de target | Validacion fallaba con invariante | Checks de core asumian vieja convencion |
+
+## Estado del proyecto
+
+- **711 tests** (43 test files), todos green
+- **0 regresiones**
+- **14 commits** en esta sesion
+- **Docker**: `opmodel-dev` corriendo
+
+### Metricas
+
+| Metrica | Inicio sesion | Fin sesion |
+|---------|---------------|------------|
+| Tests | 698 | 711 (+13) |
+| Test files | 42 | 43 (+1) |
+| Core src files | — | +1 (structural.ts) |
 
 ## Pendientes para proxima sesion
 
-### Prioridad critica
-- **Utility centralizado para structural links** — refactor los 10 sitios a un solo `getStructuralChildren`/`getStructuralParent`. Blocker antes de agregar features que toquen structural links.
-
-### Prioridad alta
+### Prioridad alta — UX
 - **Search/Find**: navegacion en modelos grandes
 - **Command palette (Ctrl+K)**: acceso rapido a acciones
 - **Minimap**: orientacion en canvas grande
 
-### Prioridad media
+### Prioridad media — Refinement avanzado
 - **Unfold-in-place (L-M1-08)**: mostrar partes inline sin crear OPD hijo
 - **Link distribution to contour**: mover links del parent a subprocesos (ISO §10.5.2)
 - **Subprocess temporal ordering**: posicion vertical = orden de ejecucion
+- **Containment auto-sizing**: contorno que se agranda para contener subprocesos
 
 ### Prioridad baja
 - **Web tests**: 0 tests en packages/web (deuda reconocida)
@@ -110,8 +120,8 @@ Un solo punto que resuelve la direccion. TODOS los consumidores lo usan. Cero he
 
 ## Artifacts de referencia
 
-- Plan: `/home/felix/.claude/plans/zany-snacking-stallman.md`
-- ISO reference: `/home/felix/kora/KNOWLEDGE/fxsl/opm/opm-iso-19450.md`
-- Refinement design spec: `/home/felix/projects/opmodel/docs/superpowers/specs/2026-03-11-refinement-inzoom-unfold-design.md`
-- Backlog: `/home/felix/projects/opmodel/docs/superpowers/specs/2026-03-10-opm-modeling-app-backlog-lean.md`
-- Memory: `feedback_structural_direction.md` — CRITICAL blocker recorded
+- Utility centralizado: `packages/core/src/structural.ts`
+- Refinement design spec: `docs/superpowers/specs/2026-03-11-refinement-inzoom-unfold-design.md`
+- Plan de sesion: `/home/felix/.claude/plans/zany-snacking-stallman.md`
+- Backlog: `docs/superpowers/specs/2026-03-10-opm-modeling-app-backlog-lean.md`
+- Memory: `feedback_structural_direction.md` (critical blocker — resolved this session)
