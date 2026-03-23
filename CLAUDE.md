@@ -63,7 +63,7 @@ L-M1-02 → L-M1-07 (In-zoom)
 ## Development
 
 - **Runtime:** Bun v1.3.10 (`~/.bun/bin/bun`). Requiere: `export BUN_INSTALL="$HOME/.bun" && export PATH="$BUN_INSTALL/bin:$PATH"`
-- **Tests:** `bunx vitest run` (all 757 tests from root). Single file: `bunx vitest run packages/core/tests/api.test.ts`
+- **Tests:** `bunx vitest run` (all 755 tests from root). Single file: `bunx vitest run packages/core/tests/api.test.ts`
 - **Type check:** `cd packages/core && bunx tsc --noEmit` (7 pre-existing TS2532 in test files — known, vitest passes)
 - **Monorepo:** Bun workspaces (root `package.json`)
 - **Pattern:** Immutable Model — funciones puras retornan `Result<Model, InvariantError>`, Maps para O(1) lookups

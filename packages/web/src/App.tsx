@@ -7,6 +7,7 @@ import { OplPanel } from "./components/OplPanel";
 import { PropertiesPanel } from "./components/PropertiesPanel";
 import { Toolbar } from "./components/Toolbar";
 import { SimulationPanel } from "./components/SimulationPanel";
+import { ValidationPanel } from "./components/ValidationPanel";
 import type { NlConfig } from "@opmodel/nl";
 import { createProvider, createPipeline } from "@opmodel/nl";
 import { NlSettingsModal } from "./components/NlSettingsModal";
@@ -181,6 +182,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
   });
   const [showNlSettings, setShowNlSettings] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [showValidation, setShowValidation] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
   const nlPipeline = useMemo(() => {
@@ -247,6 +249,11 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
 
   const errors = validate(model);
   const isValid = errors.length === 0;
+  const errorEntities = useMemo(() => {
+    const set = new Set<string>();
+    for (const e of errors) { if (e.entity) set.add(e.entity); }
+    return set;
+  }, [errors]);
 
   return (
     <div className="app">
@@ -356,6 +363,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
         linkType={ui.linkType}
         dispatch={dispatch}
         simulation={ui.simulation}
+        errorEntities={errorEntities}
       />
       {/* Search panel — floating over canvas */}
       {showSearch && (() => {
@@ -452,9 +460,23 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
         <OplPanel model={model} opdId={ui.currentOpd} selectedThing={ui.selectedThing} dispatch={dispatch} nlPipeline={nlPipeline} lastError={lastError} />
       </aside>
 
+      {/* Validation Panel (floating, above status bar) */}
+      {showValidation && (
+        <ValidationPanel
+          model={model}
+          errors={errors}
+          dispatch={dispatch}
+          onClose={() => setShowValidation(false)}
+        />
+      )}
+
       {/* Status Bar */}
       <footer className="status-bar">
-        <div className="status-bar__indicator">
+        <div
+          className="status-bar__indicator status-bar__indicator--clickable"
+          onClick={() => setShowValidation(v => !v)}
+          title="Toggle validation panel"
+        >
           <div className={`status-bar__dot status-bar__dot--${isValid ? "ok" : "error"}`} />
           <span>{isValid ? "Valid" : `${errors.length} errors`}</span>
         </div>

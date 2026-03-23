@@ -22,6 +22,7 @@ interface Props {
   linkType: LinkTypeChoice;
   dispatch: (cmd: Command) => boolean;
   simulation: SimulationUIState | null;
+  errorEntities?: Set<string>;
 }
 
 /* ─── Breadcrumb: OPD ancestor chain ─── */
@@ -347,6 +348,7 @@ function ThingNode({
   isContainer,
   isRefined,
   isImplicit,
+  isError,
   dragDelta,
   simFilter,
   simStatePillOverride,
@@ -366,6 +368,7 @@ function ThingNode({
   isContainer: boolean;
   isRefined: boolean;
   isImplicit?: boolean;
+  isError?: boolean;
   dragDelta: Point;
   simFilter?: string;
   simStatePillOverride?: string;
@@ -387,7 +390,8 @@ function ThingNode({
   const totalH = h + extraH;
 
   // ISO 19450: color always follows kind (object=green, process=blue), regardless of external/container
-  const strokeColor = thing.kind === "process" ? "var(--process-stroke)" : "var(--object-stroke)";
+  // WP-4: error things get red stroke
+  const strokeColor = isError ? "var(--error-stroke, #e53e3e)" : thing.kind === "process" ? "var(--process-stroke)" : "var(--object-stroke)";
   const isPhysical = thing.essence === "physical";
   const kindFill = thing.kind === "process"
     ? (isPhysical ? "var(--process-fill-physical)" : "var(--process-fill)")
@@ -778,7 +782,7 @@ function LinkLine({
 
 /* ─── Main Canvas Component ─── */
 
-export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatch, simulation }: Props) {
+export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatch, simulation, errorEntities }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [pan, setPan] = useState({ x: 40, y: 20 });
   const [zoom, setZoom] = useState(1);
@@ -1749,6 +1753,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
                   isExternal={isAppExternal && !opd?.refines}
                   isContainer={isAppContainer}
                   isRefined={[...model.opds.values()].some(o => o.refines === thingId)}
+                  isError={errorEntities?.has(thingId)}
                   dragDelta={isDragging ? dragDelta : { x: 0, y: 0 }}
                   simFilter={simFilter}
                   simStatePillOverride={simModelState && thing.kind === "object" ? simModelState.objects.get(thingId)?.currentState : undefined}

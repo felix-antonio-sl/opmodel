@@ -58,18 +58,34 @@ Fiber = π⁻¹(OPD_i) computada                      ← vista derivada
 | `packages/web/src/lib/commands.ts` | `bringConnected` command |
 | `docs/superpowers/specs/2026-03-23-da9-vistas-derivadas-design.md` | Spec original DA-9 |
 
+### fix: I-30 removed — ISO §14.2/§14.3 both refinement types on both kinds
+
+| Item | Archivos | Descripcion |
+|------|----------|-------------|
+| fix I-30 | api.ts (3 locations), api-invariants-new.test.ts, api-refinement.test.ts, refine.test.ts | In-zoom y unfold aplican a objetos Y procesos. ISO §14.2 (process in-zoom), §14.3 (process unfold "asynchronous, no fixed order"). Invariante I-30 eliminado. |
+
+### WP-4: Validation Panel
+
+| Item | Archivos | Descripcion |
+|------|----------|-------------|
+| ValidationPanel.tsx | Nuevo | Lista de errores: code (badge rojo), mensaje, entidad clickeable. Navigation a thing+OPD. |
+| Error highlighting | OpdCanvas.tsx | `isError` prop en ThingNode → stroke rojo. `errorEntities` prop desde App. |
+| Toggle | App.tsx, App.css | Click en status bar dot abre/cierra panel floating. |
+
 ## Estado del proyecto
 
-- **757 tests** (49 test files), todos green
+- **755 tests** (49 test files), todos green
 - **0 regresiones**
 - **9 DAs** (DA-1 a DA-9, todas implemented o defined)
+- **WP-4** (Validation Panel) completo
 
 ### Metricas
 
 | Metrica | Inicio sesion | Fin sesion |
 |---------|---------------|------------|
-| Tests | 728 | 757 (+29) |
+| Tests | 728 | 755 (+27) |
 | DAs implementadas | 5 (DA-5..DA-8) | 6 (+DA-9) |
+| Gaps resueltos | 12/33 | 13/33 (+M-09) |
 
 ## Pendientes para sesion 15
 
