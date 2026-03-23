@@ -51,7 +51,7 @@
     {"id": "lnk-calltrans-instr-cellular", "source": "obj-cellular-network", "target": "proc-call-transmitting", "type": "instrument"},
     {"id": "lnk-driver-agent-callhandling", "source": "obj-driver", "target": "proc-call-handling", "type": "agent"},
     {"id": "lnk-driver-agent-callmaking", "source": "obj-driver", "target": "proc-call-making", "type": "agent"},
-    {"id": "lnk-driver-exhibits-danger", "source": "obj-danger-status", "target": "obj-driver", "type": "exhibition"},
+    {"id": "lnk-driver-exhibits-danger", "source": "obj-driver", "target": "obj-danger-status", "type": "exhibition"},
     {"id": "lnk-driver-tagged-console", "direction": "unidirectional", "source": "obj-driver", "tag": "communicates via", "target": "obj-onstar-console", "type": "tagged"},
     {"id": "lnk-rescuing-effect-driver", "source": "proc-driver-rescuing", "target": "obj-driver", "type": "effect"},
     {"id": "lnk-rescuing-instrument-system", "source": "obj-onstar-system", "target": "proc-driver-rescuing", "type": "instrument"},

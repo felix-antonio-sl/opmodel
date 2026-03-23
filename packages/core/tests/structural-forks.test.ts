@@ -135,7 +135,7 @@ describe("findStructuralForks", () => {
   });
 
   it("sets childIsTarget=false when parent is target", () => {
-    // Correct exhibition convention: source=feature, target=exhibitor
+    // Correct exhibition convention: source=exhibitor, target=feature
     const links: ResolvedLink[] = [
       rl(mkLink("lnk-1", "exhibition", "obj-color", "obj-car")),
       rl(mkLink("lnk-2", "exhibition", "obj-weight", "obj-car")),

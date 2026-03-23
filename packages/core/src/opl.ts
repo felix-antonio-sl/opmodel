@@ -488,13 +488,13 @@ function renderLinkSentence(s: OplLinkSentence): string {
       return `${s.sourceName} consists of ${partName}.`;
     }
     case "exhibition": {
-      // Convention: source=Feature (informatical, I-19), target=Exhibitor
-      // OPL: "Exhibitor exhibits Feature" → targetName exhibits sourceName
-      const featureName = withMultiplicity(s.sourceName, s.multiplicitySource);
+      // Invariant: source=Exhibitor (parent), target=Feature (child)
+      // OPL: "Exhibitor exhibits Feature."
+      const featureName = withMultiplicity(s.targetName, s.multiplicityTarget);
       if (s.incomplete) {
-        return `${s.targetName} exhibits ${featureName} and at least one other feature.`;
+        return `${s.sourceName} exhibits ${featureName} and at least one other feature.`;
       }
-      return `${s.targetName} exhibits ${featureName}.`;
+      return `${s.sourceName} exhibits ${featureName}.`;
     }
     case "generalization": {
       if (s.incomplete) {

@@ -50,7 +50,7 @@ describe("addLink", () => {
     const attr: Thing = { id: "obj-attr", kind: "object", name: "Color", essence: "physical", affiliation: "systemic" };
     let m = buildModel();
     m = (addThing(m, attr) as any).value;
-    const link: Link = { id: "lnk-exhibit", type: "exhibition", source: "obj-attr", target: "obj-water" };
+    const link: Link = { id: "lnk-exhibit", type: "exhibition", source: "obj-water", target: "obj-attr" };
     const r = addLink(m, link);
     expect(isOk(r)).toBe(true);
     if (isOk(r)) expect(r.value.things.get("obj-attr")?.essence).toBe("informatical");
@@ -78,7 +78,7 @@ describe("addLink", () => {
     const operation: Thing = { id: "proc-op", kind: "process", name: "GetColor", essence: "informatical", affiliation: "systemic" };
     let m = buildModel();
     m = (addThing(m, operation) as any).value;
-    const link: Link = { id: "lnk-exhibit-cross", type: "exhibition", source: "proc-op", target: "obj-water" };
+    const link: Link = { id: "lnk-exhibit-cross", type: "exhibition", source: "obj-water", target: "proc-op" };
     const r = addLink(m, link);
     expect(isOk(r)).toBe(true);
     if (isOk(r)) {

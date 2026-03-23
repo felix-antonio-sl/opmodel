@@ -327,11 +327,11 @@ export function addLink(
     return err({ code: "I-TAG-REQUIRED", message: "Tagged link requires a tag value", entity: link.id });
   }
 
-  // I-31: at most 1 discriminating exhibition link per exhibitor
+  // I-31: at most 1 discriminating exhibition link per exhibitor (source=exhibitor)
   if (link.type === "exhibition" && link.discriminating) {
     for (const existingLink of model.links.values()) {
-      if (existingLink.type === "exhibition" && existingLink.discriminating && existingLink.target === link.target) {
-        return err({ code: "I-31", message: `Exhibitor ${link.target} already has a discriminating attribute: ${existingLink.source}`, entity: link.id });
+      if (existingLink.type === "exhibition" && existingLink.discriminating && existingLink.source === link.source) {
+        return err({ code: "I-31", message: `Exhibitor ${link.source} already has a discriminating attribute: ${existingLink.target}`, entity: link.id });
       }
     }
   }
@@ -364,11 +364,11 @@ export function addLink(
   }
 
   let things = model.things;
-  // I-19 effect: exhibition forces source.essence := informatical
+  // I-19 effect: exhibition forces target (feature) essence := informatical
   if (link.type === "exhibition") {
-    const exhibitSource = things.get(link.source)!;
-    if (exhibitSource.essence !== "informatical") {
-      things = new Map(things).set(exhibitSource.id, { ...exhibitSource, essence: "informatical" });
+    const exhibitFeature = things.get(link.target)!;
+    if (exhibitFeature.essence !== "informatical") {
+      things = new Map(things).set(exhibitFeature.id, { ...exhibitFeature, essence: "informatical" });
     }
   }
 
@@ -1041,14 +1041,14 @@ export function updateThing(
         if (link.type === "agent" && updated.essence !== "physical") {
           return err({ code: "I-18", message: `Agent source must be physical: ${id}`, entity: id });
         }
-        // I-19: exhibition source must be informatical
-        if (link.type === "exhibition" && updated.essence !== "informatical") {
-          return err({ code: "I-19", message: `Exhibition source must be informatical: ${id}`, entity: id });
-        }
         // I-14: exception source must have duration.max
         if (link.type === "exception" && !updated.duration?.max) {
           return err({ code: "I-14", message: `Exception source must have duration.max: ${id}`, entity: id });
         }
+      }
+      // I-19: exhibition target (feature) must be informatical
+      if (link.target === id && link.type === "exhibition" && updated.essence !== "informatical") {
+        return err({ code: "I-19", message: `Exhibition feature must be informatical: ${id}`, entity: id });
       }
     }
   }
@@ -1106,19 +1106,20 @@ export function updateLink(
       return err({ code: "I-14", message: `Exception source must have duration.max: ${updated.source}`, entity: id });
     }
 
-    // I-19: exhibition coercion
+    // I-19: exhibition coercion — target (feature) must be informatical
     if (updated.type === "exhibition") {
-      if (source.essence !== "informatical") {
-        things = new Map(things).set(source.id, { ...source, essence: "informatical" });
+      const target = things.get(updated.target)!;
+      if (target.essence !== "informatical") {
+        things = new Map(things).set(target.id, { ...target, essence: "informatical" });
       }
     }
   }
 
-  // I-31: at most 1 discriminating exhibition per exhibitor
+  // I-31: at most 1 discriminating exhibition per exhibitor (source=exhibitor)
   if (updated.type === "exhibition" && updated.discriminating) {
     for (const [existingId, existingLink] of model.links) {
-      if (existingId !== id && existingLink.type === "exhibition" && existingLink.discriminating && existingLink.target === updated.target) {
-        return err({ code: "I-31", message: `Exhibitor ${updated.target} already has a discriminating attribute: ${existingLink.source}`, entity: id });
+      if (existingId !== id && existingLink.type === "exhibition" && existingLink.discriminating && existingLink.source === updated.source) {
+        return err({ code: "I-31", message: `Exhibitor ${updated.source} already has a discriminating attribute: ${existingLink.target}`, entity: id });
       }
     }
   }
@@ -1342,11 +1343,11 @@ export function validate(model: Model): InvariantError[] {
     }
   }
 
-  // I-19
+  // I-19: exhibition target (feature) must be informatical
   for (const [id, link] of model.links) {
     if (link.type === "exhibition") {
-      const source = model.things.get(link.source);
-      if (source && source.essence !== "informatical") errors.push({ code: "I-19", message: `Exhibition link ${id} source must be informatical`, entity: id });
+      const feature = model.things.get(link.target);
+      if (feature && feature.essence !== "informatical") errors.push({ code: "I-19", message: `Exhibition link ${id} feature must be informatical`, entity: id });
     }
   }
 
@@ -1438,13 +1439,13 @@ export function validate(model: Model): InvariantError[] {
     }
   }
 
-  // I-31: at most 1 discriminating exhibition per exhibitor
+  // I-31: at most 1 discriminating exhibition per exhibitor (source=exhibitor)
   const discByExhibitor = new Map<string, string[]>();
   for (const [id, link] of model.links) {
     if (link.type === "exhibition" && link.discriminating) {
-      const list = discByExhibitor.get(link.target) ?? [];
+      const list = discByExhibitor.get(link.source) ?? [];
       list.push(id);
-      discByExhibitor.set(link.target, list);
+      discByExhibitor.set(link.source, list);
     }
   }
   for (const [exhibitor, linkIds] of discByExhibitor) {
@@ -1456,8 +1457,8 @@ export function validate(model: Model): InvariantError[] {
   // I-32: discriminating values disjoint and exhaustive
   for (const [id, link] of model.links) {
     if (link.type === "exhibition" && link.discriminating) {
-      const discriminatorId = link.source;
-      const generalId = link.target;
+      const discriminatorId = link.target;  // feature (discriminating attribute)
+      const generalId = link.source;       // exhibitor (general thing)
 
       // States of the discriminating attribute
       const discStates = new Set<string>();

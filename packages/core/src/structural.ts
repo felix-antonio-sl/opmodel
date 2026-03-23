@@ -1,14 +1,15 @@
 /**
  * Centralized structural link utilities.
  *
- * Structural links (aggregation, exhibition, generalization, classification)
- * connect parent → children, but the link direction (source/target) is
- * inconsistent across model creation paths. This module provides a single
- * source of truth for resolving parent vs child.
+ * INVARIANT: For structural links, source = parent, target = child.
+ *   - Aggregation:     source = whole,      target = part
+ *   - Exhibition:      source = exhibitor,  target = feature
+ *   - Generalization:  source = general,    target = specialization
+ *   - Classification:  source = class,      target = instance
  *
- * Convention detection: hub detection via structuralParentEnd().
- * If an endpoint appears as source in 2+ links of a type → source is parent.
- * If as target → target is parent. No hubs → default "target" (conventional).
+ * The canvas enforces this: first click = source = parent.
+ * Hub detection (structuralParentEnd) handles legacy models where the
+ * convention may differ; default is always "source".
  */
 
 import type { Model, Link } from "./types";
@@ -39,10 +40,8 @@ export function structuralParentEnd(
   const tgtHubs = [...byTgt.values()].filter(c => c >= 2).length;
   if (srcHubs > tgtHubs) return "source";
   if (tgtHubs > srcHubs) return "target";
-  // No hubs (single links): per-type default convention.
-  // Exhibition: target=parent (exhibitor). Canvas fix normalizes to this.
-  // Others: source=parent (OPL convention, canvas convention).
-  return linkType === "exhibition" ? "target" : "source";
+  // No hubs: default "source" (invariant: source=parent for all structural types).
+  return "source";
 }
 
 /**

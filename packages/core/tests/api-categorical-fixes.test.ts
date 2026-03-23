@@ -33,9 +33,9 @@ describe("P-01: unfold selector uses correct aggregation direction", () => {
     // Engine and Wheel are Parts OF Car
     m = unwrap(addLink(m, { id: "lnk-agg1", type: "aggregation", source: "obj-engine", target: "obj-car" }));
     m = unwrap(addLink(m, { id: "lnk-agg2", type: "aggregation", source: "obj-wheel", target: "obj-car" }));
-    // exhibition: Attribute → Exhibitor (source=Attribute, target=Exhibitor)
-    // Color is an Attribute OF Car
-    m = unwrap(addLink(m, { id: "lnk-exh1", type: "exhibition", source: "obj-color", target: "obj-car" }));
+    // exhibition: Exhibitor → Feature (source=Exhibitor, target=Feature)
+    // Color is a Feature OF Car
+    m = unwrap(addLink(m, { id: "lnk-exh1", type: "exhibition", source: "obj-car", target: "obj-color" }));
     // Car is a Part OF Garage (reverse direction — Car is contained in Garage)
     m = unwrap(addLink(m, { id: "lnk-agg3", type: "aggregation", source: "obj-car", target: "obj-garage" }));
     // effect: Process → Object (NOT aggregation/exhibition, should not appear in unfold)
@@ -216,29 +216,29 @@ describe("I-31: unique discriminating attribute per exhibitor", () => {
 
   it("allows first discriminating exhibition link", () => {
     const m = buildExhibitionModel();
-    const r = addLink(m, { id: "lnk-exh1", type: "exhibition", source: "obj-size", target: "obj-animal", discriminating: true });
+    const r = addLink(m, { id: "lnk-exh1", type: "exhibition", source: "obj-animal", target: "obj-size", discriminating: true });
     expect(isOk(r)).toBe(true);
   });
 
   it("rejects second discriminating exhibition to same exhibitor", () => {
     let m = buildExhibitionModel();
-    m = unwrap(addLink(m, { id: "lnk-exh1", type: "exhibition", source: "obj-size", target: "obj-animal", discriminating: true }));
-    const r = addLink(m, { id: "lnk-exh2", type: "exhibition", source: "obj-color", target: "obj-animal", discriminating: true });
+    m = unwrap(addLink(m, { id: "lnk-exh1", type: "exhibition", source: "obj-animal", target: "obj-size", discriminating: true }));
+    const r = addLink(m, { id: "lnk-exh2", type: "exhibition", source: "obj-animal", target: "obj-color", discriminating: true });
     expect(isErr(r)).toBe(true);
     if (isErr(r)) expect(r.error.code).toBe("I-31");
   });
 
   it("allows non-discriminating exhibition to same exhibitor", () => {
     let m = buildExhibitionModel();
-    m = unwrap(addLink(m, { id: "lnk-exh1", type: "exhibition", source: "obj-size", target: "obj-animal", discriminating: true }));
-    const r = addLink(m, { id: "lnk-exh2", type: "exhibition", source: "obj-color", target: "obj-animal" });
+    m = unwrap(addLink(m, { id: "lnk-exh1", type: "exhibition", source: "obj-animal", target: "obj-size", discriminating: true }));
+    const r = addLink(m, { id: "lnk-exh2", type: "exhibition", source: "obj-animal", target: "obj-color" });
     expect(isOk(r)).toBe(true);
   });
 
   it("rejects via updateLink when setting discriminating=true", () => {
     let m = buildExhibitionModel();
-    m = unwrap(addLink(m, { id: "lnk-exh1", type: "exhibition", source: "obj-size", target: "obj-animal", discriminating: true }));
-    m = unwrap(addLink(m, { id: "lnk-exh2", type: "exhibition", source: "obj-color", target: "obj-animal" }));
+    m = unwrap(addLink(m, { id: "lnk-exh1", type: "exhibition", source: "obj-animal", target: "obj-size", discriminating: true }));
+    m = unwrap(addLink(m, { id: "lnk-exh2", type: "exhibition", source: "obj-animal", target: "obj-color" }));
     const r = updateLink(m, "lnk-exh2", { discriminating: true });
     expect(isErr(r)).toBe(true);
     if (isErr(r)) expect(r.error.code).toBe("I-31");
@@ -248,8 +248,8 @@ describe("I-31: unique discriminating attribute per exhibitor", () => {
     let m = buildExhibitionModel();
     // Bypass guard by inserting directly
     const links = new Map(m.links);
-    links.set("lnk-exh1", { id: "lnk-exh1", type: "exhibition" as const, source: "obj-size", target: "obj-animal", discriminating: true });
-    links.set("lnk-exh2", { id: "lnk-exh2", type: "exhibition" as const, source: "obj-color", target: "obj-animal", discriminating: true });
+    links.set("lnk-exh1", { id: "lnk-exh1", type: "exhibition" as const, source: "obj-animal", target: "obj-size", discriminating: true });
+    links.set("lnk-exh2", { id: "lnk-exh2", type: "exhibition" as const, source: "obj-animal", target: "obj-color", discriminating: true });
     m = { ...m, links };
     const errors = validate(m);
     expect(errors.some(e => e.code === "I-31")).toBe(true);
@@ -270,8 +270,8 @@ describe("I-32: discriminating values coverage", () => {
     // States of Size: small, large
     m = unwrap(addState(m, { id: "state-small", parent: "obj-size", name: "small", initial: true, final: false, default: true }));
     m = unwrap(addState(m, { id: "state-large", parent: "obj-size", name: "large", initial: false, final: false, default: false }));
-    // Exhibition: Size → Animal (discriminating)
-    m = unwrap(addLink(m, { id: "lnk-exh", type: "exhibition", source: "obj-size", target: "obj-animal", discriminating: true }));
+    // Exhibition: Animal → Size (discriminating)
+    m = unwrap(addLink(m, { id: "lnk-exh", type: "exhibition", source: "obj-animal", target: "obj-size", discriminating: true }));
     // Generalization: Dog → Animal, Cat → Animal
     m = unwrap(addLink(m, { id: "lnk-gen-dog", type: "generalization", source: "obj-dog", target: "obj-animal" }));
     m = unwrap(addLink(m, { id: "lnk-gen-cat", type: "generalization", source: "obj-cat", target: "obj-animal" }));

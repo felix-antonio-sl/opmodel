@@ -216,7 +216,7 @@ describe("I-27: exhibition perseverance (removed)", () => {
     m = (addThing(m, obj("obj-exhibitor", "Car")) as any).value;
     m = (addThing(m, proc("proc-feature", "Speed")) as any).value;
     m = { ...m, links: new Map(m.links).set("lnk-exh", {
-      id: "lnk-exh", type: "exhibition", source: "proc-feature", target: "obj-exhibitor",
+      id: "lnk-exh", type: "exhibition", source: "obj-exhibitor", target: "proc-feature",
     }) };
     const errors = errorsOf(m, "I-27");
     expect(errors).toHaveLength(0);

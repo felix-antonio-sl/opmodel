@@ -1544,16 +1544,15 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
                           resolvedType = linkType;
                         }
 
-                        // Exhibition convention: source=feature, target=exhibitor.
-                        // User clicks exhibitor first → swap so convention holds.
-                        const isExh = resolvedType === "exhibition";
+                        // Invariant: source = parent (first click), target = child (second click).
+                        // No swap for any type — user's click order IS the direction.
                         dispatch({
                           tag: "addLink",
                           link: {
                             id: genId("lnk"),
                             type: resolvedType as any,
-                            source: isExh ? thingId : linkSource,
-                            target: isExh ? linkSource : thingId,
+                            source: linkSource,
+                            target: thingId,
                           },
                         });
                         setLinkSource(null);

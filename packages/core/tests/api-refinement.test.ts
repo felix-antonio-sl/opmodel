@@ -201,10 +201,10 @@ describe("refineThing", () => {
       m = unwrap(addAppearance(m, { thing: "obj-wheel", opd: "opd-sd", x: 200, y: 200, w: 120, h: 60 }));
       m = unwrap(addAppearance(m, { thing: "obj-color", opd: "opd-sd", x: 350, y: 200, w: 120, h: 60 }));
       m = unwrap(addAppearance(m, { thing: "proc-drive", opd: "opd-sd", x: 350, y: 100, w: 150, h: 80 }));
-      // P-01 fix: correct link directions per spec — aggregation: Part→Whole, exhibition: Attribute→Exhibitor
+      // P-01 fix: correct link directions per spec — aggregation: Part→Whole, exhibition: Exhibitor→Feature
       m = unwrap(addLink(m, { id: "lnk-agg1", type: "aggregation", source: "obj-engine", target: "obj-car" }));
       m = unwrap(addLink(m, { id: "lnk-agg2", type: "aggregation", source: "obj-wheel", target: "obj-car" }));
-      m = unwrap(addLink(m, { id: "lnk-exh1", type: "exhibition", source: "obj-color", target: "obj-car" }));
+      m = unwrap(addLink(m, { id: "lnk-exh1", type: "exhibition", source: "obj-car", target: "obj-color" }));
       m = unwrap(addLink(m, { id: "lnk-eff1", type: "effect", source: "proc-drive", target: "obj-car" }));
       return m;
     }
@@ -247,7 +247,7 @@ describe("refineThing", () => {
     });
 
     it("unfold works with exhibition in both conventions", () => {
-      // Post-fix convention: source=feature, target=exhibitor (2+ links for hub detection)
+      // Post-fix convention: source=exhibitor, target=feature (2+ links for hub detection)
       let m = createModel("test");
       m = unwrap(addThing(m, { id: "obj-car", kind: "object", name: "Car", essence: "physical", affiliation: "systemic" }));
       m = unwrap(addThing(m, { id: "obj-color", kind: "object", name: "Color", essence: "informatical", affiliation: "systemic" }));

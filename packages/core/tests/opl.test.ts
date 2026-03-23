@@ -768,8 +768,8 @@ describe("render — exhibition feature form (GAP-OPL-07)", () => {
     if (!isOk(r)) throw r.error; m = r.value;
     r = addAppearance(m, { thing: "obj-colour", opd: "opd-sd", x: 100, y: 250, w: 120, h: 60 });
     if (!isOk(r)) throw r.error; m = r.value;
-    // Exhibition link: source=feature, target=exhibitor
-    r = addLink(m, { id: "lnk-exhibit-colour", type: "exhibition", source: "obj-colour", target: "obj-vehicle" });
+    // Exhibition link: source=exhibitor, target=feature
+    r = addLink(m, { id: "lnk-exhibit-colour", type: "exhibition", source: "obj-vehicle", target: "obj-colour" });
     if (!isOk(r)) throw r.error; m = r.value;
     // States on the feature (attribute values)
     r = addState(m, { id: "state-red", parent: "obj-colour", name: "red", initial: false, final: false, default: true });
@@ -909,11 +909,11 @@ describe("render — grouped structural links (GAP-OPL-04)", () => {
       r = addAppearance(m, { thing: id, opd: "opd-sd", x: 0, y: 0, w: 100, h: 50 });
       if (!isOk(r)) throw r.error; m = r.value;
     }
-    r = addLink(m, { id: "lnk-ex-h", type: "exhibition", source: "obj-height", target: "obj-adult" });
+    r = addLink(m, { id: "lnk-ex-h", type: "exhibition", source: "obj-adult", target: "obj-height" });
     if (!isOk(r)) throw r.error; m = r.value;
-    r = addLink(m, { id: "lnk-ex-w", type: "exhibition", source: "obj-weight", target: "obj-adult" });
+    r = addLink(m, { id: "lnk-ex-w", type: "exhibition", source: "obj-adult", target: "obj-weight" });
     if (!isOk(r)) throw r.error; m = r.value;
-    r = addLink(m, { id: "lnk-ex-walk", type: "exhibition", source: "proc-walking", target: "obj-adult" });
+    r = addLink(m, { id: "lnk-ex-walk", type: "exhibition", source: "obj-adult", target: "proc-walking" });
     if (!isOk(r)) throw r.error; m = r.value;
     const doc = expose(m, "opd-sd");
     const text = render(doc);

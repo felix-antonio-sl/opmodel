@@ -32,9 +32,9 @@ function buildModel() {
   m = ok(addLink(m, { id: "lnk-engine-car", type: "aggregation", source: "obj-car", target: "obj-engine" }));
   m = ok(addLink(m, { id: "lnk-wheel-car", type: "aggregation", source: "obj-car", target: "obj-wheel" }));
   m = ok(addLink(m, { id: "lnk-door-car", type: "aggregation", source: "obj-car", target: "obj-door" }));
-  // exhibition: source=feature, target=exhibitor
-  m = ok(addLink(m, { id: "lnk-color-car", type: "exhibition", source: "obj-color", target: "obj-car" }));
-  m = ok(addLink(m, { id: "lnk-weight-car", type: "exhibition", source: "obj-weight", target: "obj-car" }));
+  // exhibition: source=exhibitor, target=feature
+  m = ok(addLink(m, { id: "lnk-color-car", type: "exhibition", source: "obj-car", target: "obj-color" }));
+  m = ok(addLink(m, { id: "lnk-weight-car", type: "exhibition", source: "obj-car", target: "obj-weight" }));
   return m;
 }
 
