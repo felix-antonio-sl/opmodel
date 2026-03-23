@@ -243,15 +243,25 @@ export function resolveLinksForOpd(model: Model, opdId: string): ResolvedLink[] 
   const result: ResolvedLink[] = [];
   const seen = new Set<string>();
 
-  // RESOLVE-01: In-zoom OPD parent-level link filtering
+  // RESOLVE-01: In-zoom OPD parent-level link filtering + C-01 distribution
   const opd = model.opds.get(opdId);
   const containerThingId = opd?.refines;
   let internalThings: Set<string> | null = null;
+  // C-01: Subprocesses sorted by Y for link distribution (ISO §14.2.2.4.1)
+  let subprocessesByY: string[] = [];
   if (containerThingId) {
     internalThings = new Set<string>();
+    const subprocessApps: Array<{ thingId: string; y: number }> = [];
     for (const app of model.appearances.values()) {
-      if (app.opd === opdId && app.internal === true) internalThings.add(app.thing);
+      if (app.opd === opdId && app.internal === true) {
+        internalThings.add(app.thing);
+        const thing = model.things.get(app.thing);
+        if (thing?.kind === "process" && app.thing !== containerThingId) {
+          subprocessApps.push({ thingId: app.thing, y: app.y });
+        }
+      }
     }
+    subprocessesByY = subprocessApps.sort((a, b) => a.y - b.y).map(a => a.thingId);
   }
 
   for (const link of model.links.values()) {
@@ -261,11 +271,44 @@ export function resolveLinksForOpd(model: Model, opdId: string): ResolvedLink[] 
     if (vs === vt) continue; // Skip self-loops from same-parent resolution
 
     // RESOLVE-01: Filter parent-level links in refinement OPDs.
-    // Skip procedural links to container (distributive semantics in process in-zoom).
-    // Keep structural links to container (they ARE the content of unfold/object in-zoom).
+    // C-01: Distribute procedural links to subprocesses instead of skipping them.
     if (containerThingId && internalThings) {
       const isStructural = ["aggregation", "exhibition", "generalization", "classification", "tagged"].includes(link.type);
-      if ((vs === containerThingId || vt === containerThingId) && !isStructural) continue;
+      const touchesContainer = vs === containerThingId || vt === containerThingId;
+
+      if (touchesContainer && !isStructural) {
+        // C-01: Distribute to subprocesses if any exist
+        if (subprocessesByY.length > 0) {
+          const first = subprocessesByY[0]!;
+          const last = subprocessesByY[subprocessesByY.length - 1]!;
+          const otherEnd = vs === containerThingId ? vt : vs;
+
+          if (link.type === "consumption" || link.type === "input") {
+            // Consumption/input → first subprocess
+            const dvs = vs === containerThingId ? first : vs;
+            const dvt = vt === containerThingId ? first : vt;
+            result.push({ link, visualSource: dvs, visualTarget: dvt, aggregated: true });
+          } else if (link.type === "result" || link.type === "output") {
+            // Result/output → last subprocess
+            const dvs = vs === containerThingId ? last : vs;
+            const dvt = vt === containerThingId ? last : vt;
+            result.push({ link, visualSource: dvs, visualTarget: dvt, aggregated: true });
+          } else {
+            // Agent/instrument/effect → all subprocesses
+            for (const spId of subprocessesByY) {
+              const dvs = vs === containerThingId ? spId : vs;
+              const dvt = vt === containerThingId ? spId : vt;
+              const spKey = `${link.type}|${dvs}|${dvt}`;
+              if (!seen.has(spKey)) {
+                seen.add(spKey);
+                result.push({ link, visualSource: dvs, visualTarget: dvt, aggregated: true });
+              }
+            }
+          }
+        }
+        // Skip the original link to container (distributed or no subprocesses)
+        continue;
+      }
       if (!internalThings.has(vs) && !internalThings.has(vt)) continue;
     }
 

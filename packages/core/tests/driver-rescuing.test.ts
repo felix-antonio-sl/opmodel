@@ -309,14 +309,19 @@ describe("OnStar Driver Rescuing System", () => {
       expect(types.has("effect")).toBe(true);
     });
 
-    it("SD1: excludes parent-level links (RESOLVE-01)", () => {
+    it("SD1: distributes parent-level links to subprocesses (C-01)", () => {
       const m = loadDriverRescuingModel();
       const resolved = resolveLinksForOpd(m, "opd-sd1");
       const linkIds = resolved.map(r => r.link.id);
-      // Parent-level links should NOT appear
-      expect(linkIds).not.toContain("lnk-advisor-agent-rescuing");   // agent to container
-      expect(linkIds).not.toContain("lnk-rescuing-effect-driver");   // effect on container process
-      expect(linkIds).not.toContain("lnk-driver-tagged-console");    // tagged between externals
+      // Agent/effect links are now DISTRIBUTED to subprocesses (not excluded)
+      // They appear with visualTarget pointing to subprocesses, not container
+      const agentLinks = resolved.filter(r => r.link.id === "lnk-advisor-agent-rescuing");
+      expect(agentLinks.length).toBeGreaterThan(0); // distributed to subprocesses
+      for (const al of agentLinks) {
+        expect(al.visualTarget).not.toBe("proc-rescuing"); // not container
+      }
+      // Tagged links between externals still excluded (no internal endpoint)
+      expect(linkIds).not.toContain("lnk-driver-tagged-console");
     });
 
     it("SD: suppresses all aggregated enabling links (VISUAL-03)", () => {
