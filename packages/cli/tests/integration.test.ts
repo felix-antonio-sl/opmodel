@@ -51,10 +51,12 @@ describe("Coffee Making System (end-to-end CLI)", () => {
     executeAdd("link", { type: "consumption", source: "obj-water", target: "proc-coffee-making", file: filePath });
     executeAdd("link", { type: "result", source: "proc-coffee-making", target: "obj-coffee", file: filePath });
 
-    // 6. Validate
+    // 6. Validate — I-CONTOUR-RESTRICT expected for consumption/result on in-zoomed process
     const validateResult = executeValidate({ file: filePath });
-    expect(validateResult.valid).toBe(true);
-    expect(validateResult.errors).toHaveLength(0);
+    const contourErrors = validateResult.errors.filter((e: any) => e.code === "I-CONTOUR-RESTRICT");
+    const otherErrors = validateResult.errors.filter((e: any) => e.code !== "I-CONTOUR-RESTRICT");
+    expect(otherErrors).toHaveLength(0);
+    expect(contourErrors.length).toBe(3); // 2 consumption + 1 result
     expect(validateResult.summary.things).toBe(5);
     expect(validateResult.summary.states).toBe(4);
     expect(validateResult.summary.links).toBe(4);
@@ -80,7 +82,11 @@ describe("Coffee Making System (end-to-end CLI)", () => {
     expect(removeResult.cascade.links).toBe(1); // consumption link
 
     const afterRemove = executeValidate({ file: filePath });
-    expect(afterRemove.valid).toBe(true);
+    // Remaining: 1 consumption (beans) + 1 result (coffee) still target in-zoomed process
+    const afterContour = afterRemove.errors.filter((e: any) => e.code === "I-CONTOUR-RESTRICT");
+    const afterOther = afterRemove.errors.filter((e: any) => e.code !== "I-CONTOUR-RESTRICT");
+    expect(afterOther).toHaveLength(0);
+    expect(afterContour.length).toBe(2);
     expect(afterRemove.summary.things).toBe(4);
   });
 });

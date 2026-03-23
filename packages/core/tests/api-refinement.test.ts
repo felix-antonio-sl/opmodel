@@ -295,11 +295,14 @@ describe("validate() refinement checks", () => {
     expect(errors.some(e => e.code === "INCONSISTENT_REFINEMENT")).toBe(true);
   });
 
-  it("passes validation for correctly formed refinement", () => {
+  it("correctly formed refinement only flags I-CONTOUR-RESTRICT for consumption links", () => {
     let m = buildTestModel();
+    // buildTestModel has lnk-2: consumption beans→proc-make-coffee
     m = unwrap(refineThing(m, "proc-make-coffee", "opd-sd", "in-zoom", "opd-sd1", "SD1"));
     const errors = validate(m);
-    expect(errors.length).toBe(0);
+    // Only I-CONTOUR-RESTRICT expected (consumption link to in-zoomed process)
+    expect(errors.every(e => e.code === "I-CONTOUR-RESTRICT")).toBe(true);
+    expect(errors.length).toBe(1);
   });
 });
 
@@ -325,5 +328,53 @@ describe("removeThing cascade to refinement OPDs", () => {
     const model = unwrap(removeThing(m, "proc-make-coffee"));
     expect(model.opds.has("opd-sd1")).toBe(false);
     expect(model.opds.has("opd-sd1-1")).toBe(false);
+  });
+});
+
+describe("validate() I-CONTOUR-RESTRICT (C-02)", () => {
+  it("flags consumption link targeting in-zoomed process", () => {
+    let m = buildTestModel();
+    // lnk-2 is consumption: beans → proc-make-coffee
+    m = unwrap(refineThing(m, "proc-make-coffee", "opd-sd", "in-zoom", "opd-sd1", "SD1"));
+    const errors = validate(m);
+    const contour = errors.filter(e => e.code === "I-CONTOUR-RESTRICT");
+    expect(contour.length).toBeGreaterThanOrEqual(1);
+    expect(contour.some(e => e.entity === "lnk-2")).toBe(true);
+  });
+
+  it("flags result link from in-zoomed process", () => {
+    let m = buildTestModel();
+    m = unwrap(addThing(m, { id: "obj-coffee", kind: "object", name: "Coffee", essence: "physical", affiliation: "systemic" }));
+    m = unwrap(addAppearance(m, { thing: "obj-coffee", opd: "opd-sd", x: 400, y: 100, w: 120, h: 60 }));
+    m = unwrap(addLink(m, { id: "lnk-result", type: "result", source: "proc-make-coffee", target: "obj-coffee" }));
+    m = unwrap(refineThing(m, "proc-make-coffee", "opd-sd", "in-zoom", "opd-sd1", "SD1"));
+    const errors = validate(m);
+    expect(errors.some(e => e.code === "I-CONTOUR-RESTRICT" && e.entity === "lnk-result")).toBe(true);
+  });
+
+  it("does NOT flag effect link to in-zoomed process", () => {
+    let m = buildTestModel();
+    // lnk-1 is effect: water → proc-make-coffee
+    m = unwrap(refineThing(m, "proc-make-coffee", "opd-sd", "in-zoom", "opd-sd1", "SD1"));
+    const errors = validate(m);
+    const contour = errors.filter(e => e.code === "I-CONTOUR-RESTRICT");
+    expect(contour.some(e => e.entity === "lnk-1")).toBe(false);
+  });
+
+  it("does NOT flag agent link to in-zoomed process", () => {
+    let m = buildTestModel();
+    m = unwrap(addThing(m, { id: "obj-barista", kind: "object", name: "Barista", essence: "physical", affiliation: "systemic" }));
+    m = unwrap(addAppearance(m, { thing: "obj-barista", opd: "opd-sd", x: 50, y: 200, w: 120, h: 60 }));
+    m = unwrap(addLink(m, { id: "lnk-agent", type: "agent", source: "obj-barista", target: "proc-make-coffee" }));
+    m = unwrap(refineThing(m, "proc-make-coffee", "opd-sd", "in-zoom", "opd-sd1", "SD1"));
+    const errors = validate(m);
+    expect(errors.some(e => e.code === "I-CONTOUR-RESTRICT" && e.entity === "lnk-agent")).toBe(false);
+  });
+
+  it("does NOT flag consumption to non-in-zoomed process", () => {
+    const m = buildTestModel();
+    // proc-make-coffee not yet in-zoomed
+    const errors = validate(m);
+    expect(errors.some(e => e.code === "I-CONTOUR-RESTRICT")).toBe(false);
   });
 });

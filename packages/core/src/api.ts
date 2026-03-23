@@ -1523,6 +1523,21 @@ export function validate(model: Model): InvariantError[] {
     }
   }
 
+  // I-CONTOUR-RESTRICT: Consumption/result links must not target in-zoomed processes (ISO §10.5.2)
+  // These links must be distributed to individual subprocesses, not the outer contour.
+  for (const [id, link] of model.links) {
+    if (link.type === "consumption" || link.type === "result" || link.type === "input" || link.type === "output") {
+      if (inZoomedProcessIds.has(link.source) || inZoomedProcessIds.has(link.target)) {
+        const procId = inZoomedProcessIds.has(link.source) ? link.source : link.target;
+        errors.push({
+          code: "I-CONTOUR-RESTRICT",
+          message: `${link.type} link ${id} targets in-zoomed process ${procId} — must target subprocesses (ISO §10.5.2)`,
+          entity: id,
+        });
+      }
+    }
+  }
+
   // I-20: Object with states must have at least 2 states defined
   for (const [id, thing] of model.things) {
     if (thing.kind === "object") {

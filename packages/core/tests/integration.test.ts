@@ -57,9 +57,12 @@ describe("Coffee Making System (end-to-end)", () => {
     // Assertion
     m = unwrap(addAssertion(m, { id: "ast-coffee-ready", target: "proc-coffee-making", predicate: "after Coffee Making, Coffee is ready", category: "correctness", enabled: true }));
 
-    // Validate
+    // Validate — I-CONTOUR-RESTRICT expected: consumption + result target in-zoomed process
     const errors = validate(m);
-    expect(errors).toEqual([]);
+    const contourErrors = errors.filter(e => e.code === "I-CONTOUR-RESTRICT");
+    const otherErrors = errors.filter(e => e.code !== "I-CONTOUR-RESTRICT");
+    expect(otherErrors).toEqual([]);
+    expect(contourErrors.length).toBe(2); // consumption + result
     expect(m.things.size).toBe(5);
     expect(m.states.size).toBe(4);
     expect(m.links.size).toBe(4);
