@@ -305,9 +305,9 @@ export function resolveLinksForOpd(model: Model, opdId: string): ResolvedLink[] 
               }
             }
           }
+          continue; // distributed — skip original
         }
-        // Skip the original link to container (distributed or no subprocesses)
-        continue;
+        // No subprocesses yet — show link to container as-is (fall through)
       }
       if (!internalThings.has(vs) && !internalThings.has(vt)) continue;
     }

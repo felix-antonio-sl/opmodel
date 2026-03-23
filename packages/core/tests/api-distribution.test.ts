@@ -90,7 +90,7 @@ describe("C-01: Link Distribution (derived via resolveLinksForOpd)", () => {
     expect(targets).toEqual(["proc-p1", "proc-p2", "proc-p3"]);
   });
 
-  it("without subprocesses, links to container are skipped", () => {
+  it("without subprocesses, links to container remain visible", () => {
     // Build model without adding subprocesses
     let m = createModel("no-subs");
     m = unwrap(addThing(m, { id: "proc-main", kind: "process", name: "Main", essence: "informatical", affiliation: "systemic" }));
@@ -99,10 +99,11 @@ describe("C-01: Link Distribution (derived via resolveLinksForOpd)", () => {
     m = unwrap(addAppearance(m, { thing: "obj-x", opd: "opd-sd", x: 50, y: 50, w: 100, h: 50 }));
     m = unwrap(addLink(m, { id: "lnk-c", type: "consumption", source: "obj-x", target: "proc-main" }));
     m = unwrap(refineThing(m, "proc-main", "opd-sd", "in-zoom", "opd-sd1", "SD1"));
-    // No subprocesses added → link to container is skipped in child OPD
+    // No subprocesses → link shows to container (until subprocesses exist for distribution)
     const resolved = resolveLinksForOpd(m, "opd-sd1");
     const consume = resolved.find(r => r.link.id === "lnk-c");
-    expect(consume).toBeUndefined();
+    expect(consume).toBeDefined();
+    expect(consume!.visualTarget).toBe("proc-main"); // still points to container
   });
 
   it("parent OPD still shows original links (not distributed)", () => {
