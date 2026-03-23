@@ -211,10 +211,10 @@ function SvgDefs() {
         <path d="M0,0 L12,6 L0,12Z" fill="#6b5fad" />
       </marker>
 
-      {/* Structural: Exhibition = filled triangle with inner line (ISO §6) */}
+      {/* Structural: Exhibition = small filled triangle inside open triangle (ISO §6) */}
       <marker id="triangle-exhibit" viewBox="0 0 12 12" refX="12" refY="6" markerWidth="12" markerHeight="12" orient="auto-start-reverse">
-        <path d="M0,0 L12,6 L0,12Z" fill="#6b5fad" />
-        <line x1="3" y1="4" x2="3" y2="8" stroke="white" strokeWidth="1.5" />
+        <path d="M0,0 L12,6 L0,12Z" fill="white" stroke="#6b5fad" strokeWidth="1.2" />
+        <path d="M2,3.5 L7,6 L2,8.5Z" fill="#6b5fad" />
       </marker>
 
       {/* Structural: Generalization = open triangle △ (ISO §6) */}
@@ -222,10 +222,10 @@ function SvgDefs() {
         <path d="M0,0 L12,6 L0,12Z" fill="white" stroke="#6b5fad" strokeWidth="1.5" />
       </marker>
 
-      {/* Structural: Classification = open triangle on baseline (ISO §6) */}
-      <marker id="triangle-classify" viewBox="0 0 14 14" refX="14" refY="7" markerWidth="14" markerHeight="14" orient="auto-start-reverse">
-        <path d="M0,2 L12,7 L0,12Z" fill="white" stroke="#6b5fad" strokeWidth="1.5" />
-        <line x1="0" y1="12" x2="12" y2="12" stroke="#6b5fad" strokeWidth="1.5" />
+      {/* Structural: Classification = small filled circle inside open triangle (ISO §6) */}
+      <marker id="triangle-classify" viewBox="0 0 12 12" refX="12" refY="6" markerWidth="12" markerHeight="12" orient="auto-start-reverse">
+        <path d="M0,0 L12,6 L0,12Z" fill="white" stroke="#6b5fad" strokeWidth="1.5" />
+        <circle cx="4" cy="6" r="2" fill="#6b5fad" />
       </marker>
 
       {/* Structural: Tagged = purple arrow (ISO §10.2) */}
@@ -1334,33 +1334,43 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
               return { ...c, origin, endpoint };
             });
 
-            // Triangle shape per type
+            // Triangle shape per type (ISO §6 canonical symbols)
             const color = "#6b5fad";
             const triPoints = `${apex.x},${apex.y} ${baseL.x},${baseL.y} ${baseR.x},${baseR.y}`;
+            // Inner triangle/circle centroid (60% from apex toward base center)
+            const innerCtr = { x: apex.x * 0.4 + baseCtr.x * 0.6, y: apex.y * 0.4 + baseCtr.y * 0.6 };
             let triangleSvg: React.ReactNode;
             switch (fork.type) {
               case "aggregation":
+                // Filled black triangle ▲
                 triangleSvg = <polygon points={triPoints} fill={color} />;
                 break;
               case "exhibition": {
-                // Filled triangle + white inner line parallel to base (25% from base toward apex)
-                const il1 = { x: baseL.x * 0.75 + apex.x * 0.25, y: baseL.y * 0.75 + apex.y * 0.25 };
-                const il2 = { x: baseR.x * 0.75 + apex.x * 0.25, y: baseR.y * 0.75 + apex.y * 0.25 };
+                // Small filled triangle inside larger open triangle (ISO §6)
+                const s = 0.35; // inner triangle scale
+                const innerApex = { x: apex.x * (1 - s) + baseCtr.x * s, y: apex.y * (1 - s) + baseCtr.y * s };
+                const innerL = { x: innerCtr.x - perp.x * TRI_HALF * s, y: innerCtr.y - perp.y * TRI_HALF * s };
+                const innerR = { x: innerCtr.x + perp.x * TRI_HALF * s, y: innerCtr.y + perp.y * TRI_HALF * s };
+                const innerPts = `${innerApex.x},${innerApex.y} ${innerL.x},${innerL.y} ${innerR.x},${innerR.y}`;
                 triangleSvg = (<>
-                  <polygon points={triPoints} fill={color} />
-                  <line x1={il1.x} y1={il1.y} x2={il2.x} y2={il2.y} stroke="white" strokeWidth="1.5" />
+                  <polygon points={triPoints} fill="white" stroke={color} strokeWidth="1.5" />
+                  <polygon points={innerPts} fill={color} />
                 </>);
                 break;
               }
               case "generalization":
+                // Open/empty triangle △
                 triangleSvg = <polygon points={triPoints} fill="white" stroke={color} strokeWidth="1.5" />;
                 break;
-              case "classification":
+              case "classification": {
+                // Small filled circle inside open triangle (ISO §6)
+                const r = Math.max(2, TRI_H * 0.15);
                 triangleSvg = (<>
                   <polygon points={triPoints} fill="white" stroke={color} strokeWidth="1.5" />
-                  <line x1={baseL.x} y1={baseL.y} x2={baseR.x} y2={baseR.y} stroke={color} strokeWidth="1.5" />
+                  <circle cx={innerCtr.x} cy={innerCtr.y} r={r} fill={color} />
                 </>);
                 break;
+              }
             }
 
             return (
