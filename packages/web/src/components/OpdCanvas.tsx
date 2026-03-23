@@ -807,6 +807,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
 
   // Multi-select state (H-04)
   const [multiSelect, setMultiSelect] = useState<Set<string>>(new Set());
+  const skipNextClick = useRef(false); // guard: lasso mouseUp → don't let onClick clear selection
 
   // Lasso selection state
   const [lasso, setLasso] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
@@ -1146,6 +1147,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
         }
       }
       setLasso(null);
+      skipNextClick.current = true; // prevent onClick from clearing multiSelect
       return;
     }
     if (resizeTarget && resizeHandle) {
@@ -1197,6 +1199,8 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
       // Clear multi-select on simple click (no significant drag movement)
       if (Math.abs(dragDelta.x) <= 1 && Math.abs(dragDelta.y) <= 1) {
         setMultiSelect(new Set());
+      } else {
+        skipNextClick.current = true; // dragged — don't let onClick interfere
       }
       setDragTarget(null);
       setDragDelta({ x: 0, y: 0 });
@@ -1216,6 +1220,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
 
   const onCanvasClick = useCallback(
     (e: React.MouseEvent) => {
+      if (skipNextClick.current) { skipNextClick.current = false; return; }
       if (dragTarget) return;
       if (simulation) {
         dispatch({ tag: "selectThing", thingId: null });
