@@ -1516,7 +1516,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
                   isSelected={selectedThing === thingId}
                   isDragging={isDragging}
                   isLinkSource={isLinkSource}
-                  isExternal={isAppExternal && opd?.refinement_type !== "unfold"}
+                  isExternal={isAppExternal && !opd?.refines}
                   isContainer={isAppContainer}
                   isRefined={[...model.opds.values()].some(o => o.refines === thingId)}
                   dragDelta={isDragging ? dragDelta : { x: 0, y: 0 }}

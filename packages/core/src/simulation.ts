@@ -260,9 +260,12 @@ export function resolveLinksForOpd(model: Model, opdId: string): ResolvedLink[] 
     if (!vs || !vt) continue;
     if (vs === vt) continue; // Skip self-loops from same-parent resolution
 
-    // RESOLVE-01: Filter parent-level links in in-zoom OPDs
+    // RESOLVE-01: Filter parent-level links in refinement OPDs.
+    // Skip procedural links to container (distributive semantics in process in-zoom).
+    // Keep structural links to container (they ARE the content of unfold/object in-zoom).
     if (containerThingId && internalThings) {
-      if (vs === containerThingId || vt === containerThingId) continue;
+      const isStructural = ["aggregation", "exhibition", "generalization", "classification", "tagged"].includes(link.type);
+      if ((vs === containerThingId || vt === containerThingId) && !isStructural) continue;
       if (!internalThings.has(vs) && !internalThings.has(vt)) continue;
     }
 
