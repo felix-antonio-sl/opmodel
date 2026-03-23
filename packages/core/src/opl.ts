@@ -35,15 +35,27 @@ export function expose(model: Model, opdId: string): OplDocument {
   }
 
   // Build exhibition feature lookup: featureId → exhibitorName
-  // Convention: exhibition link source=feature, target=exhibitor
-  // Must be built before thing declarations loop since declarations use it.
+  // Build exhibitorOf: maps feature → exhibitor for "X of Y" declarations.
+  // Direction-agnostic: the exhibitor is the endpoint with MORE exhibition links
+  // (the "hub"). Tie defaults to target (conventional: source=feature, target=exhibitor).
   const exhibitorOf = new Map<string, { id: string; name: string }>();
+  const exhLinkCount = new Map<string, number>();
   for (const link of model.links.values()) {
-    if (link.type === "exhibition" && visibleThings.has(link.source) && visibleThings.has(link.target)) {
-      const exhibitor = model.things.get(link.target);
-      if (exhibitor) {
-        exhibitorOf.set(link.source, { id: link.target, name: exhibitor.name });
-      }
+    if (link.type !== "exhibition") continue;
+    if (!visibleThings.has(link.source) || !visibleThings.has(link.target)) continue;
+    exhLinkCount.set(link.source, (exhLinkCount.get(link.source) ?? 0) + 1);
+    exhLinkCount.set(link.target, (exhLinkCount.get(link.target) ?? 0) + 1);
+  }
+  for (const link of model.links.values()) {
+    if (link.type !== "exhibition") continue;
+    if (!visibleThings.has(link.source) || !visibleThings.has(link.target)) continue;
+    const srcCount = exhLinkCount.get(link.source) ?? 0;
+    const tgtCount = exhLinkCount.get(link.target) ?? 0;
+    const exhibitorId = srcCount > tgtCount ? link.source : link.target;
+    const featureId = exhibitorId === link.source ? link.target : link.source;
+    const exhibitor = model.things.get(exhibitorId);
+    if (exhibitor && !exhibitorOf.has(featureId)) {
+      exhibitorOf.set(featureId, { id: exhibitorId, name: exhibitor.name });
     }
   }
 
@@ -176,16 +188,20 @@ export function expose(model: Model, opdId: string): OplDocument {
     .filter(l => visibleThings.has(l.source) && visibleThings.has(l.target))
     .sort((a, b) => a.id.localeCompare(b.id));
 
-  // In in-zoom OPDs, filter parent-level links (ISO: only internal decomposition)
+  // In refinement OPDs, filter parent-level procedural links (ISO: distributive semantics).
+  // Keep structural links to container — they ARE the content of unfold/object in-zoom.
   if (containerThingId) {
     const internalThings = new Set<string>();
     for (const app of model.appearances.values()) {
       if (app.opd === opdId && app.internal === true) internalThings.add(app.thing);
     }
-    sortedLinks = sortedLinks.filter(l =>
-      l.source !== containerThingId && l.target !== containerThingId &&
-      (internalThings.has(l.source) || internalThings.has(l.target))
-    );
+    sortedLinks = sortedLinks.filter(l => {
+      const isStructural = STRUCTURAL_TYPES.has(l.type);
+      const touchesContainer = l.source === containerThingId || l.target === containerThingId;
+      if (touchesContainer && !isStructural) return false;
+      if (!touchesContainer && !internalThings.has(l.source) && !internalThings.has(l.target)) return false;
+      return true;
+    });
   }
 
   // Separate structural links for grouping (GAP-OPL-04)
