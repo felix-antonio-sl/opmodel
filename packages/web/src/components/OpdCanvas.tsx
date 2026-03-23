@@ -1311,11 +1311,12 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
             const dir = { x: dx / len, y: dy / len };
             const perp = { x: -dir.y, y: dir.x };
 
-            // Geometry constants — compact for single links, larger for forks
+            // Geometry constants
             const isSingle = childrenData.length === 1;
-            const TRUNK = isSingle ? 15 : 25;
-            const TRI_H = isSingle ? 12 : 16;
-            const TRI_HALF = isSingle ? 7 : Math.max(10, childrenData.length * 5);
+            const hasInner = fork.type === "exhibition" || fork.type === "classification";
+            const TRUNK = isSingle ? 8 : 14;             // closer to parent edge
+            const TRI_H = hasInner ? (isSingle ? 18 : 22) : (isSingle ? 14 : 18);
+            const TRI_HALF = isSingle ? (hasInner ? 10 : 8) : Math.max(hasInner ? 12 : 10, childrenData.length * 5);
 
             // Trunk: parent edge → apex
             const trunkStart = edgePoint(parentThing.kind, parentRect, centroid);
@@ -1347,7 +1348,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
                 break;
               case "exhibition": {
                 // Small filled triangle inside larger open triangle (ISO §6)
-                const s = 0.35; // inner triangle scale
+                const s = 0.45; // inner triangle scale
                 const innerApex = { x: apex.x * (1 - s) + baseCtr.x * s, y: apex.y * (1 - s) + baseCtr.y * s };
                 const innerL = { x: innerCtr.x - perp.x * TRI_HALF * s, y: innerCtr.y - perp.y * TRI_HALF * s };
                 const innerR = { x: innerCtr.x + perp.x * TRI_HALF * s, y: innerCtr.y + perp.y * TRI_HALF * s };
@@ -1364,7 +1365,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
                 break;
               case "classification": {
                 // Small filled circle inside open triangle (ISO §6)
-                const r = Math.max(2, TRI_H * 0.15);
+                const r = Math.max(3, TRI_H * 0.18);
                 triangleSvg = (<>
                   <polygon points={triPoints} fill="white" stroke={color} strokeWidth="1.5" />
                   <circle cx={innerCtr.x} cy={innerCtr.y} r={r} fill={color} />
