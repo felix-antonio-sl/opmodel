@@ -805,26 +805,32 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
   const [dragDelta, setDragDelta] = useState<Point>({ x: 0, y: 0 });
   const [dragOrigin, setDragOrigin] = useState<Point>({ x: 0, y: 0 });
 
-  // Container drag coupling: when dragging the container of an in-zoom OPD,
-  // all internal things move together (ISO: container encapsulates contents).
-  const containerThingId = useMemo(() => {
-    const opd = model.opds.get(opdId);
-    return opd?.refines ?? null;
-  }, [model, opdId]);
+  // Multi-select state (H-04)
+  const [multiSelect, setMultiSelect] = useState<Set<string>>(new Set());
 
-  // Set of things that move during drag (container + all siblings, or just the single thing)
-  const draggedThings = useMemo(() => {
-    if (!dragTarget) return new Set<string>();
-    if (dragTarget === containerThingId) {
-      // Container drag: move all things in this OPD
-      const set = new Set<string>();
-      for (const app of model.appearances.values()) {
-        if (app.opd === opdId) set.add(app.thing);
+  // Lasso selection state
+  const [lasso, setLasso] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
+  const [lassoOrigin, setLassoOrigin] = useState<Point>({ x: 0, y: 0 });
+
+  // Clear multi-select when OPD changes
+  useEffect(() => { setMultiSelect(new Set()); }, [opdId]);
+
+  // Batch delete for multi-select
+  useEffect(() => {
+    if (multiSelect.size < 2) return;
+    const handler = (e: KeyboardEvent) => {
+      if ((e.key === "Delete" || e.key === "Backspace") && !e.metaKey && !e.ctrlKey) {
+        const target = e.target as HTMLElement;
+        if (target.tagName === "INPUT" || target.tagName === "SELECT" || target.tagName === "TEXTAREA") return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        for (const id of multiSelect) dispatch({ tag: "removeThing", thingId: id });
+        setMultiSelect(new Set());
       }
-      return set;
-    }
-    return new Set([dragTarget]);
-  }, [dragTarget, containerThingId, model, opdId]);
+    };
+    window.addEventListener("keydown", handler, true); // capture phase = first
+    return () => window.removeEventListener("keydown", handler, true);
+  }, [multiSelect, dispatch]);
 
   // Resize state
   type ResizeHandle = "nw" | "ne" | "sw" | "se";
@@ -832,6 +838,32 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
   const [resizeHandle, setResizeHandle] = useState<ResizeHandle | null>(null);
   const [resizeOrigin, setResizeOrigin] = useState<Point>({ x: 0, y: 0 });
   const [resizeDelta, setResizeDelta] = useState<Point>({ x: 0, y: 0 });
+
+  // Container drag coupling: when dragging the container of an in-zoom OPD,
+  // all internal things move together (ISO: container encapsulates contents).
+  const containerThingId = useMemo(() => {
+    const opd = model.opds.get(opdId);
+    return opd?.refines ?? null;
+  }, [model, opdId]);
+
+  // Set of things that move during drag (container + all siblings, multi-select, or single thing)
+  const draggedThings = useMemo(() => {
+    if (!dragTarget) return new Set<string>();
+    if (dragTarget === containerThingId) {
+      const set = new Set<string>();
+      for (const app of model.appearances.values()) {
+        if (app.opd === opdId) set.add(app.thing);
+      }
+      return set;
+    }
+    // Multi-select drag: move all selected things
+    if (multiSelect.size > 0 && multiSelect.has(dragTarget)) {
+      const set = new Set(multiSelect);
+      set.add(dragTarget);
+      return set;
+    }
+    return new Set([dragTarget]);
+  }, [dragTarget, containerThingId, model, opdId, multiSelect]);
 
   // Inline rename state
   const [renaming, setRenaming] = useState<string | null>(null);
@@ -996,31 +1028,57 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
   const onMouseDown = useCallback(
     (e: React.MouseEvent) => {
       if (e.button !== 0) return;
+      // Shift+drag: start lasso selection
+      if (e.shiftKey && !simulation) {
+        const svgRect = svgRef.current?.getBoundingClientRect();
+        if (!svgRect) return;
+        const mx = (e.clientX - svgRect.left - pan.x) / zoom;
+        const my = (e.clientY - svgRect.top - pan.y) / zoom;
+        setLasso({ x1: mx, y1: my, x2: mx, y2: my });
+        setLassoOrigin({ x: e.clientX, y: e.clientY });
+        setPanning(false);
+        return;
+      }
       // Only start pan if not dragging a thing
       setPanning(true);
       setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
     },
-    [pan],
+    [pan, zoom, simulation],
   );
 
   const onThingMouseDown = useCallback(
     (thingId: string, e: React.MouseEvent) => {
       if (e.button !== 0) return;
       if (simulation) {
-        // During simulation: only allow select, not drag
         dispatch({ tag: "selectThing", thingId });
         return;
       }
       e.stopPropagation();
-      const svgRect = svgRef.current?.getBoundingClientRect();
-      if (!svgRect) return;
+
+      // Ctrl/Cmd+Click: toggle multi-select
+      if (e.ctrlKey || e.metaKey) {
+        setMultiSelect((prev) => {
+          const next = new Set(prev);
+          if (next.has(thingId)) next.delete(thingId);
+          else next.add(thingId);
+          return next;
+        });
+        dispatch({ tag: "selectThing", thingId });
+        return;
+      }
+
+      // Normal click: if thing is in multi-select, drag all; otherwise clear multi-select
+      if (!multiSelect.has(thingId)) {
+        setMultiSelect(new Set());
+      }
+
       setDragTarget(thingId);
       setDragDelta({ x: 0, y: 0 });
       setDragOrigin({ x: e.clientX, y: e.clientY });
       setPanning(false);
       dispatch({ tag: "selectThing", thingId });
     },
-    [dispatch, simulation],
+    [dispatch, simulation, multiSelect],
   );
 
   const onResizeHandleMouseDown = useCallback(
@@ -1038,6 +1096,14 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
 
   const onMouseMove = useCallback(
     (e: React.MouseEvent) => {
+      if (lasso) {
+        const svgRect = svgRef.current?.getBoundingClientRect();
+        if (!svgRect) return;
+        const mx = (e.clientX - svgRect.left - pan.x) / zoom;
+        const my = (e.clientY - svgRect.top - pan.y) / zoom;
+        setLasso((prev) => prev ? { ...prev, x2: mx, y2: my } : null);
+        return;
+      }
       if (resizeTarget) {
         const dx = (e.clientX - resizeOrigin.x) / zoom;
         const dy = (e.clientY - resizeOrigin.y) / zoom;
@@ -1054,10 +1120,33 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
         setPan({ x: e.clientX - panStart.x, y: e.clientY - panStart.y });
       }
     },
-    [resizeTarget, resizeOrigin, dragTarget, dragOrigin, zoom, panning, panStart],
+    [lasso, pan, zoom, resizeTarget, resizeOrigin, dragTarget, dragOrigin, panning, panStart],
   );
 
   const onMouseUp = useCallback(() => {
+    if (lasso) {
+      // Resolve lasso rectangle to selected things
+      const lx = Math.min(lasso.x1, lasso.x2);
+      const ly = Math.min(lasso.y1, lasso.y2);
+      const lw = Math.abs(lasso.x2 - lasso.x1);
+      const lh = Math.abs(lasso.y2 - lasso.y1);
+      if (lw > 5 || lh > 5) {
+        const selected = new Set<string>();
+        for (const [thingId, app] of appearances) {
+          const cx = app.x + app.w / 2;
+          const cy = app.y + app.h / 2;
+          if (cx >= lx && cx <= lx + lw && cy >= ly && cy <= ly + lh) {
+            selected.add(thingId);
+          }
+        }
+        setMultiSelect(selected);
+        if (selected.size === 1) {
+          dispatch({ tag: "selectThing", thingId: [...selected][0]! });
+        }
+      }
+      setLasso(null);
+      return;
+    }
     if (resizeTarget && resizeHandle) {
       const app = appearances.get(resizeTarget);
       if (app && (Math.abs(resizeDelta.x) > 1 || Math.abs(resizeDelta.y) > 1)) {
@@ -1638,7 +1727,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
                   thing={thing}
                   appearance={app}
                   states={isAppContainer ? [] : states}
-                  isSelected={selectedThing === thingId}
+                  isSelected={selectedThing === thingId || multiSelect.has(thingId)}
                   isDragging={isDragging}
                   isLinkSource={isLinkSource}
                   isExternal={isAppExternal && !opd?.refines}
@@ -1738,6 +1827,17 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
               </g>
             );
           })()}
+
+          {/* Lasso selection rectangle */}
+          {lasso && (
+            <rect
+              className="lasso-rect"
+              x={Math.min(lasso.x1, lasso.x2)}
+              y={Math.min(lasso.y1, lasso.y2)}
+              width={Math.abs(lasso.x2 - lasso.x1)}
+              height={Math.abs(lasso.y2 - lasso.y1)}
+            />
+          )}
 
           {/* Inline rename overlay */}
           {renaming && (() => {

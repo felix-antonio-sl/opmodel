@@ -300,14 +300,54 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
       {/* Toolbar */}
       <Toolbar mode={ui.mode} linkType={ui.linkType} dispatch={dispatch} />
 
-      {/* Panels */}
-      <OpdTree
-        model={model}
-        currentOpd={ui.currentOpd}
-        selectedThing={ui.selectedThing}
-        onSelectOpd={(id) => dispatch({ tag: "selectOpd", opdId: id })}
-        onSelectThing={(id) => dispatch({ tag: "selectThing", thingId: id })}
-      />
+      {/* Left sidebar: OPD tree + Minimap */}
+      <div className="left-sidebar">
+        <OpdTree
+          model={model}
+          currentOpd={ui.currentOpd}
+          selectedThing={ui.selectedThing}
+          onSelectOpd={(id) => dispatch({ tag: "selectOpd", opdId: id })}
+          onSelectThing={(id) => dispatch({ tag: "selectThing", thingId: id })}
+        />
+        {/* Minimap (H-07) */}
+        {(() => {
+          const apps = [...model.appearances.values()].filter((a) => a.opd === ui.currentOpd);
+          if (apps.length === 0) return null;
+          let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+          for (const a of apps) {
+            minX = Math.min(minX, a.x);
+            minY = Math.min(minY, a.y);
+            maxX = Math.max(maxX, a.x + a.w);
+            maxY = Math.max(maxY, a.y + a.h);
+          }
+          const pad = 20;
+          minX -= pad; minY -= pad; maxX += pad; maxY += pad;
+          const vw = maxX - minX;
+          const vh = maxY - minY;
+          return (
+            <div className="minimap">
+              <div className="minimap__title">Minimap</div>
+              <svg className="minimap__svg" viewBox={`${minX} ${minY} ${vw} ${vh}`} preserveAspectRatio="xMidYMid meet">
+                {apps.map((a) => {
+                  const thing = model.things.get(a.thing);
+                  if (!thing) return null;
+                  const isProc = thing.kind === "process";
+                  const isSelected = ui.selectedThing === a.thing;
+                  const fill = isProc ? "var(--process-fill)" : "var(--object-fill)";
+                  const stroke = isSelected ? "var(--accent)" : (isProc ? "var(--process-stroke)" : "var(--object-stroke)");
+                  return isProc ? (
+                    <ellipse key={a.thing} cx={a.x + a.w / 2} cy={a.y + a.h / 2} rx={a.w / 2} ry={a.h / 2}
+                      fill={fill} stroke={stroke} strokeWidth={isSelected ? 3 : 1} />
+                  ) : (
+                    <rect key={a.thing} x={a.x} y={a.y} width={a.w} height={a.h}
+                      fill={fill} stroke={stroke} strokeWidth={isSelected ? 3 : 1} />
+                  );
+                })}
+              </svg>
+            </div>
+          );
+        })()}
+      </div>
       <OpdCanvas
         model={ui.simulation ? ui.simulation.frozenModel : model}
         opdId={ui.currentOpd}
