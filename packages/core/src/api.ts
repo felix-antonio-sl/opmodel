@@ -544,11 +544,29 @@ export function refineThing(
       if (link.target === thingId && thingsInFiber.has(link.source) && link.source !== thingId) {
         externalThings.add(link.source);
       }
-    } else {
-      // P-01 fix: aggregation = Part→Whole (source=Part, target=Whole)
-      // Unfolding Whole X reveals its Parts: links where target=X, collect source
-      if ((link.type === "aggregation" || link.type === "exhibition") &&
-          link.target === thingId && thingsInFiber.has(link.source) && link.source !== thingId) {
+    }
+  }
+
+  // Unfold: collect structural children (parts/features) of thingId.
+  // Convention detection: count structural links per direction to determine
+  // whether thingId is parent-as-source (canvas) or parent-as-target (old).
+  if (refinementType === "unfold") {
+    let asSource = 0, asTarget = 0;
+    for (const link of model.links.values()) {
+      if (link.type !== "aggregation" && link.type !== "exhibition") continue;
+      if (link.source === thingId) asSource++;
+      if (link.target === thingId) asTarget++;
+    }
+    for (const link of model.links.values()) {
+      if (link.type !== "aggregation" && link.type !== "exhibition") continue;
+      // If thingId appears more as source → canvas convention (source=parent)
+      if (asSource > asTarget && link.source === thingId &&
+          thingsInFiber.has(link.target) && link.target !== thingId) {
+        externalThings.add(link.target);
+      }
+      // If thingId appears more as target → old convention (target=parent)
+      if (asTarget >= asSource && link.target === thingId &&
+          thingsInFiber.has(link.source) && link.source !== thingId) {
         externalThings.add(link.source);
       }
     }

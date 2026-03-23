@@ -227,6 +227,37 @@ describe("refineThing", () => {
       expect(app).toBeDefined();
       expect(app!.internal).toBe(true);
     });
+
+    it("unfold works with canvas convention (source=whole, target=part)", () => {
+      // Canvas creates aggregation as source=whole(first click), target=part(second click)
+      let m = createModel("test");
+      m = unwrap(addThing(m, { id: "obj-car", kind: "object", name: "Car", essence: "physical", affiliation: "systemic" }));
+      m = unwrap(addThing(m, { id: "obj-engine", kind: "object", name: "Engine", essence: "physical", affiliation: "systemic" }));
+      m = unwrap(addThing(m, { id: "obj-wheel", kind: "object", name: "Wheel", essence: "physical", affiliation: "systemic" }));
+      m = unwrap(addAppearance(m, { thing: "obj-car", opd: "opd-sd", x: 100, y: 100, w: 150, h: 80 }));
+      m = unwrap(addAppearance(m, { thing: "obj-engine", opd: "opd-sd", x: 50, y: 200, w: 120, h: 60 }));
+      m = unwrap(addAppearance(m, { thing: "obj-wheel", opd: "opd-sd", x: 200, y: 200, w: 120, h: 60 }));
+      // Canvas convention: source=Car(whole), target=Engine(part)
+      m = unwrap(addLink(m, { id: "lnk-agg1", type: "aggregation", source: "obj-car", target: "obj-engine" }));
+      m = unwrap(addLink(m, { id: "lnk-agg2", type: "aggregation", source: "obj-car", target: "obj-wheel" }));
+      const model = unwrap(refineThing(m, "obj-car", "opd-sd", "unfold", "opd-sd1", "SD1"));
+      expect(model.appearances.has("obj-engine::opd-sd1")).toBe(true);
+      expect(model.appearances.has("obj-wheel::opd-sd1")).toBe(true);
+      expect(model.appearances.get("obj-engine::opd-sd1")!.internal).toBe(false);
+    });
+
+    it("unfold works with exhibition in canvas convention (source=exhibitor, target=feature)", () => {
+      let m = createModel("test");
+      m = unwrap(addThing(m, { id: "obj-car", kind: "object", name: "Car", essence: "physical", affiliation: "systemic" }));
+      m = unwrap(addThing(m, { id: "obj-color", kind: "object", name: "Color", essence: "informatical", affiliation: "systemic" }));
+      m = unwrap(addAppearance(m, { thing: "obj-car", opd: "opd-sd", x: 100, y: 100, w: 150, h: 80 }));
+      m = unwrap(addAppearance(m, { thing: "obj-color", opd: "opd-sd", x: 50, y: 200, w: 120, h: 60 }));
+      // Canvas convention (pre-fix): source=Car(exhibitor), target=Color(feature)
+      m = unwrap(addLink(m, { id: "lnk-exh1", type: "exhibition", source: "obj-car", target: "obj-color" }));
+      const model = unwrap(refineThing(m, "obj-car", "opd-sd", "unfold", "opd-sd1", "SD1"));
+      expect(model.appearances.has("obj-color::opd-sd1")).toBe(true);
+      expect(model.appearances.get("obj-color::opd-sd1")!.internal).toBe(false);
+    });
   });
 });
 

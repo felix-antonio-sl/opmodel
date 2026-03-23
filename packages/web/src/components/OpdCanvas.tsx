@@ -345,6 +345,7 @@ function ThingNode({
   isLinkSource,
   isExternal,
   isContainer,
+  isRefined,
   dragDelta,
   simFilter,
   simStatePillOverride,
@@ -362,6 +363,7 @@ function ThingNode({
   isLinkSource: boolean;
   isExternal: boolean;
   isContainer: boolean;
+  isRefined: boolean;
   dragDelta: Point;
   simFilter?: string;
   simStatePillOverride?: string;
@@ -389,7 +391,9 @@ function ThingNode({
     ? (isPhysical ? "var(--process-fill-physical)" : "var(--process-fill)")
     : (isPhysical ? "var(--object-fill-physical)" : "var(--object-fill)");
   const fillColor = kindFill;
-  const strokeWidth = isContainer ? 2.0 : isExternal ? 1.0 : isPhysical ? 3.5 : 1.2;
+  // ISO §14.2: refined things show thick contour in both parent and child OPD
+  const baseStroke = isPhysical ? 3.5 : 1.2;
+  const strokeWidth = isContainer ? 2.5 : isExternal ? 1.0 : isRefined ? Math.max(baseStroke, 2.5) : baseStroke;
   const strokeDash = thing.affiliation === "environmental" ? "6,3" : undefined;
 
   const filterStr = isDragging
@@ -454,6 +458,10 @@ function ThingNode({
       </text>
       {isExternal && (
         <text className="thing-badge-external" x={x + w - 8} y={y + 12}>↑</text>
+      )}
+      {isRefined && !isContainer && (
+        <text fontSize={10} fill="var(--accent)" pointerEvents="none"
+          x={x + w - 10} y={y + totalH - 5}>⊕</text>
       )}
 
       {hasSemiFold && (
@@ -1056,9 +1064,17 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
   );
 
   const onThingDoubleClick = useCallback((thingId: string) => {
-    if (simulation) return; // No rename during simulation
+    if (simulation) return;
+    // If thing has refinement from this OPD, navigate into it
+    const refinementOpd = [...model.opds.values()].find(
+      o => o.refines === thingId && o.parent_opd === opdId
+    );
+    if (refinementOpd) {
+      dispatch({ tag: "selectOpd", opdId: refinementOpd.id });
+      return;
+    }
     setRenaming(thingId);
-  }, [simulation]);
+  }, [simulation, model, opdId, dispatch]);
 
   const commitRename = useCallback(
     (name: string) => {
@@ -1502,6 +1518,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
                   isLinkSource={isLinkSource}
                   isExternal={isAppExternal}
                   isContainer={isAppContainer}
+                  isRefined={[...model.opds.values()].some(o => o.refines === thingId)}
                   dragDelta={isDragging ? dragDelta : { x: 0, y: 0 }}
                   simFilter={simFilter}
                   simStatePillOverride={simModelState && thing.kind === "object" ? simModelState.objects.get(thingId)?.currentState : undefined}

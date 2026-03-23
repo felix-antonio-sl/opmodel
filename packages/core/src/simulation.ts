@@ -308,7 +308,11 @@ export function resolveLinksForOpd(model: Model, opdId: string): ResolvedLink[] 
   // Rule 2: source already has a direct link to the same process (redundant role).
   const partToWhole = new Map<string, string>();
   for (const l of model.links.values()) {
-    if (l.type === "aggregation") partToWhole.set(l.target, l.source);
+    // Direction-agnostic: register both endpoints for aggregation links
+    if (l.type === "aggregation") {
+      partToWhole.set(l.target, l.source);
+      partToWhole.set(l.source, l.target);
+    }
   }
 
   const directLinkKeys = new Set<string>();
