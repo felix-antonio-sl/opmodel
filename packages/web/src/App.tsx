@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { loadModel, createModel, isOk, validate, saveModel, expose, render, type Model } from "@opmodel/core";
+import { loadModel, createModel, isOk, validate, saveModel, expose, render, type Model, type Thing } from "@opmodel/core";
 import { useModelStore } from "./hooks/useModelStore";
 import { OpdTree } from "./components/OpdTree";
 import { OpdCanvas } from "./components/OpdCanvas";
@@ -180,6 +180,8 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
     return null;
   });
   const [showNlSettings, setShowNlSettings] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const nlPipeline = useMemo(() => {
     if (!nlConfig) return undefined;
@@ -201,6 +203,11 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
       if ((e.metaKey || e.ctrlKey) && e.key === "s") {
         e.preventDefault();
         save();
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === "f") {
+        e.preventDefault();
+        setShowSearch((v) => !v);
+        setSearchQuery("");
       }
       if ((e.key === "Delete" || e.key === "Backspace") && ui.selectedThing && !e.metaKey && !e.ctrlKey) {
         const target = e.target as HTMLElement;
@@ -310,6 +317,85 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
         dispatch={dispatch}
         simulation={ui.simulation}
       />
+      {/* Search panel — floating over canvas */}
+      {showSearch && (() => {
+        const q = searchQuery.toLowerCase();
+        const results = q.length > 0
+          ? [...model.things.values()]
+              .filter((t) => t.name.toLowerCase().includes(q))
+              .slice(0, 20)
+          : [...model.things.values()].slice(0, 20);
+        // Find which OPDs each thing appears in
+        const thingOpds = (thingId: string): string[] => {
+          const opds: string[] = [];
+          for (const app of model.appearances.values()) {
+            if (app.thing === thingId) {
+              const opd = model.opds.get(app.opd);
+              if (opd) opds.push(opd.name);
+            }
+          }
+          return opds;
+        };
+        return (
+          <div className="search-panel">
+            <div className="search-panel__header">
+              <input
+                className="search-panel__input"
+                placeholder="Search things..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") { setShowSearch(false); setSearchQuery(""); }
+                  if (e.key === "Enter" && results.length > 0) {
+                    const first = results[0]!;
+                    // Navigate to first OPD containing this thing
+                    for (const app of model.appearances.values()) {
+                      if (app.thing === first.id) {
+                        dispatch({ tag: "selectOpd", opdId: app.opd });
+                        break;
+                      }
+                    }
+                    dispatch({ tag: "selectThing", thingId: first.id });
+                    setShowSearch(false);
+                    setSearchQuery("");
+                  }
+                }}
+                autoFocus
+              />
+              <button className="search-panel__close" onClick={() => { setShowSearch(false); setSearchQuery(""); }}>×</button>
+            </div>
+            <div className="search-panel__results">
+              {results.map((t) => (
+                <div
+                  key={t.id}
+                  className="search-panel__item"
+                  onClick={() => {
+                    for (const app of model.appearances.values()) {
+                      if (app.thing === t.id) {
+                        dispatch({ tag: "selectOpd", opdId: app.opd });
+                        break;
+                      }
+                    }
+                    dispatch({ tag: "selectThing", thingId: t.id });
+                    setShowSearch(false);
+                    setSearchQuery("");
+                  }}
+                >
+                  <span className={`search-panel__kind search-panel__kind--${t.kind}`}>
+                    {t.kind === "object" ? "▭" : "⬭"}
+                  </span>
+                  <span className="search-panel__name">{t.name}</span>
+                  <span className="search-panel__opds">{thingOpds(t.id).join(", ")}</span>
+                </div>
+              ))}
+              {results.length === 0 && q.length > 0 && (
+                <div className="search-panel__empty">No results</div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
       <aside className="right-panel">
         {ui.simulation ? (
           <SimulationPanel model={ui.simulation.frozenModel} simulation={ui.simulation} dispatch={dispatch} />

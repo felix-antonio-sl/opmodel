@@ -636,6 +636,19 @@ body,
   border-color: var(--accent);
 }
 
+/* ── Resize handles ── */
+
+.resize-handle {
+  rx: 1;
+  ry: 1;
+  opacity: 0.9;
+  pointer-events: all;
+}
+.resize-handle:hover {
+  opacity: 1;
+  stroke-width: 1.5;
+}
+
 /* ── Breadcrumb overlay ── */
 
 .canvas-breadcrumb {
@@ -1220,6 +1233,91 @@ body,
   height: 1px;
   background: var(--border);
   margin: 10px 0;
+}
+
+/* ═══════════════════
+   Search Panel
+   ═══════════════════ */
+
+.search-panel {
+  position: absolute;
+  top: calc(var(--header-h) + var(--toolbar-h) + 8px);
+  left: calc(var(--sidebar-w) + 16px);
+  width: 320px;
+  max-height: 360px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.search-panel__header {
+  display: flex;
+  gap: 4px;
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.search-panel__input {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  outline: none;
+}
+.search-panel__input:focus {
+  border-color: var(--accent);
+}
+.search-panel__close {
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 0 4px;
+}
+.search-panel__results {
+  overflow-y: auto;
+  max-height: 280px;
+}
+.search-panel__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.search-panel__item:hover {
+  background: var(--bg-hover);
+}
+.search-panel__kind {
+  font-size: 14px;
+  width: 18px;
+  text-align: center;
+}
+.search-panel__kind--object { color: var(--object-stroke); }
+.search-panel__kind--process { color: var(--process-stroke); }
+.search-panel__name {
+  flex: 1;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+.search-panel__opds {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+.search-panel__empty {
+  padding: 12px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 12px;
 }
 
 /* ═══════════════════

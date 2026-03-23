@@ -826,6 +826,13 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
     return new Set([dragTarget]);
   }, [dragTarget, containerThingId, model, opdId]);
 
+  // Resize state
+  type ResizeHandle = "nw" | "ne" | "sw" | "se";
+  const [resizeTarget, setResizeTarget] = useState<string | null>(null);
+  const [resizeHandle, setResizeHandle] = useState<ResizeHandle | null>(null);
+  const [resizeOrigin, setResizeOrigin] = useState<Point>({ x: 0, y: 0 });
+  const [resizeDelta, setResizeDelta] = useState<Point>({ x: 0, y: 0 });
+
   // Inline rename state
   const [renaming, setRenaming] = useState<string | null>(null);
 
@@ -1016,8 +1023,27 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
     [dispatch, simulation],
   );
 
+  const onResizeHandleMouseDown = useCallback(
+    (thingId: string, handle: ResizeHandle, e: React.MouseEvent) => {
+      e.stopPropagation();
+      e.preventDefault();
+      setResizeTarget(thingId);
+      setResizeHandle(handle);
+      setResizeOrigin({ x: e.clientX, y: e.clientY });
+      setResizeDelta({ x: 0, y: 0 });
+      setPanning(false);
+    },
+    [],
+  );
+
   const onMouseMove = useCallback(
     (e: React.MouseEvent) => {
+      if (resizeTarget) {
+        const dx = (e.clientX - resizeOrigin.x) / zoom;
+        const dy = (e.clientY - resizeOrigin.y) / zoom;
+        setResizeDelta({ x: dx, y: dy });
+        return;
+      }
       if (dragTarget) {
         const dx = (e.clientX - dragOrigin.x) / zoom;
         const dy = (e.clientY - dragOrigin.y) / zoom;
@@ -1028,10 +1054,36 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
         setPan({ x: e.clientX - panStart.x, y: e.clientY - panStart.y });
       }
     },
-    [dragTarget, dragOrigin, zoom, panning, panStart],
+    [resizeTarget, resizeOrigin, dragTarget, dragOrigin, zoom, panning, panStart],
   );
 
   const onMouseUp = useCallback(() => {
+    if (resizeTarget && resizeHandle) {
+      const app = appearances.get(resizeTarget);
+      if (app && (Math.abs(resizeDelta.x) > 1 || Math.abs(resizeDelta.y) > 1)) {
+        const MIN_W = 60, MIN_H = 30;
+        let { x, y, w, h } = app;
+        const dx = resizeDelta.x, dy = resizeDelta.y;
+        if (resizeHandle === "se") { w += dx; h += dy; }
+        else if (resizeHandle === "sw") { x += dx; w -= dx; h += dy; }
+        else if (resizeHandle === "ne") { w += dx; y += dy; h -= dy; }
+        else if (resizeHandle === "nw") { x += dx; y += dy; w -= dx; h -= dy; }
+        w = Math.max(MIN_W, Math.round(w));
+        h = Math.max(MIN_H, Math.round(h));
+        x = Math.round(x); y = Math.round(y);
+        // Clamp position so that shrinking doesn't move beyond original edges
+        if (resizeHandle === "sw" || resizeHandle === "nw") x = Math.min(x, app.x + app.w - MIN_W);
+        if (resizeHandle === "ne" || resizeHandle === "nw") y = Math.min(y, app.y + app.h - MIN_H);
+        dispatch({ tag: "resizeThing", thingId: resizeTarget, opdId, w, h });
+        if (x !== app.x || y !== app.y) {
+          dispatch({ tag: "moveThing", thingId: resizeTarget, opdId, x, y });
+        }
+      }
+      setResizeTarget(null);
+      setResizeHandle(null);
+      setResizeDelta({ x: 0, y: 0 });
+      return;
+    }
     if (dragTarget) {
       if (Math.abs(dragDelta.x) > 1 || Math.abs(dragDelta.y) > 1) {
         if (draggedThings.size > 1) {
@@ -1132,11 +1184,20 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
   const commitRename = useCallback(
     (name: string) => {
       if (renaming) {
+        // H-06: Name duplicate detection — warn if another thing has the same name
+        const existing = [...model.things.values()].find(
+          (t) => t.name === name && t.id !== renaming
+        );
+        if (existing) {
+          if (!window.confirm(`A ${existing.kind} named "${name}" already exists. Use this name anyway?`)) {
+            return; // keep InlineRename open (don't setRenaming(null))
+          }
+        }
         dispatch({ tag: "renameThing", thingId: renaming, name });
       }
       setRenaming(null);
     },
-    [renaming, dispatch],
+    [renaming, dispatch, model],
   );
 
   const opd = model.opds.get(opdId);
@@ -1631,6 +1692,52 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
               </g>
             );
           })}
+
+          {/* Resize handles — on selected thing, when not in sim or link mode */}
+          {selectedThing && !simulation && mode === "select" && (() => {
+            const app = appearances.get(selectedThing);
+            if (!app) return null;
+            const thing = model.things.get(selectedThing);
+            if (!thing) return null;
+            const allStates = statesForThing(model, selectedThing);
+            const visStates = app.suppressed_states
+              ? allStates.filter(s => !app.suppressed_states!.includes(s.id))
+              : allStates;
+            const extraH = visStates.length > 0 ? 24 : 0;
+            const rx = resizeTarget === selectedThing ? resizeDelta.x : 0;
+            const ry = resizeTarget === selectedThing ? resizeDelta.y : 0;
+            let { x, y, w, h } = app;
+            h += extraH;
+            // Apply live resize preview
+            if (resizeTarget === selectedThing && resizeHandle) {
+              if (resizeHandle === "se") { w += rx; h += ry; }
+              else if (resizeHandle === "sw") { x += rx; w -= rx; h += ry; }
+              else if (resizeHandle === "ne") { w += rx; y += ry; h -= ry; }
+              else if (resizeHandle === "nw") { x += rx; y += ry; w -= rx; h -= ry; }
+              w = Math.max(60, w); h = Math.max(30, h);
+            }
+            const S = 6; // handle size
+            const handles: Array<{ hx: number; hy: number; handle: ResizeHandle; cursor: string }> = [
+              { hx: x - S / 2, hy: y - S / 2, handle: "nw", cursor: "nwse-resize" },
+              { hx: x + w - S / 2, hy: y - S / 2, handle: "ne", cursor: "nesw-resize" },
+              { hx: x - S / 2, hy: y + h - S / 2, handle: "sw", cursor: "nesw-resize" },
+              { hx: x + w - S / 2, hy: y + h - S / 2, handle: "se", cursor: "nwse-resize" },
+            ];
+            return (
+              <g>
+                {handles.map(({ hx, hy, handle, cursor }) => (
+                  <rect
+                    key={handle}
+                    className="resize-handle"
+                    x={hx} y={hy} width={S} height={S}
+                    fill="var(--accent)" stroke="white" strokeWidth={1}
+                    style={{ cursor }}
+                    onMouseDown={(e) => onResizeHandleMouseDown(selectedThing, handle, e)}
+                  />
+                ))}
+              </g>
+            );
+          })()}
 
           {/* Inline rename overlay */}
           {renaming && (() => {
