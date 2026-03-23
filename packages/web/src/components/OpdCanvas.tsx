@@ -1347,15 +1347,15 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
                 triangleSvg = <polygon points={triPoints} fill={color} />;
                 break;
               case "exhibition": {
-                // Small filled triangle inside larger open triangle (ISO §6)
-                const s = 0.45; // inner triangle scale
-                const innerApex = { x: apex.x * (1 - s) + baseCtr.x * s, y: apex.y * (1 - s) + baseCtr.y * s };
-                const innerL = { x: innerCtr.x - perp.x * TRI_HALF * s, y: innerCtr.y - perp.y * TRI_HALF * s };
-                const innerR = { x: innerCtr.x + perp.x * TRI_HALF * s, y: innerCtr.y + perp.y * TRI_HALF * s };
-                const innerPts = `${innerApex.x},${innerApex.y} ${innerL.x},${innerL.y} ${innerR.x},${innerR.y}`;
+                // Filled triangle inside open triangle, concentric (ISO §6)
+                const s = 0.55; // inner triangle scale
+                const outerCentroid = { x: (apex.x + baseL.x + baseR.x) / 3, y: (apex.y + baseL.y + baseR.y) / 3 };
+                const iApex = { x: outerCentroid.x + (apex.x - outerCentroid.x) * s, y: outerCentroid.y + (apex.y - outerCentroid.y) * s };
+                const iL = { x: outerCentroid.x + (baseL.x - outerCentroid.x) * s, y: outerCentroid.y + (baseL.y - outerCentroid.y) * s };
+                const iR = { x: outerCentroid.x + (baseR.x - outerCentroid.x) * s, y: outerCentroid.y + (baseR.y - outerCentroid.y) * s };
                 triangleSvg = (<>
                   <polygon points={triPoints} fill="white" stroke={color} strokeWidth="1.5" />
-                  <polygon points={innerPts} fill={color} />
+                  <polygon points={`${iApex.x},${iApex.y} ${iL.x},${iL.y} ${iR.x},${iR.y}`} fill={color} />
                 </>);
                 break;
               }
