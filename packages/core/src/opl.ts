@@ -605,12 +605,15 @@ function renderGroupedStructural(s: OplGroupedStructuralSentence): string {
       const isObjectExhibitor = s.parentKind === "object";
       const first = isObjectExhibitor ? attrs : ops;
       const second = isObjectExhibitor ? ops : attrs;
-      if (second.length === 0) {
-        return `${s.parentName} exhibits ${formatList(first, s.incomplete, phrase)}.`;
+      if (first.length === 0 && second.length === 0) {
+        return `${s.parentName} exhibits ${formatList(qualifiedNames, s.incomplete, phrase)}.`;
       }
-      const firstList = formatList(first);
-      const secondList = formatList(second);
-      return `${s.parentName} exhibits ${firstList}, as well as ${secondList}.`;
+      if (first.length > 0 && second.length > 0) {
+        return `${s.parentName} exhibits ${formatList(first)}, as well as ${formatList(second)}.`;
+      }
+      // Only one kind present
+      const combined = first.length > 0 ? first : second;
+      return `${s.parentName} exhibits ${formatList(combined, s.incomplete, phrase)}.`;
     }
 
     case "generalization": {
