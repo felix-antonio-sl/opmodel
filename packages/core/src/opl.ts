@@ -199,29 +199,47 @@ export function expose(model: Model, opdId: string): OplDocument {
     }
   }
 
-  // Group structural links by (parentId, linkType)
-  const structuralGroups = new Map<string, { parentId: string; linkType: string; links: Link[] }>();
+  // Group structural links by (parentId, linkType).
+  // Direction-agnostic: groups by both source and target, picks largest non-overlapping.
+  // This handles exhibition links created in either direction (canvas UI creates
+  // source=exhibitor, target=feature; convention is source=feature, target=exhibitor).
+  const allGroups = new Map<string, { parentId: string; linkType: string; links: Link[]; parentIsSource: boolean }>();
   for (const link of structuralLinks) {
-    // Parent depends on convention:
-    // aggregation/generalization/classification: source=parent
-    // exhibition: target=parent (exhibitor)
-    const parentId = link.type === "exhibition" ? link.target : link.source;
-    const key = `${parentId}::${link.type}`;
-    if (!structuralGroups.has(key)) {
-      structuralGroups.set(key, { parentId, linkType: link.type, links: [] });
+    const srcKey = `src::${link.source}::${link.type}`;
+    if (!allGroups.has(srcKey)) {
+      allGroups.set(srcKey, { parentId: link.source, linkType: link.type, links: [], parentIsSource: true });
     }
-    structuralGroups.get(key)!.links.push(link);
-  }
+    allGroups.get(srcKey)!.links.push(link);
 
-  for (const group of structuralGroups.values()) {
+    const tgtKey = `tgt::${link.target}::${link.type}`;
+    if (!allGroups.has(tgtKey)) {
+      allGroups.set(tgtKey, { parentId: link.target, linkType: link.type, links: [], parentIsSource: false });
+    }
+    allGroups.get(tgtKey)!.links.push(link);
+  }
+  // Pick largest non-overlapping groups (prefer groups with more links)
+  const structuralGroups: typeof allGroups extends Map<string, infer V> ? V[] : never = [];
+  const usedLinks = new Set<string>();
+  const candidates = [...allGroups.values()]
+    .filter(g => g.links.length >= 2)
+    .sort((a, b) => b.links.length - a.links.length);
+  for (const g of candidates) {
+    if (g.links.some(l => usedLinks.has(l.id))) continue;
+    structuralGroups.push(g);
+    for (const l of g.links) usedLinks.add(l.id);
+  }
+  // Single links (not in any group) still need individual sentences
+  const ungroupedStructural = structuralLinks.filter(l => !usedLinks.has(l.id));
+
+  for (const group of structuralGroups) {
     const parent = model.things.get(group.parentId);
     if (!parent) continue;
-    const childIds = group.links.map(l => l.type === "exhibition" ? l.source : l.target);
+    const childIds = group.links.map(l => group.parentIsSource ? l.target : l.source);
     const childNames = childIds.map(id => model.things.get(id)?.name ?? id);
     const childKinds = childIds.map(id => model.things.get(id)?.kind ?? "object" as const);
-    // Multiplicity: for aggregation target=part, for exhibition source=feature
+    // Multiplicity on the child end
     const childMultiplicities = group.links.map(l =>
-      l.type === "exhibition" ? l.multiplicity_source : l.multiplicity_target
+      group.parentIsSource ? l.multiplicity_target : l.multiplicity_source
     );
     sentences.push({
       kind: "grouped-structural",
@@ -234,6 +252,30 @@ export function expose(model: Model, opdId: string): OplDocument {
       childKinds,
       childMultiplicities,
       incomplete: group.links.some(l => l.incomplete),
+    } as OplGroupedStructuralSentence);
+  }
+
+  // Ungrouped structural links (single links, no fork) → individual grouped sentences
+  for (const link of ungroupedStructural) {
+    // For single links, use conventional direction
+    const parentIsSource = link.type !== "exhibition";
+    const parentId = parentIsSource ? link.source : link.target;
+    const childId = parentIsSource ? link.target : link.source;
+    const parent = model.things.get(parentId);
+    const child = model.things.get(childId);
+    if (!parent || !child) continue;
+    const childMult = parentIsSource ? link.multiplicity_target : link.multiplicity_source;
+    sentences.push({
+      kind: "grouped-structural",
+      linkType: link.type,
+      parentId,
+      parentName: parent.name,
+      parentKind: parent.kind,
+      childIds: [childId],
+      childNames: [child.name],
+      childKinds: [child.kind],
+      childMultiplicities: [childMult],
+      incomplete: link.incomplete ?? false,
     } as OplGroupedStructuralSentence);
   }
 

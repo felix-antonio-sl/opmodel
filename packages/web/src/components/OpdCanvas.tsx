@@ -1,6 +1,6 @@
 import { useRef, useState, useCallback, useMemo, useEffect } from "react";
 import type { Model, Thing, State, Link, Appearance, Modifier, OPD, Fan } from "@opmodel/core";
-import { createInitialState, resolveLinksForOpd, findConsumptionResultPairs, transformingMode, getSemiFoldedParts, type ModelState } from "@opmodel/core";
+import { createInitialState, resolveLinksForOpd, findConsumptionResultPairs, findStructuralForks, transformingMode, getSemiFoldedParts, type ModelState, type StructuralFork } from "@opmodel/core";
 import type { Command, EditorMode, LinkTypeChoice, SimulationUIState } from "../lib/commands";
 import { genId } from "../lib/ids";
 import {
@@ -891,6 +891,26 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
     return result;
   }, [model, visibleLinks, appearances]);
 
+  // Structural forks (C-05): group 2+ structural links of same type sharing a parent
+  const visibleForks = useMemo((): StructuralFork[] => {
+    const resolved = visibleLinks.map(vl => ({
+      link: vl.link,
+      visualSource: vl.visualSource,
+      visualTarget: vl.visualTarget,
+      aggregated: false,
+    }));
+    return findStructuralForks(resolved);
+  }, [visibleLinks]);
+
+  // Link IDs belonging to forks — suppress from individual rendering
+  const forkedLinkIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const fork of visibleForks) {
+      for (const child of fork.children) ids.add(child.link.id);
+    }
+    return ids;
+  }, [visibleForks]);
+
   // Convert client coords to SVG model coords
   const clientToModel = useCallback(
     (clientX: number, clientY: number): Point => {
@@ -1124,6 +1144,8 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
 
           {/* Links (behind things) — re-route during drag */}
           {visibleLinks.map(({ link, modifier, visualSource, visualTarget, labelOverride, isMergedPair, isInputHalf, isOutputHalf }) => {
+            // C-05: skip links rendered as part of a fork triangle
+            if (forkedLinkIds.has(link.id)) return null;
             let srcRect = getEffectiveRect(visualSource);
             let tgtRect = getEffectiveRect(visualTarget);
             const srcThing = model.things.get(visualSource);
@@ -1238,6 +1260,122 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
                   isInputHalf={isInputHalf}
                   isOutputHalf={isOutputHalf}
                 />
+              </g>
+            );
+          })}
+
+          {/* Structural fork triangles (C-05 ISO §6): shared triangle + trunk + branches.
+              When 2+ structural links of the same type share a parent, render one triangle
+              instead of individual markers. Apex → parent, base → children. */}
+          {visibleForks.map(fork => {
+            const parentRect = getEffectiveRect(fork.parentId);
+            const parentThing = model.things.get(fork.parentId);
+            if (!parentRect || !parentThing) return null;
+
+            // Resolve children rects and things
+            const childrenData = fork.children.map(c => {
+              const rect = getEffectiveRect(c.childId);
+              const thing = model.things.get(c.childId);
+              return rect && thing ? { ...c, rect, thing } : null;
+            }).filter((c): c is NonNullable<typeof c> => c !== null);
+            if (childrenData.length < 2) return null;
+
+            // Centroid of children centers
+            const cx = childrenData.reduce((s, c) => s + c.rect.x + c.rect.w / 2, 0) / childrenData.length;
+            const cy = childrenData.reduce((s, c) => s + c.rect.y + c.rect.h / 2, 0) / childrenData.length;
+            const centroid = { x: cx, y: cy };
+            const parentCtr = center(parentRect);
+
+            // Direction from parent toward children
+            const dx = centroid.x - parentCtr.x;
+            const dy = centroid.y - parentCtr.y;
+            const len = Math.sqrt(dx * dx + dy * dy);
+            if (len < 1) return null;
+            const dir = { x: dx / len, y: dy / len };
+            const perp = { x: -dir.y, y: dir.x };
+
+            // Geometry constants
+            const TRUNK = 25;
+            const TRI_H = 16;
+            const TRI_HALF = Math.max(10, childrenData.length * 5);
+
+            // Trunk: parent edge → apex
+            const trunkStart = edgePoint(parentThing.kind, parentRect, centroid);
+            const apex = { x: trunkStart.x + dir.x * TRUNK, y: trunkStart.y + dir.y * TRUNK };
+            const baseCtr = { x: apex.x + dir.x * TRI_H, y: apex.y + dir.y * TRI_H };
+            const baseL = { x: baseCtr.x - perp.x * TRI_HALF, y: baseCtr.y - perp.y * TRI_HALF };
+            const baseR = { x: baseCtr.x + perp.x * TRI_HALF, y: baseCtr.y + perp.y * TRI_HALF };
+
+            // Branch origins: project each child onto base line, clamp to base extent
+            const branches = childrenData.map(c => {
+              const childCtr = center(c.rect);
+              const projOffset = (childCtr.x - baseCtr.x) * perp.x + (childCtr.y - baseCtr.y) * perp.y;
+              const clamped = Math.max(-TRI_HALF, Math.min(TRI_HALF, projOffset));
+              const origin = { x: baseCtr.x + perp.x * clamped, y: baseCtr.y + perp.y * clamped };
+              const endpoint = edgePoint(c.thing.kind, c.rect, origin);
+              return { ...c, origin, endpoint };
+            });
+
+            // Triangle shape per type
+            const color = "#6b5fad";
+            const triPoints = `${apex.x},${apex.y} ${baseL.x},${baseL.y} ${baseR.x},${baseR.y}`;
+            let triangleSvg: React.ReactNode;
+            switch (fork.type) {
+              case "aggregation":
+                triangleSvg = <polygon points={triPoints} fill={color} />;
+                break;
+              case "exhibition": {
+                // Filled triangle + white inner line parallel to base (25% from base toward apex)
+                const il1 = { x: baseL.x * 0.75 + apex.x * 0.25, y: baseL.y * 0.75 + apex.y * 0.25 };
+                const il2 = { x: baseR.x * 0.75 + apex.x * 0.25, y: baseR.y * 0.75 + apex.y * 0.25 };
+                triangleSvg = (<>
+                  <polygon points={triPoints} fill={color} />
+                  <line x1={il1.x} y1={il1.y} x2={il2.x} y2={il2.y} stroke="white" strokeWidth="1.5" />
+                </>);
+                break;
+              }
+              case "generalization":
+                triangleSvg = <polygon points={triPoints} fill="white" stroke={color} strokeWidth="1.5" />;
+                break;
+              case "classification":
+                triangleSvg = (<>
+                  <polygon points={triPoints} fill="white" stroke={color} strokeWidth="1.5" />
+                  <line x1={baseL.x} y1={baseL.y} x2={baseR.x} y2={baseR.y} stroke={color} strokeWidth="1.5" />
+                </>);
+                break;
+            }
+
+            return (
+              <g key={`fork-${fork.type}-${fork.parentId}`}>
+                {/* Trunk: parent edge → triangle apex */}
+                <line x1={trunkStart.x} y1={trunkStart.y} x2={apex.x} y2={apex.y}
+                  className="link-line" stroke={color} />
+                {/* Triangle symbol */}
+                {triangleSvg}
+                {/* Branches: base → each child */}
+                {branches.map(b => (
+                  <g key={b.link.id}>
+                    <line x1={b.origin.x} y1={b.origin.y} x2={b.endpoint.x} y2={b.endpoint.y}
+                      className="link-line" stroke={color}
+                      onClick={(e) => { e.stopPropagation(); dispatch({ tag: "selectThing", thingId: b.link.id }); }}
+                    />
+                    {/* Type label at midpoint of first branch only */}
+                    {b === branches[0] && (
+                      <text className="link-label"
+                        x={baseCtr.x + dir.x * 8} y={baseCtr.y + dir.y * 8 - 7}>
+                        {fork.type}
+                      </text>
+                    )}
+                    {/* Multiplicity labels per branch */}
+                    {(() => {
+                      const ml = b.childIsTarget ? b.link.multiplicity_target : b.link.multiplicity_source;
+                      if (!ml) return null;
+                      const mx = b.origin.x + (b.endpoint.x - b.origin.x) * 0.88;
+                      const my = b.origin.y + (b.endpoint.y - b.origin.y) * 0.88 - 6;
+                      return <text fontSize={9} fill="#666" fontWeight="bold" x={mx} y={my} textAnchor="middle">{ml}</text>;
+                    })()}
+                  </g>
+                ))}
               </g>
             );
           })}
@@ -1387,13 +1525,16 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
                           resolvedType = linkType;
                         }
 
+                        // Exhibition convention: source=feature, target=exhibitor.
+                        // User clicks exhibitor first → swap so convention holds.
+                        const isExh = resolvedType === "exhibition";
                         dispatch({
                           tag: "addLink",
                           link: {
                             id: genId("lnk"),
                             type: resolvedType as any,
-                            source: linkSource,
-                            target: thingId,
+                            source: isExh ? thingId : linkSource,
+                            target: isExh ? linkSource : thingId,
                           },
                         });
                         setLinkSource(null);

@@ -19,8 +19,10 @@ export {
   updateMeta, updateSettings,
   validate,
   findConsumptionResultPairs,
+  findStructuralForks,
   getSemiFoldedParts,
   type ConsumptionResultPair,
+  type StructuralFork,
   type SemiFoldEntry,
 } from "./api";
 export {

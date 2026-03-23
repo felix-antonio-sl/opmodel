@@ -1798,3 +1798,64 @@ export function findConsumptionResultPairs(
 
   return pairs;
 }
+
+// ── Structural Fork Detection (C-05) ──────────────────────────────────
+
+export interface StructuralFork {
+  type: "aggregation" | "exhibition" | "generalization" | "classification";
+  parentId: string;
+  children: Array<{
+    link: Link;
+    childId: string;
+    childIsTarget: boolean;
+  }>;
+}
+
+/**
+ * Find structural link forks within resolved links for an OPD.
+ * A fork exists when 2+ structural links of the same type share the same
+ * parent thing. ISO 19450 §6: these render as a single shared triangle
+ * (trunk from parent to apex, branches from base to children).
+ *
+ * Direction-agnostic: groups by both source and target endpoints, then picks
+ * the largest non-overlapping groups. This handles exhibition links created
+ * in either direction (source=feature→target=exhibitor or vice versa).
+ */
+export function findStructuralForks(resolvedLinks: ResolvedLink[]): StructuralFork[] {
+  const STRUCTURAL = new Set(["aggregation", "exhibition", "generalization", "classification"]);
+  const groups = new Map<string, StructuralFork>();
+
+  for (const rl of resolvedLinks) {
+    const type = rl.link.type;
+    if (!STRUCTURAL.has(type)) continue;
+    const sType = type as StructuralFork["type"];
+
+    // Group by source as parent
+    const srcKey = `src::${type}::${rl.visualSource}`;
+    if (!groups.has(srcKey)) {
+      groups.set(srcKey, { type: sType, parentId: rl.visualSource, children: [] });
+    }
+    groups.get(srcKey)!.children.push({ link: rl.link, childId: rl.visualTarget, childIsTarget: true });
+
+    // Group by target as parent
+    const tgtKey = `tgt::${type}::${rl.visualTarget}`;
+    if (!groups.has(tgtKey)) {
+      groups.set(tgtKey, { type: sType, parentId: rl.visualTarget, children: [] });
+    }
+    groups.get(tgtKey)!.children.push({ link: rl.link, childId: rl.visualSource, childIsTarget: false });
+  }
+
+  // Pick largest non-overlapping forks (prevent a link from appearing in two forks)
+  const candidates = [...groups.values()]
+    .filter(g => g.children.length >= 2)
+    .sort((a, b) => b.children.length - a.children.length);
+
+  const used = new Set<string>();
+  const result: StructuralFork[] = [];
+  for (const fork of candidates) {
+    if (fork.children.some(c => used.has(c.link.id))) continue;
+    result.push(fork);
+    for (const c of fork.children) used.add(c.link.id);
+  }
+  return result;
+}
