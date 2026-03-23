@@ -1028,8 +1028,9 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
   const onMouseDown = useCallback(
     (e: React.MouseEvent) => {
       if (e.button !== 0) return;
-      // Shift+drag: start lasso selection
-      if (e.shiftKey && !simulation) {
+      // Middle-click or Space held: always pan
+      // Shift+drag or Ctrl+drag on empty canvas: start lasso selection
+      if ((e.shiftKey || e.ctrlKey || e.metaKey) && !simulation) {
         const svgRect = svgRef.current?.getBoundingClientRect();
         if (!svgRect) return;
         const mx = (e.clientX - svgRect.left - pan.x) / zoom;
@@ -1039,7 +1040,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
         setPanning(false);
         return;
       }
-      // Only start pan if not dragging a thing
+      // Normal drag on canvas: pan
       setPanning(true);
       setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
     },
