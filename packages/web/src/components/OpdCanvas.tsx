@@ -1193,6 +1193,10 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
           }
         }
       }
+      // Clear multi-select on simple click (no significant drag movement)
+      if (Math.abs(dragDelta.x) <= 1 && Math.abs(dragDelta.y) <= 1) {
+        setMultiSelect(new Set());
+      }
       setDragTarget(null);
       setDragDelta({ x: 0, y: 0 });
       return;
@@ -1252,6 +1256,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
       }
 
       dispatch({ tag: "selectThing", thingId: null });
+      setMultiSelect(new Set());
       setRenaming(null);
     },
     [dragTarget, simulation, mode, pan, zoom, opdId, dispatch],
