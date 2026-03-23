@@ -891,7 +891,8 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
     return result;
   }, [model, visibleLinks, appearances]);
 
-  // Structural forks (C-05): group 2+ structural links of same type sharing a parent
+  // Structural link groups: ALL structural links rendered as fork triangles (ISO §6).
+  // minChildren=1 so even single structural links get trunk+triangle+branch rendering.
   const visibleForks = useMemo((): StructuralFork[] => {
     const resolved = visibleLinks.map(vl => ({
       link: vl.link,
@@ -899,7 +900,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
       visualTarget: vl.visualTarget,
       aggregated: false,
     }));
-    return findStructuralForks(resolved);
+    return findStructuralForks(resolved, 1);
   }, [visibleLinks]);
 
   // Link IDs belonging to forks — suppress from individual rendering
@@ -1278,7 +1279,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
               const thing = model.things.get(c.childId);
               return rect && thing ? { ...c, rect, thing } : null;
             }).filter((c): c is NonNullable<typeof c> => c !== null);
-            if (childrenData.length < 2) return null;
+            if (childrenData.length < 1) return null;
 
             // Centroid of children centers
             const cx = childrenData.reduce((s, c) => s + c.rect.x + c.rect.w / 2, 0) / childrenData.length;
@@ -1294,10 +1295,11 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
             const dir = { x: dx / len, y: dy / len };
             const perp = { x: -dir.y, y: dir.x };
 
-            // Geometry constants
-            const TRUNK = 25;
-            const TRI_H = 16;
-            const TRI_HALF = Math.max(10, childrenData.length * 5);
+            // Geometry constants — compact for single links, larger for forks
+            const isSingle = childrenData.length === 1;
+            const TRUNK = isSingle ? 15 : 25;
+            const TRI_H = isSingle ? 12 : 16;
+            const TRI_HALF = isSingle ? 7 : Math.max(10, childrenData.length * 5);
 
             // Trunk: parent edge → apex
             const trunkStart = edgePoint(parentThing.kind, parentRect, centroid);

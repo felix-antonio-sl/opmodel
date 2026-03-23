@@ -1180,10 +1180,16 @@ export function getSemiFoldedParts(
       const part = model.things.get(link.target);
       if (part) entries.push({ thingId: link.target, name: part.name, kind: part.kind, linkType: "aggregation" });
     }
-    // exhibition: source=feature, target=exhibitor → collect features
-    if (link.type === "exhibition" && link.target === thingId) {
-      const feature = model.things.get(link.source);
-      if (feature) entries.push({ thingId: link.source, name: feature.name, kind: feature.kind, linkType: "exhibition" });
+    // exhibition: direction-agnostic — handles both source=feature/target=exhibitor
+    // and canvas-created source=exhibitor/target=feature
+    if (link.type === "exhibition") {
+      if (link.target === thingId && link.source !== thingId) {
+        const feature = model.things.get(link.source);
+        if (feature) entries.push({ thingId: link.source, name: feature.name, kind: feature.kind, linkType: "exhibition" });
+      } else if (link.source === thingId && link.target !== thingId) {
+        const feature = model.things.get(link.target);
+        if (feature) entries.push({ thingId: link.target, name: feature.name, kind: feature.kind, linkType: "exhibition" });
+      }
     }
   }
 
@@ -1821,7 +1827,7 @@ export interface StructuralFork {
  * the largest non-overlapping groups. This handles exhibition links created
  * in either direction (source=feature→target=exhibitor or vice versa).
  */
-export function findStructuralForks(resolvedLinks: ResolvedLink[]): StructuralFork[] {
+export function findStructuralForks(resolvedLinks: ResolvedLink[], minChildren: number = 2): StructuralFork[] {
   const STRUCTURAL = new Set(["aggregation", "exhibition", "generalization", "classification"]);
   const groups = new Map<string, StructuralFork>();
 
@@ -1847,7 +1853,7 @@ export function findStructuralForks(resolvedLinks: ResolvedLink[]): StructuralFo
 
   // Pick largest non-overlapping forks (prevent a link from appearing in two forks)
   const candidates = [...groups.values()]
-    .filter(g => g.children.length >= 2)
+    .filter(g => g.children.length >= minChildren)
     .sort((a, b) => b.children.length - a.children.length);
 
   const used = new Set<string>();

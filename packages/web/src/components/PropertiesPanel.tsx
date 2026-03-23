@@ -612,7 +612,7 @@ export function PropertiesPanel({ model, thingId, opdId, dispatch }: Props) {
       {thing.kind === "object" && (() => {
         const hasStructural = links.some(l =>
           (l.type === "aggregation" && l.source === thingId) ||
-          (l.type === "exhibition" && l.target === thingId)
+          (l.type === "exhibition" && (l.target === thingId || l.source === thingId))
         );
         if (!hasStructural) return null;
         return (
