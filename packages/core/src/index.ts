@@ -31,7 +31,7 @@ export {
   createHistory, pushHistory, undo, redo,
 } from "./history";
 export {
-  expose, applyOplEdit, render, renderAll, oplSlug, editsFrom,
+  expose, applyOplEdit, render, renderAll, modelStats, oplSlug, editsFrom,
 } from "./opl";
 export type {
   OplSentence, OplThingDeclaration, OplStateEnumeration, OplDuration,
@@ -39,6 +39,7 @@ export type {
   OplStateDescription, OplGroupedStructuralSentence, OplInZoomSequence, OplAttributeValue,
   OplFanSentence,
 } from "./opl-types";
+export type { ModelStats } from "./opl";
 export {
   createInitialState,
   evaluatePrecondition,

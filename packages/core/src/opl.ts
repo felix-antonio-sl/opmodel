@@ -1169,6 +1169,68 @@ export function renderAll(model: Model): string {
   return sections.join("\n\n");
 }
 
+// === Model Statistics ===
+
+export interface ModelStats {
+  things: { total: number; objects: number; processes: number };
+  states: number;
+  links: { total: number; byType: Record<string, number> };
+  opds: { total: number; maxDepth: number };
+  appearances: number;
+  modifiers: number;
+  fans: number;
+  scenarios: number;
+  assertions: number;
+  requirements: number;
+  oplSentences: number;
+}
+
+/** Compute summary statistics for a model. */
+export function modelStats(model: Model): ModelStats {
+  let objects = 0, processes = 0;
+  for (const t of model.things.values()) {
+    if (t.kind === "object") objects++;
+    else processes++;
+  }
+
+  const byType: Record<string, number> = {};
+  for (const link of model.links.values()) {
+    byType[link.type] = (byType[link.type] ?? 0) + 1;
+  }
+
+  // OPD max depth
+  function opdDepth(opdId: string): number {
+    const opd = model.opds.get(opdId);
+    if (!opd?.parent_opd) return 0;
+    return 1 + opdDepth(opd.parent_opd);
+  }
+  let maxDepth = 0;
+  for (const id of model.opds.keys()) {
+    maxDepth = Math.max(maxDepth, opdDepth(id));
+  }
+
+  // Total OPL sentences across all OPDs
+  let oplSentences = 0;
+  for (const opdId of model.opds.keys()) {
+    const doc = expose(model, opdId);
+    oplSentences += doc.sentences.length;
+  }
+
+  return {
+    things: { total: model.things.size, objects, processes },
+    states: model.states.size,
+    links: { total: model.links.size, byType },
+    opds: { total: model.opds.size, maxDepth },
+    appearances: model.appearances.size,
+    modifiers: model.modifiers.size,
+    fans: model.fans.size,
+    scenarios: model.scenarios.size,
+    assertions: model.assertions.size,
+    requirements: model.requirements.size,
+    oplSentences,
+  };
+}
+
 // === OPL Slug & ID generation ===
 
 export function oplSlug(name: string): string {

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { loadModel } from "../src/serialization";
-import { renderAll } from "../src/opl";
+import { renderAll, modelStats } from "../src/opl";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 
@@ -40,5 +40,24 @@ describe("HODOM OPL Export", () => {
     const wordCount = fullExport.split(/\s+/).length;
     console.log(`renderAll: ${fullExport.split("\n").length} lines, ${wordCount} words`);
     expect(wordCount).toBeGreaterThan(1000);
+  });
+
+  it("modelStats returns accurate HODOM metrics", () => {
+    const r = loadModel(fixture);
+    if (!r.ok) throw new Error("load failed");
+    const stats = modelStats(r.value);
+
+    // Known HODOM fixture stats
+    expect(stats.things.total).toBe(48);
+    expect(stats.things.objects).toBeGreaterThan(30);
+    expect(stats.things.processes).toBeGreaterThan(5);
+    expect(stats.states).toBe(34);
+    expect(stats.links.total).toBe(82);
+    expect(stats.opds.total).toBe(6);
+    expect(stats.opds.maxDepth).toBe(2); // SD -> SD1 -> SD1.1
+    expect(stats.appearances).toBe(84);
+    expect(stats.oplSentences).toBeGreaterThan(200);
+
+    console.log("HODOM stats:", JSON.stringify(stats, null, 2));
   });
 });
