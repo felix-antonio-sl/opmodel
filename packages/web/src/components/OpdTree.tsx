@@ -123,7 +123,12 @@ function TreeNodeItem({
               onClick={(e) => e.stopPropagation()}
             />
           ) : (
-            <div className="opd-tree__label">{node.opd.name}</div>
+            <div className="opd-tree__label">
+              {node.opd.name}
+              <span className="opd-tree__count">
+                {[...model.appearances.values()].filter(a => a.opd === node.opd.id).length}
+              </span>
+            </div>
           )}
           {node.opd.refines && !editing && (
             <div className="opd-tree__refines">

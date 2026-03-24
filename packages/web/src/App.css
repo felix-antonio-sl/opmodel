@@ -2740,3 +2740,11 @@ body,
   color: var(--text-muted);
   margin-bottom: 4px;
 }
+
+/* OPD tree thing count */
+.opd-tree__count {
+  font-size: 9px;
+  color: var(--text-muted);
+  margin-left: 4px;
+  opacity: 0.6;
+}
