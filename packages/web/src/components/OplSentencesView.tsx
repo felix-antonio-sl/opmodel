@@ -103,17 +103,9 @@ export function OplSentencesView({ model, opdId, selectedThing }: Props) {
   );
 
   // R-OPL-3: Refinement edge label (once at top, not per sentence)
+  // Delegate to core render() for locale-aware output (DRY with opl.ts)
   const edgeLabel = doc.refinementEdge
-    ? (() => {
-        const e = doc.refinementEdge;
-        const isES = doc.renderSettings.locale === "es";
-        if (isES) {
-          const verb = e.refinementType === "in-zoom" ? "" : "despliegue de";
-          return `${e.parentOpdName} se refina por descomposición de ${verb} ${e.refinedThingName} en ${e.childOpdName}.`.replace(/  +/g, " ");
-        }
-        const verb = e.refinementType === "in-zoom" ? "in-zooming" : "unfolding";
-        return `${e.parentOpdName} is refined by ${verb} ${e.refinedThingName} in ${e.childOpdName}.`;
-      })()
+    ? render({ ...doc, sentences: [] }).trim()
     : null;
 
   return (

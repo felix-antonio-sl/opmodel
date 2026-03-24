@@ -486,4 +486,44 @@ describe("interpret — simulationEffect commands", () => {
     expect(effect.action).toBe("toggleAutoRun");
     expect(effect.payload).toBeUndefined();
   });
+
+  /* ─── Settings Commands ─── */
+
+  it("updateSettings → modelMutation that patches opl_language", () => {
+    const effect = interpret({ tag: "updateSettings", patch: { opl_language: "es" } });
+    expect(effect.type).toBe("modelMutation");
+    if (effect.type !== "modelMutation") return;
+    const m = modelWithThings();
+    const result = effect.apply(m);
+    expect(isOk(result)).toBe(true);
+    if (!isOk(result)) return;
+    expect(result.value.settings.opl_language).toBe("es");
+  });
+
+  it("updateSettings → toggle language back to en", () => {
+    const m = modelWithThings();
+    // Set to es first
+    const e1 = interpret({ tag: "updateSettings", patch: { opl_language: "es" } });
+    if (e1.type !== "modelMutation") return;
+    const r1 = e1.apply(m);
+    if (!isOk(r1)) return;
+    expect(r1.value.settings.opl_language).toBe("es");
+    // Toggle back to en
+    const e2 = interpret({ tag: "updateSettings", patch: { opl_language: "en" } });
+    if (e2.type !== "modelMutation") return;
+    const r2 = e2.apply(r1.value);
+    if (!isOk(r2)) return;
+    expect(r2.value.settings.opl_language).toBe("en");
+  });
+
+  it("updateSettings → patches other settings", () => {
+    const effect = interpret({ tag: "updateSettings", patch: { opl_essence_visibility: "none" } });
+    expect(effect.type).toBe("modelMutation");
+    if (effect.type !== "modelMutation") return;
+    const m = modelWithThings();
+    const result = effect.apply(m);
+    expect(isOk(result)).toBe(true);
+    if (!isOk(result)) return;
+    expect(result.value.settings.opl_essence_visibility).toBe("none");
+  });
 });
