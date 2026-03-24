@@ -95,3 +95,40 @@ export function getStructuralParent(
   }
   return null;
 }
+
+/**
+ * R-IH: Get all procedural links inherited via generalization hierarchy.
+ * A specialization inherits all agent, instrument, consumption, result, effect links from its general.
+ * Walks up the generalization chain (ISO §6.3).
+ */
+export function getInheritedLinks(model: Model, thingId: string): Link[] {
+  const inherited: Link[] = [];
+  const visited = new Set<string>();
+
+  function walk(currentId: string) {
+    if (visited.has(currentId)) return;
+    visited.add(currentId);
+
+    // Find generalizations where currentId is a specialization
+    for (const link of model.links.values()) {
+      if (link.type !== "generalization") continue;
+      // In generalization: source=specialization, target=general (parent end)
+      if (link.source !== currentId) continue;
+      const generalId = link.target;
+
+      // Collect all procedural/enabling links of the general
+      for (const l of model.links.values()) {
+        if (l.type === "generalization" || l.type === "aggregation" || l.type === "exhibition" || l.type === "classification" || l.type === "tagged") continue;
+        if (l.source === generalId || l.target === generalId) {
+          inherited.push(l);
+        }
+      }
+
+      // Continue up the hierarchy
+      walk(generalId);
+    }
+  }
+
+  walk(thingId);
+  return inherited;
+}

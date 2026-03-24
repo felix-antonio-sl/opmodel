@@ -5,7 +5,7 @@
 import type { Model, Thing, State, Link, Modifier, OPD, Fan, Appearance } from "./types";
 import type { InvariantError, Result } from "./result";
 import { ok, err } from "./result";
-import { getStructuralChildren } from "./structural";
+import { getStructuralChildren, getInheritedLinks } from "./structural";
 
 /** Maximum self-invocation repetitions per process before stopping (ISO §9.5.2.5.2) */
 export const MAX_SELF_INVOCATIONS = 10;
