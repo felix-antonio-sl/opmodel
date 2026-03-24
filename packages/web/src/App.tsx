@@ -455,7 +455,15 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
         const q = searchQuery.toLowerCase();
         const results = q.length > 0
           ? [...model.things.values()]
-              .filter((t) => t.name.toLowerCase().includes(q))
+              .filter((t) => {
+                if (t.name.toLowerCase().includes(q)) return true;
+                // Also search states
+                const states = [...model.states.values()].filter(s => s.parent === t.id);
+                if (states.some(s => s.name.toLowerCase().includes(q))) return true;
+                // Search notes
+                if (t.notes?.toLowerCase().includes(q)) return true;
+                return false;
+              })
               .slice(0, 20)
           : [...model.things.values()].slice(0, 20);
         // Find which OPDs each thing appears in
