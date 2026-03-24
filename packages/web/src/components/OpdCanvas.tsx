@@ -487,6 +487,23 @@ function ThingNode({
           <tspan> {thing.duration.unit}</tspan>
         </text>
       )}
+      {/* R-VI-2: Duplicate indicator — shadow offset for things in multiple OPDs */}
+      {isExternal && !isContainer && (
+        thing.kind === "process" ? (
+          <ellipse
+            cx={x + w / 2 + 3} cy={y + totalH / 2 + 3}
+            rx={w / 2} ry={totalH / 2}
+            fill="none" stroke={strokeColor} strokeWidth={1} opacity={0.3}
+            strokeDasharray={strokeDash}
+          />
+        ) : (
+          <rect
+            x={x + 3} y={y + 3} width={w} height={totalH}
+            fill="none" stroke={strokeColor} strokeWidth={1} opacity={0.3}
+            strokeDasharray={strokeDash}
+          />
+        )
+      )}
       {isExternal && (
         <text className="thing-badge-external" x={x + w - 8} y={y + 12}>↑</text>
       )}
@@ -978,6 +995,19 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
     }
     return set;
   }, [model.subModels]);
+
+  // R-VI-2: Things appearing in multiple OPDs (duplicate indicator)
+  const multiOpdThings = useMemo(() => {
+    const opdCount = new Map<string, number>();
+    for (const app of model.appearances.values()) {
+      opdCount.set(app.thing, (opdCount.get(app.thing) ?? 0) + 1);
+    }
+    const set = new Set<string>();
+    for (const [id, count] of opdCount) {
+      if (count > 1) set.add(id);
+    }
+    return set;
+  }, [model.appearances]);
 
   const appearances = useMemo(() => {
     const map = new Map<string, Appearance>();

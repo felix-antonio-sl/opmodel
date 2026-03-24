@@ -1206,6 +1206,18 @@ export function runSimulation(
         executed = true;
         break;
       } else {
+        // R-BC-4: When subprocess skipped (condition_mode=skip), auto-advance to next subprocess
+        if (ep.parentProcessId && stepResult.processId) {
+          completedProcesses.add(ep.id);
+          // Find next subprocess in sequence
+          const siblingIdx = executableProcesses.findIndex(p => p.id === ep.id);
+          if (siblingIdx >= 0 && siblingIdx < executableProcesses.length - 1) {
+            const next = executableProcesses[siblingIdx + 1];
+            if (next?.parentProcessId === ep.parentProcessId) {
+              completedProcesses.delete(next.id);
+            }
+          }
+        }
         // Snapshot said satisfied but execution failed (parallel conflict) — mark completed
         completedProcesses.add(ep.id);
         if (stepResult.processId && stepResult.newState.waitingProcesses.has(stepResult.processId)) {
