@@ -428,7 +428,18 @@ export function resolveOpdFiber(model: Model, opdId: string): OpdFiber {
 
   // 3. Implicit things: connected via link to an explicit thing, no appearance in this OPD.
   //    Only 1-hop from explicit — no cascading.
+  //    Exclude things that are internal to a child refinement OPD (inside objects — R-IE-8).
   const explicitIds = new Set(things.keys());
+  const childOpdIds = new Set(
+    [...model.opds.values()].filter(o => o.parent_opd === opdId).map(o => o.id)
+  );
+  const internalToChildOpd = new Set<string>();
+  for (const app of model.appearances.values()) {
+    if (childOpdIds.has(app.opd) && app.internal === true) {
+      internalToChildOpd.add(app.thing);
+    }
+  }
+
   let implicitIndex = 0;
   for (const link of model.links.values()) {
     addImplicit(link.source, link.target);
@@ -438,6 +449,7 @@ export function resolveOpdFiber(model: Model, opdId: string): OpdFiber {
   function addImplicit(anchorId: string, candidateId: string): void {
     if (!explicitIds.has(anchorId)) return;
     if (things.has(candidateId)) return;
+    if (internalToChildOpd.has(candidateId)) return; // Inside object of child refinement
     const thing = model.things.get(candidateId);
     if (!thing) return;
     things.set(candidateId, {
