@@ -216,7 +216,7 @@
     {"id":"scn-flujo-normal","name":"Flujo Normal","path_labels":["flujo-normal"]}
   ],
   "settings": {
-      "autosave_interval_s": 300,
+      "autosave_interval_s": 1,
       "methodology_coaching": true,
       "opl_language": "es",
       "primary_essence": "physical"
