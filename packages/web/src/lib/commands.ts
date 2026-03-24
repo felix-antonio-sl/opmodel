@@ -27,6 +27,8 @@ import {
   addModifier,
   removeModifier,
   updateModifier,
+  addOPD,
+  removeOPD,
   refineThing,
   bringConnectedThings,
   applyOplEdit,
@@ -84,6 +86,9 @@ export type Command =
   | { tag: "removeModifier"; modifierId: string }
   | { tag: "updateModifier"; modifierId: string; patch: Partial<Omit<Modifier, "id">> }
   /* ─── Settings Commands ─── */
+  | { tag: "addViewOpd"; opdId: string; name: string }
+  | { tag: "removeOpd"; opdId: string }
+  | { tag: "addThingToView"; thingId: string; opdId: string }
   | { tag: "updateSettings"; patch: Partial<Settings> }
   /* ─── Simulation Commands ─── */
   | { tag: "startSimulation" }
@@ -300,6 +305,49 @@ export function interpret(cmd: Command): Effect {
         type: "modelMutation",
         apply: (m) => updateSettings(m, cmd.patch),
       };
+
+    /* ─── OPDs (R-NT-4: View OPDs) ─── */
+
+    case "addViewOpd":
+      return {
+        type: "modelMutation",
+        apply: (m) => addOPD(m, {
+          id: cmd.opdId,
+          name: cmd.name,
+          opd_type: "view",
+          parent_opd: null,
+        }),
+      };
+
+    case "removeOpd":
+      return {
+        type: "modelMutation",
+        apply: (m) => removeOPD(m, cmd.opdId),
+      };
+
+    case "addThingToView": {
+      return {
+        type: "modelMutation",
+        apply: (m) => {
+          const thing = m.things.get(cmd.thingId);
+          if (!thing) return { ok: false, error: { code: "NOT_FOUND", message: `Thing ${cmd.thingId} not found`, entity: cmd.thingId } } as Result<Model, InvariantError>;
+          // Auto-position: grid layout based on existing appearances in this OPD
+          const existing = [...m.appearances.values()].filter(a => a.opd === cmd.opdId);
+          const col = existing.length % 4;
+          const row = Math.floor(existing.length / 4);
+          const w = thing.kind === "process" ? 180 : 140;
+          const h = thing.kind === "process" ? 70 : 55;
+          return addAppearance(m, {
+            thing: cmd.thingId,
+            opd: cmd.opdId,
+            x: 50 + col * 200,
+            y: 50 + row * 120,
+            w,
+            h,
+          });
+        },
+      };
+    }
 
     /* ─── Simulation ─── */
 

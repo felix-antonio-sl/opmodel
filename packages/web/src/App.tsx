@@ -12,6 +12,7 @@ import { BugCapture } from "./components/BugCapture";
 import type { NlConfig } from "@opmodel/nl";
 import { createProvider, createPipeline } from "@opmodel/nl";
 import { NlSettingsModal } from "./components/NlSettingsModal";
+import { SettingsPanel } from "./components/SettingsPanel";
 
 const STORAGE_KEY = "opmodel:current";
 
@@ -182,6 +183,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
   const [showSearch, setShowSearch] = useState(false);
   const [showValidation, setShowValidation] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
   const nlPipeline = useMemo(() => {
@@ -316,7 +318,8 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
         >
           {ui.simulation ? "Exit Sim" : "Simulate"}
         </button>
-        <button onClick={() => setShowNlSettings(true)} title="NL Settings">⚙</button>
+        <button onClick={() => setShowSettings(true)} title="Model Settings">⚙</button>
+        <button onClick={() => setShowNlSettings(true)} title="NL Settings" style={{ fontSize: "11px" }}>NL</button>
       </header>
 
       {/* Toolbar */}
@@ -330,6 +333,18 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
           selectedThing={ui.selectedThing}
           onSelectOpd={(id) => dispatch({ tag: "selectOpd", opdId: id })}
           onSelectThing={(id) => dispatch({ tag: "selectThing", thingId: id })}
+          onCreateViewOpd={() => {
+            const id = `opd-view-${Date.now()}`;
+            const name = `View ${[...model.opds.values()].filter(o => o.opd_type === "view").length + 1}`;
+            dispatch({ tag: "addViewOpd", opdId: id, name });
+          }}
+          onRemoveViewOpd={(opdId) => {
+            if (ui.currentOpd === opdId) dispatch({ tag: "selectOpd", opdId: "opd-sd" });
+            dispatch({ tag: "removeOpd", opdId });
+          }}
+          onAddThingToView={(thingId, opdId) => {
+            dispatch({ tag: "addThingToView", thingId, opdId });
+          }}
         />
         {/* Minimap (H-07) */}
         {(() => {
@@ -572,6 +587,9 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
             <button className="help-dialog__close" onClick={() => setShowHelp(false)}>Close</button>
           </div>
         </div>
+      )}
+      {showSettings && (
+        <SettingsPanel model={model} dispatch={dispatch} onClose={() => setShowSettings(false)} />
       )}
     </div>
   );
