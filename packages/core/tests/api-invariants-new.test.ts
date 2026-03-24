@@ -36,12 +36,22 @@ function errorsOf(model: ReturnType<typeof createModel>, code: string) {
 // === I-17: Process must have at least one transformation link ===
 
 describe("I-17: orphan processes", () => {
-  it("flags process with no transformation link", () => {
+  it("flags process with non-transform links but no transformation link", () => {
     let m = createModel("Test");
     m = (addThing(m, proc("proc-boil", "Boiling")) as any).value;
+    m = (addThing(m, obj("obj-tool", "Tool")) as any).value;
+    // Has agent link but no transformation link → I-17
+    m = (addLink(m, { id: "lnk-agent", type: "agent", source: "obj-tool", target: "proc-boil" }) as any).value;
     const errors = errorsOf(m, "I-17");
     expect(errors.length).toBeGreaterThanOrEqual(1);
     expect(errors[0].entity).toBe("proc-boil");
+  });
+
+  it("skips I-17 for process with zero links (WIP)", () => {
+    let m = createModel("Test");
+    m = (addThing(m, proc("proc-boil", "Boiling")) as any).value;
+    const errors = errorsOf(m, "I-17");
+    expect(errors).toHaveLength(0);
   });
 
   it("passes when process has an effect link", () => {

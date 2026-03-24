@@ -546,13 +546,12 @@ function ThingNode({
                     strokeWidth={1} rx={2}
                   />
                 )}
-                {/* R-TC-8: default state — diagonal arrow marker */}
+                {/* R-TC-8: default state — diagonal arrow marker (ISO §4 line 329) */}
                 {state.default && (
                   <line
-                    x1={px + 2} y1={py + pillH - 2}
-                    x2={px + 7} y2={py + pillH - 7}
-                    stroke="var(--text-muted)" strokeWidth={1.5}
-                    markerEnd="none"
+                    x1={px + 1} y1={py + pillH - 1}
+                    x2={px + 9} y2={py + pillH - 9}
+                    stroke="var(--accent)" strokeWidth={2}
                   />
                 )}
                 <text

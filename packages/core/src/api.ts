@@ -561,9 +561,12 @@ export function refineThing(
   const opds = new Map(model.opds).set(childOpdId, childOpd);
 
   const appearances = new Map(model.appearances);
+  // R-OC-1: container must be large enough for 3 placeholder subprocesses
+  const containerW = refinementType === "in-zoom" && thing.kind === "process" ? 300 : 200;
+  const containerH = refinementType === "in-zoom" && thing.kind === "process" ? 350 : 150;
   appearances.set(appearanceKey(thingId, childOpdId), {
     thing: thingId, opd: childOpdId,
-    x: 200, y: 30, w: 200, h: 150, internal: true,
+    x: 150, y: 30, w: containerW, h: containerH, internal: true,
   });
   let index = 0;
   for (const extThingId of externalThings) {
@@ -580,11 +583,9 @@ export function refineThing(
   // R-OC-1: auto-create placeholder subprocesses for process in-zoom
   const things = new Map(model.things);
   if (refinementType === "in-zoom" && thing.kind === "process") {
-    const containerW = 200;
-    const containerX = 200;
     const subW = 120, subH = 50;
-    const startY = 80;
-    const spacingY = 70;
+    const startY = 70;
+    const spacingY = 100;
     for (let i = 1; i <= 3; i++) {
       const subId = `${childOpdId}-sub-${i}`;
       things.set(subId, {
@@ -593,7 +594,7 @@ export function refineThing(
       });
       appearances.set(appearanceKey(subId, childOpdId), {
         thing: subId, opd: childOpdId,
-        x: containerX + (containerW - subW) / 2, y: startY + (i - 1) * spacingY,
+        x: 150 + (containerW - subW) / 2, y: startY + (i - 1) * spacingY,
         w: subW, h: subH, internal: true,
       });
     }
@@ -1530,8 +1531,10 @@ export function validate(model: Model): InvariantError[] {
   }
   for (const [id, thing] of model.things) {
     if (thing.kind === "process" && !inZoomedProcessIds.has(id) && !internalSubprocessIds.has(id)) {
-      const hasTransformLink = [...model.links.values()].some(
-        l => (l.source === id || l.target === id) &&
+      const processLinks = [...model.links.values()].filter(l => l.source === id || l.target === id);
+      // Skip processes with no links at all — they are WIP (not yet connected)
+      if (processLinks.length === 0) continue;
+      const hasTransformLink = processLinks.some(l =>
         ["effect", "consumption", "result", "input", "output"].includes(l.type)
       );
       if (!hasTransformLink) {
