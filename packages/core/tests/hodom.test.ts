@@ -24,7 +24,7 @@ describe("Hospitalización Domiciliaria fixture", () => {
     expect(m.opds.size).toBe(6);
     expect(m.links.size).toBe(82);
     expect(m.modifiers.size).toBe(5);
-    expect(m.appearances.size).toBe(76);
+    expect(m.appearances.size).toBe(80);
     expect(m.fans.size).toBe(4);
     expect(m.scenarios.size).toBe(2);
     expect(m.assertions.size).toBe(5);
