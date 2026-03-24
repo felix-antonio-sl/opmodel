@@ -135,4 +135,47 @@ describe("Hospitalización Domiciliaria fixture", () => {
     expect(r2.value.links.size).toBe(r1.value.links.size);
     expect(r2.value.appearances.size).toBe(r1.value.appearances.size);
   });
+
+  it("all OPDs have unique names", () => {
+    const r = loadModel(fixture);
+    if (!r.ok) throw new Error("load failed");
+    const names = [...r.value.opds.values()].map(o => o.name);
+    expect(new Set(names).size).toBe(names.length);
+  });
+
+  it("all things have unique names", () => {
+    const r = loadModel(fixture);
+    if (!r.ok) throw new Error("load failed");
+    const names = [...r.value.things.values()].map(t => t.name);
+    expect(new Set(names).size).toBe(names.length);
+  });
+
+  it("all states belong to existing objects", () => {
+    const r = loadModel(fixture);
+    if (!r.ok) throw new Error("load failed");
+    for (const state of r.value.states.values()) {
+      const parent = r.value.things.get(state.parent);
+      expect(parent).toBeDefined();
+      expect(parent?.kind).toBe("object");
+    }
+  });
+
+  it("every object with states has exactly one initial+default state", () => {
+    const r = loadModel(fixture);
+    if (!r.ok) throw new Error("load failed");
+    const statesByParent = new Map<string, typeof r.value.states extends Map<any, infer V> ? V : never>();
+    for (const [, s] of r.value.states) {
+      if (!statesByParent.has(s.parent)) statesByParent.set(s.parent, [] as any);
+    }
+    const grouped = new Map<string, Array<{ initial: boolean; default: boolean }>>();
+    for (const s of r.value.states.values()) {
+      const list = grouped.get(s.parent) ?? [];
+      list.push({ initial: s.initial, default: s.default });
+      grouped.set(s.parent, list);
+    }
+    for (const [, states] of grouped) {
+      expect(states.filter(s => s.initial).length).toBeGreaterThanOrEqual(1);
+      expect(states.filter(s => s.default).length).toBe(1);
+    }
+  });
 });
