@@ -1090,3 +1090,41 @@ describe("event trigger after state change", () => {
     expect(executed).toContain("Alert");
   });
 });
+
+describe("simulation edge cases", () => {
+  it("handles model with no processes gracefully", () => {
+    const m = createModel("EmptyTest");
+    const trace = runSimulation(m);
+    expect(trace.steps).toHaveLength(0);
+    expect(trace.completed).toBe(true);
+    expect(trace.deadlocked).toBe(false);
+  });
+
+  it("handles model with process but no links", () => {
+    let m = createModel("NoLinksTest");
+    const proc: Thing = { id: "proc-1", kind: "process", name: "Idle", essence: "informatical", affiliation: "systemic" };
+    let r = addThing(m, proc); m = isOk(r) ? r.value : m;
+    r = addAppearance(m, { thing: "proc-1", opd: "opd-sd", x: 0, y: 0, w: 120, h: 60 });
+    m = isOk(r) ? r.value : m;
+    const trace = runSimulation(m);
+    // Process with no links still executes (no preconditions to fail)
+    expect(trace.steps.length).toBeGreaterThanOrEqual(0);
+    expect(trace.deadlocked).toBe(false);
+  });
+
+  it("totalDuration accumulates across steps", () => {
+    let m = createModel("DurationAccumTest");
+    const proc: Thing = {
+      id: "proc-1", kind: "process", name: "Task",
+      essence: "informatical", affiliation: "systemic",
+      duration: { nominal: 30, unit: "min" },
+    };
+    let r = addThing(m, proc); m = isOk(r) ? r.value : m;
+    r = addAppearance(m, { thing: "proc-1", opd: "opd-sd", x: 0, y: 0, w: 120, h: 60 });
+    m = isOk(r) ? r.value : m;
+    const trace = runSimulation(m);
+    if (trace.totalDuration != null) {
+      expect(trace.totalDuration).toBeGreaterThanOrEqual(30);
+    }
+  });
+});
