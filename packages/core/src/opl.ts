@@ -576,15 +576,29 @@ function renderModifierSentence(s: OplModifierSentence): string {
   // Determine process/object names based on link direction convention:
   // Enabling links (agent, instrument): source=object, target=process
   // Consumption (ISO): source=object, target=process
+  // Invocation/exception: source=process(invoker), target=process(invoked)
+  //   → for event/condition modifiers, source triggers target
   // Other transforming (effect, result): source=process, target=object
   const isEnabling = ["agent", "instrument"].includes(s.linkType);
   const isConsumption = s.linkType === "consumption";
+  const isInvocation = ["invocation", "exception"].includes(s.linkType);
   // For enabling and consumption: source=object, target=process
+  // For invocation: source=invoker(trigger), target=invoked(triggered)
   // For other transforming (effect, result): source=process, target=object
   const objectIsSource = isEnabling || isConsumption;
-  const processName = objectIsSource ? s.targetName : s.sourceName;
-  const objectName = objectIsSource ? s.sourceName : s.targetName;
-  const stateName = objectIsSource ? s.sourceStateName : s.targetStateName;
+  let processName: string;
+  let objectName: string;
+  let stateName: string | undefined;
+  if (isInvocation) {
+    // Both are processes; source triggers/invokes target
+    processName = s.targetName;
+    objectName = s.sourceName;
+    stateName = s.sourceStateName;
+  } else {
+    processName = objectIsSource ? s.targetName : s.sourceName;
+    objectName = objectIsSource ? s.sourceName : s.targetName;
+    stateName = objectIsSource ? s.sourceStateName : s.targetStateName;
+  }
 
   if (s.modifierType === "event") {
     if (s.negated && stateName) {

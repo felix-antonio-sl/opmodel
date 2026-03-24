@@ -491,31 +491,64 @@ export function resolveOpdFiber(model: Model, opdId: string): OpdFiber {
     }
   }
 
-  let implicitIndex = 0;
+  // Compute bounding box of explicit things to place ghosts outside
+  let maxRight = 0;
+  let minTop = Infinity;
+  for (const entry of things.values()) {
+    const r = entry.appearance.x + entry.appearance.w;
+    if (r > maxRight) maxRight = r;
+    if (entry.appearance.y < minTop) minTop = entry.appearance.y;
+  }
+  if (!isFinite(minTop)) minTop = 50;
+  const ghostStartX = maxRight + 80; // 80px gap after rightmost explicit thing
+  const ghostColWidth = 160;
+  const ghostRowHeight = 80;
+  const ghostCols = 3;
+
+  // First pass: collect implicit candidates
+  const implicitCandidates: Array<{ anchorId: string; candidateId: string; thing: Thing }> = [];
+  const implicitSeen = new Set<string>();
   for (const link of model.links.values()) {
-    addImplicit(link.source, link.target);
-    addImplicit(link.target, link.source);
+    collectImplicit(link.source, link.target);
+    collectImplicit(link.target, link.source);
   }
 
-  function addImplicit(anchorId: string, candidateId: string): void {
+  function collectImplicit(anchorId: string, candidateId: string): void {
     if (!explicitIds.has(anchorId)) return;
     if (things.has(candidateId)) return;
+    if (implicitSeen.has(candidateId)) return;
     if (internalToChildOpd.has(candidateId)) return; // Inside object of child refinement
     const thing = model.things.get(candidateId);
     if (!thing) return;
+    implicitSeen.add(candidateId);
+    implicitCandidates.push({ anchorId, candidateId, thing });
+  }
+
+  // Second pass: position ghosts near their anchor when possible, fallback to grid
+  let gridIndex = 0;
+  for (const { anchorId, candidateId, thing } of implicitCandidates) {
+    const anchor = things.get(anchorId)?.appearance;
+    const w = thing.kind === "process" ? 140 : 120;
+    const h = 60;
+
+    // Try anchor-relative: place to the right of the anchor
+    let x: number;
+    let y: number;
+    if (anchor) {
+      // Place ghost to the right outside any explicit bounding box
+      x = ghostStartX + (gridIndex % ghostCols) * ghostColWidth;
+      y = Math.max(minTop, anchor.y) + Math.floor(gridIndex / ghostCols) * ghostRowHeight;
+    } else {
+      x = ghostStartX + (gridIndex % ghostCols) * ghostColWidth;
+      y = minTop + Math.floor(gridIndex / ghostCols) * ghostRowHeight;
+    }
+
     things.set(candidateId, {
       thing,
-      appearance: {
-        thing: candidateId,
-        opd: opdId,
-        x: 600 + (implicitIndex % 3) * 150,
-        y: 50 + Math.floor(implicitIndex / 3) * 100,
-        w: thing.kind === "process" ? 140 : 120,
-        h: 60,
-      },
+      appearance: { thing: candidateId, opd: opdId, x, y, w, h },
       implicit: true,
     });
-    implicitIndex++;
+    gridIndex++;
   }
 
   // 4. State suppression — derived from child in-zoom OPDs (replaces stored C-04)

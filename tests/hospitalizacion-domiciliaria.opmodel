@@ -102,7 +102,7 @@
     {"id":"lnk-aut-san-instr-autorizacion","source":"obj-autorizacion-sanitaria","target":"proc-autorizacion-seremi","type":"instrument"},
     {"id":"lnk-autorizacion-effect-aut","source":"proc-autorizacion-seremi","source_state":"state-aut-vencida","target":"obj-autorizacion-sanitaria","target_state":"state-aut-vigente","type":"effect"},
     {"id":"lnk-autorizacion-effect-svc","source":"proc-autorizacion-seremi","source_state":"state-svc-no-autorizado","target":"obj-estado-servicio","target_state":"state-svc-autorizado","type":"effect"},
-    {"id":"lnk-cap-effect-cuidador","source":"proc-capacitacion-cuidador","target":"obj-cuidador","type":"effect"},
+    {"id":"lnk-cap-effect-cuidador","source":"proc-capacitacion-cuidador","source_state":"state-cuid-no-capacitado","target":"obj-cuidador","target_state":"state-cuid-capacitado","type":"effect"},
     {"distributed":true,"id":"lnk-cons-consumed-admision","source":"obj-consentimiento","source_state":"state-cons-firmado","target":"proc-admision","type":"consumption"},
     {"id":"lnk-coordinador-agent-admision","source":"obj-coordinador","target":"proc-admision","type":"agent"},
     {"id":"lnk-cuidador-agent-capacitacion","source":"obj-cuidador","target":"proc-capacitacion-cuidador","type":"agent"},
@@ -242,7 +242,12 @@
     {"default":false,"final":true,"id":"state-svc-suspendido","initial":false,"name":"suspendido","parent":"obj-estado-servicio"},
     {"default":false,"final":false,"id":"state-temp-febril","initial":false,"name":"febril","parent":"obj-temperatura"},
     {"default":false,"final":false,"id":"state-temp-hipotermia","initial":false,"name":"hipotermia","parent":"obj-temperatura"},
-    {"current":true,"default":true,"final":false,"id":"state-temp-normal","initial":true,"name":"normal","parent":"obj-temperatura"}
+    {"current":true,"default":true,"final":false,"id":"state-temp-normal","initial":true,"name":"normal","parent":"obj-temperatura"},
+    {"current":true,"default":true,"final":false,"id":"state-cuid-no-capacitado","initial":true,"name":"no capacitado","parent":"obj-cuidador"},
+    {"default":false,"final":false,"id":"state-cuid-capacitado","initial":false,"name":"capacitado","parent":"obj-cuidador"},
+    {"current":true,"default":true,"final":false,"id":"state-eplan-vigente","initial":true,"name":"vigente","parent":"obj-estado-plan"},
+    {"default":false,"final":false,"id":"state-eplan-vencido","initial":false,"name":"vencido","parent":"obj-estado-plan"},
+    {"default":false,"final":true,"id":"state-eplan-cerrado","initial":false,"name":"cerrado","parent":"obj-estado-plan"}
   ],
   "stereotypes": [
     {"global":false,"id":"stp-regulacion-continua","stereotype_id":"servicio-continuo-24-7","thing":"proc-regulacion-medica"},
