@@ -218,6 +218,33 @@ export function SimulationPanel({ model, simulation, dispatch }: Props) {
           </table>
         </div>
       )}
+
+      {/* Simulation summary */}
+      {isTerminal && (
+        <div className="sim-panel__summary">
+          <div className="sim-panel__summary-title">Summary</div>
+          <div>Steps: {trace.steps.length} | Status: {status}{trace.totalDuration != null ? ` | Duration: ${trace.totalDuration.toFixed(1)}` : ""}</div>
+          {trace.steps.some(s => s.exceptionTriggered) && (
+            <div style={{ color: "var(--error-stroke, #e53e3e)" }}>
+              ⚠ Exceptions: {trace.steps.filter(s => s.exceptionTriggered).map(s => `${s.processName} (${s.exceptionTriggered})`).join(", ")}
+            </div>
+          )}
+          {trace.assertionResults && trace.assertionResults.length > 0 && (
+            <div style={{ marginTop: 6 }}>
+              <div style={{ fontWeight: 600, fontSize: 10, marginBottom: 4 }}>Assertions</div>
+              {trace.assertionResults.map(ar => (
+                <div key={ar.assertionId} style={{ fontSize: 10, display: "flex", gap: 6 }}>
+                  <span style={{ color: ar.passed ? "#48bb78" : "#f56565", fontWeight: 700 }}>
+                    {ar.passed ? "✓" : "✗"}
+                  </span>
+                  <span>[{ar.category}] {ar.name}</span>
+                  {ar.reason && <span style={{ color: "var(--text-muted)" }}>— {ar.reason}</span>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

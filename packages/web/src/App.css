@@ -2723,3 +2723,20 @@ body,
   background: rgba(245, 101, 101, 0.15);
   color: #f56565;
 }
+
+/* Simulation summary */
+.sim-panel__summary {
+  padding: 8px 10px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.sim-panel__summary-title {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}

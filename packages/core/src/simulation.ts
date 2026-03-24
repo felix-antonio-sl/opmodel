@@ -59,11 +59,21 @@ export interface SimulationStep {
 }
 
 /** Traza coinductiva de simulación */
+export interface AssertionResult {
+  assertionId: string;
+  name: string;
+  category: string;
+  passed: boolean;
+  reason?: string;
+}
+
 export interface SimulationTrace {
   steps: SimulationStep[];
   finalState: ModelState;
   completed: boolean;
   deadlocked: boolean;
+  assertionResults?: AssertionResult[];
+  totalDuration?: number;
 }
 
 /** Proceso ejecutable con orden y contexto OPD */
@@ -689,12 +699,30 @@ function checkLinkPrecondition(
   link: Link,
   processId: string,
 ): PreconditionResult {
+  // ISO §8.2.3: negated condition modifier inverts precondition (absence of state / not to exist)
+  const modifier = [...model.modifiers.values()].find(m => m.over === link.id);
+  const isNegated = modifier?.negated === true;
+
   if (["consumption", "effect", "input", "output"].includes(link.type)) {
     const srcThing = model.things.get(link.source);
     const processEnd = srcThing?.kind === "process" ? link.source : link.target;
     const objectEnd = srcThing?.kind === "object" ? link.source : link.target;
     if (processEnd !== processId) return { satisfied: true };
     const objState = state.objects.get(objectEnd);
+
+    if (isNegated) {
+      // Negated: satisfied when object does NOT exist or is NOT in required state
+      if (!objState?.exists) return { satisfied: true };
+      const stateRef = link.type === "effect" ? link.source_state : (link.source_state || link.target_state);
+      if (stateRef) {
+        if (objState.currentState === stateRef) {
+          return { satisfied: false, reason: `Object ${objectEnd} IS in negated state`, response: getResponse(model, link.id) };
+        }
+        return { satisfied: true };
+      }
+      return { satisfied: false, reason: `Object ${objectEnd} exists (negated)`, response: getResponse(model, link.id) };
+    }
+
     if (!objState?.exists) {
       return { satisfied: false, reason: `Object ${objectEnd} does not exist`, response: getResponse(model, link.id) };
     }
@@ -710,6 +738,13 @@ function checkLinkPrecondition(
     if (link.target !== processId) return { satisfied: true };
     const objectId = link.source;
     const objState = state.objects.get(objectId);
+
+    if (isNegated) {
+      // Negated enabling: satisfied when agent/instrument does NOT exist
+      if (!objState?.exists) return { satisfied: true };
+      return { satisfied: false, reason: `${link.type} ${objectId} exists (negated)`, response: getResponse(model, link.id) };
+    }
+
     if (!objState?.exists) {
       return { satisfied: false, reason: `${link.type} ${objectId} does not exist`, response: getResponse(model, link.id) };
     }
@@ -1165,18 +1200,91 @@ export function runSimulation(
 
     if (!executed) {
       if (currentState.waitingProcesses.size > 0) {
-        return { steps, finalState: currentState, completed: false, deadlocked: true };
+        return {
+          steps, finalState: currentState, completed: false, deadlocked: true,
+          assertionResults: verifyAssertions(model, currentState, steps).length > 0 ? verifyAssertions(model, currentState, steps) : undefined,
+        };
       }
       break;
     }
   }
+
+  // Post-simulation assertion verification (ISO §8.3)
+  const assertionResults = verifyAssertions(model, currentState, steps);
+  const totalDuration = currentState.timestamp - state.timestamp;
 
   return {
     steps,
     finalState: currentState,
     completed: steps.length < maxSteps,
     deadlocked: false,
+    assertionResults: assertionResults.length > 0 ? assertionResults : undefined,
+    totalDuration: totalDuration > 0 ? totalDuration : undefined,
   };
+}
+
+/** Verify model assertions against final simulation state */
+function verifyAssertions(model: Model, finalState: ModelState, steps: SimulationStep[]): AssertionResult[] {
+  const results: AssertionResult[] = [];
+  for (const assertion of model.assertions.values()) {
+    if (!assertion.enabled) continue;
+    const result: AssertionResult = {
+      assertionId: assertion.id,
+      name: assertion.predicate,
+      category: assertion.category,
+      passed: false,
+    };
+
+    // Pattern matching on predicate text
+    const pred = assertion.predicate.toLowerCase();
+
+    // Pattern: "after <Process>, <Object> is <state>"
+    const afterMatch = pred.match(/after\s+(.+?),\s+(.+?)\s+is\s+(.+)/);
+    if (afterMatch) {
+      const [, procName, objName, stateName] = afterMatch;
+      const proc = [...model.things.values()].find(t => t.name.toLowerCase() === procName?.trim());
+      const obj = [...model.things.values()].find(t => t.name.toLowerCase() === objName?.trim());
+      if (proc && obj) {
+        const wasExecuted = steps.some(s => s.processId === proc.id && !s.skipped);
+        const objState = finalState.objects?.get(obj.id);
+        const targetState = [...model.states.values()].find(s => s.parent === obj.id && s.name.toLowerCase() === stateName?.trim());
+        if (wasExecuted && objState && targetState && objState.currentState === targetState.id) {
+          result.passed = true;
+        } else {
+          result.reason = wasExecuted
+            ? `${obj.name} is in state ${objState?.currentState ? model.states.get(objState.currentState)?.name : "unknown"}, expected ${stateName}`
+            : `${proc.name} was not executed`;
+        }
+      } else {
+        result.reason = `Could not resolve entities in predicate`;
+      }
+      results.push(result);
+      continue;
+    }
+
+    // Pattern: "<Process> requires <Object> <state>"
+    const reqMatch = pred.match(/(.+?)\s+requires\s+(.+?)\s+(.+)/);
+    if (reqMatch) {
+      const [, procName, objName, qualifier] = reqMatch;
+      const proc = [...model.things.values()].find(t => t.name.toLowerCase() === procName?.trim());
+      const obj = [...model.things.values()].find(t => t.name.toLowerCase() === objName?.trim());
+      if (proc && obj) {
+        const objState = finalState.objects?.get(obj.id);
+        if (objState?.exists) {
+          result.passed = true;
+        } else {
+          result.reason = `${obj.name} does not exist`;
+        }
+      }
+      results.push(result);
+      continue;
+    }
+
+    // Unknown pattern — mark as inconclusive
+    result.reason = "Predicate pattern not recognized";
+    results.push(result);
+  }
+  return results;
 }
 
 /**
