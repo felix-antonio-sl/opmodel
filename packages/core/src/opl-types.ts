@@ -32,6 +32,8 @@ export interface OplDuration {
   thingId: string;
   thingName: string;
   nominal: number;
+  min?: number;
+  max?: number;
   unit: TimeUnit;
 }
 

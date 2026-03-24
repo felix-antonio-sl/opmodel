@@ -190,6 +190,8 @@ export function expose(model: Model, opdId: string): OplDocument {
         thingId,
         thingName: thing.name,
         nominal: thing.duration.nominal,
+        min: thing.duration.min,
+        max: thing.duration.max,
         unit: thing.duration.unit,
       });
     }
@@ -900,10 +902,17 @@ function renderSentence(s: OplSentence, settings: OplRenderSettings): string {
       return `${displayName} can be ${rest.join(", ")} or ${last}.`;
     }
     case "duration": {
-      if (settings.unitsVisibility === "hide") {
-        return `${s.thingName} requires ${s.nominal}.`;
+      const unit = settings.unitsVisibility === "hide" ? "" : s.unit;
+      if (s.min != null && s.max != null) {
+        return `${s.thingName} requires ${s.min}–${s.nominal}–${s.max}${unit}.`;
       }
-      return `${s.thingName} requires ${s.nominal}${s.unit}.`;
+      if (s.max != null) {
+        return `${s.thingName} requires ${s.nominal}–${s.max}${unit}.`;
+      }
+      if (s.min != null) {
+        return `${s.thingName} requires ${s.min}–${s.nominal}${unit}.`;
+      }
+      return `${s.thingName} requires ${s.nominal}${unit}.`;
     }
     case "link":
     {
