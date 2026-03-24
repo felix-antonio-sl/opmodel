@@ -622,6 +622,7 @@ function LinkLine({
   isInputHalf,
   isOutputHalf,
   isError,
+  hideLabel,
 }: {
   link: Link;
   sourceRect: Rect;
@@ -634,6 +635,7 @@ function LinkLine({
   isInputHalf?: boolean;
   isOutputHalf?: boolean;
   isError?: boolean;
+  hideLabel?: boolean;
 }) {
   const srcCenter = center(sourceRect);
   const tgtCenter = center(targetRect);
@@ -765,9 +767,11 @@ function LinkLine({
   return (
     <g>
       {linkElement}
-      <text className="link-label" x={mid.x} y={mid.y - 7}>
-        {labelOverride ?? (link.type === "tagged" && link.tag ? link.tag : link.type)}
-      </text>
+      {!hideLabel && (
+        <text className="link-label" x={mid.x} y={mid.y - 7}>
+          {labelOverride ?? (link.type === "tagged" && link.tag ? link.tag : link.type)}
+        </text>
+      )}
       {link.rate && (
         <text className="link-rate" x={mid.x} y={mid.y + 5}>
           {link.rate.value}{link.rate.unit}
@@ -863,6 +867,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
   const [zoom, setZoom] = useState(1);
   const [hiddenLinkTypes, setHiddenLinkTypes] = useState<Set<string>>(new Set());
   const [showLinkFilter, setShowLinkFilter] = useState(false);
+  const [hideLinkLabels, setHideLinkLabels] = useState(false);
 
   const toggleLinkCategory = (category: string) => {
     setHiddenLinkTypes(prev => {
@@ -1601,6 +1606,10 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
               </label>
             );
           })}
+          <label className="canvas-link-filter__row" style={{ marginTop: 4, borderTop: "1px solid var(--border)", paddingTop: 4 }}>
+            <input type="checkbox" checked={hideLinkLabels} onChange={(e) => setHideLinkLabels(e.target.checked)} />
+            <span>Hide labels</span>
+          </label>
           {hiddenLinkTypes.size > 0 && (
             <button className="canvas-link-filter__reset" onClick={() => setHiddenLinkTypes(new Set())}>
               Show All
@@ -1754,6 +1763,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
                   isInputHalf={isInputHalf}
                   isOutputHalf={isOutputHalf}
                   isError={errorEntities?.has(link.id)}
+                  hideLabel={hideLinkLabels}
                 />
               </g>
             );

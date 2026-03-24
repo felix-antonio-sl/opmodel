@@ -111,7 +111,7 @@ export function SimulationPanel({ model, simulation, dispatch }: Props) {
         </span>
       </div>
 
-      {/* ─── Speed slider ─── */}
+      {/* ─── Speed slider + presets ─── */}
       <div className="sim-panel__speed">
         <label>
           Speed: {speed}ms
@@ -126,6 +126,15 @@ export function SimulationPanel({ model, simulation, dispatch }: Props) {
             }
           />
         </label>
+        <div style={{ display: "flex", gap: 4, marginTop: 2 }}>
+          {[{ label: "Fast", ms: 200 }, { label: "Normal", ms: 800 }, { label: "Slow", ms: 1500 }].map(p => (
+            <button
+              key={p.label}
+              style={{ fontSize: 9, padding: "1px 6px", cursor: "pointer", opacity: speed === p.ms ? 1 : 0.6 }}
+              onClick={() => dispatch({ tag: "setSimulationSpeed", speed: p.ms })}
+            >{p.label}</button>
+          ))}
+        </div>
       </div>
 
       {/* ─── Scrubber ─── */}
