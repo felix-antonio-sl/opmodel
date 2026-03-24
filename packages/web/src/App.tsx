@@ -181,6 +181,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
   const [showNlSettings, setShowNlSettings] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [showValidation, setShowValidation] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
   const nlPipeline = useMemo(() => {
@@ -250,6 +251,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
         if (e.key === "o") dispatch({ tag: "setMode", mode: "addObject" });
         if (e.key === "p") dispatch({ tag: "setMode", mode: "addProcess" });
         if (e.key === "l") dispatch({ tag: "setMode", mode: "addLink" });
+        if (e.key === "?") setShowHelp(v => !v);
       }
     },
     [doUndo, doRedo, save, ui.selectedThing, ui.currentOpd, ui.simulation, model.opds, dispatch],
@@ -545,6 +547,32 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
         />
       )}
       <BugCapture model={model} opdId={ui.currentOpd} selectedThing={ui.selectedThing} errors={errors} />
+      {showHelp && (
+        <div className="help-overlay" onClick={() => setShowHelp(false)}>
+          <div className="help-dialog" onClick={(e) => e.stopPropagation()}>
+            <div className="help-dialog__title">Keyboard Shortcuts</div>
+            <div className="help-dialog__grid">
+              <kbd>O</kbd><span>Add Object</span>
+              <kbd>P</kbd><span>Add Process</span>
+              <kbd>L</kbd><span>Add Link</span>
+              <kbd>Esc</kbd><span>Select Mode</span>
+              <kbd>Del</kbd><span>Delete Selected</span>
+              <kbd>⌘Z</kbd><span>Undo</span>
+              <kbd>⌘⇧Z</kbd><span>Redo</span>
+              <kbd>⌘S</kbd><span>Save</span>
+              <kbd>⌘F</kbd><span>Search</span>
+              <kbd>⌘↑</kbd><span>Parent OPD</span>
+              <kbd>⌘↓</kbd><span>Child OPD</span>
+              <kbd>S</kbd><span>Toggle Simulation</span>
+              <kbd>Space</kbd><span>Play/Pause Sim</span>
+              <kbd>→</kbd><span>Step Forward</span>
+              <kbd>←</kbd><span>Step Back</span>
+              <kbd>?</kbd><span>This Help</span>
+            </div>
+            <button className="help-dialog__close" onClick={() => setShowHelp(false)}>Close</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
