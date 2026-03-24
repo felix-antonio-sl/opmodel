@@ -1679,6 +1679,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
 
             return (
               <g key={isInputHalf ? `${link.id}__in__${visualSource}__${visualTarget}` : isOutputHalf ? `${link.id}__out__${visualSource}__${visualTarget}` : `${link.id}__${visualSource}__${visualTarget}`} className={linkSimClass || undefined}>
+                <title>{`${link.type}: ${srcThing.name} → ${tgtThing.name}`}</title>
                 <LinkLine
                   link={link}
                   sourceRect={srcRect}
