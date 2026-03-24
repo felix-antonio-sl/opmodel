@@ -1,4 +1,4 @@
-# Handoff: Sesion 15 — Refinement Visual Rules (9 Gaps Resueltos)
+# Handoff: Sesion 15 — Refinement Visual Rules (9 Gaps + 5 Bugfixes)
 
 **Fecha**: 2026-03-24
 **Sesion**: 15
@@ -6,7 +6,7 @@
 
 ## Resumen ejecutivo
 
-Auditoria completa de `docs/superpowers/specs/2026-03-24-refinement-visual-rules.md` (Rev.2, 85+ reglas, 20 secciones) contra el codigo actual. Identificados 9 gaps prioritarios (P0+P1). Todos implementados con TDD. Spec bumped a Rev.3 con tabla de 42 filas auditada. 785 tests green (+18), 0 regresiones.
+Auditoria completa de `docs/superpowers/specs/2026-03-24-refinement-visual-rules.md` (Rev.2, 85+ reglas, 20 secciones) contra el codigo actual. Identificados 9 gaps prioritarios (P0+P1). Todos implementados con TDD. Spec bumped a Rev.3 con tabla de 42 filas auditada. Luego ronda de testing manual con 5 bugfixes adicionales. 786 tests green (+19 total), 0 regresiones.
 
 ## Gaps resueltos
 
@@ -86,9 +86,23 @@ Auditoria completa de `docs/superpowers/specs/2026-03-24-refinement-visual-rules
 | `packages/web/src/App.tsx` | Keyboard nav Ctrl+Up/Down (R-NT-5) |
 | `docs/superpowers/specs/2026-03-24-refinement-visual-rules.md` | Spec Rev.3 auditada |
 
+## Bugfixes post-testing manual (5 commits adicionales)
+
+| Commit | Fix |
+|--------|-----|
+| `54644f8` | I-17: eximir subprocesos internos de in-zoom de validacion "no transformation link" |
+| `95da52c` | R-OC-1 layout: container 300x350 para 3 placeholders. I-17: skip procesos con 0 links (WIP). Default marker mas visible |
+| `aae2fab` | Skip effect split (input/output) en links distribuidos (aggregated). 1 link ya no genera 6 flechas |
+| `f0d4a26` | Limpiar selectedThing al navegar entre OPDs (evita panel con datos de thing invisible) |
+| `a26e45b` | **Inside objects (R-IE-8) excluidos de fiber implicit en parent OPD**. Things con `internal=true` en child OPD no aparecen como ghost en padre |
+
+### Bug critico resuelto: Ghost de inside objects
+
+Inside objects creados dentro de un in-zoom (ej: o1 creado en SD1) aparecian como fantasmas (implicit, dashed, opacity 0.4) en el OPD padre (SD). Root cause: `resolveOpdFiber` los detectaba como implicit porque tenian links al container (p1), que es explicit en SD. Fix: agregar exclusion set `internalToChildOpd` en la fiber para things con `internal=true` en child OPDs.
+
 ## Estado del proyecto
 
-- **785 tests** (50 test files), todos green
+- **786 tests** (50 test files), todos green
 - **0 regresiones**
 - **9 DAs** (DA-1 a DA-9, todas implemented o defined)
 - **Spec Rev.3**: 85+ reglas, 42 filas en tabla de implementacion
@@ -97,9 +111,10 @@ Auditoria completa de `docs/superpowers/specs/2026-03-24-refinement-visual-rules
 
 | Metrica | Inicio sesion | Fin sesion |
 |---------|---------------|------------|
-| Tests | 767 | 785 (+18) |
+| Tests | 767 | 786 (+19) |
 | Gaps resueltos (spec) | 0/9 P0+P1 | 9/9 P0+P1 |
-| Reglas con estado ✓ | ~18 | ~27 (+9) |
+| Bugfixes post-testing | 0 | 5 |
+| Commits totales | 0 | 6 |
 
 ## Pendientes para sesion 16
 
