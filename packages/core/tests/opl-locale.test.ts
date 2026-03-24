@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { createModel, addThing, addState, addLink, addAppearance, updateSettings, isOk, type Model, type Thing, type State, type Link } from "../src/index";
-import { expose, render, renderAll } from "../src/opl";
+import { expose, render, renderAll, modelStats } from "../src/opl";
+import { exportMarkdown } from "../src/export-md";
 
 function buildModelWithLang(lang: "en" | "es"): Model {
   let m = createModel("Test");
@@ -117,5 +118,30 @@ describe("OPL computational rendering", () => {
     m = { ...m, things: new Map(m.things).set("obj-1", { ...water, perseverance: "dynamic" }) };
     const text = render(expose(m, "opd-sd"));
     expect(text).toContain("dinámico");
+  });
+});
+
+describe("modelStats", () => {
+  it("computes stats for a simple model", () => {
+    const m = buildModelWithLang("en");
+    const stats = modelStats(m);
+    expect(stats.things.total).toBe(2);
+    expect(stats.things.objects).toBe(1);
+    expect(stats.things.processes).toBe(1);
+    expect(stats.states).toBe(2);
+    expect(stats.links.total).toBe(2);
+    expect(stats.opds.total).toBe(1);
+    expect(stats.oplSentences).toBeGreaterThan(0);
+  });
+});
+
+describe("exportMarkdown", () => {
+  it("produces markdown with model name and OPL", () => {
+    const m = buildModelWithLang("en");
+    const md = exportMarkdown(m);
+    expect(md).toContain("# Test");
+    expect(md).toContain("## Summary");
+    expect(md).toContain("| Things |");
+    expect(md).toContain("Water is an object");
   });
 });
