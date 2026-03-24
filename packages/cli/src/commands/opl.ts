@@ -1,15 +1,21 @@
 // packages/cli/src/commands/opl.ts
 import { resolveModelFile, readModel } from "../io";
 import { fatal } from "../format";
-import { expose, render } from "@opmodel/core";
+import { expose, render, renderAll } from "@opmodel/core";
 
 export function executeOpl(opts: {
   file?: string;
   opd?: string;
+  all?: boolean;
   json?: boolean;
 }): { text?: string; document?: unknown } {
   const filePath = resolveModelFile(opts.file);
   const { model } = readModel(filePath);
+
+  // --all: export all OPDs in hierarchical order
+  if (opts.all) {
+    return { text: renderAll(model) };
+  }
 
   const opdId = opts.opd ?? "opd-sd";
 
