@@ -441,9 +441,9 @@ Cuando se out-zoomea (fold), multiples links de subprocesos al mismo objeto debe
 | R-VI-2 (duplicate indicator) | — | OpdCanvas.tsx | **No renderizado** |
 | R-PI-1..5 (invariant properties) | ✓ | types.ts | Essence/kind immutables |
 | R-SF-1,2,4,7,8 (semi-fold core) | ✓ | api.ts:1157-1176, OpdCanvas.tsx:494-511 | getSemiFoldedParts, per-OPD state |
-| R-SF-3 (extract part) | — | — | Feature UI no implementada |
+| R-SF-3 (extract part) | ✓ | OpdCanvas.tsx, commands.ts | Click en semi-fold entry → extractPart command |
 | R-SF-5 (OPL semi-fold) | ✓ | opl.ts:618-620 | `semiFolded` flag → "lists...as parts" |
-| R-SF-6,9 (links a parts) | — | — | **No implementado** (links no target semi-fold entries) |
+| R-SF-6,9 (links a parts) | ✓ | simulation.ts:210-220, OpdCanvas.tsx:1359-1380 | Semi-fold parts as virtual appearances + rect fallback |
 | R-SF-10 (triangle position) | Diferente | OpdCanvas.tsx:494-511 | Dentro del parent (OPCloud: fuera) |
 | R-NT-1 (OPD tree) | ✓ | OpdTree.tsx:16-34 | buildTree hierarchical |
 | R-NT-2 (object tree) | — | — | Solo process tree |
@@ -484,7 +484,6 @@ Cuando se out-zoomea (fold), multiples links de subprocesos al mismo objeto debe
 | Gap | Archivos | Descripcion |
 |-----|----------|-------------|
 | R-IH | core nuevo | Herencia estructural completa (links heredados por specializations) |
-| R-SF-6,9 | OpdCanvas.tsx, simulation.ts | Links apuntando a parts dentro de semi-fold |
 | R-VI-2 | OpdCanvas.tsx | Duplicate visual indicator (offset shape) |
 | R-NT-4 | OpdTree.tsx, types.ts | View OPDs (colecciones ad-hoc) |
 | R-NT-2 | OpdTree.tsx | Object tree paralelo al process tree |

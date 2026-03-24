@@ -358,6 +358,7 @@ function ThingNode({
   simStatePillOverride,
   semiFoldEntries,
   semiFoldHidden,
+  onExtractPart,
   onMouseDown,
   onSelect,
   onDoubleClick,
@@ -377,8 +378,9 @@ function ThingNode({
   dragDelta: Point;
   simFilter?: string;
   simStatePillOverride?: string;
-  semiFoldEntries?: Array<{ name: string; linkType: string }>;
+  semiFoldEntries?: Array<{ thingId: string; name: string; linkType: string }>;
   semiFoldHidden?: number;
+  onExtractPart?: (partThingId: string) => void;
   onMouseDown: (e: React.MouseEvent) => void;
   onSelect: () => void;
   onDoubleClick: () => void;
@@ -502,7 +504,9 @@ function ThingNode({
             stroke="var(--border)" strokeWidth={0.5} />
           {semiFoldEntries!.map((entry, i) => (
             <text key={i} x={x + 12} y={y + h + 10 + i * 14}
-              fontSize={9} fill="var(--text-muted)" textAnchor="start" dominantBaseline="middle">
+              fontSize={9} fill="var(--text-muted)" textAnchor="start" dominantBaseline="middle"
+              style={{ cursor: onExtractPart ? "pointer" : undefined }}
+              onClick={onExtractPart ? (e) => { e.stopPropagation(); onExtractPart(entry.thingId); } : undefined}>
               {entry.linkType === "aggregation" ? "◇ " : "◈ "}{entry.name}
             </text>
           ))}
@@ -1352,10 +1356,32 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
   const opd = model.opds.get(opdId);
 
   // Build effective rects for links, accounting for drag delta
+  // R-SF-6/9: Build map of semi-folded part → virtual rect (position inside container)
+  const semiFoldPartRects = useMemo(() => {
+    const map = new Map<string, Rect>();
+    for (const [containerId, app] of appearances) {
+      if (!app.semi_folded) continue;
+      const thing = model.things.get(containerId);
+      if (thing?.kind !== "object") continue;
+      const sf = getSemiFoldedParts(model, containerId);
+      for (let i = 0; i < sf.visible.length; i++) {
+        const entry = sf.visible[i]!;
+        map.set(entry.thingId, {
+          x: app.x + 12, y: app.y + app.h + 3 + i * 14,
+          w: app.w - 24, h: 14,
+        });
+      }
+    }
+    return map;
+  }, [appearances, model]);
+
   const getEffectiveRect = useCallback(
     (thingId: string): Rect | null => {
       const app = appearances.get(thingId);
-      if (!app) return null;
+      if (!app) {
+        // R-SF-6/9: fallback to semi-fold part virtual rect
+        return semiFoldPartRects.get(thingId) ?? null;
+      }
       const thing = model.things.get(thingId);
       const states = statesForThing(model, thingId);
       const ox = draggedThings.has(thingId) ? dragDelta.x : 0;
@@ -1373,7 +1399,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
         h: app.h + extraH,
       };
     },
-    [appearances, model, draggedThings, dragDelta],
+    [appearances, model, draggedThings, dragDelta, semiFoldPartRects],
   );
 
   // Cursor
@@ -1792,6 +1818,10 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
                     const sf = getSemiFoldedParts(model, thingId);
                     return { semiFoldEntries: sf.visible, semiFoldHidden: sf.hiddenCount };
                   })() : {})}
+                  onExtractPart={(partThingId) => {
+                    // R-SF-3: Extract part — add appearance for the part outside the container
+                    dispatch({ tag: "extractPart", partThingId, opdId, x: app.x + app.w + 40, y: app.y });
+                  }}
                   onMouseDown={(e) => onThingMouseDown(thingId, e)}
                   onSelect={() => {
                     if (mode === "addLink") {

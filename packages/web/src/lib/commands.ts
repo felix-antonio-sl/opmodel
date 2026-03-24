@@ -71,6 +71,7 @@ export type Command =
   | { tag: "applyOplEdit"; edit: OplEdit }
   | { tag: "updateAppearance"; thingId: string; opdId: string; patch: Record<string, unknown> }
   | { tag: "bringConnected"; thingId: string; opdId: string; filter: "procedural" | "structural" | "all" }
+  | { tag: "extractPart"; partThingId: string; opdId: string; x: number; y: number }
   | { tag: "setMode"; mode: EditorMode }
   | { tag: "setLinkType"; linkType: LinkTypeChoice }
   /* ─── Fan Commands ─── */
@@ -226,6 +227,15 @@ export function interpret(cmd: Command): Effect {
       return {
         type: "modelMutation",
         apply: (m) => bringConnectedThings(m, cmd.thingId, cmd.opdId, cmd.filter),
+      };
+
+    case "extractPart":
+      return {
+        type: "modelMutation",
+        apply: (m) => addAppearance(m, {
+          thing: cmd.partThingId, opd: cmd.opdId,
+          x: cmd.x, y: cmd.y, w: 120, h: 60,
+        }),
       };
 
     case "applyOplEdit":

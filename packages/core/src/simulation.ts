@@ -5,6 +5,7 @@
 import type { Model, Thing, State, Link, Modifier, OPD, Fan, Appearance } from "./types";
 import type { InvariantError, Result } from "./result";
 import { ok, err } from "./result";
+import { getStructuralChildren } from "./structural";
 
 /** Maximum self-invocation repetitions per process before stopping (ISO §9.5.2.5.2) */
 export const MAX_SELF_INVOCATIONS = 10;
@@ -205,6 +206,19 @@ export function resolveLinksForOpd(model: Model, opdId: string): ResolvedLink[] 
   const appearances = new Set<string>();
   for (const app of model.appearances.values()) {
     if (app.opd === opdId) appearances.add(app.thing);
+  }
+
+  // R-SF-6/9: Semi-fold parts are virtually "present" — links to them should resolve
+  for (const app of model.appearances.values()) {
+    if (app.opd === opdId && app.semi_folded) {
+      const thing = model.things.get(app.thing);
+      if (thing?.kind === "object") {
+        const children = getStructuralChildren(model, app.thing, new Set(["aggregation", "exhibition"]));
+        for (const { childId } of children) {
+          if (!appearances.has(childId)) appearances.add(childId);
+        }
+      }
+    }
   }
 
   // 2. Build subprocessToAncestor: subprocess ID → visible ancestor process ID

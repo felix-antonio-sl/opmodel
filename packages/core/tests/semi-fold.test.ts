@@ -1,7 +1,8 @@
 // packages/core/tests/semi-fold.test.ts
 import { describe, it, expect } from "vitest";
 import { createModel } from "../src/model";
-import { addThing, addLink, addAppearance, getSemiFoldedParts } from "../src/api";
+import { addThing, addLink, addAppearance, getSemiFoldedParts, updateAppearance } from "../src/api";
+import { resolveLinksForOpd } from "../src/simulation";
 import { isOk } from "../src/result";
 import type { Thing } from "../src/types";
 
@@ -84,5 +85,43 @@ describe("getSemiFoldedParts", () => {
     const result = getSemiFoldedParts(m, "proc-x");
     expect(result.visible).toHaveLength(0);
     expect(result.hiddenCount).toBe(0);
+  });
+});
+
+// === R-SF-6/9: Links to semi-folded parts ===
+
+describe("R-SF-6/9: links resolve to semi-folded parts", () => {
+  function buildSemiFoldLinkModel() {
+    let m = buildModel();
+    // Add a process that has an effect link to a semi-fold part (Engine)
+    m = ok(addThing(m, { id: "proc-repair", kind: "process", name: "Repairing", essence: "physical", affiliation: "systemic" }));
+    // Appearances in SD
+    m = ok(addAppearance(m, { thing: "obj-car", opd: "opd-sd", x: 100, y: 100, w: 150, h: 80, semi_folded: true }));
+    m = ok(addAppearance(m, { thing: "proc-repair", opd: "opd-sd", x: 400, y: 100, w: 120, h: 60 }));
+    // Effect link: Repairing affects Engine (which is semi-folded inside Car)
+    m = ok(addLink(m, { id: "lnk-repair-engine", type: "effect", source: "obj-engine", target: "proc-repair" }));
+    return m;
+  }
+
+  it("link to semi-folded part resolves in parent OPD", () => {
+    const m = buildSemiFoldLinkModel();
+    const resolved = resolveLinksForOpd(m, "opd-sd");
+    const repair = resolved.find(r => r.link.id === "lnk-repair-engine");
+    expect(repair).toBeDefined();
+    expect(repair!.visualSource).toBe("obj-engine");
+    expect(repair!.visualTarget).toBe("proc-repair");
+  });
+
+  it("link to non-semi-folded part without appearance does not resolve", () => {
+    let m = buildModel();
+    m = ok(addThing(m, { id: "proc-x", kind: "process", name: "X", essence: "informatical", affiliation: "systemic" }));
+    // Car NOT semi-folded
+    m = ok(addAppearance(m, { thing: "obj-car", opd: "opd-sd", x: 100, y: 100, w: 150, h: 80 }));
+    m = ok(addAppearance(m, { thing: "proc-x", opd: "opd-sd", x: 400, y: 100, w: 120, h: 60 }));
+    m = ok(addLink(m, { id: "lnk-x-engine", type: "effect", source: "obj-engine", target: "proc-x" }));
+    const resolved = resolveLinksForOpd(m, "opd-sd");
+    const link = resolved.find(r => r.link.id === "lnk-x-engine");
+    // Engine has no appearance and Car is not semi-folded → link should not resolve
+    expect(link).toBeUndefined();
   });
 });
