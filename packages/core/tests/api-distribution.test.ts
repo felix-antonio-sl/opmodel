@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { createModel } from "../src/model";
-import { addThing, addAppearance, addLink, refineThing, removeThing } from "../src/api";
+import { addThing, addAppearance, addLink, addState, refineThing, removeThing } from "../src/api";
 import { resolveLinksForOpd } from "../src/simulation";
 import type { Model } from "../src/types";
 
@@ -131,5 +131,92 @@ describe("C-01: Link Distribution (derived via resolveLinksForOpd)", () => {
     const result = resolved.find(r => r.link.id === "lnk-result");
     expect(consume!.visualTarget).toBe("proc-p1"); // first
     expect(result!.visualSource).toBe("proc-p3"); // last
+  });
+});
+
+// === R-ES: Effect Split (state-specified effect → input half + output half) ===
+
+describe("R-ES: Effect Split in in-zoom distribution", () => {
+  function buildEffectSplitModel(): Model {
+    let m = createModel("effect-split");
+    m = unwrap(addThing(m, { id: "proc-main", kind: "process", name: "Main", essence: "informatical", affiliation: "systemic" }));
+    m = unwrap(addThing(m, { id: "obj-x", kind: "object", name: "X", essence: "physical", affiliation: "systemic" }));
+    m = unwrap(addThing(m, { id: "proc-p1", kind: "process", name: "P1", essence: "informatical", affiliation: "systemic" }));
+    m = unwrap(addThing(m, { id: "proc-p2", kind: "process", name: "P2", essence: "informatical", affiliation: "systemic" }));
+    m = unwrap(addThing(m, { id: "proc-p3", kind: "process", name: "P3", essence: "informatical", affiliation: "systemic" }));
+    m = unwrap(addState(m, { id: "st-s1", parent: "obj-x", name: "s1", initial: true, final: false, default: false }));
+    m = unwrap(addState(m, { id: "st-s2", parent: "obj-x", name: "s2", initial: false, final: true, default: false }));
+    // Appearances in SD
+    m = unwrap(addAppearance(m, { thing: "proc-main", opd: "opd-sd", x: 200, y: 100, w: 150, h: 80 }));
+    m = unwrap(addAppearance(m, { thing: "obj-x", opd: "opd-sd", x: 400, y: 100, w: 100, h: 60 }));
+    // Effect link with BOTH states: "Main changes X from s1 to s2"
+    m = unwrap(addLink(m, { id: "lnk-effect-io", type: "effect", source: "obj-x", target: "proc-main", source_state: "st-s1", target_state: "st-s2" }));
+    // In-zoom
+    m = unwrap(refineThing(m, "proc-main", "opd-sd", "in-zoom", "opd-sd1", "SD1"));
+    m = unwrap(removeThing(m, "opd-sd1-sub-1"));
+    m = unwrap(removeThing(m, "opd-sd1-sub-2"));
+    m = unwrap(removeThing(m, "opd-sd1-sub-3"));
+    m = unwrap(addAppearance(m, { thing: "proc-p1", opd: "opd-sd1", x: 200, y: 50, w: 120, h: 60, internal: true }));
+    m = unwrap(addAppearance(m, { thing: "proc-p2", opd: "opd-sd1", x: 200, y: 120, w: 120, h: 60, internal: true }));
+    m = unwrap(addAppearance(m, { thing: "proc-p3", opd: "opd-sd1", x: 200, y: 190, w: 120, h: 60, internal: true }));
+    return m;
+  }
+
+  it("state-specified effect splits into 2 links (input→first, output→last)", () => {
+    const m = buildEffectSplitModel();
+    const resolved = resolveLinksForOpd(m, "opd-sd1");
+    const effects = resolved.filter(r => r.link.id === "lnk-effect-io");
+    // Should be 2 (split), not 3 (all subprocesses)
+    expect(effects).toHaveLength(2);
+  });
+
+  it("input half targets first subprocess with source_state", () => {
+    const m = buildEffectSplitModel();
+    const resolved = resolveLinksForOpd(m, "opd-sd1");
+    const effects = resolved.filter(r => r.link.id === "lnk-effect-io");
+    // Input half: obj-x (with s1) → first subprocess (P1)
+    const inputHalf = effects.find(r => r.visualTarget === "proc-p1");
+    expect(inputHalf).toBeDefined();
+    expect(inputHalf!.visualSource).toBe("obj-x");
+  });
+
+  it("output half targets last subprocess with target_state", () => {
+    const m = buildEffectSplitModel();
+    const resolved = resolveLinksForOpd(m, "opd-sd1");
+    const effects = resolved.filter(r => r.link.id === "lnk-effect-io");
+    // Output half: last subprocess (P3) → obj-x (with s2)
+    const outputHalf = effects.find(r => r.visualSource === "proc-p3");
+    expect(outputHalf).toBeDefined();
+    expect(outputHalf!.visualTarget).toBe("obj-x");
+  });
+
+  it("basic effect (no states) still distributes to all subprocesses", () => {
+    let m = buildEffectSplitModel();
+    // Replace state-specified effect with basic effect
+    const links = new Map(m.links);
+    links.delete("lnk-effect-io");
+    links.set("lnk-effect-basic", {
+      id: "lnk-effect-basic", type: "effect" as const,
+      source: "obj-x", target: "proc-main",
+    } as any);
+    m = { ...m, links };
+    const resolved = resolveLinksForOpd(m, "opd-sd1");
+    const effects = resolved.filter(r => r.link.id === "lnk-effect-basic");
+    expect(effects).toHaveLength(3); // all subprocesses
+  });
+
+  it("input-specified effect (only source_state) splits into 2", () => {
+    let m = buildEffectSplitModel();
+    // Replace with input-specified only
+    const links = new Map(m.links);
+    links.delete("lnk-effect-io");
+    links.set("lnk-effect-in", {
+      id: "lnk-effect-in", type: "effect" as const,
+      source: "obj-x", target: "proc-main", source_state: "st-s1",
+    } as any);
+    m = { ...m, links };
+    const resolved = resolveLinksForOpd(m, "opd-sd1");
+    const effects = resolved.filter(r => r.link.id === "lnk-effect-in");
+    expect(effects).toHaveLength(2);
   });
 });

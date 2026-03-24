@@ -309,8 +309,14 @@ export function resolveLinksForOpd(model: Model, opdId: string): ResolvedLink[] 
             const dvs = vs === containerThingId ? last : vs;
             const dvt = vt === containerThingId ? last : vt;
             result.push({ link, visualSource: dvs, visualTarget: dvt, aggregated: true });
+          } else if (link.type === "effect" && (link.source_state || link.target_state)) {
+            // R-ES: State-specified effect → split into input half (→first) + output half (last→)
+            // Input half: object(source_state) → first subprocess
+            result.push({ link, visualSource: otherEnd, visualTarget: first, aggregated: true });
+            // Output half: last subprocess → object(target_state)
+            result.push({ link, visualSource: last, visualTarget: otherEnd, aggregated: true });
           } else {
-            // Agent/instrument/effect → all subprocesses
+            // Agent/instrument/basic effect → all subprocesses
             for (const spId of subprocessesByY) {
               const dvs = vs === containerThingId ? spId : vs;
               const dvt = vt === containerThingId ? spId : vt;
