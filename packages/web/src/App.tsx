@@ -207,6 +207,42 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
         e.preventDefault();
         save();
       }
+      if ((e.metaKey || e.ctrlKey) && e.key === "d") {
+        e.preventDefault();
+        if (ui.selectedThing && !ui.simulation) {
+          const thing = model.things.get(ui.selectedThing);
+          if (thing) {
+            const newId = `${thing.kind === "object" ? "obj" : "proc"}-${Date.now().toString(36)}`;
+            const app = [...model.appearances.values()].find(a => a.thing === ui.selectedThing && a.opd === ui.currentOpd);
+            dispatch({
+              tag: "addThing",
+              thing: { ...thing, id: newId, name: `${thing.name} (copy)` },
+              opdId: ui.currentOpd,
+              x: (app?.x ?? 100) + 40,
+              y: (app?.y ?? 100) + 40,
+              w: app?.w ?? 120,
+              h: app?.h ?? 60,
+            });
+            // Copy states
+            for (const state of model.states.values()) {
+              if (state.parent === ui.selectedThing) {
+                dispatch({
+                  tag: "addState",
+                  state: {
+                    id: `${state.id}-${Date.now().toString(36)}`,
+                    parent: newId,
+                    name: state.name,
+                    initial: state.initial,
+                    final: state.final,
+                    default: state.default,
+                  },
+                });
+              }
+            }
+            dispatch({ tag: "selectThing", thingId: newId });
+          }
+        }
+      }
       if ((e.metaKey || e.ctrlKey) && e.key === "f") {
         e.preventDefault();
         setShowSearch((v) => !v);
@@ -581,6 +617,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
               <kbd>⌘Z</kbd><span>Undo</span>
               <kbd>⌘⇧Z</kbd><span>Redo</span>
               <kbd>⌘S</kbd><span>Save</span>
+              <kbd>⌘D</kbd><span>Duplicate Thing</span>
               <kbd>⌘F</kbd><span>Search</span>
               <kbd>⌘↑</kbd><span>Parent OPD</span>
               <kbd>⌘↓</kbd><span>Child OPD</span>
