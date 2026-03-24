@@ -104,10 +104,13 @@ function adjustEffectEndpoints(
     isMergedPair: boolean;
     isInputHalf?: boolean;
     isOutputHalf?: boolean;
+    aggregated?: boolean;
   }[],
   model: Model,
 ) {
   return entries.flatMap(entry => {
+    // Aggregated (distributed) links show as simple effect — no input/output split
+    if (entry.aggregated) return [entry];
     const mode = transformingMode(entry.link);
     if (!mode || mode === "effect") return [entry];
 
@@ -953,6 +956,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
       visualTarget: rl.visualTarget,
       labelOverride: undefined as string | undefined,
       isMergedPair: false,
+      aggregated: rl.aggregated,
     }));
 
     // Merge consumption+result pairs into single visual link (DA-7).
