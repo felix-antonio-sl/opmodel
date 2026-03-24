@@ -6,7 +6,7 @@
    into Model mutations or UI state transitions.
    ═══════════════════════════════════════════════════ */
 
-import type { Model, Thing, Link, State, Fan, Modifier, InvariantError, RefinementType, OplEdit, SimulationTrace, Settings, Meta, Requirement, Assertion, Scenario } from "@opmodel/core";
+import type { Model, Thing, Link, State, Fan, Modifier, InvariantError, RefinementType, OplEdit, SimulationTrace, Settings, Meta, Requirement, Assertion, Scenario, Stereotype } from "@opmodel/core";
 import {
   updateAppearance,
   updateThing,
@@ -24,6 +24,9 @@ import {
   addScenario,
   removeScenario,
   updateScenario,
+  addStereotype,
+  removeStereotype,
+  updateStereotype,
   addThing,
   addState,
   addLink,
@@ -112,6 +115,8 @@ export type Command =
   | { tag: "removeScenario"; scenarioId: string }
   | { tag: "updateScenario"; scenarioId: string; patch: Partial<Omit<Scenario, "id">> }
   | { tag: "renameOpd"; opdId: string; name: string }
+  | { tag: "addStereotype"; stereotype: Stereotype }
+  | { tag: "removeStereotype"; stereotypeId: string }
   /* ─── Simulation Commands ─── */
   | { tag: "startSimulation" }
   | { tag: "stepSimulation"; direction: 1 | -1 }
@@ -359,6 +364,11 @@ export function interpret(cmd: Command): Effect {
 
     case "renameOpd":
       return { type: "modelMutation", apply: (m) => updateOPD(m, cmd.opdId, { name: cmd.name }) };
+
+    case "addStereotype":
+      return { type: "modelMutation", apply: (m) => addStereotype(m, cmd.stereotype) };
+    case "removeStereotype":
+      return { type: "modelMutation", apply: (m) => removeStereotype(m, cmd.stereotypeId) };
 
     /* ─── OPDs (R-NT-4: View OPDs) ─── */
 

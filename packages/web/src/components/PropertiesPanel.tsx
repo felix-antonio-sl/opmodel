@@ -1036,6 +1036,32 @@ export function PropertiesPanel({ model, thingId, opdId, dispatch }: Props) {
         );
       })()}
 
+      {/* Stereotypes on this thing (M-05) */}
+      {(() => {
+        const stps = [...model.stereotypes.values()].filter(s => s.thing === thingId);
+        return (
+          <div className="props-panel__section">
+            <label className="props-panel__label">Stereotypes ({stps.length})</label>
+            {stps.map(s => (
+              <div key={s.id} className="props-panel__req-row">
+                <span style={{ fontSize: 10, flex: 1 }}>«{s.stereotype_id}»{s.global ? " (global)" : ""}</span>
+                <button className="props-panel__remove-btn" onClick={() => dispatch({ tag: "removeStereotype", stereotypeId: s.id })}>✕</button>
+              </div>
+            ))}
+            <button
+              className="props-panel__add-btn"
+              onClick={() => {
+                const id = `stp-${Date.now().toString(36)}`;
+                const stpId = prompt("Stereotype identifier (e.g., agent, sensor, actuator):");
+                if (stpId) dispatch({ tag: "addStereotype", stereotype: { id, thing: thingId, stereotype_id: stpId, global: false } });
+              }}
+            >
+              + Stereotype
+            </button>
+          </div>
+        );
+      })()}
+
       <button
         className="props-panel__delete-btn"
         onClick={() => dispatch({ tag: "removeThing", thingId })}
