@@ -129,6 +129,23 @@ export interface OplFanSentence {
   memberTargetStateNames?: (string | undefined)[];
 }
 
+export interface OplRequirementSentence {
+  kind: "requirement";
+  reqId: string;
+  reqCode: string;  // e.g. "R-01"
+  name: string;
+  description: string;
+  targetName: string;
+}
+
+export interface OplAssertionSentence {
+  kind: "assertion";
+  assertionId: string;
+  predicate: string;
+  targetName: string;
+  category: string;
+}
+
 export type OplSentence =
   | OplThingDeclaration
   | OplStateEnumeration
@@ -139,7 +156,9 @@ export type OplSentence =
   | OplGroupedStructuralSentence
   | OplInZoomSequence
   | OplAttributeValue
-  | OplFanSentence;
+  | OplFanSentence
+  | OplRequirementSentence
+  | OplAssertionSentence;
 
 export interface OplRenderSettings {
   essenceVisibility: OplEssenceVisibility;

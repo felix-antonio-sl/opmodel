@@ -410,6 +410,46 @@ export function expose(model: Model, opdId: string): OplDocument {
     }
   }
 
+  // 6. Requirements targeting visible things
+  for (const req of model.requirements.values()) {
+    if (!visibleThings.has(req.target)) continue;
+    const targetThing = model.things.get(req.target);
+    if (!targetThing) continue;
+    sentences.push({
+      kind: "requirement",
+      reqId: req.id,
+      reqCode: req.req_id ?? req.id,
+      name: req.name,
+      description: req.description ?? "",
+      targetName: targetThing.name,
+    });
+  }
+
+  // 7. Assertions targeting visible things or links with visible endpoints
+  for (const ast of model.assertions.values()) {
+    if (!ast.enabled) continue;
+    // Target can be a thing or a link
+    const targetThing = model.things.get(ast.target);
+    const targetLink = model.links.get(ast.target);
+    let targetName: string;
+    if (targetThing && visibleThings.has(targetThing.id)) {
+      targetName = targetThing.name;
+    } else if (targetLink && visibleThings.has(targetLink.source) && visibleThings.has(targetLink.target)) {
+      const srcName = model.things.get(targetLink.source)?.name ?? targetLink.source;
+      const tgtName = model.things.get(targetLink.target)?.name ?? targetLink.target;
+      targetName = `${srcName} → ${tgtName}`;
+    } else {
+      continue;
+    }
+    sentences.push({
+      kind: "assertion",
+      assertionId: ast.id,
+      predicate: ast.predicate,
+      targetName,
+      category: ast.category ?? "correctness",
+    });
+  }
+
   return { opdId, opdName, sentences, renderSettings, ...(refinementEdge ? { refinementEdge } : {}) };
 }
 
@@ -886,6 +926,10 @@ function renderSentence(s: OplSentence, settings: OplRenderSettings): string {
       }
       return `${s.parentName} zooms into ${list}${objClause}, in that sequence.`;
     }
+    case "requirement":
+      return `[${s.reqCode}] ${s.name}: ${s.description} (applies to ${s.targetName}).`;
+    case "assertion":
+      return `[${s.category}] ${s.predicate}`;
   }
 }
 

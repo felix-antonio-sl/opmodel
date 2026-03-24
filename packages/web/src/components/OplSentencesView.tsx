@@ -29,10 +29,14 @@ function getEntityIds(sentence: OplSentence): string[] {
       return [sentence.thingId, sentence.exhibitorId];
     case "fan":
       return [sentence.fanId];
+    case "requirement":
+      return [sentence.reqId];
+    case "assertion":
+      return [sentence.assertionId];
   }
 }
 
-function sentenceCategory(sentence: OplSentence): "thing" | "link" | "modifier" {
+function sentenceCategory(sentence: OplSentence): "thing" | "link" | "modifier" | "meta" {
   switch (sentence.kind) {
     case "thing-declaration":
     case "state-enumeration":
@@ -47,6 +51,9 @@ function sentenceCategory(sentence: OplSentence): "thing" | "link" | "modifier" 
       return "link";
     case "modifier":
       return "modifier";
+    case "requirement":
+    case "assertion":
+      return "meta";
   }
 }
 
@@ -85,6 +92,11 @@ export function OplSentencesView({ model, opdId, selectedThing }: Props) {
       s.kind === "in-zoom-sequence" ||
       s.kind === "fan"
   );
+  const metaSentences = doc.sentences.filter(
+    (s): s is OplSentence =>
+      s.kind === "requirement" ||
+      s.kind === "assertion"
+  );
 
   // R-OPL-3: Refinement edge label (once at top, not per sentence)
   const edgeLabel = doc.refinementEdge
@@ -110,6 +122,12 @@ export function OplSentencesView({ model, opdId, selectedThing }: Props) {
       {thingSentences.length > 0 && linkSentences.length > 0 && <div className="opl-divider" />}
       {linkSentences.map((sentence, i) => (
         <div key={`l-${i}`} className={sentenceClass(sentence, selectedThing)}>
+          {renderSentence(sentence, doc)}
+        </div>
+      ))}
+      {metaSentences.length > 0 && <div className="opl-divider" />}
+      {metaSentences.map((sentence, i) => (
+        <div key={`m-${i}`} className="opl-sentence opl-sentence--meta" style={{ fontSize: "0.85em", opacity: 0.8 }}>
           {renderSentence(sentence, doc)}
         </div>
       ))}
