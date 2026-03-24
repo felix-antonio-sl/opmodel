@@ -147,6 +147,14 @@ export interface OplAssertionSentence {
   category: string;
 }
 
+export interface OplScenarioSentence {
+  kind: "scenario";
+  scenarioId: string;
+  name: string;
+  pathLabels: string[];
+  linkCount: number;
+}
+
 export type OplSentence =
   | OplThingDeclaration
   | OplStateEnumeration
@@ -159,7 +167,8 @@ export type OplSentence =
   | OplAttributeValue
   | OplFanSentence
   | OplRequirementSentence
-  | OplAssertionSentence;
+  | OplAssertionSentence
+  | OplScenarioSentence;
 
 export interface OplRenderSettings {
   essenceVisibility: OplEssenceVisibility;

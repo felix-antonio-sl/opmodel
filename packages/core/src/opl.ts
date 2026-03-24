@@ -453,6 +453,23 @@ export function expose(model: Model, opdId: string): OplDocument {
     });
   }
 
+  // 8. Scenarios — list scenarios that have links visible in this OPD
+  for (const scenario of model.scenarios.values()) {
+    const scenarioLinks = [...model.links.values()].filter(l =>
+      l.path_label && scenario.path_labels.includes(l.path_label) &&
+      visibleThings.has(l.source) && visibleThings.has(l.target)
+    );
+    if (scenarioLinks.length > 0) {
+      sentences.push({
+        kind: "scenario",
+        scenarioId: scenario.id,
+        name: scenario.name,
+        pathLabels: scenario.path_labels,
+        linkCount: scenarioLinks.length,
+      });
+    }
+  }
+
   return { opdId, opdName, sentences, renderSettings, ...(refinementEdge ? { refinementEdge } : {}) };
 }
 
@@ -940,6 +957,8 @@ function renderSentence(s: OplSentence, settings: OplRenderSettings): string {
       return `[${s.reqCode}] ${s.name}: ${s.description} (applies to ${s.targetName}).`;
     case "assertion":
       return `[${s.category}] ${s.predicate}`;
+    case "scenario":
+      return `[scenario: ${s.name}] ${s.linkCount} links on path "${s.pathLabels.join(", ")}"`;
   }
 }
 

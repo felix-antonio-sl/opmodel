@@ -33,6 +33,8 @@ function getEntityIds(sentence: OplSentence): string[] {
       return [sentence.reqId];
     case "assertion":
       return [sentence.assertionId];
+    case "scenario":
+      return [sentence.scenarioId];
   }
 }
 
@@ -53,6 +55,7 @@ function sentenceCategory(sentence: OplSentence): "thing" | "link" | "modifier" 
       return "modifier";
     case "requirement":
     case "assertion":
+    case "scenario":
       return "meta";
   }
 }
@@ -95,7 +98,8 @@ export function OplSentencesView({ model, opdId, selectedThing }: Props) {
   const metaSentences = doc.sentences.filter(
     (s): s is OplSentence =>
       s.kind === "requirement" ||
-      s.kind === "assertion"
+      s.kind === "assertion" ||
+      s.kind === "scenario"
   );
 
   // R-OPL-3: Refinement edge label (once at top, not per sentence)
