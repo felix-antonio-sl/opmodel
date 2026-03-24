@@ -333,6 +333,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
           selectedThing={ui.selectedThing}
           onSelectOpd={(id) => dispatch({ tag: "selectOpd", opdId: id })}
           onSelectThing={(id) => dispatch({ tag: "selectThing", thingId: id })}
+          onRenameOpd={(opdId, name) => dispatch({ tag: "renameOpd", opdId, name })}
           onCreateViewOpd={() => {
             const id = `opd-view-${Date.now()}`;
             const name = `View ${[...model.opds.values()].filter(o => o.opd_type === "view").length + 1}`;

@@ -111,6 +111,7 @@ export type Command =
   | { tag: "addScenario"; scenario: Scenario }
   | { tag: "removeScenario"; scenarioId: string }
   | { tag: "updateScenario"; scenarioId: string; patch: Partial<Omit<Scenario, "id">> }
+  | { tag: "renameOpd"; opdId: string; name: string }
   /* ─── Simulation Commands ─── */
   | { tag: "startSimulation" }
   | { tag: "stepSimulation"; direction: 1 | -1 }
@@ -355,6 +356,9 @@ export function interpret(cmd: Command): Effect {
       return { type: "modelMutation", apply: (m) => removeScenario(m, cmd.scenarioId) };
     case "updateScenario":
       return { type: "modelMutation", apply: (m) => updateScenario(m, cmd.scenarioId, cmd.patch) };
+
+    case "renameOpd":
+      return { type: "modelMutation", apply: (m) => updateOPD(m, cmd.opdId, { name: cmd.name }) };
 
     /* ─── OPDs (R-NT-4: View OPDs) ─── */
 

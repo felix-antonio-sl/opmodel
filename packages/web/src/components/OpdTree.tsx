@@ -7,6 +7,7 @@ interface Props {
   selectedThing: string | null;
   onSelectOpd: (id: string) => void;
   onSelectThing: (id: string | null) => void;
+  onRenameOpd?: (opdId: string, name: string) => void;
   onCreateViewOpd?: () => void;
   onRemoveViewOpd?: (opdId: string) => void;
   onAddThingToView?: (thingId: string, opdId: string) => void;
@@ -79,15 +80,27 @@ function TreeNodeItem({
   currentOpd,
   model,
   onSelectOpd,
+  onRenameOpd,
 }: {
   node: TreeNode;
   depth: number;
   currentOpd: string;
   model: Model;
   onSelectOpd: (id: string) => void;
+  onRenameOpd?: (opdId: string, name: string) => void;
 }) {
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState(node.opd.name);
   const isActive = node.opd.id === currentOpd;
   const hasChildren = node.children.length > 0;
+
+  const commitRename = () => {
+    const trimmed = editName.trim();
+    if (trimmed && trimmed !== node.opd.name && onRenameOpd) {
+      onRenameOpd(node.opd.id, trimmed);
+    }
+    setEditing(false);
+  };
 
   return (
     <>
@@ -95,11 +108,24 @@ function TreeNodeItem({
         className={`opd-tree__node${isActive ? " opd-tree__node--active" : ""}${depth > 0 ? " opd-tree__node--child" : ""}`}
         style={{ paddingLeft: `${14 + depth * 18}px` }}
         onClick={() => onSelectOpd(node.opd.id)}
+        onDoubleClick={(e) => { e.stopPropagation(); setEditName(node.opd.name); setEditing(true); }}
       >
         <span className="opd-tree__icon">{hasChildren ? "▾" : "◇"}</span>
         <div>
-          <div className="opd-tree__label">{node.opd.name}</div>
-          {node.opd.refines && (
+          {editing ? (
+            <input
+              className="opd-tree__rename-input"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              onBlur={commitRename}
+              onKeyDown={(e) => { if (e.key === "Enter") commitRename(); if (e.key === "Escape") setEditing(false); }}
+              autoFocus
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <div className="opd-tree__label">{node.opd.name}</div>
+          )}
+          {node.opd.refines && !editing && (
             <div className="opd-tree__refines">
               {node.opd.refinement_type}: {model.things.get(node.opd.refines)?.name ?? node.opd.refines}
             </div>
@@ -114,13 +140,14 @@ function TreeNodeItem({
           currentOpd={currentOpd}
           model={model}
           onSelectOpd={onSelectOpd}
+          onRenameOpd={onRenameOpd}
         />
       ))}
     </>
   );
 }
 
-export function OpdTree({ model, currentOpd, selectedThing, onSelectOpd, onSelectThing, onCreateViewOpd, onRemoveViewOpd, onAddThingToView }: Props) {
+export function OpdTree({ model, currentOpd, selectedThing, onSelectOpd, onSelectThing, onRenameOpd, onCreateViewOpd, onRemoveViewOpd, onAddThingToView }: Props) {
   const tree = buildTree(model);
   const objectTree = buildObjectTree(model);
   const viewOpds = getViewOpds(model);
@@ -140,6 +167,7 @@ export function OpdTree({ model, currentOpd, selectedThing, onSelectOpd, onSelec
           currentOpd={currentOpd}
           model={model}
           onSelectOpd={onSelectOpd}
+          onRenameOpd={onRenameOpd}
         />
       ))}
 
