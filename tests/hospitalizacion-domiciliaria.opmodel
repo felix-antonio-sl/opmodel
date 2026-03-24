@@ -210,7 +210,9 @@
     {"description":"DS 1/2022 Art. 18: consentimiento informado escrito obligatorio","id":"req-consentimiento-informado","name":"Consentimiento Informado Obligatorio","req_id":"R-03","target":"obj-consentimiento"},
     {"description":"Norma Técnica 2024: dotación mínima de personal clínico habilitado","id":"req-equipo-minimo","name":"Equipo Clínico Mínimo","req_id":"R-04","target":"obj-equipo-clinico"},
     {"description":"DS 1/2022 Art. 14: ficha clínica física o electrónica per DS 41","id":"req-registro-clinico","name":"Registro Clínico Obligatorio","req_id":"R-02","stereotype":{"actual_name":"NormaMinsal","attributes":[{"name":"tipo","validation":"soft","value":"física o electrónica"}],"essence":"regulatory"},"target":"obj-ficha-clinica"},
-    {"description":"DS 1/2022 Art. 5: autorización sanitaria SEREMI renovable cada 3 años","id":"req-seremi-autorizacion","name":"Autorización Sanitaria SEREMI","req_id":"R-01","stereotype":{"actual_name":"NormaMinsal","attributes":[{"name":"plazo","validation":"hard","value":"3 años"}],"essence":"regulatory"},"target":"proc-autorizacion-seremi"}
+    {"description":"DS 1/2022 Art. 5: autorización sanitaria SEREMI renovable cada 3 años","id":"req-seremi-autorizacion","name":"Autorización Sanitaria SEREMI","req_id":"R-01","stereotype":{"actual_name":"NormaMinsal","attributes":[{"name":"plazo","validation":"hard","value":"3 años"}],"essence":"regulatory"},"target":"proc-autorizacion-seremi"},
+    {"description":"DS 1/2022 Art. 10: dirección técnica por médico cirujano con postítulo en gestión","id":"req-direccion-tecnica","name":"Dirección Técnica Médica","req_id":"R-05","target":"obj-director-tecnico"},
+    {"description":"DS 1/2022 Art. 15: plan terapéutico obligatorio con indicación médica y término determinado","id":"req-plan-terapeutico","name":"Plan Terapéutico Obligatorio","req_id":"R-06","target":"obj-plan-terapeutico"}
   ],
   "scenarios": [
     {"id":"scn-emergencia","name":"Respuesta a Emergencia","path_labels":["emergencia"]},
