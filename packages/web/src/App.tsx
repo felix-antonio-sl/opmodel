@@ -582,6 +582,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
               <kbd>Space</kbd><span>Play/Pause Sim</span>
               <kbd>→</kbd><span>Step Forward</span>
               <kbd>←</kbd><span>Step Back</span>
+              <kbd>+/−</kbd><span>Zoom In/Out (scroll)</span>
               <kbd>?</kbd><span>This Help</span>
             </div>
             <button className="help-dialog__close" onClick={() => setShowHelp(false)}>Close</button>
