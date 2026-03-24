@@ -223,7 +223,11 @@ export function SimulationPanel({ model, simulation, dispatch }: Props) {
       {isTerminal && (
         <div className="sim-panel__summary">
           <div className="sim-panel__summary-title">Summary</div>
-          <div>Steps: {trace.steps.length} | Status: {status}{trace.totalDuration != null ? ` | Duration: ${trace.totalDuration.toFixed(1)}` : ""}</div>
+          <div>Steps: {trace.steps.length} | Status: {status}{trace.totalDuration != null ? ` | Duration: ${trace.totalDuration.toFixed(1)}` : ""}
+            {" | "}Consumed: {trace.steps.reduce((n, s) => n + s.consumptionIds.length, 0)}
+            {" | "}Created: {trace.steps.reduce((n, s) => n + s.resultIds.length, 0)}
+            {" | "}State changes: {trace.steps.reduce((n, s) => n + s.stateChanges.length, 0)}
+          </div>
           {trace.steps.some(s => s.exceptionTriggered) && (
             <div style={{ color: "var(--error-stroke, #e53e3e)" }}>
               ⚠ Exceptions: {trace.steps.filter(s => s.exceptionTriggered).map(s => `${s.processName} (${s.exceptionTriggered})`).join(", ")}
