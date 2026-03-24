@@ -328,6 +328,36 @@ Cuando se out-zoomea (fold), multiples links de subprocesos al mismo objeto debe
 
 ---
 
+## §19. Observaciones OPCloud Visual (Secuencia In-Zoom OnStar)
+
+**Fuente**: 32 screenshots secuenciales de OPCloud, modelo OnStar Example (Driver Rescuing). Flujo: SD → in-zoom → rename → Bring Connected → links manuales → objetos internos → paralelismo.
+
+### Comportamientos confirmados
+
+| ID | Observacion | Regla confirmada |
+|----|------------|-----------------|
+| **R-OC-3** | Bring Connected en OnStar System trae GPS, Cellular Network, OnStar Console, VCIM como **externos** con aggregation triangle visible | R-IE-2 + R-LV-1 |
+| **R-OC-4** | Links entre externos traidos y subprocesos se crean **manualmente** (dialog de tipo) | Diseño correcto |
+| **R-OC-5** | Objetos creados dentro del container son internos (sin appearance en padre) | R-IE-8 |
+| **R-OC-H3** | Driver (environmental) mantiene contorno **dashed** en SD y SD1 | R-TC-6 |
+| **R-OC-H4** | Agent link (OnStar Advisor) apunta al **contorno** del container, no a subproceso especifico | R-LD-3 |
+| **R-OC-H5** | Instrument link (OnStar System) apunta al **contorno** del container | R-LD-3 |
+| **R-OC-H6** | Effect link (Driver) apunta al **contorno** con flecha bidireccional | R-LD-4 |
+| **R-OC-H13** | Subprocesos a misma Y se muestran como paralelos en OPL y ejecucion | R-TI-3 |
+
+### Reglas nuevas descubiertas
+
+| ID | Regla | Impacto |
+|----|-------|---------|
+| **R-OC-1** | In-zoom auto-crea N subprocesos **placeholder** con nombres genericos (B Processing, C Processing, D Processing) | UX: considerar auto-crear subprocesos en `refineThing()` |
+| **R-OC-2** | OPL in-zoom sentence incluye objetos internos: "**as well as** Call and Vehicle Location" despues de la secuencia de subprocesos | **Gap en opl.ts**: agregar objetos internos a in-zoom sentence |
+| **R-OC-6** | Link type dialog filtra opciones segun kind de source/target (process→object solo ofrece Exhibition, Result, Effect) | UX improvement para link creation dialog |
+| **R-OC-7** | Subprocesos a misma Y → OPL dice "**parallel** Call Transmitting and Vehicle Location Calculating" | **Gap en opl.ts**: detectar parallelism y usar "parallel" |
+
+**Gaps reales identificados**: R-OC-2 y R-OC-7 son diferencias funcionales entre OPCloud y nuestra implementacion OPL.
+
+---
+
 ## Tabla Resumen: Aplicabilidad
 
 | Regla | In-Zoom Proceso | In-Zoom Objeto | Unfold Objeto | Unfold Proceso |
@@ -372,3 +402,6 @@ Cuando se out-zoomea (fold), multiples links de subprocesos al mismo objeto debe
 | R-SF (semi-fold) | ✓ | api.ts:getSemiFoldedParts, OpdCanvas.tsx |
 | R-NT (OPD tree) | ✓ | OpdTree.tsx; View OPDs no implementados |
 | R-BCT (bring connected) | ✓ | api.ts:bringConnectedThings, PropertiesPanel.tsx |
+| R-OC-1 (auto subprocesos) | — | refineThing no auto-crea subprocesos |
+| R-OC-2 (OPL "as well as") | — | opl.ts: objetos internos faltan en in-zoom sentence |
+| R-OC-7 (OPL "parallel") | — | opl.ts: parallelism no detectado en sentence |
