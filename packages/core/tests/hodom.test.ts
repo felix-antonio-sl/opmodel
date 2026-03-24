@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { loadModel, saveModel } from "../src/serialization";
+import { validate } from "../src/api";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 
@@ -85,6 +86,42 @@ describe("Hospitalización Domiciliaria fixture", () => {
     const result = loadModel(fixture);
     if (!result.ok) throw new Error("load failed");
     expect(result.value.meta.system_type).toBe("socio-technical");
+  });
+
+  it("has 2 scenarios (flujo-normal, emergencia)", () => {
+    const result = loadModel(fixture);
+    if (!result.ok) throw new Error("load failed");
+    const scenarios = [...result.value.scenarios.values()];
+    expect(scenarios.map(s => s.name).sort()).toEqual(["Flujo Normal", "Respuesta a Emergencia"]);
+    // Each scenario has at least one path label
+    for (const scn of scenarios) {
+      expect(scn.path_labels.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("has 4 fans (2 XOR, 1 OR, 1 AND)", () => {
+    const result = loadModel(fixture);
+    if (!result.ok) throw new Error("load failed");
+    const fans = [...result.value.fans.values()];
+    const byType = new Map<string, number>();
+    for (const f of fans) byType.set(f.type, (byType.get(f.type) || 0) + 1);
+    expect(byType.get("xor")).toBe(2);
+    expect(byType.get("or")).toBe(1);
+    expect(byType.get("and")).toBe(1);
+  });
+
+  it("has environmental objects (Paciente, Cuidador, Domicilio)", () => {
+    const result = loadModel(fixture);
+    if (!result.ok) throw new Error("load failed");
+    const env = [...result.value.things.values()].filter(t => t.affiliation === "environmental");
+    expect(env.map(t => t.name).sort()).toEqual(["Cuidador", "Domicilio", "Paciente", "Paciente Geriátrico", "Paciente Pediátrico"]);
+  });
+
+  it("passes validation with 0 errors", () => {
+    const result = loadModel(fixture);
+    if (!result.ok) throw new Error("load failed");
+    const errors = validate(result.value);
+    expect(errors).toEqual([]);
   });
 
   it("roundtrips through save/load", () => {
