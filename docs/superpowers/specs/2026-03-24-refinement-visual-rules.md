@@ -1,8 +1,9 @@
-# Reglas de Codependencia Visual Cross-Refinamiento
+# Reglas de Codependencia Visual Cross-Refinamiento (Rev.2)
 
 **Fecha**: 2026-03-24
+**Revision**: 2 (ampliada con 30+ reglas adicionales)
 **Autor**: fxsl/arquitecto-categorico
-**Fuentes**: ISO 19450 (§4, §6, §9, §10, §12, §14), OPCloud Tutorial, implementacion OPModel
+**Fuentes**: ISO 19450 (§3, §4, §6, §9, §10, §11, §12, §14, §17, Annex A), OPCloud Tutorial (completo), implementacion OPModel
 
 ---
 
@@ -27,6 +28,9 @@ Aplican dos tipos de refinamiento:
 | **R-TC-3** | El contorno grueso es bidireccional — existe simultaneamente en padre e hijo |
 | **R-TC-4** | Aplica a in-zoom Y unfold (ambos tipos de refinamiento new-diagram) |
 | **R-TC-5** | In-diagram unfolding NO muestra contorno grueso (refineable y refinees en mismo OPD) |
+| **R-TC-6** | Contorno solido = systemic, punteado = environmental — persiste en TODOS los niveles de refinamiento (ISO §4 line 155) |
+| **R-TC-7** | Process in-zoom **agranda la elipse** para contener subprocesos; object in-zoom **agranda el rectangulo** para contener componentes (ISO §14 lines 263-274) |
+| **R-TC-8** | Initial states: borde grueso. Final states: borde doble. Default states: flecha diagonal. Persisten cross-nivel (ISO §4 lines 329-331) |
 
 **Implementacion**: `OpdCanvas.tsx:402` — `isRefined ? Math.max(baseStroke, 2.5)`, `isContainer ? 2.5`.
 
@@ -45,6 +49,9 @@ Aplican dos tipos de refinamiento:
 | **R-IE-5** | Externos heredan position auto-calculada; no heredan la posicion del padre |
 | **R-IE-6** | La eliminacion del thing refinado elimina el OPD hijo y todos sus contenidos (cascade) |
 | **R-IE-7** | No se puede refinar un external (appearance con `internal=false`) — I-REFINE-EXT |
+| **R-IE-8** | Inside objects (creados dentro de in-zoom) se eliminan cuando el parent process se elimina — cascade (OPCloud line 112) |
+| **R-IE-9** | Outside objects (creados en SD) existen independientemente y son referenciables cross-OPD (OPCloud line 113) |
+| **R-IE-10** | Enveloping: agrandar un proceso puede "tragar" un objeto externo visualmente, pero **revierte al mover** (OPCloud line 157) |
 
 **Implementacion**: `api.ts:472-576` (refineThing), `api.ts:496` (I-REFINE-EXT).
 
@@ -91,6 +98,10 @@ Cuando un thing es in-zoomed y tiene subprocesos, los links procedurales del pad
 | **R-SS-5** | Estados no referenciados en links al refinado NO se suprimen (permanecen visibles) |
 | **R-SS-6** | El indicador visual "..." (rountangle con label) aparece cuando un objeto tiene estados ocultos |
 | **R-SS-7** | La supresion es coherente con el split de effect links: el input-state se muestra en el OPD hijo (split input), el output-state se muestra en el OPD hijo (split output) |
+| **R-SS-8** | Indicador visual "..." (rountangle pequeño, esquina inferior derecha del objeto) aparece cuando hay estados ocultos (ISO §4 line 260) |
+| **R-SS-9** | Un estado NO puede existir sin su objeto dueño — ownership estricta cross-nivel (ISO line 1248) |
+| **R-SS-10** | State expression: estados suprimidos en SD se **revelan** en SD1 vinculados a subprocesos especificos (ISO line 890) |
+| **R-SS-11** | Estado en transicion: entre input y output state, el affectee esta en estado **indeterminado** si el proceso se interrumpe prematuramente (ISO line 392) |
 
 **Implementacion**: `simulation.ts:471-511` (computeStateSuppression). `OpdCanvas.tsx:904-912` (visibleStatesFor merge fiber+stored).
 
@@ -124,6 +135,7 @@ Cuando un thing es in-zoomed y tiene subprocesos, los links procedurales del pad
 | **R-TI-4** | En ejecucion paralela, el ultimo en completarse invoca el siguiente nivel |
 | **R-TI-5** | Solo aplica a **process in-zoom** — object in-zoom tiene orden espacial, no temporal |
 | **R-TI-6** | Object in-zoom: la posicion espacial tiene significado semantico (layout de componentes) pero NO invocacion |
+| **R-TI-7** | Object in-zoom: posicion espacial codifica layout fisico (componentes en un room) o logico (secciones en articulo, campos en record) — **significado semantico real** (ISO line 935) |
 
 **Implementacion**: `simulation.ts:81-170` (getExecutableProcesses, sorted by Y).
 
@@ -170,6 +182,7 @@ Cuando un thing es in-zoomed y tiene subprocesos, los links procedurales del pad
 | **R-RS-2** | Valido solo si el estado inicial = estado final en el nivel padre (el objeto "parece" no cambiar) |
 | **R-RS-3** | En el nivel hijo, el objeto muestra estados intermedios (ej: empty → loaded → empty) |
 | **R-RS-4** | Solo aplica a in-zoom |
+| **R-RS-5** | Ejemplo canonico (ISO line 1289): Dishwasher es instrument en SD, affectee en SD1 (empty→loaded→empty). Valido porque empty=empty cross-nivel |
 
 **Implementacion**: No enforced — el modelo permite el patron naturalmente porque el link type es por-link, no por-thing.
 
@@ -202,6 +215,10 @@ Cuando se out-zoomea (fold), multiples links de subprocesos al mismo objeto debe
 | **R-IH-1** | Especializaciones heredan del general: partes, features, tagged links, y **todos los links procedurales** |
 | **R-IH-2** | La herencia aplica a traves de niveles de refinamiento (unfold) |
 | **R-IH-3** | Links heredados no son visibles explicitamente pero aplican semanticamente |
+| **R-IH-4** | Herencia de afiliacion: atributos de objetos ambientales son **automaticamente** ambientales. Procesos de entidades ambientales son ambientales (ISO line 302) |
+| **R-IH-5** | Override: un specialization puede reemplazar un participante heredado con una especializacion diferente (ISO line 554) |
+| **R-IH-6** | Existencia runtime: una instancia especializada NO existe sin su instancia general (ISO line 556) |
+| **R-IH-7** | Migracion de links comunes: al crear un general desde specializations, links comunes se **mueven al general** (ISO line 564) |
 
 **Implementacion**: No implementado explicitamente — la herencia de links no se computa aun.
 
@@ -233,6 +250,84 @@ Cuando se out-zoomea (fold), multiples links de subprocesos al mismo objeto debe
 
 ---
 
+## §14. Instancias Visuales y Duplicados
+
+**ISO §4 line 267, line 1231. OPCloud lines 133-137.**
+
+| Regla | Descripcion |
+|-------|-------------|
+| **R-VI-1** | Un model element puede aparecer en **cualquier numero** de OPDs — incluir solo lo necesario para explicar el aspecto (ISO line 1231) |
+| **R-VI-2** | Duplicado visual en mismo OPD: small offset shape detras del thing repetido. Indica misma entidad logica, evita links cruzados (ISO line 267, 1235). Usar con moderacion. |
+| **R-VI-3** | Visual instance ≠ Logical instance — visual = misma identidad en diferente view; logical = relacion classification/inheritance (OPCloud line 137) |
+| **R-VI-4** | No se puede crear visual instance entre tipos diferentes (object→process **prohibido**) (OPCloud line 135) |
+| **R-VI-5** | Crear visual instance via "use existing thing" al detectar conflicto de nombre (OPCloud line 133) |
+
+**Implementacion**: Appearances multiples por thing ya soportadas (key = `thing::opd`). Duplicate visual indicator no implementado.
+
+---
+
+## §15. Propiedades Invariantes Cross-Nivel
+
+**ISO §4, §14.**
+
+| Regla | Descripcion |
+|-------|-------------|
+| **R-PI-1** | **Essence** (physical/informatical) NO cambia across refinement — propiedad estatica (ISO line 299) |
+| **R-PI-2** | **Perseverance** (static/dynamic) NO cambia — determinada por kind (ISO line 298) |
+| **R-PI-3** | **Nombres** no cambian across refinement (implicito — capitalization convention consistente, ISO line 1246) |
+| **R-PI-4** | **Model fact consistency**: un hecho en un OPD no puede contradecir un hecho en otro OPD. Refinement/abstraction de hechos NO es contradiccion (ISO line 839) |
+| **R-PI-5** | **Importancia proporcional**: la importancia relativa de un thing es proporcional al OPD mas alto del hierarchy donde aparece (ISO line 1256) |
+
+**Implementacion**: Essence y kind son inmutables en el modelo. Consistency check parcial en validate().
+
+---
+
+## §16. Semi-Fold (Compresion de Contexto)
+
+**OPCloud lines 177-178.**
+
+| Regla | Descripcion |
+|-------|-------------|
+| **R-SF-1** | Semi-fold muestra **nombres** de partes dentro del container sin expandir completamente |
+| **R-SF-2** | Indicador "N more" en el link cuando hay partes ocultas |
+| **R-SF-3** | Extract Part: doble-click en una parte semi-folded la trae al diagrama principal |
+| **R-SF-4** | Full unfold muestra detalles completos; semi-fold es intermedio entre fold y unfold |
+
+**Implementacion**: `api.ts:getSemiFoldedParts()`, `OpdCanvas.tsx` ThingNode con `semiFoldEntries`.
+
+---
+
+## §17. OPD Tree y Navegacion
+
+**ISO §14 lines 730-732. OPCloud lines 54, 95.**
+
+| Regla | Descripcion |
+|-------|-------------|
+| **R-NT-1** | OPD process tree: root = SD, labels SD, SD1, SD1.1, etc. Navegacion primaria (ISO line 730) |
+| **R-NT-2** | OPD object tree: paralelo al process tree, para elaboracion de objetos (ISO line 732) |
+| **R-NT-3** | Solo **leaf nodes** son eliminables — inner nodes protegidos para integridad del arbol (OPCloud line 95) |
+| **R-NT-4** | **View OPDs** son colecciones ad-hoc de multiples OPDs, **distintos** del tree jerarquico. No participan en refinamiento (ISO line 726) |
+| **R-NT-5** | Navegacion: Ctrl+Up = padre, Ctrl+Down = hijo, doble-click = enter refinement (OPCloud lines 57, 335) |
+
+**Implementacion**: OPD tree en `OpdTree.tsx`. View OPDs definidos en tipo pero no implementados en UI.
+
+---
+
+## §18. Bring Connected Things
+
+**OPCloud lines 394-396. DA-9 `bringConnectedThings()`.**
+
+| Regla | Descripcion |
+|-------|-------------|
+| **R-BCT-1** | Solo trae things **directamente** conectados via link — no parent-child structural relations (OPCloud line 396) |
+| **R-BCT-2** | Filtro por tipo: Procedural (instrument, consumption, effect) o Fundamental (exhibition, characterisation) (OPCloud line 394) |
+| **R-BCT-3** | Filtered Bring: seleccionar things primero, luego traer links **solo entre seleccionados** (OPCloud line 395) |
+| **R-BCT-4** | No cascadea — solo 1-hop. Consistente con DA-9 fiber implicit things |
+
+**Implementacion**: `api.ts:bringConnectedThings()` con filtro procedural/structural/all. Boton en PropertiesPanel.
+
+---
+
 ## Tabla Resumen: Aplicabilidad
 
 | Regla | In-Zoom Proceso | In-Zoom Objeto | Unfold Objeto | Unfold Proceso |
@@ -247,6 +342,11 @@ Cuando se out-zoomea (fold), multiples links de subprocesos al mismo objeto debe
 | Role shift (R-RS) | ✓ | — | — | — |
 | Link precedence (R-OZ) | ✓ | — | — | — |
 | Structural inheritance (R-IH) | — | — | ✓ | ✓ |
+| Visual instances (R-VI) | ✓ | ✓ | ✓ | ✓ |
+| Invariant properties (R-PI) | ✓ | ✓ | ✓ | ✓ |
+| Semi-fold (R-SF) | ✓ | ✓ | ✓ | ✓ |
+| OPD tree (R-NT) | ✓ | ✓ | ✓ | ✓ |
+| Bring Connected (R-BCT) | ✓ | ✓ | ✓ | ✓ |
 
 ---
 
@@ -267,3 +367,8 @@ Cuando se out-zoomea (fold), multiples links de subprocesos al mismo objeto debe
 | R-IH (structural inheritance) | — | No implementado |
 | R-RC (cycle prohibition) | ✓ | api.ts:501-510 |
 | R-OPL (OPL sentences) | ✓ | opl.ts:65-94 |
+| R-VI (visual instances) | Parcial | Appearances multiples OK; duplicate indicator no |
+| R-PI (invariant properties) | ✓ | types.ts (immutable fields) |
+| R-SF (semi-fold) | ✓ | api.ts:getSemiFoldedParts, OpdCanvas.tsx |
+| R-NT (OPD tree) | ✓ | OpdTree.tsx; View OPDs no implementados |
+| R-BCT (bring connected) | ✓ | api.ts:bringConnectedThings, PropertiesPanel.tsx |
