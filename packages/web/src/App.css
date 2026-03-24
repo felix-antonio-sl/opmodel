@@ -2545,3 +2545,64 @@ body,
 .settings-panel__control input[type="checkbox"] {
   accent-color: var(--accent, #4a9eff);
 }
+
+/* Canvas link filter */
+.canvas-link-filter {
+  position: absolute;
+  bottom: 52px;
+  right: 16px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  z-index: 10;
+  min-width: 160px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.canvas-link-filter__title {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.canvas-link-filter__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text);
+  padding: 2px 0;
+  cursor: pointer;
+}
+
+.canvas-link-filter__count {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.canvas-link-filter__reset {
+  margin-top: 6px;
+  width: 100%;
+  padding: 4px;
+  font-size: 10px;
+  background: var(--bg-secondary, #2a2a2a);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.canvas-link-filter__reset:hover {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.canvas-zoom-controls__active {
+  background: var(--accent) !important;
+  color: var(--bg) !important;
+}

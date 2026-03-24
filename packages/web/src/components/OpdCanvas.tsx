@@ -815,10 +815,32 @@ function LinkLine({
 
 /* ─── Main Canvas Component ─── */
 
+const LINK_CATEGORIES: Record<string, string[]> = {
+  "Procedural": ["effect", "consumption", "result", "input", "output"],
+  "Enabling": ["agent", "instrument"],
+  "Structural": ["aggregation", "exhibition", "generalization", "classification", "tagged"],
+  "Control": ["invocation", "exception"],
+};
+
 export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatch, simulation, errorEntities }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [pan, setPan] = useState({ x: 40, y: 20 });
   const [zoom, setZoom] = useState(1);
+  const [hiddenLinkTypes, setHiddenLinkTypes] = useState<Set<string>>(new Set());
+  const [showLinkFilter, setShowLinkFilter] = useState(false);
+
+  const toggleLinkCategory = (category: string) => {
+    setHiddenLinkTypes(prev => {
+      const next = new Set(prev);
+      const types = LINK_CATEGORIES[category];
+      const allHidden = types.every(t => prev.has(t));
+      for (const t of types) {
+        if (allHidden) next.delete(t);
+        else next.add(t);
+      }
+      return next;
+    });
+  };
 
   // Derive simulation ModelState for current step
   const simModelState = useMemo(() => {
@@ -994,6 +1016,12 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
     return adjustEffectEndpoints(filtered, model);
   }, [model, opdId]);
 
+  // Link type filter — applied after computation to avoid recomputing fiber
+  const filteredVisibleLinks = useMemo(() => {
+    if (hiddenLinkTypes.size === 0) return visibleLinks;
+    return visibleLinks.filter(vl => !hiddenLinkTypes.has(vl.link.type));
+  }, [visibleLinks, hiddenLinkTypes]);
+
   // Fan arcs: compute points along each link line at fixed distance from shared endpoint edge.
   // ISO 19450: "dashed arc across links of the fan, focal point at convergent endpoint"
   const ARC_DIST = 65; // distance along each link line from the edge point
@@ -1060,14 +1088,14 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
   // Structural link groups: ALL structural links rendered as fork triangles (ISO §6).
   // minChildren=1 so even single structural links get trunk+triangle+branch rendering.
   const visibleForks = useMemo((): StructuralFork[] => {
-    const resolved = visibleLinks.map(vl => ({
+    const resolved = filteredVisibleLinks.map(vl => ({
       link: vl.link,
       visualSource: vl.visualSource,
       visualTarget: vl.visualTarget,
       aggregated: false,
     }));
     return findStructuralForks(resolved, 1);
-  }, [visibleLinks]);
+  }, [filteredVisibleLinks]);
 
   // Link IDs belonging to forks — suppress from individual rendering
   const forkedLinkIds = useMemo(() => {
@@ -1441,7 +1469,40 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
         <button title="Zoom Out" onClick={() => setZoom(z => Math.max(0.3, z * 0.83))}>−</button>
         <button title="Fit to Content (F)" onClick={fitToContent}>⊡</button>
         <button title="Reset Zoom" onClick={() => { setZoom(1); setPan({ x: 40, y: 20 }); }}>1:1</button>
+        <button
+          title="Filter Links"
+          className={hiddenLinkTypes.size > 0 ? "canvas-zoom-controls__active" : ""}
+          onClick={() => setShowLinkFilter(v => !v)}
+        >⫘</button>
       </div>
+      {showLinkFilter && (
+        <div className="canvas-link-filter">
+          <div className="canvas-link-filter__title">Link Visibility</div>
+          {Object.entries(LINK_CATEGORIES).map(([cat, types]) => {
+            const allHidden = types.every(t => hiddenLinkTypes.has(t));
+            const someHidden = types.some(t => hiddenLinkTypes.has(t));
+            return (
+              <label key={cat} className="canvas-link-filter__row">
+                <input
+                  type="checkbox"
+                  checked={!allHidden}
+                  ref={(el) => { if (el) el.indeterminate = someHidden && !allHidden; }}
+                  onChange={() => toggleLinkCategory(cat)}
+                />
+                <span>{cat}</span>
+                <span className="canvas-link-filter__count">
+                  {types.reduce((n, t) => n + visibleLinks.filter(vl => vl.link.type === t).length, 0)}
+                </span>
+              </label>
+            );
+          })}
+          {hiddenLinkTypes.size > 0 && (
+            <button className="canvas-link-filter__reset" onClick={() => setHiddenLinkTypes(new Set())}>
+              Show All
+            </button>
+          )}
+        </div>
+      )}
       <div className="canvas-breadcrumb">
         {opdAncestors(model, opdId).map((ancestor, i, arr) => (
           <span key={ancestor.id}>
@@ -1478,7 +1539,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
           <rect x="-500" y="-500" width="3000" height="3000" fill="url(#grid-dots)" />
 
           {/* Links (behind things) — re-route during drag */}
-          {visibleLinks.map(({ link, modifier, visualSource, visualTarget, labelOverride, isMergedPair, isInputHalf, isOutputHalf }) => {
+          {filteredVisibleLinks.map(({ link, modifier, visualSource, visualTarget, labelOverride, isMergedPair, isInputHalf, isOutputHalf }) => {
             // C-05: skip links rendered as part of a fork triangle
             if (forkedLinkIds.has(link.id)) return null;
             let srcRect = getEffectiveRect(visualSource);
