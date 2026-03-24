@@ -815,6 +815,9 @@ function LinkLine({
 
 /* ─── Main Canvas Component ─── */
 
+const GRID_SIZE = 20;
+function snap(v: number): number { return Math.round(v / GRID_SIZE) * GRID_SIZE; }
+
 const LINK_CATEGORIES: Record<string, string[]> = {
   "Procedural": ["effect", "consumption", "result", "input", "output"],
   "Enabling": ["agent", "instrument"],
@@ -1241,9 +1244,9 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
         else if (resizeHandle === "sw") { x += dx; w -= dx; h += dy; }
         else if (resizeHandle === "ne") { w += dx; y += dy; h -= dy; }
         else if (resizeHandle === "nw") { x += dx; y += dy; w -= dx; h -= dy; }
-        w = Math.max(MIN_W, Math.round(w));
-        h = Math.max(MIN_H, Math.round(h));
-        x = Math.round(x); y = Math.round(y);
+        w = Math.max(MIN_W, snap(w));
+        h = Math.max(MIN_H, snap(h));
+        x = snap(x); y = snap(y);
         // Clamp position so that shrinking doesn't move beyond original edges
         if (resizeHandle === "sw" || resizeHandle === "nw") x = Math.min(x, app.x + app.w - MIN_W);
         if (resizeHandle === "ne" || resizeHandle === "nw") y = Math.min(y, app.y + app.h - MIN_H);
@@ -1265,7 +1268,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
           for (const thingId of draggedThings) {
             const app = appearances.get(thingId);
             if (app) {
-              moves.push({ thingId, opdId, x: Math.round(app.x + dragDelta.x), y: Math.round(app.y + dragDelta.y) });
+              moves.push({ thingId, opdId, x: snap(app.x + dragDelta.x), y: snap(app.y + dragDelta.y) });
             }
           }
           if (moves.length > 0) dispatch({ tag: "moveThings", moves });
@@ -1273,7 +1276,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
           // Single thing drag
           const app = appearances.get(dragTarget);
           if (app) {
-            dispatch({ tag: "moveThing", thingId: dragTarget, opdId, x: Math.round(app.x + dragDelta.x), y: Math.round(app.y + dragDelta.y) });
+            dispatch({ tag: "moveThing", thingId: dragTarget, opdId, x: snap(app.x + dragDelta.x), y: snap(app.y + dragDelta.y) });
           }
         }
       }
@@ -1350,10 +1353,10 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
             affiliation: "systemic" as const,
           },
           opdId,
-          x: Math.round(x - 60),
-          y: Math.round(y - 25),
+          x: snap(x - 60),
+          y: snap(y - 25),
           w: 120,
-          h: 50,
+          h: 60,
         });
         dispatch({ tag: "selectThing", thingId: id });
         dispatch({ tag: "setMode", mode: "select" });
