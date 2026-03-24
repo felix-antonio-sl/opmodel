@@ -970,19 +970,39 @@ export function render(doc: OplDocument): string {
     const verb = e.refinementType === "in-zoom" ? "in-zooming" : "unfolding";
     lines.push(`${e.parentOpdName} is refined by ${verb} ${e.refinedThingName} in ${e.childOpdName}.`);
   }
-  const rendered = doc.sentences
-    .map(s => renderSentence(s, doc.renderSettings))
-    .filter(Boolean) as string[];
-  // Deduplicate consecutive identical sentences (e.g. condition modifier repeating instrument sentence)
-  const deduped: string[] = [];
-  const seen = new Set<string>();
-  for (const line of rendered) {
-    if (!seen.has(line)) {
-      deduped.push(line);
-      seen.add(line);
+  // Group sentences by category for structured output
+  const thingSentences = doc.sentences.filter(s =>
+    s.kind === "thing-declaration" || s.kind === "state-enumeration" ||
+    s.kind === "duration" || s.kind === "state-description" || s.kind === "attribute-value"
+  );
+  const linkSentences = doc.sentences.filter(s =>
+    s.kind === "link" || s.kind === "modifier" || s.kind === "grouped-structural" ||
+    s.kind === "in-zoom-sequence" || s.kind === "fan"
+  );
+  const metaSentences = doc.sentences.filter(s =>
+    s.kind === "requirement" || s.kind === "assertion" || s.kind === "scenario"
+  );
+
+  const renderGroup = (sentences: typeof doc.sentences): string[] => {
+    const rendered = sentences
+      .map(s => renderSentence(s, doc.renderSettings))
+      .filter(Boolean) as string[];
+    const deduped: string[] = [];
+    const seen = new Set<string>();
+    for (const line of rendered) {
+      if (!seen.has(line)) {
+        deduped.push(line);
+        seen.add(line);
+      }
     }
-  }
-  lines.push(...deduped);
+    return deduped;
+  };
+
+  lines.push(...renderGroup(thingSentences));
+  const linkLines = renderGroup(linkSentences);
+  if (linkLines.length > 0) lines.push(...linkLines);
+  const metaLines = renderGroup(metaSentences);
+  if (metaLines.length > 0) lines.push(...metaLines);
   return lines.join("\n");
 }
 
