@@ -358,6 +358,31 @@ Cuando se out-zoomea (fold), multiples links de subprocesos al mismo objeto debe
 
 ---
 
+## §20. Observaciones OPCloud Visual (Secuencia Semi-Folding)
+
+**Fuente**: 15 screenshots secuenciales de OPCloud. Flujo: Object 1 → unfold → fold → semi-fold → extract part → links a parts → OnStar complete model.
+
+### Reglas confirmadas
+
+| ID | Observacion | Regla confirmada |
+|----|------------|-----------------|
+| **R-SF-C1** | Semi-fold muestra triangulo aggregation (▲) + nombre de cada part dentro del rectangulo del parent | R-SF-1 |
+| **R-SF-C2** | Extract part saca un part del semi-fold → aparece afuera con aggregation link + indicador "N" (hidden count) | R-SF-2, R-SF-3 |
+| **R-SF-C3** | Thick contour persiste en parent al volver de unfold child OPD | R-TC-1 |
+
+### Reglas nuevas descubiertas
+
+| ID | Regla | Impacto |
+|----|-------|---------|
+| **R-SF-5** | OPL semi-fold usa "**lists** [parts] **as parts**" (no "consists of") para parts semi-folded. "consists of" se reserva para parts extraidos + "N more parts" | **Gap en opl.ts**: dos sentences distintas para semi-folded vs extracted |
+| **R-SF-6** | Links procedurales pueden apuntar **directamente a un part semi-folded** dentro del rectangulo parent — el link endpoint es el part, no el parent. Visualmente la flecha entra al rectangulo y apunta al nombre del part. | **Gap visual**: links a parts semi-folded no implementados |
+| **R-SF-7** | El indicador numerico ("2", "3") en el triangulo aggregation muestra **cuantos parts quedan ocultos** en el semi-fold, NO cuantos hay en total | Confirma nuestra implementacion `semiFoldHidden` |
+| **R-SF-8** | Semi-fold es **per-OPD** — puede estar activo en SD (parent) mientras SD1 (child) muestra full unfold. Son independientes. | Confirma `Appearance.semi_folded` per-appearance |
+| **R-SF-9** | Result link (⇒) puede apuntar a un part **dentro** del semi-fold directamente — la flecha entra al borde del parent y llega al part name | Mismo que R-SF-6 pero para result links |
+| **R-SF-10** | Semi-fold en SD muestra aggregation triangle con count label **fuera** del parent (ej: triangulo + "3" a la derecha del parent, abajo) cuando hay parts extraidos | Nuestra impl: triangle dentro del parent. OPCloud: fuera |
+
+---
+
 ## Tabla Resumen: Aplicabilidad
 
 | Regla | In-Zoom Proceso | In-Zoom Objeto | Unfold Objeto | Unfold Proceso |
