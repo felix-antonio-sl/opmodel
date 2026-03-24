@@ -190,6 +190,41 @@ export function SettingsPanel({ model, dispatch, onClose }: Props) {
             onChange={(e) => update({ decimal_precision: parseInt(e.target.value) || 2 })}
           />
         </SettingRow>
+
+        <div className="settings-panel__section-title">Scenarios ({model.scenarios.size})</div>
+
+        {[...model.scenarios.values()].map(sc => (
+          <div key={sc.id} className="settings-panel__row" style={{ flexWrap: "wrap", gap: 4 }}>
+            <input
+              type="text"
+              value={sc.name}
+              onChange={(e) => dispatch({ tag: "updateScenario", scenarioId: sc.id, patch: { name: e.target.value } })}
+              style={{ flex: 1, minWidth: 100 }}
+            />
+            <input
+              type="text"
+              value={sc.path_labels.join(", ")}
+              onChange={(e) => dispatch({ tag: "updateScenario", scenarioId: sc.id, patch: { path_labels: e.target.value.split(",").map(s => s.trim()).filter(Boolean) } })}
+              placeholder="path labels (comma-separated)"
+              style={{ flex: 2, minWidth: 140, fontSize: 10 }}
+            />
+            <button
+              className="settings-panel__close"
+              onClick={() => dispatch({ tag: "removeScenario", scenarioId: sc.id })}
+              style={{ padding: "0 4px" }}
+            >✕</button>
+          </div>
+        ))}
+        <div className="settings-panel__row">
+          <button
+            className="props-panel__add-btn"
+            style={{ width: "100%" }}
+            onClick={() => {
+              const id = `sc-${Date.now().toString(36)}`;
+              dispatch({ tag: "addScenario", scenario: { id, name: "New Scenario", path_labels: [] } });
+            }}
+          >+ Scenario</button>
+        </div>
       </div>
     </div>
   );
