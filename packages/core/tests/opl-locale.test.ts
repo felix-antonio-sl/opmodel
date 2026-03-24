@@ -214,3 +214,26 @@ describe("OPL affiliation rendering", () => {
     expect(text).not.toContain("systemic");
   });
 });
+
+describe("OPL state designation rendering", () => {
+  it("renders initial state designation", () => {
+    const m = buildModelWithLang("en");
+    const text = render(expose(m, "opd-sd"));
+    expect(text).toContain("initial");
+    expect(text).toContain("default");
+  });
+
+  it("renders final state designation", () => {
+    const m = buildModelWithLang("en");
+    const text = render(expose(m, "opd-sd"));
+    expect(text).toContain("final");
+  });
+
+  it("renders state designations in Spanish", () => {
+    const m = buildModelWithLang("es");
+    const text = render(expose(m, "opd-sd"));
+    expect(text).toContain("inicial");
+    expect(text).toContain("final");
+    expect(text).toContain("por defecto");
+  });
+});
