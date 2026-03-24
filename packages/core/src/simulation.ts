@@ -331,6 +331,37 @@ export function resolveLinksForOpd(model: Model, opdId: string): ResolvedLink[] 
             result.push({ link, visualSource: otherEnd, visualTarget: first, aggregated: true, splitHalf: "input" });
             // Output half: last subprocess → object(target_state)
             result.push({ link, visualSource: last, visualTarget: otherEnd, aggregated: true, splitHalf: "output" });
+          } else if (link.type === "invocation" || link.type === "exception") {
+            // Invocation/exception: resolve to nearest visible internal subprocess, not all.
+            // Find which internal subprocess contains each endpoint.
+            function findInternalAncestor(thingId: string): string | null {
+              if (internalThings!.has(thingId)) return thingId;
+              for (const intId of internalThings!) {
+                const childOpd = [...model.opds.values()].find(o => o.refines === intId && o.refinement_type === "in-zoom");
+                if (!childOpd) continue;
+                // Check direct appearance
+                if ([...model.appearances.values()].some(a => a.opd === childOpd.id && a.thing === thingId)) return intId;
+                // Check transitive (nested in-zoom)
+                const thing = model.things.get(thingId);
+                if (thing?.kind === "process" && subprocessToAncestor.get(thingId) === containerThingId) {
+                  // thingId is a deep descendant — check if intId is on the path
+                  let cur = thingId;
+                  while (subprocessToAncestor.has(cur)) {
+                    const parent = subprocessToAncestor.get(cur)!;
+                    if (parent === intId) return intId;
+                    cur = parent;
+                  }
+                }
+              }
+              return null;
+            }
+            const srcAnc = vs === containerThingId ? findInternalAncestor(link.source) : null;
+            const tgtAnc = vt === containerThingId ? findInternalAncestor(link.target) : null;
+            const finalVs = srcAnc ?? vs;
+            const finalVt = tgtAnc ?? vt;
+            if (finalVs !== finalVt) {
+              result.push({ link, visualSource: finalVs, visualTarget: finalVt, aggregated: true });
+            }
           } else {
             // Agent/instrument/basic effect → all subprocesses
             for (const spId of subprocessesByY) {
