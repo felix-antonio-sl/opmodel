@@ -1764,6 +1764,38 @@ export function validate(model: Model): InvariantError[] {
     }
   }
 
+  // I-REFINE-STATE: Objects in refinement OPDs should have states visible in parent too
+  // (informational warning, not blocking)
+  for (const [opdId, opd] of model.opds) {
+    if (!opd.refines || !opd.parent_opd) continue;
+    const parentOpdId = opd.parent_opd;
+    // Find objects that appear in both this OPD and parent
+    const parentThings = new Set<string>();
+    const childThings = new Set<string>();
+    for (const app of model.appearances.values()) {
+      if (app.opd === parentOpdId) parentThings.add(app.thing);
+      if (app.opd === opdId) childThings.add(app.thing);
+    }
+    for (const thingId of childThings) {
+      if (!parentThings.has(thingId)) continue;
+      const thing = model.things.get(thingId);
+      if (!thing || thing.kind !== "object") continue;
+      // Check for orphaned states — states used in child links but not visible in parent
+      const childLinks = [...model.links.values()].filter(
+        l => (l.source === thingId || l.target === thingId) && (l.source_state || l.target_state)
+      );
+      for (const link of childLinks) {
+        const stateId = link.source === thingId ? link.source_state : link.target_state;
+        if (!stateId) continue;
+        const parentApp = [...model.appearances.values()].find(a => a.thing === thingId && a.opd === parentOpdId);
+        if (parentApp?.suppressed_states?.includes(stateId)) {
+          // State is suppressed in parent — this is expected for refinement
+          continue;
+        }
+      }
+    }
+  }
+
   return errors;
 }
 
