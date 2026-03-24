@@ -41,11 +41,13 @@ All documentation follows OPM (ISO 19450) guidelines and KODA Framework architec
 | DA-7 | Link Refinement Fibration (consumption+result visual merge) | Implemented (Opción D: compute on demand, zero schema change, `findConsumptionResultPairs`) |
 | DA-8 | Effect Fibration (effect ≅ 4 visual modes via transformingMode) | Implemented (`transformingMode` functor, `adjustEffectEndpoints`, per-mode markers+routing) |
 | DA-9 | Vistas Derivadas — God Diagram + Computed Fibers | Implemented (`resolveOpdFiber`, `bringConnectedThings`, derived state suppression, OpdCanvas consumes fiber) |
+| DA-10 | Links as Reified Morphisms (Yoneda Pattern) | Documented (links are 1-cells in C_OPM, reified as entities in implementation via Yoneda embedding; cascade deletion preserves morphism semantics) |
 
 ## Key Domain Concepts
 
 - **OPM (Object Process Methodology):** ISO 19450 standard for systems modeling using Things (objects/processes), Links, States, and OPDs (Object Process Diagrams).
 - **God Diagram (DA-9):** The Model is the Grothendieck colimit `∫ M` — a single total graph containing ALL things, links, and states. OPDs are computed fibers `π⁻¹(OPD_i)` over this graph. Appearances are positioning hints, not the source of truth for visibility. `resolveOpdFiber()` computes the derived view; `bringConnectedThings()` materializes implicit things as explicit.
+- **Reified Morphisms (DA-10):** Links are 1-cells (morphisms) in C_OPM — they relate Things, not exist independently (ISO 3.36: "graphical expression of relation"). Implementation reifies them as entities with IDs via Yoneda embedding `y: C_OPM → [C_OPM^op, Set]` to support meta-constructions (Modifiers as 2-cells, Fans as cones). Cascade deletion preserves ontological dependency: no endpoints → no link.
 - **OPD Tree:** Hierarchical diagram structure forming a fibration π: C_opm → C_opd_tree.
 - **Bimodality:** OPM models have dual graphical (OPD) and textual (OPL) representations that must stay synchronized (lens laws: PutGet, GetPut).
 - **ECA (Event-Condition-Action):** Simulation engine modeled as coalgebra S → F(S).

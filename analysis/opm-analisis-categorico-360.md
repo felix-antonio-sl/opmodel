@@ -1396,5 +1396,60 @@ C_OPM
 
 ---
 
+## §16: Morfismos Reificados — Patron Yoneda (DA-10)
+
+### 16.1 La Tension Observada
+
+Los links en OPModel habitan dos niveles categoricos simultaneamente:
+
+**Nivel ontologico (ISO 19450, OPL):** Links son 1-celdas (morfismos) en C_OPM. La Def. 3.36 los define como "graphical expression of structural or procedural relation" — expresiones de relaciones, no entidades con existencia independiente. OPL los renderiza como verbos ("consumes", "affects", "handles"), nunca como sustantivos. La cascade deletion (eliminar un thing elimina sus links) confirma la dependencia existencial: sin endpoints, sin morfismo.
+
+**Nivel implementacional (types.ts, api.ts):** Links son entidades reificadas con identidad propia. Viven en `Map<string, Link>` con ID unico en el namespace global (`collectAllIds`). Son target de meta-relaciones: `Modifier.over` apunta a un Link.id, `Fan.members` agrupa Link.ids, `Assertion.target` y `Requirement.target` pueden referenciar Link.ids. Tienen CRUD completo (addLink, removeLink, updateLink) y 16 propiedades opcionales (probability, rate, multiplicity, vertices, etc.).
+
+### 16.2 Resolucion: El Embedding de Yoneda
+
+La dualidad no es un defecto de diseno — es una instancia del patron categorico mas fundamental: el **embedding de Yoneda**.
+
+```
+y: C_OPM → [C_OPM^op, Set]
+```
+
+El embedding de Yoneda convierte cada morfismo `f: A → B` en C_OPM en un objeto `y(f)` en la categoria de presheaves `[C_OPM^op, Set]`, preservando fielmente toda la estructura original. Concretamente:
+
+| C_OPM (ontologico) | [C_OPM^op, Set] (implementacion) |
+|---------------------|----------------------------------|
+| 0-celdas: Things | Objetos: Things con ID unico |
+| 1-celdas: Links | Objetos: Links con ID unico |
+| 2-celdas: Modifiers | Objetos: Modifiers con ID unico |
+| Hom(A,B) | Foreign keys: link.source, link.target |
+| Composicion | Path equations (invariantes I-*) |
+
+La funcion `collectAllIds()` en helpers.ts es la realizacion computacional del embedding: reune Things, States, OPDs, Links, Modifiers, Fans, Scenarios, Assertions, Requirements, Stereotypes y SubModels en un unico namespace plano — todos los morfismos y objetos de C_OPM reificados como objetos en la categoria de presheaves.
+
+### 16.3 Evidencias de Correctitud
+
+**E-1 (Cascade deletion = dependencia existencial):** Al eliminar un Thing T, se eliminan todos los links incidentes a T (`api.ts:45-52`), y los modifiers/fans de esos links se cascadan (`api.ts:52-84`). Esto preserva la semantica de morfismo: un morfismo `f: A → B` no puede existir si A o B dejan de existir. En la implementacion, la reificacion NO otorga existencia independiente — solo identidad.
+
+**E-2 (OPL transparencia = verbos, no sustantivos):** El motor OPL (`opl.ts:178-342`) genera sentences donde los links producen verbos ("Processing **consumes** Consumee", "Agent **handles** Process") pero nunca declaraciones de existencia. Los links permanecen morfismos en la representacion textual, a pesar de ser objetos en la representacion implementacional.
+
+**E-3 (Modifiers como 2-celdas):** `Modifier.over: string` referencia un Link.id — esto es una 2-celda `α: f ⇒ f'` que decora un morfismo con semantica de control (event 'e' o condition 'c'). En la 2-categoria C_OPM, esto es la estructura natural. En la implementacion, es un foreign key — la reificacion del patron.
+
+**E-4 (Fans como conos/coconos):** `Fan.members: string[]` agrupa Link.ids que comparten un endpoint. Un XOR fan divergente es un cocono sobre una familia de morfismos `{f_i: P → O_i}`. Un AND fan convergente es un cono `{f_i: O_i → P}`. Estas son construcciones universales SOBRE morfismos — naturales en una 2-categoria, realizadas via IDs en la implementacion.
+
+**E-5 (Invariantes como ecuaciones de camino):** Los 37 invariant guards en `validate()` son las ecuaciones de camino (path equations) que definen C_OPM como categoria finitamente presentada. I-16 (exclusividad de transformacion), I-33 (segregacion procedural), I-34 (no self-loops excepto invocacion), PE-1 (consume ∘ create = id_∅), PE-3 (invarianza de enablers) — todas son restricciones sobre la composicion de morfismos.
+
+### 16.4 Consecuencias para el Diseno
+
+**Regla DA-10-R1:** Links son morfismos con identidad. Cualquier feature nueva que opere sobre links debe respetar ambos niveles:
+- Ontologico: los links dependen de sus endpoints y no se declaran en OPL como entidades
+- Implementacional: los links tienen ID, propiedades, y pueden ser target de meta-construcciones
+
+**Regla DA-10-R2:** No crear "links entre links". Si se necesita una relacion entre morfismos, usar 2-celdas (modifiers) o construcciones universales (fans). Elevar links a 0-celdas romperia la distincion Element = Thing | Link de ISO 19450.
+
+**Regla DA-10-R3:** La cascade deletion es invariante. Nunca permitir que un link sobreviva a la eliminacion de sus endpoints. Esto es la prueba operacional de que links son morfismos dependientes, no objetos libres.
+
+---
+
 *Fin del analisis categorico 360 de OPM (ISO 19450).*
 *Producido por fxsl/arquitecto-categorico, 2026-03-10.*
+*§16 agregado 2026-03-24: DA-10 Morfismos Reificados.*

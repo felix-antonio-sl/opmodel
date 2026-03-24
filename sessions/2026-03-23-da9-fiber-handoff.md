@@ -103,6 +103,7 @@ Fiber = π⁻¹(OPD_i) computada                      ← vista derivada
 - **Colimite**: El Model sigue siendo `∫ M`. Las vistas son proyecciones.
 - **Pullback preciso**: `bringConnectedThings()` es `π*(T, OPD_i)` materializado.
 - **Lens OPL**: `expose()` opera sobre el model directamente — no requiere fiber.
+- **Yoneda (DA-10)**: Links son morfismos reificados. Cascade deletion preserva dependencia. Modifiers son 2-celdas. Fans son conos/coconos. `analysis/opm-analisis-categorico-360.md §16`.
 
 ## Artifacts de referencia
 
