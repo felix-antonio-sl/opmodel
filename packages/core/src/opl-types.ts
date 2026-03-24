@@ -15,6 +15,8 @@ export interface OplThingDeclaration {
   essence: Essence;
   affiliation: Affiliation;
   perseverance?: "static" | "dynamic";
+  valueType?: string;
+  unit?: string;
   alias?: string;
   exhibitorName?: string;
 }

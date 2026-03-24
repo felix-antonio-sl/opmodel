@@ -204,6 +204,11 @@ export function expose(model: Model, opdId: string): OplDocument {
       affiliation: thing.affiliation,
       perseverance: thing.perseverance,
     };
+    if (thing.computational && "value_type" in thing.computational) {
+      const comp = thing.computational as ComputationalObject;
+      declaration.valueType = comp.value_type;
+      declaration.unit = comp.unit;
+    }
     if (renderSettings.aliasVisibility && thing.computational && "alias" in thing.computational) {
       declaration.alias = (thing.computational as ComputationalObject).alias;
     }
@@ -999,6 +1004,10 @@ function renderSentence(s: OplSentence, settings: OplRenderSettings): string {
       }
       if (s.perseverance === "dynamic") {
         text += settings.locale === "es" ? ", dinámico" : ", dynamic";
+      }
+      if (s.valueType) {
+        text += settings.locale === "es" ? `, de tipo ${s.valueType}` : `, of type ${s.valueType}`;
+        if (s.unit) text += ` [${s.unit}]`;
       }
       if (s.alias && settings.aliasVisibility) {
         text += ` (alias: ${s.alias})`;
