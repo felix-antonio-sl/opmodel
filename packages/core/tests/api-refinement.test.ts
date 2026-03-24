@@ -64,7 +64,8 @@ describe("refineThing", () => {
     it("returns correct total appearances count", () => {
       const m = buildTestModel();
       const model = unwrap(refineThing(m, "proc-make-coffee", "opd-sd", "in-zoom", "opd-sd1", "SD1"));
-      expect(model.appearances.size).toBe(7);
+      // 4 SD + 1 container + 2 externals + 3 auto-created subprocesses (R-OC-1) = 10
+      expect(model.appearances.size).toBe(10);
     });
   });
 
@@ -301,9 +302,11 @@ describe("validate() refinement checks", () => {
     // buildTestModel has lnk-2: consumption beans→proc-make-coffee
     m = unwrap(refineThing(m, "proc-make-coffee", "opd-sd", "in-zoom", "opd-sd1", "SD1"));
     const errors = validate(m);
-    // Only I-CONTOUR-RESTRICT expected (consumption link to in-zoomed process)
-    expect(errors.every(e => e.code === "I-CONTOUR-RESTRICT")).toBe(true);
-    expect(errors.length).toBe(1);
+    // I-CONTOUR-RESTRICT (consumption link to in-zoomed) + I-17 (auto-created placeholders have no links yet)
+    expect(errors.some(e => e.code === "I-CONTOUR-RESTRICT")).toBe(true);
+    const nonPlaceholderErrors = errors.filter(e => e.code !== "I-17");
+    expect(nonPlaceholderErrors).toHaveLength(1);
+    expect(nonPlaceholderErrors[0]!.code).toBe("I-CONTOUR-RESTRICT");
   });
 });
 
@@ -418,5 +421,62 @@ describe("auto state suppression C-04 (DA-9: computed by fiber)", () => {
     m = unwrap(refineThing(m, "obj-car", "opd-sd", "unfold", "opd-unfold", "SD-unfold"));
     const fiber = resolveOpdFiber(m, "opd-sd");
     expect(fiber.suppressedStates.size).toBe(0);
+  });
+});
+
+// === R-OC-1: Auto-create placeholder subprocesses ===
+
+describe("refineThing — auto-create placeholders (R-OC-1)", () => {
+  it("process in-zoom auto-creates 3 placeholder subprocesses", () => {
+    const m = buildTestModel();
+    const model = unwrap(refineThing(m, "proc-make-coffee", "opd-sd", "in-zoom", "opd-sd1", "SD1"));
+    // Should have 3 auto-created subprocesses
+    const sub1 = model.things.get("opd-sd1-sub-1");
+    const sub2 = model.things.get("opd-sd1-sub-2");
+    const sub3 = model.things.get("opd-sd1-sub-3");
+    expect(sub1).toBeDefined();
+    expect(sub2).toBeDefined();
+    expect(sub3).toBeDefined();
+    expect(sub1!.kind).toBe("process");
+    expect(sub1!.name).toBe("Making Coffee 1");
+    expect(sub2!.name).toBe("Making Coffee 2");
+    expect(sub3!.name).toBe("Making Coffee 3");
+  });
+
+  it("placeholder subprocesses have internal appearances in child OPD", () => {
+    const m = buildTestModel();
+    const model = unwrap(refineThing(m, "proc-make-coffee", "opd-sd", "in-zoom", "opd-sd1", "SD1"));
+    const app1 = model.appearances.get("opd-sd1-sub-1::opd-sd1");
+    expect(app1).toBeDefined();
+    expect(app1!.internal).toBe(true);
+    // Y ordering: sub-1 < sub-2 < sub-3
+    const app2 = model.appearances.get("opd-sd1-sub-2::opd-sd1");
+    const app3 = model.appearances.get("opd-sd1-sub-3::opd-sd1");
+    expect(app1!.y).toBeLessThan(app2!.y);
+    expect(app2!.y).toBeLessThan(app3!.y);
+  });
+
+  it("placeholder subprocesses inherit essence and affiliation", () => {
+    const m = buildTestModel();
+    const model = unwrap(refineThing(m, "proc-make-coffee", "opd-sd", "in-zoom", "opd-sd1", "SD1"));
+    const sub1 = model.things.get("opd-sd1-sub-1")!;
+    expect(sub1.essence).toBe("physical");
+    expect(sub1.affiliation).toBe("systemic");
+  });
+
+  it("object in-zoom does NOT auto-create subprocesses", () => {
+    let m = createModel("test");
+    m = unwrap(addThing(m, { id: "obj-car", kind: "object", name: "Car", essence: "physical", affiliation: "systemic" }));
+    m = unwrap(addAppearance(m, { thing: "obj-car", opd: "opd-sd", x: 100, y: 100, w: 120, h: 60 }));
+    m = unwrap(refineThing(m, "obj-car", "opd-sd", "in-zoom", "opd-sd1", "SD1"));
+    expect(m.things.get("opd-sd1-sub-1")).toBeUndefined();
+  });
+
+  it("unfold does NOT auto-create subprocesses", () => {
+    let m = createModel("test");
+    m = unwrap(addThing(m, { id: "obj-car", kind: "object", name: "Car", essence: "physical", affiliation: "systemic" }));
+    m = unwrap(addAppearance(m, { thing: "obj-car", opd: "opd-sd", x: 100, y: 100, w: 120, h: 60 }));
+    m = unwrap(refineThing(m, "obj-car", "opd-sd", "unfold", "opd-sd1", "SD1"));
+    expect(m.things.get("opd-sd1-sub-1")).toBeUndefined();
   });
 });

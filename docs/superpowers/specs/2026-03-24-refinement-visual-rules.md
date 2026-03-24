@@ -1,7 +1,7 @@
-# Reglas de Codependencia Visual Cross-Refinamiento (Rev.2)
+# Reglas de Codependencia Visual Cross-Refinamiento (Rev.3)
 
 **Fecha**: 2026-03-24
-**Revision**: 2 (ampliada con 30+ reglas adicionales)
+**Revision**: 3 (auditoria completa contra codigo — estados actualizados, gaps priorizados)
 **Autor**: fxsl/arquitecto-categorico
 **Fuentes**: ISO 19450 (§3, §4, §6, §9, §10, §11, §12, §14, §17, Annex A), OPCloud Tutorial (completo), implementacion OPModel
 
@@ -34,6 +34,8 @@ Aplican dos tipos de refinamiento:
 
 **Implementacion**: `OpdCanvas.tsx:402` — `isRefined ? Math.max(baseStroke, 2.5)`, `isContainer ? 2.5`.
 
+**R-TC-8 estado**: Implementada — data model (`initial/final/default` flags), OPL (`state-description` sentences, opl.ts:133-148), PropertiesPanel (checkboxes I/F/D), **canvas** state pills: initial=strokeWidth 2.5, final=double rect border, default=diagonal line marker.
+
 ---
 
 ## §2. Container vs Externos (Internal/External)
@@ -49,7 +51,7 @@ Aplican dos tipos de refinamiento:
 | **R-IE-5** | Externos heredan position auto-calculada; no heredan la posicion del padre |
 | **R-IE-6** | La eliminacion del thing refinado elimina el OPD hijo y todos sus contenidos (cascade) |
 | **R-IE-7** | No se puede refinar un external (appearance con `internal=false`) — I-REFINE-EXT |
-| **R-IE-8** | Inside objects (creados dentro de in-zoom) se eliminan cuando el parent process se elimina — cascade (OPCloud line 112) |
+| **R-IE-8** | Inside objects (creados dentro de in-zoom) se eliminan cuando el parent process se elimina — cascade (OPCloud line 112). **Implementada**: `removeThing` cascade via `collectDescendants` (api.ts:98-118) elimina OPD hijo + contenido |
 | **R-IE-9** | Outside objects (creados en SD) existen independientemente y son referenciables cross-OPD (OPCloud line 113) |
 | **R-IE-10** | Enveloping: agrandar un proceso puede "tragar" un objeto externo visualmente, pero **revierte al mover** (OPCloud line 157) |
 
@@ -103,7 +105,9 @@ Cuando un thing es in-zoomed y tiene subprocesos, los links procedurales del pad
 | **R-SS-10** | State expression: estados suprimidos en SD se **revelan** en SD1 vinculados a subprocesos especificos (ISO line 890) |
 | **R-SS-11** | Estado en transicion: entre input y output state, el affectee esta en estado **indeterminado** si el proceso se interrumpe prematuramente (ISO line 392) |
 
-**Implementacion**: `simulation.ts:471-511` (computeStateSuppression). `OpdCanvas.tsx:904-912` (visibleStatesFor merge fiber+stored).
+**Implementacion**: `simulation.ts:471-511` (computeStateSuppression). `OpdCanvas.tsx:908-918` (visibleStatesFor merge fiber+stored).
+
+**R-SS-8 estado**: Implementada — indicador "..." (text, esquina inferior derecha del objeto) aparece cuando `hasSuppressedStates=true` (allStates.length > visibleStates.length). Core computa `suppressedStates` via fiber; OpdCanvas pasa el flag a ThingNode.
 
 ---
 
@@ -352,9 +356,9 @@ Cuando se out-zoomea (fold), multiples links de subprocesos al mismo objeto debe
 | **R-OC-1** | In-zoom auto-crea N subprocesos **placeholder** con nombres genericos (B Processing, C Processing, D Processing) | UX: considerar auto-crear subprocesos en `refineThing()` |
 | **R-OC-2** | OPL in-zoom sentence incluye objetos internos: "**as well as** Call and Vehicle Location" despues de la secuencia de subprocesos | **Gap en opl.ts**: agregar objetos internos a in-zoom sentence |
 | **R-OC-6** | Link type dialog filtra opciones segun kind de source/target (process→object solo ofrece Exhibition, Result, Effect) | UX improvement para link creation dialog |
-| **R-OC-7** | Subprocesos a misma Y → OPL dice "**parallel** Call Transmitting and Vehicle Location Calculating" | **Gap en opl.ts**: detectar parallelism y usar "parallel" |
+| **R-OC-7** | Subprocesos a misma Y → OPL dice "**parallel** Call Transmitting and Vehicle Location Calculating" | ✓ Implementada: collector agrupa por Y (opl.ts:84-95), rendering emite "parallel" (opl.ts:808-810) |
 
-**Gaps reales identificados**: R-OC-2 y R-OC-7 son diferencias funcionales entre OPCloud y nuestra implementacion OPL.
+**Gaps resueltos (sesion 15)**: R-OC-2 (objetos internos "as well as") y R-OC-7 (parallel por Y) implementados.
 
 ---
 
@@ -405,28 +409,87 @@ Cuando se out-zoomea (fold), multiples links de subprocesos al mismo objeto debe
 
 ---
 
-## Estado de Implementacion
+## Estado de Implementacion (Auditado 2026-03-24)
 
-| Regla | Implementada | Archivo |
-|-------|:---:|---------|
-| R-TC (thick contour) | ✓ | OpdCanvas.tsx:402 |
-| R-IE (internal/external) | ✓ | api.ts:472-576 |
-| R-LD (link distribution) | ✓ | simulation.ts:201-401 |
-| R-SS (state suppression) | ✓ | simulation.ts:471-511 |
-| R-BC (boundary crossing) | ✓ | api.ts:1683-1719 |
-| R-TI (implicit invocation) | ✓ | simulation.ts:81-170 |
-| R-LV (link visibility) | ✓ | simulation.ts:275-313, opl.ts:183 |
-| R-ES (effect split) | Parcial | helpers.ts:transformingMode |
-| R-RS (role shift) | Implicita | — |
-| R-OZ (out-zoom precedence) | Parcial | simulation.ts:376-401 |
-| R-IH (structural inheritance) | — | No implementado |
-| R-RC (cycle prohibition) | ✓ | api.ts:501-510 |
-| R-OPL (OPL sentences) | ✓ | opl.ts:65-94 |
-| R-VI (visual instances) | Parcial | Appearances multiples OK; duplicate indicator no |
-| R-PI (invariant properties) | ✓ | types.ts (immutable fields) |
-| R-SF (semi-fold) | ✓ | api.ts:getSemiFoldedParts, OpdCanvas.tsx |
-| R-NT (OPD tree) | ✓ | OpdTree.tsx; View OPDs no implementados |
-| R-BCT (bring connected) | ✓ | api.ts:bringConnectedThings, PropertiesPanel.tsx |
-| R-OC-1 (auto subprocesos) | — | refineThing no auto-crea subprocesos |
-| R-OC-2 (OPL "as well as") | — | opl.ts: objetos internos faltan en in-zoom sentence |
-| R-OC-7 (OPL "parallel") | — | opl.ts: parallelism no detectado en sentence |
+| Regla | Estado | Archivo | Detalle |
+|-------|:---:|---------|---------|
+| R-TC-1..7 (thick contour) | ✓ | OpdCanvas.tsx:400-403 | strokeWidth logic, environmental dashing |
+| R-TC-8 (initial/final/default) | ✓ | OpdCanvas.tsx:527-570 | Initial=borde grueso, final=borde doble, default=diagonal marker |
+| R-IE-1..7,9 (internal/external) | ✓ | api.ts:472-576 | refineThing, pullback, I-REFINE-EXT |
+| R-IE-8 (inside cascade) | ✓ | api.ts:98-118 | cascade via removeThing + collectDescendants |
+| R-IE-10 (enveloping revert) | — | — | Feature UI, no enforced en data model |
+| R-LD-1..10 (link distribution) | ✓ | simulation.ts:201-401 | C-01 completo, 10/10 reglas |
+| R-SS-1..6,9 (state suppression) | ✓ | simulation.ts:471-511 | computeStateSuppression on-demand |
+| R-SS-8 ("..." indicator) | ✓ | OpdCanvas.tsx:560-565 | "..." text en objects con estados suprimidos |
+| R-SS-10 (state expression) | Implicita | simulation.ts | Fiber computation cumple el intent |
+| R-SS-11 (indeterminate state) | — | — | Specification reference, no enforced |
+| R-BC-1,2,5 (boundary crossing) | ✓ | api.ts:1683-1719 | I-EVENT-INZOOM-BOUNDARY |
+| R-BC-3 (environmental exception) | — | — | No distinguido explicitamente |
+| R-BC-4 (condition skip auto-invoke) | — | — | No implementado |
+| R-TI-1..6 (temporal ordering) | ✓ | simulation.ts:81-170 | getExecutableProcesses, wave-based |
+| R-TI-7 (object spatial meaning) | Implicita | — | UI responsibility |
+| R-LV-1..5 (link visibility) | ✓ | simulation.ts:275-313, opl.ts:183-197 | Filtering completo |
+| R-ES (effect split) | Parcial | helpers.ts:transformingMode | 4 modos visuales OK; split automatico no |
+| R-RS (role shift) | Implicita | — | Permitido naturalmente por link-type per-link |
+| R-OZ-1..3,5 (out-zoom precedence) | Parcial | simulation.ts:376-401 | Solo VISUAL-03; **matriz completa no** |
+| R-OZ-4 (result+consumption invalid) | ✓ | api.ts:316-320 | I-16 en addLink |
+| R-IH (structural inheritance) | — | — | **No implementado** |
+| R-RC-1..3 (cycle prohibition) | ✓ | api.ts:501-510 | Transitive ancestor check |
+| R-OPL-1,2,4,5 (OPL sentences) | ✓ | opl.ts:65-94, 183-197 | In-zoom + unfold + link filtering |
+| R-OPL-3 (OPD tree edge labels) | ✓ | opl.ts:392-402, opl-types.ts:152-159 | `refinementEdge` en OplDocument + rendering |
+| R-VI-1 (multi-appearance) | ✓ | — | Appearances multiples soportadas |
+| R-VI-2 (duplicate indicator) | — | OpdCanvas.tsx | **No renderizado** |
+| R-PI-1..5 (invariant properties) | ✓ | types.ts | Essence/kind immutables |
+| R-SF-1,2,4,7,8 (semi-fold core) | ✓ | api.ts:1157-1176, OpdCanvas.tsx:494-511 | getSemiFoldedParts, per-OPD state |
+| R-SF-3 (extract part) | — | — | Feature UI no implementada |
+| R-SF-5 (OPL semi-fold) | ✓ | opl.ts:618-620 | `semiFolded` flag → "lists...as parts" |
+| R-SF-6,9 (links a parts) | — | — | **No implementado** (links no target semi-fold entries) |
+| R-SF-10 (triangle position) | Diferente | OpdCanvas.tsx:494-511 | Dentro del parent (OPCloud: fuera) |
+| R-NT-1 (OPD tree) | ✓ | OpdTree.tsx:16-34 | buildTree hierarchical |
+| R-NT-2 (object tree) | — | — | Solo process tree |
+| R-NT-3 (leaf-only deletion) | ✓ | api.ts:446-449 | NON_LEAF_OPD invariante en removeOPD |
+| R-NT-4 (View OPDs) | — | — | **No implementado** |
+| R-NT-5 (keyboard nav) | ✓ | App.tsx:224-236 | Ctrl+Up=parent, Ctrl+Down=child |
+| R-BCT-1,2,4 (bring connected) | ✓ | api.ts:1852-1916, PropertiesPanel.tsx | 1-hop, filter by type |
+| R-BCT-3 (filtered bring) | — | — | UX enhancement, no gap funcional |
+| R-OC-1 (auto subprocesos) | ✓ | api.ts:575-590 | 3 placeholders auto-creados en process in-zoom |
+| R-OC-2 (OPL "as well as") | ✓ | opl.ts:69-94, 817-819 | `internalObjects` en OplInZoomSequence, "as well as [objects]" |
+| R-OC-7 (OPL "parallel") | ✓ | opl.ts:84-95, 808-810 | Agrupacion por Y, `parallel: true` para same-Y |
+
+---
+
+## §21. Priorizacion de Gaps para Implementacion
+
+### P0 — Resueltos (sesion 15)
+
+| Gap | Archivos | Estado |
+|-----|----------|:---:|
+| R-OC-2 | opl.ts, opl-types.ts | ✓ `internalObjects` + "as well as" rendering |
+| R-OC-7 | opl.ts | ✓ Agrupacion por Y, `parallel: true` |
+| R-SS-8 | OpdCanvas.tsx | ✓ Indicador "..." en ThingNode |
+| R-TC-8 | OpdCanvas.tsx | ✓ Initial (borde grueso), final (doble), default (diagonal) |
+
+### P1 — Resueltos (sesion 15)
+
+| Gap | Archivos | Estado |
+|-----|----------|:---:|
+| R-SF-5 | opl.ts, opl-types.ts | ✓ `semiFolded` flag + "lists...as parts" rendering |
+| R-OC-1 | api.ts | ✓ 3 placeholders auto-creados en process in-zoom |
+| R-NT-5 | App.tsx | ✓ Ctrl+Up=parent, Ctrl+Down=child |
+| R-NT-3 | api.ts | ✓ NON_LEAF_OPD invariante en removeOPD |
+| R-OPL-3 | opl.ts, opl-types.ts | ✓ `refinementEdge` en OplDocument + rendering |
+
+### P2 — Blast radius alto (futuro)
+
+| Gap | Archivos | Descripcion |
+|-----|----------|-------------|
+| R-IH | core nuevo | Herencia estructural completa (links heredados por specializations) |
+| R-ES | api.ts, simulation.ts | Effect split automatico (input-output underspecification) |
+| R-OZ-1..3,5 | simulation.ts | Matriz completa de precedencia out-zoom |
+| R-SF-6,9 | OpdCanvas.tsx, simulation.ts | Links apuntando a parts dentro de semi-fold |
+| R-VI-2 | OpdCanvas.tsx | Duplicate visual indicator (offset shape) |
+| R-NT-4 | OpdTree.tsx, types.ts | View OPDs (colecciones ad-hoc) |
+| R-NT-2 | OpdTree.tsx | Object tree paralelo al process tree |
+| R-BC-3 | api.ts | Distinguir environmental exception en boundary crossing |
+| R-BC-4 | simulation.ts | Condition skip auto-invocacion del siguiente subproceso |
+| R-IE-10 | OpdCanvas.tsx | Enveloping reversion on move |

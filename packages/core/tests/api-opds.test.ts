@@ -47,16 +47,24 @@ describe("removeOPD", () => {
     if (isOk(r)) expect(r.value.appearances.size).toBe(0);
   });
 
-  it("recursively removes child OPDs (I-03 cascade)", () => {
+  // R-NT-3: only leaf OPDs are deletable
+  it("rejects deletion of non-leaf OPD (R-NT-3)", () => {
     let m = createModel("Test");
     m = (addOPD(m, { id: "opd-sd1", name: "SD1", opd_type: "hierarchical", parent_opd: "opd-sd" }) as any).value;
     m = (addOPD(m, { id: "opd-sd1-1", name: "SD1.1", opd_type: "hierarchical", parent_opd: "opd-sd1" }) as any).value;
-    expect(m.opds.size).toBe(3);
+    const r = removeOPD(m, "opd-sd1");
+    expect(isErr(r)).toBe(true);
+    if (isErr(r)) expect(r.error.code).toBe("NON_LEAF_OPD");
+  });
+
+  it("allows deletion of leaf OPD that previously had children removed", () => {
+    let m = createModel("Test");
+    m = (addOPD(m, { id: "opd-sd1", name: "SD1", opd_type: "hierarchical", parent_opd: "opd-sd" }) as any).value;
+    m = (addOPD(m, { id: "opd-sd1-1", name: "SD1.1", opd_type: "hierarchical", parent_opd: "opd-sd1" }) as any).value;
+    // Remove child first (leaf), then parent becomes leaf
+    m = (removeOPD(m, "opd-sd1-1") as any).value;
     const r = removeOPD(m, "opd-sd1");
     expect(isOk(r)).toBe(true);
-    if (isOk(r)) {
-      expect(r.value.opds.size).toBe(1); // only root SD remains
-      expect(r.value.opds.has("opd-sd")).toBe(true);
-    }
+    if (isOk(r)) expect(r.value.opds.size).toBe(1);
   });
 });

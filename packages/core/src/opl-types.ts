@@ -91,6 +91,7 @@ export interface OplGroupedStructuralSentence {
   childKinds: Kind[];
   childMultiplicities?: (string | undefined)[];
   incomplete: boolean;
+  semiFolded?: boolean;
 }
 
 export interface OplInZoomSequence {
@@ -102,6 +103,7 @@ export interface OplInZoomSequence {
     thingNames: string[];
     parallel: boolean;
   }[];
+  internalObjects?: { thingId: string; name: string }[];
 }
 
 export interface OplAttributeValue {
@@ -149,6 +151,13 @@ export interface OplDocument {
   opdName: string;
   sentences: OplSentence[];
   renderSettings: OplRenderSettings;
+  /** R-OPL-3: OPD tree edge label — e.g. "SD is refined by in-zooming Making Coffee in SD1" */
+  refinementEdge?: {
+    parentOpdName: string;
+    refinementType: "in-zoom" | "unfold";
+    refinedThingName: string;
+    childOpdName: string;
+  };
 }
 
 // === OPL Edits ===

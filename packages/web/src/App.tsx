@@ -221,6 +221,21 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
       if (e.key === "Escape") {
         dispatch({ tag: "setMode", mode: "select" });
       }
+      // R-NT-5: Ctrl+Up = parent OPD, Ctrl+Down = first child OPD
+      if ((e.metaKey || e.ctrlKey) && e.key === "ArrowUp") {
+        const currentOpdObj = model.opds.get(ui.currentOpd);
+        if (currentOpdObj?.parent_opd) {
+          e.preventDefault();
+          dispatch({ tag: "selectOpd", opdId: currentOpdObj.parent_opd });
+        }
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === "ArrowDown") {
+        const childOpd = [...model.opds.values()].find(o => o.parent_opd === ui.currentOpd);
+        if (childOpd) {
+          e.preventDefault();
+          dispatch({ tag: "selectOpd", opdId: childOpd.id });
+        }
+      }
       // Only activate mode shortcuts when not typing in an input
       const target = e.target as HTMLElement;
       if (!e.metaKey && !e.ctrlKey && target.tagName !== "INPUT" && target.tagName !== "SELECT") {
@@ -240,7 +255,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
         if (e.key === "l") dispatch({ tag: "setMode", mode: "addLink" });
       }
     },
-    [doUndo, doRedo, save, ui.selectedThing, ui.simulation, dispatch],
+    [doUndo, doRedo, save, ui.selectedThing, ui.currentOpd, ui.simulation, model.opds, dispatch],
   );
 
   useEffect(() => {

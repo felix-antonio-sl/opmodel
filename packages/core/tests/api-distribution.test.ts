@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { createModel } from "../src/model";
-import { addThing, addAppearance, addLink, refineThing } from "../src/api";
+import { addThing, addAppearance, addLink, refineThing, removeThing } from "../src/api";
 import { resolveLinksForOpd } from "../src/simulation";
 import type { Model } from "../src/types";
 
@@ -41,7 +41,11 @@ function buildDistributionModel(): Model {
   m = unwrap(addLink(m, { id: "lnk-agent", type: "agent", source: "obj-tool", target: "proc-main" }));
   m = unwrap(addLink(m, { id: "lnk-effect", type: "effect", source: "obj-affected", target: "proc-main" }));
   // In-zoom: creates child OPD with external appearances for connected objects
+  // (R-OC-1 auto-creates placeholders — remove them so test controls its own subprocesses)
   m = unwrap(refineThing(m, "proc-main", "opd-sd", "in-zoom", "opd-sd1", "SD1"));
+  m = unwrap(removeThing(m, "opd-sd1-sub-1"));
+  m = unwrap(removeThing(m, "opd-sd1-sub-2"));
+  m = unwrap(removeThing(m, "opd-sd1-sub-3"));
   // Add subprocesses in child OPD with Y-ordering: P1(y=50), P2(y=120), P3(y=190)
   m = unwrap(addAppearance(m, { thing: "proc-p1", opd: "opd-sd1", x: 200, y: 50, w: 120, h: 60, internal: true }));
   m = unwrap(addAppearance(m, { thing: "proc-p2", opd: "opd-sd1", x: 200, y: 120, w: 120, h: 60, internal: true }));
@@ -98,7 +102,11 @@ describe("C-01: Link Distribution (derived via resolveLinksForOpd)", () => {
     m = unwrap(addAppearance(m, { thing: "proc-main", opd: "opd-sd", x: 200, y: 100, w: 150, h: 80 }));
     m = unwrap(addAppearance(m, { thing: "obj-x", opd: "opd-sd", x: 50, y: 50, w: 100, h: 50 }));
     m = unwrap(addLink(m, { id: "lnk-c", type: "consumption", source: "obj-x", target: "proc-main" }));
+    // R-OC-1 auto-creates placeholders — remove them to test the "no subprocesses" fallback
     m = unwrap(refineThing(m, "proc-main", "opd-sd", "in-zoom", "opd-sd1", "SD1"));
+    m = unwrap(removeThing(m, "opd-sd1-sub-1"));
+    m = unwrap(removeThing(m, "opd-sd1-sub-2"));
+    m = unwrap(removeThing(m, "opd-sd1-sub-3"));
     // No subprocesses → link shows to container (until subprocesses exist for distribution)
     const resolved = resolveLinksForOpd(m, "opd-sd1");
     const consume = resolved.find(r => r.link.id === "lnk-c");

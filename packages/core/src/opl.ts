@@ -29,10 +29,14 @@ export function expose(model: Model, opdId: string): OplDocument {
     primaryEssence: settings.primary_essence ?? "informatical",
   };
 
-  // 1. Collect visible things
+  // 1. Collect visible things + appearance lookup for this OPD
   const visibleThings = new Set<string>();
+  const opdAppearances = new Map<string, typeof model.appearances extends Map<any, infer V> ? V : never>();
   for (const app of model.appearances.values()) {
-    if (app.opd === opdId) visibleThings.add(app.thing);
+    if (app.opd === opdId) {
+      visibleThings.add(app.thing);
+      opdAppearances.set(app.thing, app);
+    }
   }
 
   // Build exhibition feature lookup: featureId → exhibitorName
@@ -67,6 +71,7 @@ export function expose(model: Model, opdId: string): OplDocument {
     const containerThing = model.things.get(containerThingId);
     if (containerThing) {
       const subprocessApps: Array<{ thingId: string; name: string; y: number }> = [];
+      const internalObjects: Array<{ thingId: string; name: string }> = [];
       for (const app of model.appearances.values()) {
         if (app.opd !== opdId) continue;
         if (app.thing === containerThingId) continue;
@@ -74,20 +79,35 @@ export function expose(model: Model, opdId: string): OplDocument {
         const thing = model.things.get(app.thing);
         if (thing?.kind === "process") {
           subprocessApps.push({ thingId: thing.id, name: thing.name, y: app.y });
+        } else if (thing?.kind === "object") {
+          internalObjects.push({ thingId: thing.id, name: thing.name });
         }
       }
       subprocessApps.sort((a, b) => a.y - b.y || a.thingId.localeCompare(b.thingId));
+      internalObjects.sort((a, b) => a.name.localeCompare(b.name));
 
       if (subprocessApps.length > 0) {
+        // R-OC-7: group subprocesses at same Y as parallel
+        const steps: OplInZoomSequence["steps"] = [];
+        for (const sp of subprocessApps) {
+          const last = steps[steps.length - 1];
+          if (last && last._y === sp.y) {
+            last.thingIds.push(sp.thingId);
+            last.thingNames.push(sp.name);
+            last.parallel = true;
+          } else {
+            steps.push({ thingIds: [sp.thingId], thingNames: [sp.name], parallel: false, _y: sp.y } as any);
+          }
+        }
+        // Strip internal _y helper
+        const cleanSteps = steps.map(({ thingIds, thingNames, parallel }) => ({ thingIds, thingNames, parallel }));
+
         sentences.push({
           kind: "in-zoom-sequence",
           parentId: containerThingId,
           parentName: containerThing.name,
-          steps: subprocessApps.map(sp => ({
-            thingIds: [sp.thingId],
-            thingNames: [sp.name],
-            parallel: false,
-          })),
+          steps: cleanSteps,
+          ...(internalObjects.length > 0 ? { internalObjects } : {}),
         } as OplInZoomSequence);
       }
     }
@@ -240,6 +260,7 @@ export function expose(model: Model, opdId: string): OplDocument {
     const childMultiplicities = group.links.map(l =>
       group.parentIsSource ? l.multiplicity_target : l.multiplicity_source
     );
+    const parentApp = opdAppearances.get(group.parentId);
     sentences.push({
       kind: "grouped-structural",
       linkType: group.linkType,
@@ -251,6 +272,7 @@ export function expose(model: Model, opdId: string): OplDocument {
       childKinds,
       childMultiplicities,
       incomplete: group.links.some(l => l.incomplete),
+      ...(parentApp?.semi_folded ? { semiFolded: true } : {}),
     } as OplGroupedStructuralSentence);
   }
 
@@ -364,7 +386,22 @@ export function expose(model: Model, opdId: string): OplDocument {
     });
   }
 
-  return { opdId, opdName, sentences, renderSettings };
+  // R-OPL-3: OPD tree edge label for refinement OPDs
+  let refinementEdge: OplDocument["refinementEdge"];
+  if (opd?.refines && opd.refinement_type && opd.parent_opd) {
+    const parentOpd = model.opds.get(opd.parent_opd);
+    const refinedThing = model.things.get(opd.refines);
+    if (parentOpd && refinedThing) {
+      refinementEdge = {
+        parentOpdName: parentOpd.name,
+        refinementType: opd.refinement_type,
+        refinedThingName: refinedThing.name,
+        childOpdName: opdName,
+      };
+    }
+  }
+
+  return { opdId, opdName, sentences, renderSettings, ...(refinementEdge ? { refinementEdge } : {}) };
 }
 
 // === render ===
@@ -593,6 +630,10 @@ function renderGroupedStructural(s: OplGroupedStructuralSentence): string {
       const qualifiedNames = s.childNames.map((name, i) =>
         withMultiplicity(name, s.childMultiplicities?.[i])
       );
+      // R-SF-5: semi-folded uses "lists...as parts"; full unfold uses "consists of"
+      if (s.semiFolded) {
+        return `${s.parentName} lists ${formatList(qualifiedNames)} as parts.`;
+      }
       return `${s.parentName} consists of ${formatList(qualifiedNames, s.incomplete, phrase)}.`;
     }
 
@@ -794,20 +835,34 @@ function renderSentence(s: OplSentence, settings: OplRenderSettings): string {
           : step.thingNames
       );
       const list = formatList(allNames);
+      // R-OC-2: append "as well as [objects]" for internal objects
+      const objClause = s.internalObjects && s.internalObjects.length > 0
+        ? `, as well as ${formatList(s.internalObjects.map(o => o.name))}`
+        : "";
+      const allParallel = s.steps.length === 1 && s.steps[0]!.parallel;
       if (s.steps.length === 1 && s.steps[0]!.thingNames.length === 1) {
-        return `${s.parentName} zooms into ${list}.`;
+        return `${s.parentName} zooms into ${list}${objClause}.`;
       }
-      return `${s.parentName} zooms into ${list}, in that sequence.`;
+      if (allParallel) {
+        return `${s.parentName} zooms into ${list}${objClause}.`;
+      }
+      return `${s.parentName} zooms into ${list}${objClause}, in that sequence.`;
     }
   }
 }
 
 export function render(doc: OplDocument): string {
-  if (doc.sentences.length === 0) return "";
-  return doc.sentences
+  const lines: string[] = [];
+  // R-OPL-3: OPD tree edge label
+  if (doc.refinementEdge) {
+    const e = doc.refinementEdge;
+    const verb = e.refinementType === "in-zoom" ? "in-zooming" : "unfolding";
+    lines.push(`${e.parentOpdName} is refined by ${verb} ${e.refinedThingName} in ${e.childOpdName}.`);
+  }
+  lines.push(...doc.sentences
     .map(s => renderSentence(s, doc.renderSettings))
-    .filter(Boolean)
-    .join("\n");
+    .filter(Boolean) as string[]);
+  return lines.join("\n");
 }
 
 // === OPL Slug & ID generation ===

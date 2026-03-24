@@ -3,7 +3,7 @@ import { describe, it, expect } from "vitest";
 import { createModel } from "../src/model";
 import {
   addThing, addState, addLink, addAppearance, addModifier,
-  updateSettings,
+  updateSettings, updateAppearance,
 } from "../src/api";
 import { isOk, isErr } from "../src/result";
 import { expose, render, applyOplEdit, oplSlug, editsFrom } from "../src/opl";
@@ -1017,5 +1017,254 @@ describe("editsFrom — condition_mode propagation (GetPut)", () => {
     if (modEdit && modEdit.kind === "add-modifier") {
       expect(modEdit.modifier.condition_mode).toBe("skip");
     }
+  });
+});
+
+// === R-OC-2: in-zoom sentence includes internal objects ("as well as") ===
+
+describe("render — in-zoom 'as well as' internal objects (R-OC-2)", () => {
+  function buildInZoomWithObjects() {
+    let m = createModel("Test");
+    let r = addThing(m, { id: "proc-main", kind: "process", name: "Rescuing", essence: "informatical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addThing(m, { id: "proc-step-a", kind: "process", name: "Call Transmitting", essence: "informatical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addThing(m, { id: "proc-step-b", kind: "process", name: "Vehicle Locating", essence: "informatical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    // Internal objects
+    r = addThing(m, { id: "obj-call", kind: "object", name: "Call", essence: "informatical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addThing(m, { id: "obj-location", kind: "object", name: "Vehicle Location", essence: "informatical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    // SD appearance for container
+    r = addAppearance(m, { thing: "proc-main", opd: "opd-sd", x: 100, y: 100, w: 120, h: 60 });
+    if (!isOk(r)) throw r.error; m = r.value;
+    // In-zoom OPD
+    const opd1 = { id: "opd-sd1", name: "SD1", opd_type: "hierarchical" as const, parent_opd: "opd-sd", refines: "proc-main", refinement_type: "in-zoom" as const };
+    m = { ...m, opds: new Map(m.opds).set("opd-sd1", opd1) };
+    // Container
+    r = addAppearance(m, { thing: "proc-main", opd: "opd-sd1", x: 50, y: 50, w: 300, h: 400 });
+    if (!isOk(r)) throw r.error; m = r.value;
+    // Internal subprocesses
+    r = addAppearance(m, { thing: "proc-step-a", opd: "opd-sd1", x: 100, y: 100, w: 120, h: 50, internal: true });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addAppearance(m, { thing: "proc-step-b", opd: "opd-sd1", x: 100, y: 200, w: 120, h: 50, internal: true });
+    if (!isOk(r)) throw r.error; m = r.value;
+    // Internal objects
+    r = addAppearance(m, { thing: "obj-call", opd: "opd-sd1", x: 250, y: 120, w: 80, h: 40, internal: true });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addAppearance(m, { thing: "obj-location", opd: "opd-sd1", x: 250, y: 220, w: 80, h: 40, internal: true });
+    if (!isOk(r)) throw r.error; m = r.value;
+    return m;
+  }
+
+  it("includes internal objects with 'as well as'", () => {
+    const m = buildInZoomWithObjects();
+    const doc = expose(m, "opd-sd1");
+    const text = render(doc);
+    expect(text).toContain("as well as Call and Vehicle Location");
+  });
+
+  it("in-zoom sentence AST has internalObjects field", () => {
+    const m = buildInZoomWithObjects();
+    const doc = expose(m, "opd-sd1");
+    const seq = doc.sentences.find(s => s.kind === "in-zoom-sequence") as any;
+    expect(seq).toBeDefined();
+    expect(seq.internalObjects).toHaveLength(2);
+  });
+
+  it("omits 'as well as' when no internal objects", () => {
+    // Use the classic buildInZoomModel pattern — only subprocesses, no objects
+    let m = createModel("Test");
+    let r = addThing(m, { id: "proc-main", kind: "process", name: "Main Processing", essence: "informatical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addThing(m, { id: "proc-step-a", kind: "process", name: "Step A", essence: "informatical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addAppearance(m, { thing: "proc-main", opd: "opd-sd", x: 0, y: 0, w: 100, h: 50 });
+    if (!isOk(r)) throw r.error; m = r.value;
+    const opd1 = { id: "opd-sd1", name: "SD1", opd_type: "hierarchical" as const, parent_opd: "opd-sd", refines: "proc-main", refinement_type: "in-zoom" as const };
+    m = { ...m, opds: new Map(m.opds).set("opd-sd1", opd1) };
+    r = addAppearance(m, { thing: "proc-main", opd: "opd-sd1", x: 0, y: 0, w: 300, h: 300 });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addAppearance(m, { thing: "proc-step-a", opd: "opd-sd1", x: 50, y: 50, w: 100, h: 50, internal: true });
+    if (!isOk(r)) throw r.error; m = r.value;
+    const text = render(expose(m, "opd-sd1"));
+    expect(text).not.toContain("as well as");
+  });
+});
+
+// === R-OC-7: parallel subprocesses at same Y ===
+
+describe("render — in-zoom parallel subprocesses (R-OC-7)", () => {
+  function buildParallelModel() {
+    let m = createModel("Test");
+    let r = addThing(m, { id: "proc-main", kind: "process", name: "Rescuing", essence: "informatical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addThing(m, { id: "proc-a", kind: "process", name: "Call Transmitting", essence: "informatical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addThing(m, { id: "proc-b", kind: "process", name: "Vehicle Location Calculating", essence: "informatical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addThing(m, { id: "proc-c", kind: "process", name: "Dispatching", essence: "informatical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addAppearance(m, { thing: "proc-main", opd: "opd-sd", x: 100, y: 100, w: 120, h: 60 });
+    if (!isOk(r)) throw r.error; m = r.value;
+    const opd1 = { id: "opd-sd1", name: "SD1", opd_type: "hierarchical" as const, parent_opd: "opd-sd", refines: "proc-main", refinement_type: "in-zoom" as const };
+    m = { ...m, opds: new Map(m.opds).set("opd-sd1", opd1) };
+    r = addAppearance(m, { thing: "proc-main", opd: "opd-sd1", x: 50, y: 50, w: 400, h: 400 });
+    if (!isOk(r)) throw r.error; m = r.value;
+    // proc-a and proc-b at SAME Y (parallel), proc-c below
+    r = addAppearance(m, { thing: "proc-a", opd: "opd-sd1", x: 80, y: 100, w: 120, h: 50, internal: true });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addAppearance(m, { thing: "proc-b", opd: "opd-sd1", x: 250, y: 100, w: 120, h: 50, internal: true });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addAppearance(m, { thing: "proc-c", opd: "opd-sd1", x: 150, y: 250, w: 120, h: 50, internal: true });
+    if (!isOk(r)) throw r.error; m = r.value;
+    return m;
+  }
+
+  it("renders parallel subprocesses with 'parallel' keyword", () => {
+    const m = buildParallelModel();
+    const text = render(expose(m, "opd-sd1"));
+    expect(text).toContain("parallel Call Transmitting and Vehicle Location Calculating");
+    expect(text).toContain("Dispatching");
+  });
+
+  it("groups same-Y processes in AST steps", () => {
+    const m = buildParallelModel();
+    const doc = expose(m, "opd-sd1");
+    const seq = doc.sentences.find(s => s.kind === "in-zoom-sequence") as any;
+    expect(seq).toBeDefined();
+    // 2 steps: one parallel group, one sequential
+    expect(seq.steps).toHaveLength(2);
+    expect(seq.steps[0].parallel).toBe(true);
+    expect(seq.steps[0].thingNames).toHaveLength(2);
+    expect(seq.steps[1].parallel).toBe(false);
+    expect(seq.steps[1].thingNames).toEqual(["Dispatching"]);
+  });
+
+  it("all same-Y means all parallel, no 'in that sequence'", () => {
+    let m = createModel("Test");
+    let r = addThing(m, { id: "proc-main", kind: "process", name: "Processing", essence: "informatical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addThing(m, { id: "proc-a", kind: "process", name: "A", essence: "informatical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addThing(m, { id: "proc-b", kind: "process", name: "B", essence: "informatical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addAppearance(m, { thing: "proc-main", opd: "opd-sd", x: 0, y: 0, w: 100, h: 50 });
+    if (!isOk(r)) throw r.error; m = r.value;
+    const opd1 = { id: "opd-sd1", name: "SD1", opd_type: "hierarchical" as const, parent_opd: "opd-sd", refines: "proc-main", refinement_type: "in-zoom" as const };
+    m = { ...m, opds: new Map(m.opds).set("opd-sd1", opd1) };
+    r = addAppearance(m, { thing: "proc-main", opd: "opd-sd1", x: 0, y: 0, w: 300, h: 300 });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addAppearance(m, { thing: "proc-a", opd: "opd-sd1", x: 50, y: 100, w: 100, h: 50, internal: true });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addAppearance(m, { thing: "proc-b", opd: "opd-sd1", x: 200, y: 100, w: 100, h: 50, internal: true });
+    if (!isOk(r)) throw r.error; m = r.value;
+    const text = render(expose(m, "opd-sd1"));
+    expect(text).toContain("Processing zooms into parallel A and B.");
+    expect(text).not.toContain("in that sequence");
+  });
+});
+
+// === R-SF-5: semi-fold OPL "lists...as parts" vs "consists of" ===
+
+describe("render — semi-fold OPL (R-SF-5)", () => {
+  function buildSemiFoldModel() {
+    let m = createModel("Test");
+    let r = addThing(m, { id: "obj-car", kind: "object", name: "Car", essence: "physical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addThing(m, { id: "obj-engine", kind: "object", name: "Engine", essence: "physical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addThing(m, { id: "obj-wheels", kind: "object", name: "Wheels", essence: "physical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addThing(m, { id: "obj-body", kind: "object", name: "Body", essence: "physical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    // Appearances in SD
+    r = addAppearance(m, { thing: "obj-car", opd: "opd-sd", x: 100, y: 100, w: 120, h: 60 });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addAppearance(m, { thing: "obj-engine", opd: "opd-sd", x: 100, y: 200, w: 80, h: 40 });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addAppearance(m, { thing: "obj-wheels", opd: "opd-sd", x: 200, y: 200, w: 80, h: 40 });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addAppearance(m, { thing: "obj-body", opd: "opd-sd", x: 300, y: 200, w: 80, h: 40 });
+    if (!isOk(r)) throw r.error; m = r.value;
+    // Aggregation links
+    r = addLink(m, { id: "lnk-agg-1", type: "aggregation", source: "obj-car", target: "obj-engine" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addLink(m, { id: "lnk-agg-2", type: "aggregation", source: "obj-car", target: "obj-wheels" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addLink(m, { id: "lnk-agg-3", type: "aggregation", source: "obj-car", target: "obj-body" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    return m;
+  }
+
+  it("uses 'consists of' when NOT semi-folded", () => {
+    const m = buildSemiFoldModel();
+    const text = render(expose(m, "opd-sd"));
+    expect(text).toContain("Car consists of");
+    expect(text).not.toContain("lists");
+  });
+
+  it("uses 'lists...as parts' when semi-folded", () => {
+    let m = buildSemiFoldModel();
+    // Set Car appearance as semi-folded
+    const r = updateAppearance(m, "obj-car", "opd-sd", { semi_folded: true });
+    if (!isOk(r)) throw r.error; m = r.value;
+    const text = render(expose(m, "opd-sd"));
+    expect(text).toContain("Car lists Engine, Wheels, and Body as parts.");
+    expect(text).not.toContain("consists of");
+  });
+
+  it("semi-fold sentence AST has semiFolded flag", () => {
+    let m = buildSemiFoldModel();
+    const r = updateAppearance(m, "obj-car", "opd-sd", { semi_folded: true });
+    if (!isOk(r)) throw r.error; m = r.value;
+    const doc = expose(m, "opd-sd");
+    const grouped = doc.sentences.find(s => s.kind === "grouped-structural" && (s as any).linkType === "aggregation") as any;
+    expect(grouped).toBeDefined();
+    expect(grouped.semiFolded).toBe(true);
+  });
+});
+
+// === R-OPL-3: OPD tree edge labels ===
+
+describe("render — OPD tree edge labels (R-OPL-3)", () => {
+  it("renders in-zoom edge label", () => {
+    let m = createModel("Test");
+    let r = addThing(m, { id: "proc-main", kind: "process", name: "Main Processing", essence: "informatical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addAppearance(m, { thing: "proc-main", opd: "opd-sd", x: 100, y: 100, w: 120, h: 60 });
+    if (!isOk(r)) throw r.error; m = r.value;
+    const opd1 = { id: "opd-sd1", name: "SD1", opd_type: "hierarchical" as const, parent_opd: "opd-sd", refines: "proc-main", refinement_type: "in-zoom" as const };
+    m = { ...m, opds: new Map(m.opds).set("opd-sd1", opd1) };
+    r = addAppearance(m, { thing: "proc-main", opd: "opd-sd1", x: 50, y: 50, w: 300, h: 300 });
+    if (!isOk(r)) throw r.error; m = r.value;
+    const doc = expose(m, "opd-sd1");
+    expect(doc.refinementEdge).toBeDefined();
+    expect(doc.refinementEdge!.parentOpdName).toBe("SD");
+    expect(doc.refinementEdge!.refinementType).toBe("in-zoom");
+    expect(doc.refinementEdge!.refinedThingName).toBe("Main Processing");
+    const text = render(doc);
+    expect(text).toContain("SD is refined by in-zooming Main Processing in SD1.");
+  });
+
+  it("renders unfold edge label", () => {
+    let m = createModel("Test");
+    let r = addThing(m, { id: "obj-car", kind: "object", name: "Car", essence: "physical", affiliation: "systemic" });
+    if (!isOk(r)) throw r.error; m = r.value;
+    r = addAppearance(m, { thing: "obj-car", opd: "opd-sd", x: 100, y: 100, w: 120, h: 60 });
+    if (!isOk(r)) throw r.error; m = r.value;
+    const opd1 = { id: "opd-sd1", name: "SD1", opd_type: "hierarchical" as const, parent_opd: "opd-sd", refines: "obj-car", refinement_type: "unfold" as const };
+    m = { ...m, opds: new Map(m.opds).set("opd-sd1", opd1) };
+    r = addAppearance(m, { thing: "obj-car", opd: "opd-sd1", x: 50, y: 50, w: 300, h: 300 });
+    if (!isOk(r)) throw r.error; m = r.value;
+    const text = render(expose(m, "opd-sd1"));
+    expect(text).toContain("SD is refined by unfolding Car in SD1.");
+  });
+
+  it("root OPD has no edge label", () => {
+    const m = createModel("Test");
+    const doc = expose(m, "opd-sd");
+    expect(doc.refinementEdge).toBeUndefined();
   });
 });

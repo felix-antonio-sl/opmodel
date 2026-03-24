@@ -444,6 +444,11 @@ export function removeOPD(
   if (!model.opds.has(opdId)) {
     return err({ code: "NOT_FOUND", message: `OPD not found: ${opdId}`, entity: opdId });
   }
+  // R-NT-3: only leaf OPDs are deletable — inner nodes protected for tree integrity
+  const hasChildren = [...model.opds.values()].some(o => o.parent_opd === opdId);
+  if (hasChildren) {
+    return err({ code: "NON_LEAF_OPD", message: `Cannot delete OPD ${opdId} — it has child OPDs. Delete children first.`, entity: opdId });
+  }
   // Collect this OPD and all descendant OPDs recursively
   const opdsToRemove = new Set<string>();
   const collectDescendants = (parentId: string) => {
@@ -572,7 +577,29 @@ export function refineThing(
   // C-04: State suppression is now computed by resolveOpdFiber() (DA-9).
   // No longer stored in Appearance.suppressed_states.
 
-  return ok(touch({ ...model, opds, appearances }));
+  // R-OC-1: auto-create placeholder subprocesses for process in-zoom
+  const things = new Map(model.things);
+  if (refinementType === "in-zoom" && thing.kind === "process") {
+    const containerW = 200;
+    const containerX = 200;
+    const subW = 120, subH = 50;
+    const startY = 80;
+    const spacingY = 70;
+    for (let i = 1; i <= 3; i++) {
+      const subId = `${childOpdId}-sub-${i}`;
+      things.set(subId, {
+        id: subId, kind: "process" as const, name: `${thing.name} ${i}`,
+        essence: thing.essence, affiliation: thing.affiliation,
+      });
+      appearances.set(appearanceKey(subId, childOpdId), {
+        thing: subId, opd: childOpdId,
+        x: containerX + (containerW - subW) / 2, y: startY + (i - 1) * spacingY,
+        w: subW, h: subH, internal: true,
+      });
+    }
+  }
+
+  return ok(touch({ ...model, things, opds, appearances }));
 }
 
 // ── Appearances ────────────────────────────────────────────────────────

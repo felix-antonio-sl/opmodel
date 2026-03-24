@@ -349,6 +349,7 @@ function ThingNode({
   isRefined,
   isImplicit,
   isError,
+  hasSuppressedStates,
   dragDelta,
   simFilter,
   simStatePillOverride,
@@ -369,6 +370,7 @@ function ThingNode({
   isRefined: boolean;
   isImplicit?: boolean;
   isError?: boolean;
+  hasSuppressedStates?: boolean;
   dragDelta: Point;
   simFilter?: string;
   simStatePillOverride?: string;
@@ -534,8 +536,25 @@ function ThingNode({
                   height={pillH}
                   fill={isCurrent ? "var(--state-current-bg)" : "var(--state-bg)"}
                   stroke={isCurrent ? "var(--accent)" : "var(--state-border)"}
-                  strokeWidth={1}
+                  strokeWidth={state.initial ? 2.5 : 1}
                 />
+                {/* R-TC-8: final state — double border */}
+                {state.final && (
+                  <rect
+                    x={px + 2} y={py + 2} width={pillW - 4} height={pillH - 4}
+                    fill="none" stroke={isCurrent ? "var(--accent)" : "var(--state-border)"}
+                    strokeWidth={1} rx={2}
+                  />
+                )}
+                {/* R-TC-8: default state — diagonal arrow marker */}
+                {state.default && (
+                  <line
+                    x1={px + 2} y1={py + pillH - 2}
+                    x2={px + 7} y2={py + pillH - 7}
+                    stroke="var(--text-muted)" strokeWidth={1.5}
+                    markerEnd="none"
+                  />
+                )}
                 <text
                   className={`state-label${isCurrent ? " state-label--current" : ""}`}
                   x={px + pillW / 2}
@@ -547,6 +566,14 @@ function ThingNode({
             );
           })}
         </g>
+      )}
+
+      {/* R-SS-8: suppressed states indicator "..." */}
+      {hasSuppressedStates && thing.kind === "object" && (
+        <text
+          x={x + w - 8} y={y + totalH - 4}
+          fontSize={10} fill="var(--text-muted)" textAnchor="end"
+          fontWeight="bold" title="Hidden states">...</text>
       )}
     </g>
   );
@@ -1754,6 +1781,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
                   isContainer={isAppContainer}
                   isRefined={[...model.opds.values()].some(o => o.refines === thingId)}
                   isError={errorEntities?.has(thingId)}
+                  hasSuppressedStates={allStates.length > states.length}
                   dragDelta={isDragging ? dragDelta : { x: 0, y: 0 }}
                   simFilter={simFilter}
                   simStatePillOverride={simModelState && thing.kind === "object" ? simModelState.objects.get(thingId)?.currentState : undefined}
