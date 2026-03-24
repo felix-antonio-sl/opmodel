@@ -264,6 +264,11 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
+  // Dynamic page title
+  useEffect(() => {
+    document.title = `${model.meta.name} — OPModeling`;
+  }, [model.meta.name]);
+
   const errors = validate(model);
   const isValid = errors.length === 0;
   const errorEntities = useMemo(() => {
