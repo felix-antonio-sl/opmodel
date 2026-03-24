@@ -5,6 +5,7 @@ interface Props {
   model: Model;
   opdId: string;
   selectedThing: string | null;
+  onSelectThing?: (thingId: string | null) => void;
 }
 
 function getEntityIds(sentence: OplSentence): string[] {
@@ -76,7 +77,7 @@ function sentenceClass(sentence: OplSentence, selectedThing: string | null): str
   return base;
 }
 
-export function OplSentencesView({ model, opdId, selectedThing }: Props) {
+export function OplSentencesView({ model, opdId, selectedThing, onSelectThing }: Props) {
   const doc = expose(model, opdId);
 
   const thingSentences = doc.sentences.filter(
@@ -115,17 +116,31 @@ export function OplSentencesView({ model, opdId, selectedThing }: Props) {
           {edgeLabel}
         </div>
       )}
-      {thingSentences.map((sentence, i) => (
-        <div key={`t-${i}`} className={sentenceClass(sentence, selectedThing)}>
-          {renderSentence(sentence, doc)}
-        </div>
-      ))}
+      {thingSentences.map((sentence, i) => {
+        const ids = getEntityIds(sentence);
+        const primaryId = ids[0];
+        return (
+          <div key={`t-${i}`} className={sentenceClass(sentence, selectedThing)}
+            onClick={onSelectThing ? () => onSelectThing(primaryId) : undefined}
+            style={onSelectThing ? { cursor: "pointer" } : undefined}
+          >
+            {renderSentence(sentence, doc)}
+          </div>
+        );
+      })}
       {thingSentences.length > 0 && linkSentences.length > 0 && <div className="opl-divider" />}
-      {linkSentences.map((sentence, i) => (
-        <div key={`l-${i}`} className={sentenceClass(sentence, selectedThing)}>
-          {renderSentence(sentence, doc)}
-        </div>
-      ))}
+      {linkSentences.map((sentence, i) => {
+        const ids = getEntityIds(sentence);
+        const primaryId = ids[0];
+        return (
+          <div key={`l-${i}`} className={sentenceClass(sentence, selectedThing)}
+            onClick={onSelectThing ? () => onSelectThing(primaryId) : undefined}
+            style={onSelectThing ? { cursor: "pointer" } : undefined}
+          >
+            {renderSentence(sentence, doc)}
+          </div>
+        );
+      })}
       {metaSentences.length > 0 && <div className="opl-divider" />}
       {metaSentences.map((sentence, i) => (
         <div key={`m-${i}`} className="opl-sentence opl-sentence--meta" style={{ fontSize: "0.85em", opacity: 0.8 }}>

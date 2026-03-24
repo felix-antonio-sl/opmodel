@@ -46,7 +46,8 @@ export function OplPanel({ model, opdId, selectedThing, dispatch, nlPipeline, la
         ))}
       </div>
       {activeTab === "sentences" && (
-        <OplSentencesView model={model} opdId={opdId} selectedThing={selectedThing} />
+        <OplSentencesView model={model} opdId={opdId} selectedThing={selectedThing}
+          onSelectThing={(id) => id && dispatch({ tag: "selectThing", thingId: id })} />
       )}
       {activeTab === "text" && (
         <OplTextView model={model} opdId={opdId} />
