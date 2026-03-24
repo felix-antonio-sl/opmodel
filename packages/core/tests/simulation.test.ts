@@ -996,3 +996,61 @@ describe("duration and exception handling", () => {
     expect(step2.exceptionTriggered).toBe("overtime");
   });
 });
+
+describe("condition negation", () => {
+  it("negated condition: fires when object does NOT exist", () => {
+    let m = createModel("NegTest");
+    const obj: Thing = { id: "obj-1", kind: "object", name: "Sensor", essence: "physical", affiliation: "systemic" };
+    const proc: Thing = { id: "proc-1", kind: "process", name: "Alert", essence: "informatical", affiliation: "systemic" };
+    let r = addThing(m, obj); m = isOk(r) ? r.value : m;
+    r = addThing(m, proc); m = isOk(r) ? r.value : m;
+    r = addAppearance(m, { thing: "obj-1", opd: "opd-sd", x: 0, y: 0, w: 120, h: 60 }); m = isOk(r) ? r.value : m;
+    r = addAppearance(m, { thing: "proc-1", opd: "opd-sd", x: 200, y: 0, w: 120, h: 60 }); m = isOk(r) ? r.value : m;
+    // Agent link: Sensor → Alert
+    const link: Link = { id: "lnk-1", type: "agent", source: "obj-1", target: "proc-1" };
+    r = addLink(m, link); m = isOk(r) ? r.value : m;
+    // Negated condition modifier on agent link
+    const mod: Modifier = { id: "mod-1", over: "lnk-1", type: "condition", negated: true };
+    r = addModifier(m, mod); m = isOk(r) ? r.value : m;
+
+    // Object exists → negated condition should NOT be satisfied
+    const state1 = createInitialState(m);
+    const precond1 = evaluatePrecondition(m, state1, "proc-1");
+    expect(precond1.satisfied).toBe(false);
+
+    // Object doesn't exist → negated condition should BE satisfied
+    const state2 = { ...state1, objects: new Map(state1.objects) };
+    state2.objects.set("obj-1", { exists: false });
+    const precond2 = evaluatePrecondition(m, state2, "proc-1");
+    expect(precond2.satisfied).toBe(true);
+  });
+});
+
+describe("assertion verification", () => {
+  it("verifies 'after Process, Object is state' pattern", () => {
+    let m = createModel("AssertTest");
+    const obj: Thing = { id: "obj-1", kind: "object", name: "Coffee", essence: "physical", affiliation: "systemic" };
+    const proc: Thing = { id: "proc-1", kind: "process", name: "Brewing", essence: "informatical", affiliation: "systemic" };
+    let r = addThing(m, obj); m = isOk(r) ? r.value : m;
+    r = addThing(m, proc); m = isOk(r) ? r.value : m;
+    r = addAppearance(m, { thing: "obj-1", opd: "opd-sd", x: 0, y: 0, w: 120, h: 60 }); m = isOk(r) ? r.value : m;
+    r = addAppearance(m, { thing: "proc-1", opd: "opd-sd", x: 200, y: 0, w: 120, h: 60 }); m = isOk(r) ? r.value : m;
+
+    const s1: State = { id: "s-unmade", parent: "obj-1", name: "unmade", initial: true, final: false, default: true };
+    const s2: State = { id: "s-ready", parent: "obj-1", name: "ready", initial: false, final: true, default: false };
+    r = addState(m, s1); m = isOk(r) ? r.value : m;
+    r = addState(m, s2); m = isOk(r) ? r.value : m;
+
+    const link: Link = { id: "lnk-1", type: "effect", source: "proc-1", target: "obj-1", target_state: "s-ready" };
+    r = addLink(m, link); m = isOk(r) ? r.value : m;
+
+    // Add assertion
+    const assert1 = { id: "a-1", target: "obj-1", predicate: "after Brewing, Coffee is ready", category: "correctness" as const, enabled: true };
+    m = { ...m, assertions: new Map(m.assertions).set("a-1", assert1) };
+
+    const trace = runSimulation(m);
+    expect(trace.assertionResults).toBeDefined();
+    expect(trace.assertionResults!.length).toBe(1);
+    expect(trace.assertionResults![0]!.passed).toBe(true);
+  });
+});

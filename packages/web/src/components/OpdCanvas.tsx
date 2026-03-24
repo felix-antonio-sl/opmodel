@@ -756,6 +756,13 @@ function LinkLine({
           {link.rate.value}{link.rate.unit}
         </text>
       )}
+      {link.probability != null && (
+        <text fontSize={9} fill="#ed8936" fontWeight="bold"
+          x={mid.x} y={mid.y + (link.rate ? 14 : 5)}
+          textAnchor="middle">
+          {Math.round(link.probability * 100)}%
+        </text>
+      )}
       {link.multiplicity_source && (
         <text fontSize={9} fill="#666" fontWeight="bold"
           x={p1.x + (p2.x - p1.x) * 0.12} y={p1.y + (p2.y - p1.y) * 0.12 - 6}

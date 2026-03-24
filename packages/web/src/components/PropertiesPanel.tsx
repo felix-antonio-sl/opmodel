@@ -446,6 +446,40 @@ function FanSection({
                 ×
               </button>
             </div>
+            {f.type === "xor" && (
+              <div style={{ marginTop: 4 }}>
+                {f.members.map(mid => {
+                  const link = model.links.get(mid);
+                  if (!link) return null;
+                  const otherId = link.source === thingId ? link.target : link.source;
+                  const otherName = model.things.get(otherId)?.name ?? otherId;
+                  return (
+                    <div key={mid} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, marginBottom: 2 }}>
+                      <span style={{ flex: 1, color: "var(--text-muted)" }}>{otherName}</span>
+                      <input
+                        type="number"
+                        min={0} max={1} step={0.05}
+                        value={link.probability ?? ""}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value);
+                          dispatch({ tag: "updateLink", linkId: mid, patch: { probability: isNaN(val) ? undefined : val } });
+                        }}
+                        placeholder="P"
+                        style={{ width: 50, fontSize: 10, padding: "1px 3px" }}
+                      />
+                    </div>
+                  );
+                })}
+                {(() => {
+                  const probs = f.members.map(mid => model.links.get(mid)?.probability).filter((p): p is number => p != null);
+                  if (probs.length === f.members.length) {
+                    const sum = probs.reduce((a, b) => a + b, 0);
+                    return <div style={{ fontSize: 9, color: Math.abs(sum - 1) < 0.01 ? "#48bb78" : "#f56565" }}>Σ = {sum.toFixed(2)}</div>;
+                  }
+                  return null;
+                })()}
+              </div>
+            )}
           </div>
         );
       })}

@@ -1035,6 +1035,8 @@ export function runSimulation(
   // (re-activation via invocation link — ISO §9.5.2.5.1)
   const completedProcesses = new Set<string>();
   const selfInvocationCount = new Map<string, number>();
+  const waitingSince = new Map<string, number>(); // processId → step when started waiting
+  const MAX_WAIT_STEPS = 20; // Max steps a process can wait before being timed out
   const pendingInvocations = new Map<string, string>(); // targetId → sourceId (who invoked it)
 
   /** Phase 3: process invocation links from a just-completed process.
@@ -1096,8 +1098,21 @@ export function runSimulation(
 
     // Phase 1: Re-evaluar procesos en espera primero (against currentState, not snapshot)
     for (const waitingId of [...currentState.waitingProcesses]) {
+      // Track waiting duration — timeout if exceeded
+      if (!waitingSince.has(waitingId)) waitingSince.set(waitingId, i);
+      if (i - (waitingSince.get(waitingId) ?? 0) > MAX_WAIT_STEPS) {
+        // Timeout: remove from waiting, mark as completed (timed out)
+        currentState = {
+          ...currentState,
+          waitingProcesses: new Set([...currentState.waitingProcesses].filter(id => id !== waitingId)),
+        };
+        completedProcesses.add(waitingId);
+        waitingSince.delete(waitingId);
+        continue;
+      }
       const precond = evaluatePrecondition(model, currentState, waitingId);
       if (precond.satisfied) {
+        waitingSince.delete(waitingId);
         const unblocked: ModelState = {
           ...currentState,
           objects: new Map(currentState.objects),
@@ -1275,6 +1290,45 @@ function verifyAssertions(model: Model, finalState: ModelState, steps: Simulatio
         } else {
           result.reason = `${obj.name} does not exist`;
         }
+      }
+      results.push(result);
+      continue;
+    }
+
+    // Pattern: "<Object> exists" or "<Object> does not exist"
+    const existsMatch = pred.match(/^(.+?)\s+(exists|does not exist)$/);
+    if (existsMatch) {
+      const [, objName, verb] = existsMatch;
+      const obj = [...model.things.values()].find(t => t.name.toLowerCase() === objName?.trim());
+      if (obj) {
+        const objState = finalState.objects?.get(obj.id);
+        const exists = objState?.exists ?? false;
+        const shouldExist = verb === "exists";
+        result.passed = exists === shouldExist;
+        if (!result.passed) result.reason = `${obj.name} ${exists ? "exists" : "does not exist"}`;
+      } else {
+        result.reason = `Object "${objName}" not found`;
+      }
+      results.push(result);
+      continue;
+    }
+
+    // Pattern: "<Object> is <state>"
+    const isMatch = pred.match(/^(.+?)\s+is\s+(.+)$/);
+    if (isMatch) {
+      const [, objName, stateName] = isMatch;
+      const obj = [...model.things.values()].find(t => t.name.toLowerCase() === objName?.trim());
+      if (obj) {
+        const objState = finalState.objects?.get(obj.id);
+        const targetState = [...model.states.values()].find(s => s.parent === obj.id && s.name.toLowerCase() === stateName?.trim());
+        if (targetState && objState?.currentState === targetState.id) {
+          result.passed = true;
+        } else {
+          const currentName = objState?.currentState ? model.states.get(objState.currentState)?.name : "unknown";
+          result.reason = `${obj.name} is ${currentName}, expected ${stateName}`;
+        }
+      } else {
+        result.reason = `Object "${objName}" not found`;
       }
       results.push(result);
       continue;
