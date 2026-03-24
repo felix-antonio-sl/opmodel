@@ -986,14 +986,31 @@ export function PropertiesPanel({ model, thingId, opdId, dispatch }: Props) {
           <div className="props-panel__section">
             <label className="props-panel__label">Requirements ({reqs.length})</label>
             {reqs.map(r => (
-              <div key={r.id} className="props-panel__req-row">
-                <input
-                  className="props-panel__input props-panel__input--sm"
-                  value={r.name}
-                  onChange={(e) => dispatch({ tag: "updateRequirement", requirementId: r.id, patch: { name: e.target.value } })}
-                  placeholder="Requirement name"
+              <div key={r.id} style={{ marginBottom: 6 }}>
+                <div className="props-panel__req-row">
+                  <input
+                    className="props-panel__input props-panel__input--sm"
+                    value={r.req_id ?? ""}
+                    onChange={(e) => dispatch({ tag: "updateRequirement", requirementId: r.id, patch: { req_id: e.target.value || undefined } })}
+                    placeholder="ID (e.g. R-01)"
+                    style={{ maxWidth: 60 }}
+                  />
+                  <input
+                    className="props-panel__input props-panel__input--sm"
+                    value={r.name}
+                    onChange={(e) => dispatch({ tag: "updateRequirement", requirementId: r.id, patch: { name: e.target.value } })}
+                    placeholder="Name"
+                  />
+                  <button className="props-panel__remove-btn" onClick={() => dispatch({ tag: "removeRequirement", requirementId: r.id })}>✕</button>
+                </div>
+                <textarea
+                  className="props-panel__textarea"
+                  value={r.description ?? ""}
+                  onChange={(e) => dispatch({ tag: "updateRequirement", requirementId: r.id, patch: { description: e.target.value || undefined } })}
+                  placeholder="Description..."
+                  rows={1}
+                  style={{ fontSize: 10, marginTop: 2 }}
                 />
-                <button className="props-panel__remove-btn" onClick={() => dispatch({ tag: "removeRequirement", requirementId: r.id })}>✕</button>
               </div>
             ))}
             <button
