@@ -101,7 +101,14 @@ export function useModelStore(initialModel: Model): ModelStore {
     const effect = interpret(cmd);
 
     if (effect.type === "uiTransition") {
-      setUi((prev) => ({ ...prev, [effect.field]: effect.value }));
+      setUi((prev) => {
+        const next = { ...prev, [effect.field]: effect.value };
+        // Clear selectedThing when navigating to a different OPD (thing may not exist there)
+        if (effect.field === "currentOpd" && prev.selectedThing) {
+          next.selectedThing = null;
+        }
+        return next;
+      });
       setLastError(null);
       return true;
     }
