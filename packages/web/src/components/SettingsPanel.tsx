@@ -1,4 +1,4 @@
-import type { Model, Settings, Essence, OplEssenceVisibility, OplUnitsVisibility, OpdNameFormat } from "@opmodel/core";
+import type { Model, Settings, Meta, Essence, OplEssenceVisibility, OplUnitsVisibility, OpdNameFormat, SystemType } from "@opmodel/core";
 import type { Command } from "../lib/commands";
 
 interface Props {
@@ -23,6 +23,10 @@ export function SettingsPanel({ model, dispatch, onClose }: Props) {
     dispatch({ tag: "updateSettings", patch });
   };
 
+  const updateM = (patch: Partial<Omit<Meta, "created" | "modified">>) => {
+    dispatch({ tag: "updateMeta", patch });
+  };
+
   return (
     <div className="settings-overlay" onClick={onClose}>
       <div className="settings-panel" onClick={(e) => e.stopPropagation()}>
@@ -30,6 +34,38 @@ export function SettingsPanel({ model, dispatch, onClose }: Props) {
           <span className="settings-panel__title">Model Settings</span>
           <button className="settings-panel__close" onClick={onClose}>✕</button>
         </div>
+
+        <div className="settings-panel__section-title">Model</div>
+
+        <SettingRow label="Name">
+          <input
+            type="text"
+            value={model.meta.name}
+            onChange={(e) => updateM({ name: e.target.value })}
+          />
+        </SettingRow>
+
+        <SettingRow label="Description">
+          <input
+            type="text"
+            value={model.meta.description ?? ""}
+            onChange={(e) => updateM({ description: e.target.value || undefined })}
+            placeholder="Model description..."
+          />
+        </SettingRow>
+
+        <SettingRow label="System type">
+          <select
+            value={model.meta.system_type ?? ""}
+            onChange={(e) => updateM({ system_type: (e.target.value || undefined) as SystemType | undefined })}
+          >
+            <option value="">Not specified</option>
+            <option value="artificial">Artificial</option>
+            <option value="natural">Natural</option>
+            <option value="social">Social</option>
+            <option value="socio-technical">Socio-technical</option>
+          </select>
+        </SettingRow>
 
         <div className="settings-panel__section-title">OPL</div>
 

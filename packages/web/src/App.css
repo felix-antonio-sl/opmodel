@@ -2496,7 +2496,8 @@ body,
 }
 
 .settings-panel__control select,
-.settings-panel__control input[type="number"] {
+.settings-panel__control input[type="number"],
+.settings-panel__control input[type="text"] {
   font-size: 11px;
   padding: 3px 6px;
   background: var(--bg-secondary, #2a2a2a);
