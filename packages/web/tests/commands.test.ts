@@ -526,4 +526,27 @@ describe("interpret — simulationEffect commands", () => {
     if (!isOk(result)) return;
     expect(result.value.settings.opl_essence_visibility).toBe("none");
   });
+
+  /* ─── Meta Commands ─── */
+
+  it("updateMeta → modelMutation that patches model name", () => {
+    const effect = interpret({ tag: "updateMeta", patch: { name: "New Name" } });
+    expect(effect.type).toBe("modelMutation");
+    if (effect.type !== "modelMutation") return;
+    const m = modelWithThings();
+    const result = effect.apply(m);
+    expect(isOk(result)).toBe(true);
+    if (!isOk(result)) return;
+    expect(result.value.meta.name).toBe("New Name");
+  });
+
+  it("updateMeta → patches description", () => {
+    const effect = interpret({ tag: "updateMeta", patch: { description: "A test model" } });
+    if (effect.type !== "modelMutation") return;
+    const m = modelWithThings();
+    const result = effect.apply(m);
+    expect(isOk(result)).toBe(true);
+    if (!isOk(result)) return;
+    expect(result.value.meta.description).toBe("A test model");
+  });
 });
