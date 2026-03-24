@@ -1022,7 +1022,8 @@ export function simulationStep(
 export function runSimulation(
   model: Model,
   initialState?: ModelState,
-  maxSteps: number = 100
+  maxSteps: number = 100,
+  rng: () => number = Math.random,
 ): SimulationTrace {
   const state = initialState ?? createInitialState(model);
   const steps: SimulationStep[] = [];
@@ -1119,7 +1120,7 @@ export function runSimulation(
           waitingProcesses: new Set([...currentState.waitingProcesses].filter(id => id !== waitingId)),
         };
         const event: SimulationEvent = { kind: "manual", targetId: waitingId };
-        const stepResult = simulationStep(model, unblocked, event);
+        const stepResult = simulationStep(model, unblocked, event, rng);
         if (!stepResult.skipped) {
           enrichStep(stepResult, waitingId);
           steps.push(stepResult);
@@ -1174,7 +1175,7 @@ export function runSimulation(
       }
 
       const event: SimulationEvent = { kind: "manual", targetId: ep.id };
-      const stepResult = simulationStep(model, currentState, event);
+      const stepResult = simulationStep(model, currentState, event, rng);
 
       if (!stepResult.skipped) {
         enrichStep(stepResult, ep.id);
@@ -1279,7 +1280,7 @@ export function runMonteCarloSimulation(
     // Override simulation's rng by patching the model's fans
     // Actually, runSimulation doesn't accept rng — we need to use simulationStep directly
     // For simplicity, re-run with a deterministic approach
-    const trace = runSimulation(model, undefined, maxSteps);
+    const trace = runSimulation(model, undefined, maxSteps, rng);
 
     totalSteps += trace.steps.length;
     if (trace.completed) completedCount++;
