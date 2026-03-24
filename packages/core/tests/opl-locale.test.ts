@@ -78,3 +78,44 @@ describe("OPL locale toggle", () => {
     expect(expose(mEs, "opd-sd").renderSettings.locale).toBe("es");
   });
 });
+
+describe("OPL computational rendering", () => {
+  it("renders value_type and unit for computational objects", () => {
+    let m = buildModelWithLang("en");
+    // Add computational property to Water
+    const water = m.things.get("obj-1")!;
+    m = { ...m, things: new Map(m.things).set("obj-1", {
+      ...water,
+      computational: { value: 0, value_type: "float", unit: "°C" },
+    }) };
+    const text = render(expose(m, "opd-sd"));
+    expect(text).toContain("of type float [°C]");
+  });
+
+  it("renders value_type in Spanish", () => {
+    let m = buildModelWithLang("es");
+    const water = m.things.get("obj-1")!;
+    m = { ...m, things: new Map(m.things).set("obj-1", {
+      ...water,
+      computational: { value: 0, value_type: "integer", unit: "kg" },
+    }) };
+    const text = render(expose(m, "opd-sd"));
+    expect(text).toContain("de tipo integer [kg]");
+  });
+
+  it("renders perseverance dynamic", () => {
+    let m = buildModelWithLang("en");
+    const water = m.things.get("obj-1")!;
+    m = { ...m, things: new Map(m.things).set("obj-1", { ...water, perseverance: "dynamic" }) };
+    const text = render(expose(m, "opd-sd"));
+    expect(text).toContain("dynamic");
+  });
+
+  it("renders perseverance dynamic in Spanish", () => {
+    let m = buildModelWithLang("es");
+    const water = m.things.get("obj-1")!;
+    m = { ...m, things: new Map(m.things).set("obj-1", { ...water, perseverance: "dynamic" }) };
+    const text = render(expose(m, "opd-sd"));
+    expect(text).toContain("dinámico");
+  });
+});
