@@ -40,6 +40,7 @@ export type {
   OplFanSentence,
 } from "./opl-types";
 export type { ModelStats } from "./opl";
+export { exportMarkdown } from "./export-md";
 export {
   createInitialState,
   evaluatePrecondition,

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { loadModel } from "../src/serialization";
 import { renderAll, modelStats } from "../src/opl";
+import { exportMarkdown } from "../src/export-md";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 
@@ -59,5 +60,32 @@ describe("HODOM OPL Export", () => {
     expect(stats.oplSentences).toBeGreaterThan(200);
 
     console.log("HODOM stats:", JSON.stringify(stats, null, 2));
+  });
+
+  it("exportMarkdown produces structured documentation", () => {
+    const r = loadModel(fixture);
+    if (!r.ok) throw new Error("load failed");
+    const md = exportMarkdown(r.value);
+
+    // Title
+    expect(md).toMatch(/^# .+Hospitalización Domiciliaria/m);
+    // Summary table
+    expect(md).toContain("| Things |");
+    expect(md).toContain("| States |");
+    // OPD hierarchy
+    expect(md).toContain("## OPD Hierarchy");
+    expect(md).toContain("**SD**");
+    expect(md).toContain("**SD1**");
+    // OPL sections in code blocks
+    expect(md).toContain("### SD");
+    expect(md).toContain("```");
+    // Content from OPL
+    expect(md).toContain("Paciente es un objeto");
+    // Link types table
+    expect(md).toContain("### Link Types");
+
+    const wordCount = md.split(/\s+/).length;
+    console.log(`Markdown export: ${md.split("\n").length} lines, ${wordCount} words`);
+    expect(wordCount).toBeGreaterThan(1500);
   });
 });
