@@ -47,7 +47,8 @@ describe("HODOM OPL audit", () => {
   it("SD3 aggregation lists all 6 parts", () => {
     const doc = expose(m, "opd-sd3");
     const text = render(doc);
-    expect(text).toContain("consists of");
+    // OPL-ES: "consta de" instead of "consists of"
+    expect(text).toContain("consta de");
     expect(text).toContain("Equipamiento Médico");
     expect(text).toContain("Equipo Clínico");
     expect(text).toContain("Medicamentos");
@@ -59,14 +60,16 @@ describe("HODOM OPL audit", () => {
   it("SD1.2 event trigger is correct direction", () => {
     const doc = expose(m, "opd-sd1-2");
     const text = render(doc);
-    expect(text).toContain("Regulación Médica triggers Respuesta a Emergencia");
-    expect(text).not.toContain("Respuesta a Emergencia triggers Regulación Médica");
+    // OPL-ES: "inicia" instead of "triggers"
+    expect(text).toContain("Regulación Médica inicia Respuesta a Emergencia");
+    expect(text).not.toContain("Respuesta a Emergencia inicia Regulación Médica");
   });
 
   it("SD1 capacitación effect is state-specified", () => {
     const doc = expose(m, "opd-sd1");
     const text = render(doc);
-    expect(text).toContain("Capacitación del Cuidador changes Cuidador from no capacitado to capacitado");
+    // OPL-ES: "cambia ... de ... a" instead of "changes ... from ... to"
+    expect(text).toContain("Capacitación del Cuidador cambia Cuidador de no capacitado a capacitado");
   });
 
   it("SD1 renders requirements from normativa", () => {
@@ -87,13 +90,15 @@ describe("HODOM OPL audit", () => {
   it("SD1 renders path labels for scenarios", () => {
     const doc = expose(m, "opd-sd1");
     const text = render(doc);
-    expect(text).toContain("[path: flujo-normal]");
+    // OPL-ES: "ruta" instead of "path"
+    expect(text).toContain("[ruta: flujo-normal]");
   });
 
   it("SD1.2 renders emergency path labels", () => {
     const doc = expose(m, "opd-sd1-2");
     const text = render(doc);
-    expect(text).toContain("[path: emergencia]");
-    expect(text).toContain("Regulación Médica triggers Respuesta a Emergencia");
+    expect(text).toContain("[ruta: emergencia]");
+    // OPL-ES: "inicia" instead of "triggers"
+    expect(text).toContain("Regulación Médica inicia Respuesta a Emergencia");
   });
 });

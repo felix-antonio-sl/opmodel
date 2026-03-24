@@ -172,11 +172,14 @@ export type OplSentence =
   | OplAssertionSentence
   | OplScenarioSentence;
 
+export type OplLocale = "en" | "es";
+
 export interface OplRenderSettings {
   essenceVisibility: OplEssenceVisibility;
   unitsVisibility: OplUnitsVisibility;
   aliasVisibility: boolean;
   primaryEssence: Essence;
+  locale: OplLocale;
 }
 
 export interface OplDocument {

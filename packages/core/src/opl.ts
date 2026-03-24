@@ -16,17 +16,94 @@ import {
   addAppearance,
 } from "./api";
 
+// === OPL-ES Vocabulary (per urn:fxsl:kb:opm-opl-es §2, §15) ===
+
+type OplVocab = {
+  isAn: (word: string) => string;  // "is a/an" or "es un/una"
+  object: string; process: string;
+  physical: string; informatical: string; environmental: string; systemic: string;
+  canBe: string; stateOf: string; isInitial: string; isFinal: string; isDefault: string;
+  requires: string; consumes: string; yields: string; affects: string; handles: string;
+  changes: string; from: string; to: string; and: string; or: string;
+  invokes: string; exhibitsWord: string; consistsOf: string; isInstanceOf: string;
+  inThatSequence: string; zoomsInto: string; parallel: string;
+  refinedBy: string; inZooming: string; unfolding: string;
+  triggers: string; handlesException: string; overtimeException: string; undertimeException: string;
+  occursIf: string; isState: string; otherwise: string; isSkipped: string;
+  notToBe: string; notToExist: string; absenceOf: string;
+  // Path labels
+  path: string;
+  // Meta
+  appliesTo: string; linksOnPath: string; scenario: string;
+  // Probability
+  probability: string;
+  // Fan
+  exactlyOneOf: string; atLeastOneOf: string;
+  // Duration
+  requiresDuration: string;
+  // Structural incomplete
+  atLeastOneOtherPart: string; atLeastOneOtherFeature: string; atLeastOneOtherSpecialization: string;
+};
+
+const EN_VOCAB: OplVocab = {
+  isAn: (w) => /^[aeiou]/i.test(w) ? `an ${w}` : `a ${w}`,
+  object: "object", process: "process",
+  physical: "physical", informatical: "informatical", environmental: "environmental", systemic: "systemic",
+  canBe: "can be", stateOf: "State", isInitial: "initial", isFinal: "final", isDefault: "default",
+  requires: "requires", consumes: "consumes", yields: "yields", affects: "affects", handles: "handles",
+  changes: "changes", from: "from", to: "to", and: "and", or: "or",
+  invokes: "invokes", exhibitsWord: "exhibits", consistsOf: "consists of", isInstanceOf: "is an instance of",
+  inThatSequence: "in that sequence", zoomsInto: "zooms into", parallel: "parallel",
+  refinedBy: "is refined by", inZooming: "in-zooming", unfolding: "unfolding",
+  triggers: "triggers", handlesException: "handles exception from", overtimeException: "handles overtime exception from", undertimeException: "handles undertime exception from",
+  occursIf: "occurs if", isState: "is", otherwise: "otherwise", isSkipped: "is skipped",
+  notToBe: "not to be", notToExist: "not to exist", absenceOf: "absence of",
+  path: "path",
+  appliesTo: "applies to", linksOnPath: "links on path", scenario: "scenario",
+  probability: "probability",
+  exactlyOneOf: "exactly one of", atLeastOneOf: "at least one of",
+  requiresDuration: "requires",
+  atLeastOneOtherPart: "at least one other part", atLeastOneOtherFeature: "at least one other feature", atLeastOneOtherSpecialization: "at least one other specialization",
+};
+
+const ES_VOCAB: OplVocab = {
+  isAn: (_w) => `un`, // Simplified: "es un" (masculine default per §1.4)
+  object: "objeto", process: "proceso",
+  physical: "físico", informatical: "informático", environmental: "ambiental", systemic: "sistémico",
+  canBe: "puede estar", stateOf: "Estado", isInitial: "inicial", isFinal: "final", isDefault: "por defecto",
+  requires: "requiere", consumes: "consume", yields: "genera", affects: "afecta", handles: "maneja",
+  changes: "cambia", from: "de", to: "a", and: "y", or: "o",
+  invokes: "invoca", exhibitsWord: "exhibe", consistsOf: "consta de", isInstanceOf: "es una instancia de",
+  inThatSequence: "en esa secuencia", zoomsInto: "se descompone en", parallel: "paralelo",
+  refinedBy: "se refina por descomposición de", inZooming: "", unfolding: "despliegue de",
+  triggers: "inicia", handlesException: "maneja excepción de", overtimeException: "maneja excepción de sobretiempo de", undertimeException: "maneja excepción de subtiempo de",
+  occursIf: "ocurre si", isState: "está en", otherwise: "de lo contrario", isSkipped: "se omite",
+  notToBe: "no esté en", notToExist: "no exista", absenceOf: "ausencia de",
+  path: "ruta",
+  appliesTo: "aplica a", linksOnPath: "enlaces en ruta", scenario: "escenario",
+  probability: "probabilidad",
+  exactlyOneOf: "exactamente uno de", atLeastOneOf: "al menos uno de",
+  requiresDuration: "requiere",
+  atLeastOneOtherPart: "al menos otra parte", atLeastOneOtherFeature: "al menos otro rasgo", atLeastOneOtherSpecialization: "al menos otra especialización",
+};
+
+function getVocab(locale: string): OplVocab {
+  return locale === "es" ? ES_VOCAB : EN_VOCAB;
+}
+
 export function expose(model: Model, opdId: string): OplDocument {
   const opd = model.opds.get(opdId);
   const opdName = opd?.name ?? opdId;
   const containerThingId = opd?.refines;
 
   const settings = model.settings;
+  const locale = (settings.opl_language === "es" ? "es" : "en") as import("./opl-types").OplLocale;
   const renderSettings: OplRenderSettings = {
     essenceVisibility: settings.opl_essence_visibility ?? "all",
     unitsVisibility: settings.opl_units_visibility ?? "always",
     aliasVisibility: settings.opl_alias_visibility ?? false,
     primaryEssence: settings.primary_essence ?? "informatical",
+    locale,
   };
 
   // 1. Collect visible things + appearance lookup for this OPD
@@ -481,7 +558,8 @@ function aOrAn(word: string): string {
   return /^[aeiou]/i.test(word) ? `an ${word}` : `a ${word}`;
 }
 
-function formatList(names: string[], incomplete?: boolean, incompletePhrase?: string): string {
+function formatList(names: string[], incomplete?: boolean, incompletePhrase?: string, v?: OplVocab): string {
+  const andWord = v?.and ?? "and";
   if (names.length === 0) return "";
   if (names.length === 1) {
     return incomplete && incompletePhrase ? `${names[0]} and ${incompletePhrase}` : names[0]!;
@@ -495,9 +573,9 @@ function formatList(names: string[], incomplete?: boolean, incompletePhrase?: st
   const last = names[names.length - 1]!;
   const rest = names.slice(0, -1);
   if (incomplete && incompletePhrase) {
-    return `${rest.join(", ")}, ${last}, and ${incompletePhrase}`;
+    return `${rest.join(", ")}, ${last}, ${andWord} ${incompletePhrase}`;
   }
-  return `${rest.join(", ")}, and ${last}`;
+  return `${rest.join(", ")}, ${andWord} ${last}`;
 }
 
 // STRUCTURAL_TYPES imported from ./structural
@@ -534,137 +612,147 @@ function withMultiplicity(name: string, mult: string | undefined): string {
   return phrase ? `${phrase} ${name}` : name;
 }
 
-function renderLinkSentence(s: OplLinkSentence): string {
-  const processName = s.sourceName; // For transforming links, source is process
-  const objectName = s.targetName; // For transforming links, target is object
-  
+function renderLinkSentence(s: OplLinkSentence, v: OplVocab): string {
+  const processName = s.sourceName;
+  const objectName = s.targetName;
+  // OPL-ES §1.9: state follows object with "en" — "Objeto en estado"
+  // OPL-EN: state precedes object — "state Object"
+  const isES = v === ES_VOCAB;
+  const ss = (stateName: string | undefined, name: string) =>
+    stateName ? (isES ? `${name} en ${stateName}` : `${stateName} ${name}`) : name;
+
   switch (s.linkType) {
     case "agent": {
-      // State-specified agent: "S Agent handles Process"
-      if (s.sourceStateName) {
-        return `${s.sourceStateName} ${s.sourceName} handles ${s.targetName}.`;
-      }
-      return `${s.sourceName} handles ${s.targetName}.`;
+      // H1/HS1: Agent handles Process / Agente maneja Proceso
+      return `${ss(s.sourceStateName, s.sourceName)} ${v.handles} ${s.targetName}.`;
     }
     case "instrument": {
-      // State-specified instrument: "Process requires S Instrument"
-      if (s.sourceStateName) {
-        return `${s.targetName} requires ${s.sourceStateName} ${s.sourceName}.`;
-      }
-      return `${s.targetName} requires ${s.sourceName}.`;
+      // H2/HS2: Process requires Instrument / Proceso requiere Instrumento
+      return `${s.targetName} ${v.requires} ${ss(s.sourceStateName, s.sourceName)}.`;
     }
     case "consumption": {
-      // consumption: source=object, target=process (ISO direction)
-      // OPL: "Process consumes [State] Object" → target consumes source
+      // T1/TS1: Process consumes Object / Proceso consume Objeto
       if (s.sourceStateName) {
-        return `${s.targetName} consumes ${s.sourceStateName} ${s.sourceName}.`;
+        return `${s.targetName} ${v.consumes} ${ss(s.sourceStateName, s.sourceName)}.`;
       }
-      return `${s.targetName} consumes ${withMultiplicity(s.sourceName, s.multiplicitySource)}.`;
+      return `${s.targetName} ${v.consumes} ${withMultiplicity(s.sourceName, s.multiplicitySource)}.`;
     }
     case "effect": {
-      // State-specified effect (ISO 19450 9.3.3)
-      const prob = s.probability != null ? ` (probability ${Math.round(s.probability * 100)}%)` : "";
+      // TS3-TS5: Process changes Object from A to B / Proceso cambia Objeto de A a B
+      const prob = s.probability != null ? ` (${v.probability} ${Math.round(s.probability * 100)}%)` : "";
       if (s.sourceStateName && s.targetStateName) {
-        return `${processName} changes ${objectName} from ${s.sourceStateName} to ${s.targetStateName}${prob}.`;
+        return `${processName} ${v.changes} ${objectName} ${v.from} ${s.sourceStateName} ${v.to} ${s.targetStateName}${prob}.`;
       }
       if (s.sourceStateName && !s.targetStateName) {
-        return `${processName} changes ${objectName} from ${s.sourceStateName}${prob}.`;
+        return `${processName} ${v.changes} ${objectName} ${v.from} ${s.sourceStateName}${prob}.`;
       }
       if (!s.sourceStateName && s.targetStateName) {
-        return `${processName} changes ${objectName} to ${s.targetStateName}${prob}.`;
+        return `${processName} ${v.changes} ${objectName} ${v.to} ${s.targetStateName}${prob}.`;
       }
-      // Basic effect
-      return `${s.sourceName} affects ${s.targetName}${prob}.`;
+      return `${s.sourceName} ${v.affects} ${s.targetName}${prob}.`;
     }
     case "result": {
-      // State-specified result: "Process yields S Object"
+      // T2/TS2: Process yields Object / Proceso genera Objeto
       if (s.targetStateName) {
-        return `${s.sourceName} yields ${s.targetStateName} ${s.targetName}.`;
+        return `${s.sourceName} ${v.yields} ${ss(s.targetStateName, s.targetName)}.`;
       }
-      return `${s.sourceName} yields ${s.targetName}.`;
+      return `${s.sourceName} ${v.yields} ${s.targetName}.`;
     }
     case "input": {
-      // input: source=object, target=process (like consumption)
       if (s.sourceStateName) {
-        return `${s.sourceStateName} ${s.sourceName} is an input of ${s.targetName}.`;
+        return isES
+          ? `${ss(s.sourceStateName, s.sourceName)} es entrada de ${s.targetName}.`
+          : `${s.sourceStateName} ${s.sourceName} is an input of ${s.targetName}.`;
       }
-      return `${s.sourceName} is an input of ${s.targetName}.`;
+      return isES
+        ? `${s.sourceName} es entrada de ${s.targetName}.`
+        : `${s.sourceName} is an input of ${s.targetName}.`;
     }
     case "output": {
-      // output: source=process, target=object (like effect/result)
       if (s.targetStateName) {
-        return `${s.sourceName} outputs ${s.targetStateName} ${s.targetName}.`;
+        return isES
+          ? `${s.sourceName} produce ${ss(s.targetStateName, s.targetName)}.`
+          : `${s.sourceName} outputs ${s.targetStateName} ${s.targetName}.`;
       }
-      return `${s.sourceName} outputs ${s.targetName}.`;
+      return isES
+        ? `${s.sourceName} produce ${s.targetName}.`
+        : `${s.sourceName} outputs ${s.targetName}.`;
     }
     case "aggregation": {
-      // aggregation: source=whole, target=part. Multiplicity on target = part count.
+      // RF1: Whole consists of Parts / Todo consta de Partes
       const partName = withMultiplicity(s.targetName, s.multiplicityTarget);
       if (s.incomplete) {
-        return `${s.sourceName} consists of ${partName} and at least one other part.`;
+        return `${s.sourceName} ${v.consistsOf} ${partName} ${v.and} ${v.atLeastOneOtherPart}.`;
       }
-      return `${s.sourceName} consists of ${partName}.`;
+      return `${s.sourceName} ${v.consistsOf} ${partName}.`;
     }
     case "exhibition": {
-      // Invariant: source=Exhibitor (parent), target=Feature (child)
-      // OPL: "Exhibitor exhibits Feature."
+      // RF2: Exhibitor exhibits Feature / Exhibidor exhibe Atributo
       const featureName = withMultiplicity(s.targetName, s.multiplicityTarget);
       if (s.incomplete) {
-        return `${s.sourceName} exhibits ${featureName} and at least one other feature.`;
+        return `${s.sourceName} ${v.exhibitsWord} ${featureName} ${v.and} ${v.atLeastOneOtherFeature}.`;
       }
-      return `${s.sourceName} exhibits ${featureName}.`;
+      return `${s.sourceName} ${v.exhibitsWord} ${featureName}.`;
     }
     case "generalization": {
+      // RF3/RF3b
       if (s.incomplete) {
-        return `${s.sourceName}, ${s.targetName} and other specializations are general.`;
+        return isES
+          ? `${s.sourceName}, ${s.targetName} ${v.and} ${v.atLeastOneOtherSpecialization} son generales.`
+          : `${s.sourceName}, ${s.targetName} and other specializations are general.`;
       }
-      // ISO: objects use article ("B is a/an A"), processes omit article ("B is A")
       if (s.targetKind === "object") {
-        return `${s.targetName} is ${aOrAn(s.sourceName)}.`;
+        return isES
+          ? `${s.targetName} es ${v.isAn(s.sourceName)} ${s.sourceName}.`
+          : `${s.targetName} is ${aOrAn(s.sourceName)}.`;
       }
-      return `${s.targetName} is ${s.sourceName}.`;
+      return isES
+        ? `${s.targetName} es ${s.sourceName}.`
+        : `${s.targetName} is ${s.sourceName}.`;
     }
-    case "classification": return `${s.targetName} is an instance of ${s.sourceName}.`;
-    case "invocation": return `${s.sourceName} invokes ${s.targetName}.`;
+    case "classification":
+      // RF4
+      return `${s.targetName} ${v.isInstanceOf} ${s.sourceName}.`;
+    case "invocation":
+      // IV1
+      return `${s.sourceName} ${v.invokes} ${s.targetName}.`;
     case "exception": {
-      const excType = s.exceptionType === "overtime" ? "overtime exception"
-        : s.exceptionType === "undertime" ? "undertime exception"
-        : "exception";
-      return `${s.targetName} handles ${excType} from ${s.sourceName}.`;
+      // EX1/EX2
+      const excType = s.exceptionType === "overtime" ? v.overtimeException
+        : s.exceptionType === "undertime" ? v.undertimeException
+        : v.handlesException;
+      return `${s.targetName} ${excType} ${s.sourceName}.`;
     }
     case "tagged": {
-      // ISO §10.2.2: null-tagged defaults — "relates to" (uni/bi), "are related" (reciprocal)
-      const defaultTag = s.direction === "reciprocal" ? "are related" : "relates to";
+      // SE1-SE5
+      const defaultTag = s.direction === "reciprocal"
+        ? (isES ? "se relacionan" : "are related")
+        : (isES ? "se relaciona con" : "relates to");
       const tag = s.tag ?? defaultTag;
-      return s.direction === "bidirectional"
-        ? `${s.sourceName} ${tag} ${s.targetName} and vice versa.`
-        : s.direction === "reciprocal"
-          ? `${s.sourceName} and ${s.targetName} ${tag}.`
-          : `${s.sourceName} ${tag} ${s.targetName}.`;
+      if (s.direction === "bidirectional") {
+        return isES
+          ? `${s.sourceName} ${tag} ${s.targetName} ${v.and} viceversa.`
+          : `${s.sourceName} ${tag} ${s.targetName} and vice versa.`;
+      }
+      if (s.direction === "reciprocal") {
+        return `${s.sourceName} ${v.and} ${s.targetName} ${tag}.`;
+      }
+      return `${s.sourceName} ${tag} ${s.targetName}.`;
     }
     default: return `${s.sourceName} --[${s.linkType}]--> ${s.targetName}.`;
   }
 }
 
-function renderModifierSentence(s: OplModifierSentence): string {
-  // Determine process/object names based on link direction convention:
-  // Enabling links (agent, instrument): source=object, target=process
-  // Consumption (ISO): source=object, target=process
-  // Invocation/exception: source=process(invoker), target=process(invoked)
-  //   → for event/condition modifiers, source triggers target
-  // Other transforming (effect, result): source=process, target=object
+function renderModifierSentence(s: OplModifierSentence, v: OplVocab): string {
+  const isES = v === ES_VOCAB;
   const isEnabling = ["agent", "instrument"].includes(s.linkType);
   const isConsumption = s.linkType === "consumption";
   const isInvocation = ["invocation", "exception"].includes(s.linkType);
-  // For enabling and consumption: source=object, target=process
-  // For invocation: source=invoker(trigger), target=invoked(triggered)
-  // For other transforming (effect, result): source=process, target=object
   const objectIsSource = isEnabling || isConsumption;
   let processName: string;
   let objectName: string;
   let stateName: string | undefined;
   if (isInvocation) {
-    // Both are processes; source triggers/invokes target
     processName = s.targetName;
     objectName = s.sourceName;
     stateName = s.sourceStateName;
@@ -673,68 +761,92 @@ function renderModifierSentence(s: OplModifierSentence): string {
     objectName = objectIsSource ? s.sourceName : s.targetName;
     stateName = objectIsSource ? s.sourceStateName : s.targetStateName;
   }
+  // OPL-ES §1.9: state after object with "en"
+  const ssObj = stateName ? (isES ? `${objectName} en ${stateName}` : `${stateName} ${objectName}`) : objectName;
 
   if (s.modifierType === "event") {
+    // ET/EH: event trigger — "Object triggers Process" / "Objeto inicia Proceso"
     if (s.negated && stateName) {
-      return `non-${stateName} ${objectName} triggers ${processName}.`;
+      return isES
+        ? `no-${stateName} ${objectName} ${v.triggers} ${processName}.`
+        : `non-${stateName} ${objectName} triggers ${processName}.`;
     }
     if (s.negated) {
-      return `absence of ${objectName} triggers ${processName}.`;
+      return isES
+        ? `${v.absenceOf} ${objectName} ${v.triggers} ${processName}.`
+        : `absence of ${objectName} triggers ${processName}.`;
     }
-    if (stateName) {
-      return `${stateName} ${objectName} triggers ${processName}.`;
-    }
-    return `${objectName} triggers ${processName}.`;
+    return `${ssObj} ${v.triggers} ${processName}.`;
   }
 
   if (s.modifierType === "condition") {
     const mode = s.conditionMode ?? "wait";
 
     if (mode === "wait") {
+      // CH/CS: "Process requires Object" / "Proceso requiere Objeto"
       if (s.negated && stateName) {
-        return `${processName} requires ${objectName} not to be ${stateName}.`;
+        return isES
+          ? `${processName} ${v.requires} ${objectName} ${v.notToBe} ${stateName}.`
+          : `${processName} requires ${objectName} not to be ${stateName}.`;
       }
       if (s.negated) {
-        return `${processName} requires ${objectName} not to exist.`;
+        return isES
+          ? `${processName} ${v.requires} que ${objectName} ${v.notToExist}.`
+          : `${processName} requires ${objectName} not to exist.`;
       }
       if (stateName) {
-        return `${processName} requires ${stateName} ${objectName}.`;
+        return `${processName} ${v.requires} ${ssObj}.`;
       }
-      return `${processName} requires ${objectName}.`;
+      return `${processName} ${v.requires} ${objectName}.`;
     }
 
     if (mode === "skip") {
+      // CT/CS: "Process occurs if Object is state, otherwise skipped"
       if (s.negated && stateName) {
-        return `${processName} occurs if ${objectName} is not ${stateName}, otherwise ${processName} is skipped.`;
+        return isES
+          ? `${processName} ${v.occursIf} ${objectName} no ${v.isState} ${stateName}, ${v.otherwise} ${processName} ${v.isSkipped}.`
+          : `${processName} occurs if ${objectName} is not ${stateName}, otherwise ${processName} is skipped.`;
       }
       if (s.negated) {
-        return `${processName} occurs if ${objectName} does not exist, otherwise ${processName} is skipped.`;
+        return isES
+          ? `${processName} ${v.occursIf} ${objectName} no existe, ${v.otherwise} ${processName} ${v.isSkipped}.`
+          : `${processName} occurs if ${objectName} does not exist, otherwise ${processName} is skipped.`;
       }
       if (stateName) {
-        return `${processName} occurs if ${objectName} is ${stateName}, otherwise ${processName} is skipped.`;
+        return isES
+          ? `${processName} ${v.occursIf} ${objectName} ${v.isState} ${stateName}, ${v.otherwise} ${processName} ${v.isSkipped}.`
+          : `${processName} occurs if ${objectName} is ${stateName}, otherwise ${processName} is skipped.`;
       }
-      return `${processName} occurs if ${objectName} exists, otherwise ${processName} is skipped.`;
+      return isES
+        ? `${processName} ${v.occursIf} ${objectName} existe, ${v.otherwise} ${processName} ${v.isSkipped}.`
+        : `${processName} occurs if ${objectName} exists, otherwise ${processName} is skipped.`;
     }
   }
 
-  // Fallback
-  const neg = s.negated ? "negated " : "";
-  return `${s.linkType} link from ${s.sourceName} to ${s.targetName} has ${neg}${s.modifierType} modifier.`;
+  const neg = s.negated ? (isES ? "negado " : "negated ") : "";
+  return isES
+    ? `enlace ${s.linkType} de ${s.sourceName} a ${s.targetName} tiene modificador ${neg}${s.modifierType}.`
+    : `${s.linkType} link from ${s.sourceName} to ${s.targetName} has ${neg}${s.modifierType} modifier.`;
 }
 
-function renderGroupedStructural(s: OplGroupedStructuralSentence): string {
-  const phrase = INCOMPLETE_PHRASES[s.linkType] ?? "at least one other";
+function renderGroupedStructural(s: OplGroupedStructuralSentence, v: OplVocab): string {
+  const isES = v === ES_VOCAB;
+  const incPhrases: Record<string, string> = isES
+    ? { aggregation: v.atLeastOneOtherPart, exhibition: v.atLeastOneOtherFeature, generalization: v.atLeastOneOtherSpecialization }
+    : INCOMPLETE_PHRASES;
+  const phrase = incPhrases[s.linkType] ?? (isES ? "al menos otro" : "at least one other");
 
   switch (s.linkType) {
     case "aggregation": {
       const qualifiedNames = s.childNames.map((name, i) =>
         withMultiplicity(name, s.childMultiplicities?.[i])
       );
-      // R-SF-5: semi-folded uses "lists...as parts"; full unfold uses "consists of"
       if (s.semiFolded) {
-        return `${s.parentName} lists ${formatList(qualifiedNames)} as parts.`;
+        return isES
+          ? `${s.parentName} lista ${formatList(qualifiedNames, false, "", v)} como partes.`
+          : `${s.parentName} lists ${formatList(qualifiedNames)} as parts.`;
       }
-      return `${s.parentName} consists of ${formatList(qualifiedNames, s.incomplete, phrase)}.`;
+      return `${s.parentName} ${v.consistsOf} ${formatList(qualifiedNames, s.incomplete, phrase, v)}.`;
     }
 
     case "exhibition": {
@@ -746,27 +858,33 @@ function renderGroupedStructural(s: OplGroupedStructuralSentence): string {
       const isObjectExhibitor = s.parentKind === "object";
       const first = isObjectExhibitor ? attrs : ops;
       const second = isObjectExhibitor ? ops : attrs;
+      const asWellAs = isES ? "así como" : "as well as";
       if (first.length === 0 && second.length === 0) {
-        return `${s.parentName} exhibits ${formatList(qualifiedNames, s.incomplete, phrase)}.`;
+        return `${s.parentName} ${v.exhibitsWord} ${formatList(qualifiedNames, s.incomplete, phrase, v)}.`;
       }
       if (first.length > 0 && second.length > 0) {
-        return `${s.parentName} exhibits ${formatList(first)}, as well as ${formatList(second)}.`;
+        return `${s.parentName} ${v.exhibitsWord} ${formatList(first, false, "", v)}, ${asWellAs} ${formatList(second, false, "", v)}.`;
       }
-      // Only one kind present
       const combined = first.length > 0 ? first : second;
-      return `${s.parentName} exhibits ${formatList(combined, s.incomplete, phrase)}.`;
+      return `${s.parentName} ${v.exhibitsWord} ${formatList(combined, s.incomplete, phrase, v)}.`;
     }
 
     case "generalization": {
-      const list = formatList(s.childNames, s.incomplete, phrase);
+      const list = formatList(s.childNames, s.incomplete, phrase, v);
       if (s.childNames.length === 1 && !s.incomplete) {
-        // Single specialization (complete): "Spec is a/an General." (objects) / "Spec is General." (processes)
+        // RF3b: single specialization
+        if (isES) {
+          return `${s.childNames[0]} es ${v.isAn(s.parentName)} ${s.parentName}.`;
+        }
         if (s.parentKind === "object") {
           return `${s.childNames[0]} is ${aOrAn(s.parentName)}.`;
         }
         return `${s.childNames[0]} is ${s.parentName}.`;
       }
-      // Multiple specializations or incomplete: use "are"
+      // RF3: multiple specializations
+      if (isES) {
+        return `${list} son ${v.isAn(s.parentName)} ${s.parentName}.`;
+      }
       if (s.parentKind === "object") {
         return `${list} are ${aOrAn(s.parentName)}.`;
       }
@@ -786,89 +904,68 @@ function renderGroupedStructural(s: OplGroupedStructuralSentence): string {
   }
 }
 
-function formatFanList(names: string[], stateNames?: (string | undefined)[]): string {
+function formatFanList(names: string[], stateNames?: (string | undefined)[], v?: OplVocab): string {
+  const isES = v === ES_VOCAB;
+  const orWord = v?.or ?? "or";
   const qualified = names.map((name, i) => {
     const st = stateNames?.[i];
-    return st ? `${st} ${name}` : name;
+    // OPL-ES §1.9: state after object — "Objeto en estado"
+    return st ? (isES ? `${name} en ${st}` : `${st} ${name}`) : name;
   });
   if (qualified.length === 1) return qualified[0]!;
-  if (qualified.length === 2) return `${qualified[0]} or ${qualified[1]}`;
+  if (qualified.length === 2) return `${qualified[0]} ${orWord} ${qualified[1]}`;
   const last = qualified[qualified.length - 1]!;
   const rest = qualified.slice(0, -1);
-  return `${rest.join(", ")}, or ${last}`;
+  return `${rest.join(", ")}, ${orWord} ${last}`;
 }
 
-function renderFanSentence(s: OplFanSentence): string {
-  const quantifier = s.fanType === "xor" ? "exactly one of" : "at least one of";
+function renderFanSentence(s: OplFanSentence, v: OplVocab): string {
+  const quantifier = s.fanType === "xor" ? v.exactlyOneOf : v.atLeastOneOf;
   const list = formatFanList(
     s.memberNames,
-    // For converging fans, member = source side → use source state names
-    // For diverging fans, member = target side → use target state names
     s.direction === "converging" ? s.memberSourceStateNames : s.memberTargetStateNames,
+    v,
   );
-
-  // Converging: shared endpoint is the process/object all links point TO
-  // "SharedName VERB quantifier list."
-  // Diverging: shared endpoint is the thing all links come FROM
-  // "quantifier list VERB SharedName."  (capitalized quantifier)
 
   switch (s.linkType) {
     case "consumption":
-      // consumption: source=object, target=process
-      // converging (shared=process, members=objects): "Process consumes quantifier A, B, or C."
-      // diverging (shared=object, members=processes): "Quantifier P, Q, or R consumes Object."
       if (s.direction === "converging") {
-        return `${s.sharedEndpointName} consumes ${quantifier} ${list}.`;
+        return `${s.sharedEndpointName} ${v.consumes} ${quantifier} ${list}.`;
       }
-      return `${capitalize(quantifier)} ${list} consumes ${s.sharedEndpointName}.`;
+      return `${capitalize(quantifier)} ${list} ${v.consumes} ${s.sharedEndpointName}.`;
 
     case "result":
-      // result: source=process, target=object
-      // diverging (shared=process, members=objects): "Process yields quantifier A, B, or C."
-      // converging (shared=object, members=processes): "Quantifier P, Q, or R yields Object."
       if (s.direction === "diverging") {
-        return `${s.sharedEndpointName} yields ${quantifier} ${list}.`;
+        return `${s.sharedEndpointName} ${v.yields} ${quantifier} ${list}.`;
       }
-      return `${capitalize(quantifier)} ${list} yields ${s.sharedEndpointName}.`;
+      return `${capitalize(quantifier)} ${list} ${v.yields} ${s.sharedEndpointName}.`;
 
     case "effect":
-      // effect: source=process, target=object
-      // diverging (shared=process, members=objects): "Process affects quantifier A, B, or C."
-      // converging (shared=object, members=processes): "Quantifier P, Q, or R affects Object."
       if (s.direction === "diverging") {
-        return `${s.sharedEndpointName} affects ${quantifier} ${list}.`;
+        return `${s.sharedEndpointName} ${v.affects} ${quantifier} ${list}.`;
       }
-      return `${capitalize(quantifier)} ${list} affects ${s.sharedEndpointName}.`;
+      return `${capitalize(quantifier)} ${list} ${v.affects} ${s.sharedEndpointName}.`;
 
     case "agent":
-      // agent: source=object, target=process
-      // converging (shared=process, members=objects): "Quantifier A, B, or C handles Process."
-      // diverging (shared=object, members=processes): "Object handles quantifier P, Q, or R."
       if (s.direction === "converging") {
-        return `${capitalize(quantifier)} ${list} handles ${s.sharedEndpointName}.`;
+        return `${capitalize(quantifier)} ${list} ${v.handles} ${s.sharedEndpointName}.`;
       }
-      return `${s.sharedEndpointName} handles ${quantifier} ${list}.`;
+      return `${s.sharedEndpointName} ${v.handles} ${quantifier} ${list}.`;
 
     case "instrument":
-      // instrument: source=object, target=process
-      // converging (shared=process, members=objects): "Process requires quantifier A, B, or C."
-      // diverging (shared=object, members=processes): "Quantifier P, Q, or R requires Object."
       if (s.direction === "converging") {
-        return `${s.sharedEndpointName} requires ${quantifier} ${list}.`;
+        return `${s.sharedEndpointName} ${v.requires} ${quantifier} ${list}.`;
       }
-      return `${capitalize(quantifier)} ${list} requires ${s.sharedEndpointName}.`;
+      return `${capitalize(quantifier)} ${list} ${v.requires} ${s.sharedEndpointName}.`;
 
     case "invocation":
-      // invocation: source=invoker, target=invoked
-      // diverging (shared=invoker, members=invoked): "Process invokes quantifier Q, R."
-      // converging (shared=invoked, members=invokers): "Quantifier P, Q invokes Process."
       if (s.direction === "diverging") {
-        return `${s.sharedEndpointName} invokes ${quantifier} ${list}.`;
+        return `${s.sharedEndpointName} ${v.invokes} ${quantifier} ${list}.`;
       }
-      return `${capitalize(quantifier)} ${list} invokes ${s.sharedEndpointName}.`;
+      return `${capitalize(quantifier)} ${list} ${v.invokes} ${s.sharedEndpointName}.`;
 
     default:
-      return `${s.sharedEndpointName} links to ${quantifier} ${list}.`;
+      return `${s.sharedEndpointName} → ${quantifier} ${list}.`;
   }
 }
 
@@ -877,16 +974,23 @@ function capitalize(s: string): string {
 }
 
 function renderSentence(s: OplSentence, settings: OplRenderSettings): string {
+  const v = getVocab(settings.locale);
+
   switch (s.kind) {
     case "thing-declaration": {
-      const displayName = s.exhibitorName ? `${s.name} of ${s.exhibitorName}` : s.name;
-      let text = `${displayName} is ${aOrAn(s.thingKind)}`;
+      const displayName = s.exhibitorName ? `${s.name} ${v.from === "de" ? "de" : "of"} ${s.exhibitorName}` : s.name;
+      const kindWord = s.thingKind === "object" ? v.object : v.process;
+      const essenceMap: Record<string, string> = { physical: v.physical, informatical: v.informatical };
+      const affiliationMap: Record<string, string> = { environmental: v.environmental, systemic: v.systemic };
+      let text = settings.locale === "es"
+        ? `${displayName} es ${v.isAn(kindWord)} ${kindWord}`
+        : `${displayName} is ${aOrAn(s.thingKind)}`;
       if (settings.essenceVisibility === "all" ||
           (settings.essenceVisibility === "non_default" && s.essence !== settings.primaryEssence)) {
-        text += `, ${s.essence}`;
+        text += `, ${essenceMap[s.essence] ?? s.essence}`;
       }
       if (s.affiliation !== "systemic") {
-        text += `, ${s.affiliation}`;
+        text += `, ${affiliationMap[s.affiliation] ?? s.affiliation}`;
       }
       if (s.alias && settings.aliasVisibility) {
         text += ` (alias: ${s.alias})`;
@@ -894,80 +998,84 @@ function renderSentence(s: OplSentence, settings: OplRenderSettings): string {
       return text + ".";
     }
     case "state-enumeration": {
-      const displayName = s.exhibitorName ? `${s.thingName} of ${s.exhibitorName}` : s.thingName;
+      const displayName = s.exhibitorName
+        ? `${s.thingName} ${settings.locale === "es" ? "de" : "of"} ${s.exhibitorName}`
+        : s.thingName;
       if (s.stateNames.length === 0) return "";
-      if (s.stateNames.length === 1) return `${displayName} can be ${s.stateNames[0]}.`;
+      if (s.stateNames.length === 1) return `${displayName} ${v.canBe} ${s.stateNames[0]}.`;
       const last = s.stateNames[s.stateNames.length - 1];
       const rest = s.stateNames.slice(0, -1);
-      return `${displayName} can be ${rest.join(", ")} or ${last}.`;
+      return `${displayName} ${v.canBe} ${rest.join(", ")} ${v.or} ${last}.`;
     }
     case "duration": {
       const unit = settings.unitsVisibility === "hide" ? "" : s.unit;
       if (s.min != null && s.max != null) {
-        return `${s.thingName} requires ${s.min}–${s.nominal}–${s.max}${unit}.`;
+        return `${s.thingName} ${v.requiresDuration} ${s.min}–${s.nominal}–${s.max}${unit}.`;
       }
       if (s.max != null) {
-        return `${s.thingName} requires ${s.nominal}–${s.max}${unit}.`;
+        return `${s.thingName} ${v.requiresDuration} ${s.nominal}–${s.max}${unit}.`;
       }
       if (s.min != null) {
-        return `${s.thingName} requires ${s.min}–${s.nominal}${unit}.`;
+        return `${s.thingName} ${v.requiresDuration} ${s.min}–${s.nominal}${unit}.`;
       }
-      return `${s.thingName} requires ${s.nominal}${unit}.`;
+      return `${s.thingName} ${v.requiresDuration} ${s.nominal}${unit}.`;
     }
     case "link":
     {
-      let text = renderLinkSentence(s);
+      let text = renderLinkSentence(s, v);
       if (s.pathLabel) {
-        // Annotate with scenario path label: "sentence. [path: emergencia]" → "sentence [path: emergencia]."
-        text = text.slice(0, -1) + ` [path: ${s.pathLabel}].`;
+        text = text.slice(0, -1) + ` [${v.path}: ${s.pathLabel}].`;
       }
       return text;
     }
     case "modifier": {
-      return renderModifierSentence(s);
+      return renderModifierSentence(s, v);
     }
     case "state-description": {
       const qualifiers: string[] = [];
-      if (s.initial) qualifiers.push("initial");
+      if (s.initial) qualifiers.push(v.isInitial);
       if (s.final) qualifiers.push("final");
-      if (s.default) qualifiers.push("default");
+      if (s.default) qualifiers.push(v.isDefault);
+      const ofWord = settings.locale === "es" ? "de" : "of";
       const thingDisplay = s.exhibitorName
-        ? `${s.thingName} of ${s.exhibitorName}`
+        ? `${s.thingName} ${ofWord} ${s.exhibitorName}`
         : s.thingName;
-      return `State ${s.stateName} of ${thingDisplay} is ${qualifiers.join(" and ")}.`;
+      return `${v.stateOf} ${s.stateName} ${ofWord} ${thingDisplay} ${settings.locale === "es" ? "es" : "is"} ${qualifiers.join(` ${v.and} `)}.`;
     }
-    case "attribute-value":
-      return `${s.thingName} of ${s.exhibitorName} is ${s.valueName}.`;
+    case "attribute-value": {
+      const ofWord = settings.locale === "es" ? "de" : "of";
+      const isWord = settings.locale === "es" ? "es" : "is";
+      return `${s.thingName} ${ofWord} ${s.exhibitorName} ${isWord} ${s.valueName}.`;
+    }
     case "grouped-structural":
-      return renderGroupedStructural(s);
+      return renderGroupedStructural(s, v);
     case "fan":
-      return renderFanSentence(s);
+      return renderFanSentence(s, v);
     case "in-zoom-sequence": {
       const allNames = s.steps.flatMap(step =>
         step.parallel
-          ? [`parallel ${formatList(step.thingNames)}`]
+          ? [`${v.parallel} ${formatList(step.thingNames, false, "", v)}`]
           : step.thingNames
       );
-      const list = formatList(allNames);
-      // R-OC-2: append "as well as [objects]" for internal objects
+      const list = formatList(allNames, false, "", v);
       const objClause = s.internalObjects && s.internalObjects.length > 0
-        ? `, as well as ${formatList(s.internalObjects.map(o => o.name))}`
+        ? `, ${settings.locale === "es" ? "así como" : "as well as"} ${formatList(s.internalObjects.map(o => o.name), false, "", v)}`
         : "";
       const allParallel = s.steps.length === 1 && s.steps[0]!.parallel;
       if (s.steps.length === 1 && s.steps[0]!.thingNames.length === 1) {
-        return `${s.parentName} zooms into ${list}${objClause}.`;
+        return `${s.parentName} ${v.zoomsInto} ${list}${objClause}.`;
       }
       if (allParallel) {
-        return `${s.parentName} zooms into ${list}${objClause}.`;
+        return `${s.parentName} ${v.zoomsInto} ${list}${objClause}.`;
       }
-      return `${s.parentName} zooms into ${list}${objClause}, in that sequence.`;
+      return `${s.parentName} ${v.zoomsInto} ${list}${objClause}, ${v.inThatSequence}.`;
     }
     case "requirement":
-      return `[${s.reqCode}] ${s.name}: ${s.description} (applies to ${s.targetName}).`;
+      return `[${s.reqCode}] ${s.name}: ${s.description} (${v.appliesTo} ${s.targetName}).`;
     case "assertion":
       return `[${s.category}] ${s.predicate}`;
     case "scenario":
-      return `[scenario: ${s.name}] ${s.linkCount} links on path "${s.pathLabels.join(", ")}"`;
+      return `[${v.scenario}: ${s.name}] ${s.linkCount} ${v.linksOnPath} "${s.pathLabels.join(", ")}"`;
   }
 }
 
@@ -976,8 +1084,14 @@ export function render(doc: OplDocument): string {
   // R-OPL-3: OPD tree edge label
   if (doc.refinementEdge) {
     const e = doc.refinementEdge;
-    const verb = e.refinementType === "in-zoom" ? "in-zooming" : "unfolding";
-    lines.push(`${e.parentOpdName} is refined by ${verb} ${e.refinedThingName} in ${e.childOpdName}.`);
+    const v = getVocab(doc.renderSettings.locale);
+    if (doc.renderSettings.locale === "es") {
+      const verb = e.refinementType === "in-zoom" ? "" : `${v.unfolding} `;
+      lines.push(`${e.parentOpdName} ${v.refinedBy} ${verb}${e.refinedThingName} en ${e.childOpdName}.`);
+    } else {
+      const verb = e.refinementType === "in-zoom" ? "in-zooming" : "unfolding";
+      lines.push(`${e.parentOpdName} is refined by ${verb} ${e.refinedThingName} in ${e.childOpdName}.`);
+    }
   }
   // Group sentences by category for structured output
   const thingSentences = doc.sentences.filter(s =>

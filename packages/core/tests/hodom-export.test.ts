@@ -35,8 +35,8 @@ describe("HODOM OPL Export", () => {
     expect(fullExport).toContain("=== SD2 ===");
     expect(fullExport).toContain("=== SD3 ===");
     
-    // Key content checks
-    expect(fullExport).toContain("Paciente is an object");
+    // Key content checks (OPL-ES: "es un objeto" instead of "is an object")
+    expect(fullExport).toContain("Paciente es un objeto");
     expect(fullExport).toContain("Hospitalización Domiciliaria");
     // No issues
     expect(fullExport).not.toContain("unspecified state");

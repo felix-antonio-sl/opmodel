@@ -1018,6 +1018,27 @@ body,
   letter-spacing: 0.1em;
   color: var(--text-muted);
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.opl-lang-toggle {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--bg-secondary, #2a2a2a);
+  color: var(--text-muted);
+  cursor: pointer;
+  letter-spacing: 0.05em;
+  transition: background 0.15s, color 0.15s;
+}
+
+.opl-lang-toggle:hover {
+  background: var(--accent, #4a9eff);
+  color: var(--bg, #1a1a1a);
 }
 
 .opl-tabs {

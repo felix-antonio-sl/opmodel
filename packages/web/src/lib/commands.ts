@@ -6,13 +6,14 @@
    into Model mutations or UI state transitions.
    ═══════════════════════════════════════════════════ */
 
-import type { Model, Thing, Link, State, Fan, Modifier, InvariantError, RefinementType, OplEdit, SimulationTrace } from "@opmodel/core";
+import type { Model, Thing, Link, State, Fan, Modifier, InvariantError, RefinementType, OplEdit, SimulationTrace, Settings } from "@opmodel/core";
 import {
   updateAppearance,
   updateThing,
   updateState,
   updateLink,
   updateOPD,
+  updateSettings,
   addThing,
   addState,
   addLink,
@@ -82,6 +83,8 @@ export type Command =
   | { tag: "addModifier"; modifier: Modifier }
   | { tag: "removeModifier"; modifierId: string }
   | { tag: "updateModifier"; modifierId: string; patch: Partial<Omit<Modifier, "id">> }
+  /* ─── Settings Commands ─── */
+  | { tag: "updateSettings"; patch: Partial<Settings> }
   /* ─── Simulation Commands ─── */
   | { tag: "startSimulation" }
   | { tag: "stepSimulation"; direction: 1 | -1 }
@@ -288,6 +291,14 @@ export function interpret(cmd: Command): Effect {
       return {
         type: "modelMutation",
         apply: (m) => updateModifier(m, cmd.modifierId, cmd.patch),
+      };
+
+    /* ─── Settings ─── */
+
+    case "updateSettings":
+      return {
+        type: "modelMutation",
+        apply: (m) => updateSettings(m, cmd.patch),
       };
 
     /* ─── Simulation ─── */

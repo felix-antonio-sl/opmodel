@@ -20,11 +20,19 @@ interface Props {
 export function OplPanel({ model, opdId, selectedThing, dispatch, nlPipeline, lastError }: Props) {
   const [activeTab, setActiveTab] = useState<OplTab>("sentences");
   const opd = model.opds.get(opdId);
+  const currentLang = model.settings.opl_language === "es" ? "es" : "en";
 
   return (
     <aside className="opl-panel">
       <div className="opl-panel__title">
-        OPL — {opd?.name ?? opdId}
+        <span>OPL — {opd?.name ?? opdId}</span>
+        <button
+          className="opl-lang-toggle"
+          onClick={() => dispatch({ tag: "updateSettings", patch: { opl_language: currentLang === "en" ? "es" : "en" } })}
+          title={currentLang === "en" ? "Switch to Spanish OPL" : "Switch to English OPL"}
+        >
+          {currentLang.toUpperCase()}
+        </button>
       </div>
       <div className="opl-tabs">
         {(["sentences", "text", "editor"] as const).map((tab) => (
