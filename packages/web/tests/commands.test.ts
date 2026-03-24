@@ -550,3 +550,81 @@ describe("interpret — simulationEffect commands", () => {
     expect(result.value.meta.description).toBe("A test model");
   });
 });
+
+  /* ─── OPD Commands ─── */
+
+  it("renameOpd → modelMutation that changes OPD name", () => {
+    const effect = interpret({ tag: "renameOpd", opdId: "opd-sd", name: "System Diagram" });
+    expect(effect.type).toBe("modelMutation");
+    if (effect.type !== "modelMutation") return;
+    const m = modelWithThings();
+    const result = effect.apply(m);
+    expect(isOk(result)).toBe(true);
+    if (!isOk(result)) return;
+    expect(result.value.opds.get("opd-sd")?.name).toBe("System Diagram");
+  });
+
+  /* ─── SubModel Commands ─── */
+
+  it("addSubModel → modelMutation", () => {
+    const effect = interpret({ tag: "addSubModel", subModel: { id: "sub-1", name: "Test Sub", path: "/test", shared_things: [], sync_status: "unloaded" } });
+    expect(effect.type).toBe("modelMutation");
+    if (effect.type !== "modelMutation") return;
+    const m = modelWithThings();
+    const result = effect.apply(m);
+    expect(isOk(result)).toBe(true);
+    if (!isOk(result)) return;
+    expect(result.value.subModels.get("sub-1")?.name).toBe("Test Sub");
+  });
+
+  it("removeSubModel → removes sub-model", () => {
+    const addEffect = interpret({ tag: "addSubModel", subModel: { id: "sub-1", name: "Test", path: "/t", shared_things: [], sync_status: "unloaded" } });
+    if (addEffect.type !== "modelMutation") return;
+    let m = modelWithThings();
+    const r1 = addEffect.apply(m);
+    if (!isOk(r1)) return;
+    m = r1.value;
+    expect(m.subModels.has("sub-1")).toBe(true);
+
+    const rmEffect = interpret({ tag: "removeSubModel", subModelId: "sub-1" });
+    if (rmEffect.type !== "modelMutation") return;
+    const r2 = rmEffect.apply(m);
+    expect(isOk(r2)).toBe(true);
+    if (!isOk(r2)) return;
+    expect(r2.value.subModels.has("sub-1")).toBe(false);
+  });
+
+  /* ─── Requirement/Assertion/Scenario Commands ─── */
+
+  it("addRequirement → modelMutation", () => {
+    const effect = interpret({ tag: "addRequirement", requirement: { id: "req-1", target: "obj-1", name: "Test Req" } });
+    expect(effect.type).toBe("modelMutation");
+    if (effect.type !== "modelMutation") return;
+    const m = modelWithThings();
+    const result = effect.apply(m);
+    expect(isOk(result)).toBe(true);
+    if (!isOk(result)) return;
+    expect(result.value.requirements.get("req-1")?.name).toBe("Test Req");
+  });
+
+  it("addAssertion → modelMutation", () => {
+    const effect = interpret({ tag: "addAssertion", assertion: { id: "a-1", target: "obj-1", predicate: "test", category: "safety", enabled: true } });
+    expect(effect.type).toBe("modelMutation");
+    if (effect.type !== "modelMutation") return;
+    const m = modelWithThings();
+    const result = effect.apply(m);
+    expect(isOk(result)).toBe(true);
+    if (!isOk(result)) return;
+    expect(result.value.assertions.get("a-1")?.predicate).toBe("test");
+  });
+
+  it("addScenario → modelMutation", () => {
+    const effect = interpret({ tag: "addScenario", scenario: { id: "sc-1", name: "Happy Path", path_labels: [] } });
+    expect(effect.type).toBe("modelMutation");
+    if (effect.type !== "modelMutation") return;
+    const m = modelWithThings();
+    const result = effect.apply(m);
+    expect(isOk(result)).toBe(true);
+    if (!isOk(result)) return;
+    expect(result.value.scenarios.get("sc-1")?.name).toBe("Happy Path");
+  });
