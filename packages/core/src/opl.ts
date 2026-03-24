@@ -514,8 +514,20 @@ function renderLinkSentence(s: OplLinkSentence): string {
       }
       return `${s.sourceName} yields ${s.targetName}.`;
     }
-    case "input": return `${processName} changes ${objectName} from ${s.sourceStateName ?? "unspecified state"}.`;
-    case "output": return `${processName} changes ${objectName} to ${s.targetStateName ?? "unspecified state"}.`;
+    case "input": {
+      // input: source=object, target=process (like consumption)
+      if (s.sourceStateName) {
+        return `${s.sourceStateName} ${s.sourceName} is an input of ${s.targetName}.`;
+      }
+      return `${s.sourceName} is an input of ${s.targetName}.`;
+    }
+    case "output": {
+      // output: source=process, target=object (like effect/result)
+      if (s.targetStateName) {
+        return `${s.sourceName} outputs ${s.targetStateName} ${s.targetName}.`;
+      }
+      return `${s.sourceName} outputs ${s.targetName}.`;
+    }
     case "aggregation": {
       // aggregation: source=whole, target=part. Multiplicity on target = part count.
       const partName = withMultiplicity(s.targetName, s.multiplicityTarget);
@@ -859,9 +871,19 @@ export function render(doc: OplDocument): string {
     const verb = e.refinementType === "in-zoom" ? "in-zooming" : "unfolding";
     lines.push(`${e.parentOpdName} is refined by ${verb} ${e.refinedThingName} in ${e.childOpdName}.`);
   }
-  lines.push(...doc.sentences
+  const rendered = doc.sentences
     .map(s => renderSentence(s, doc.renderSettings))
-    .filter(Boolean) as string[]);
+    .filter(Boolean) as string[];
+  // Deduplicate consecutive identical sentences (e.g. condition modifier repeating instrument sentence)
+  const deduped: string[] = [];
+  const seen = new Set<string>();
+  for (const line of rendered) {
+    if (!seen.has(line)) {
+      deduped.push(line);
+      seen.add(line);
+    }
+  }
+  lines.push(...deduped);
   return lines.join("\n");
 }
 

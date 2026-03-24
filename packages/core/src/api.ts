@@ -1548,8 +1548,10 @@ export function validate(model: Model): InvariantError[] {
 
   // I-CONTOUR-RESTRICT: Consumption/result links must not target in-zoomed processes (ISO §10.5.2)
   // These links must be distributed to individual subprocesses, not the outer contour.
+  // Exception: distributed links (ISO §14.2.2.4.1) explicitly target the parent contour.
   for (const [id, link] of model.links) {
     if (link.type === "consumption" || link.type === "result" || link.type === "input" || link.type === "output") {
+      if (link.distributed) continue; // ISO §14.2.2.4.1: distributed links target contour by design
       if (inZoomedProcessIds.has(link.source) || inZoomedProcessIds.has(link.target)) {
         const procId = inZoomedProcessIds.has(link.source) ? link.source : link.target;
         errors.push({
