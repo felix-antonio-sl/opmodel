@@ -2693,3 +2693,33 @@ body,
   resize: vertical;
   font-family: inherit;
 }
+
+/* SubModel sync status badges */
+.settings-panel__badge {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.settings-panel__badge--synced {
+  background: rgba(72, 187, 120, 0.15);
+  color: #48bb78;
+}
+
+.settings-panel__badge--pending {
+  background: rgba(237, 137, 54, 0.15);
+  color: #ed8936;
+}
+
+.settings-panel__badge--unloaded {
+  background: rgba(160, 174, 192, 0.15);
+  color: #a0aec0;
+}
+
+.settings-panel__badge--disconnected {
+  background: rgba(245, 101, 101, 0.15);
+  color: #f56565;
+}

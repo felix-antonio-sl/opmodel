@@ -352,6 +352,7 @@ function ThingNode({
   isRefined,
   isImplicit,
   isError,
+  isShared,
   hasSuppressedStates,
   dragDelta,
   simFilter,
@@ -374,6 +375,7 @@ function ThingNode({
   isRefined: boolean;
   isImplicit?: boolean;
   isError?: boolean;
+  isShared?: boolean;
   hasSuppressedStates?: boolean;
   dragDelta: Point;
   simFilter?: string;
@@ -496,6 +498,10 @@ function ThingNode({
       {isRefined && !isContainer && (
         <text fontSize={10} fill="var(--accent)" pointerEvents="none"
           x={x + w - 10} y={y + totalH - 5}>⊕</text>
+      )}
+      {isShared && (
+        <text fontSize={8} fill="var(--accent-dim, #3a7bc8)" pointerEvents="none"
+          x={x + 3} y={y + totalH - 3} title="Shared with sub-model">⇌</text>
       )}
 
       {hasSemiFold && (
@@ -957,6 +963,15 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
   const fiber = useMemo(() => resolveOpdFiber(model, opdId), [model, opdId]);
 
   // Derive appearances map from fiber (explicit only — implicit things rendered separately)
+  // SubModel shared things — for visual badge
+  const sharedThingIds = useMemo(() => {
+    const set = new Set<string>();
+    for (const sub of model.subModels.values()) {
+      for (const id of sub.shared_things) set.add(id);
+    }
+    return set;
+  }, [model.subModels]);
+
   const appearances = useMemo(() => {
     const map = new Map<string, Appearance>();
     for (const [id, entry] of fiber.things) {
@@ -1955,6 +1970,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
                   isContainer={isAppContainer}
                   isRefined={[...model.opds.values()].some(o => o.refines === thingId)}
                   isError={errorEntities?.has(thingId)}
+                  isShared={sharedThingIds.has(thingId)}
                   hasSuppressedStates={allStates.length > states.length}
                   dragDelta={isDragging ? dragDelta : { x: 0, y: 0 }}
                   simFilter={simFilter}

@@ -225,6 +225,66 @@ export function SettingsPanel({ model, dispatch, onClose }: Props) {
             }}
           >+ Scenario</button>
         </div>
+
+        <div className="settings-panel__section-title">Sub-Models ({model.subModels.size})</div>
+
+        {[...model.subModels.values()].map(sub => (
+          <div key={sub.id} style={{ padding: "6px 16px", borderBottom: "1px solid var(--border)" }}>
+            <div className="settings-panel__row" style={{ padding: 0 }}>
+              <input
+                type="text"
+                value={sub.name}
+                onChange={(e) => dispatch({ tag: "updateSubModel", subModelId: sub.id, patch: { name: e.target.value } })}
+                style={{ flex: 1, minWidth: 80 }}
+                placeholder="Name"
+              />
+              <span className={`settings-panel__badge settings-panel__badge--${sub.sync_status}`}>
+                {sub.sync_status}
+              </span>
+              <button
+                className="settings-panel__close"
+                onClick={() => dispatch({ tag: "removeSubModel", subModelId: sub.id })}
+                style={{ padding: "0 4px" }}
+              >✕</button>
+            </div>
+            <div style={{ marginTop: 4 }}>
+              <input
+                type="text"
+                value={sub.path}
+                onChange={(e) => dispatch({ tag: "updateSubModel", subModelId: sub.id, patch: { path: e.target.value } })}
+                style={{ width: "100%", fontSize: 10 }}
+                placeholder="File path or URL"
+              />
+            </div>
+            <div style={{ marginTop: 4, fontSize: 10, color: "var(--text-muted)" }}>
+              Shared: {sub.shared_things.length > 0
+                ? sub.shared_things.map(id => model.things.get(id)?.name ?? id).join(", ")
+                : "none"}
+              <button
+                style={{ marginLeft: 6, fontSize: 9, cursor: "pointer", background: "none", border: "1px solid var(--border)", borderRadius: 2, color: "var(--text-muted)", padding: "1px 4px" }}
+                onClick={() => {
+                  const available = [...model.things.values()].filter(t => !sub.shared_things.includes(t.id));
+                  if (available.length === 0) { alert("All things are already shared"); return; }
+                  const name = prompt(`Add shared thing:\n${available.map(t => t.name).join(", ")}`);
+                  if (!name) return;
+                  const thing = available.find(t => t.name.toLowerCase() === name.toLowerCase());
+                  if (!thing) { alert(`Thing "${name}" not found`); return; }
+                  dispatch({ tag: "updateSubModel", subModelId: sub.id, patch: { shared_things: [...sub.shared_things, thing.id] } });
+                }}
+              >+ share</button>
+            </div>
+          </div>
+        ))}
+        <div className="settings-panel__row">
+          <button
+            className="props-panel__add-btn"
+            style={{ width: "100%" }}
+            onClick={() => {
+              const id = `sub-${Date.now().toString(36)}`;
+              dispatch({ tag: "addSubModel", subModel: { id, name: "New Sub-Model", path: "", shared_things: [], sync_status: "unloaded" } });
+            }}
+          >+ Sub-Model</button>
+        </div>
       </div>
     </div>
   );
