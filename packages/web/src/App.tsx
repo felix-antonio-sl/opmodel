@@ -252,6 +252,12 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
         const target = e.target as HTMLElement;
         if (target.tagName === "INPUT" || target.tagName === "SELECT" || target.tagName === "TEXTAREA") return;
         e.preventDefault();
+        const thing = model.things.get(ui.selectedThing);
+        const stateCount = [...model.states.values()].filter(s => s.parent === ui.selectedThing).length;
+        const linkCount = [...model.links.values()].filter(l => l.source === ui.selectedThing || l.target === ui.selectedThing).length;
+        if ((stateCount > 0 || linkCount > 0) && !window.confirm(
+          `Delete "${thing?.name}"? This will also remove ${stateCount} state(s) and ${linkCount} link(s).`
+        )) return;
         dispatch({ tag: "removeThing", thingId: ui.selectedThing });
       }
       if (e.key === "Escape") {
