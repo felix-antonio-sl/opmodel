@@ -431,7 +431,7 @@ Cuando se out-zoomea (fold), multiples links de subprocesos al mismo objeto debe
 | R-LV-1..5 (link visibility) | ✓ | simulation.ts:275-313, opl.ts:183-197 | Filtering completo |
 | R-ES (effect split) | ✓ | simulation.ts:313-317, helpers.ts:transformingMode | Split automatico en C-01: state-specified→input(first)+output(last) |
 | R-RS (role shift) | Implicita | — | Permitido naturalmente por link-type per-link |
-| R-OZ-1..3,5 (out-zoom precedence) | Parcial | simulation.ts:376-401 | Solo VISUAL-03; **matriz completa no** |
+| R-OZ-1..3,5 (out-zoom precedence) | ✓ | simulation.ts:400-425 | VISUAL-03 + R-OZ precedencia completa (consumption>effect>agent>instrument) |
 | R-OZ-4 (result+consumption invalid) | ✓ | api.ts:316-320 | I-16 en addLink |
 | R-IH (structural inheritance) | — | — | **No implementado** |
 | R-RC-1..3 (cycle prohibition) | ✓ | api.ts:501-510 | Transitive ancestor check |
@@ -484,7 +484,6 @@ Cuando se out-zoomea (fold), multiples links de subprocesos al mismo objeto debe
 | Gap | Archivos | Descripcion |
 |-----|----------|-------------|
 | R-IH | core nuevo | Herencia estructural completa (links heredados por specializations) |
-| R-OZ-1..3,5 | simulation.ts | Matriz completa de precedencia out-zoom |
 | R-SF-6,9 | OpdCanvas.tsx, simulation.ts | Links apuntando a parts dentro de semi-fold |
 | R-VI-2 | OpdCanvas.tsx | Duplicate visual indicator (offset shape) |
 | R-NT-4 | OpdTree.tsx, types.ts | View OPDs (colecciones ad-hoc) |

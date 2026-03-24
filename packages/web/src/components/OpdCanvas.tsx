@@ -954,7 +954,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
       modifier: [...model.modifiers.values()].find((m) => m.over === rl.link.id),
       visualSource: rl.visualSource,
       visualTarget: rl.visualTarget,
-      labelOverride: undefined as string | undefined,
+      labelOverride: rl.splitHalf as string | undefined,  // R-ES: "input" or "output"
       isMergedPair: false,
       aggregated: rl.aggregated,
     }));

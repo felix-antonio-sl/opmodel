@@ -175,6 +175,8 @@ export interface ResolvedLink {
   visualSource: string;
   visualTarget: string;
   aggregated: boolean;
+  /** R-ES: effect split half — "input" (source_state→first) or "output" (last→target_state) */
+  splitHalf?: "input" | "output";
 }
 
 // === DA-9: Fiber (derived OPD view) ===
@@ -312,9 +314,9 @@ export function resolveLinksForOpd(model: Model, opdId: string): ResolvedLink[] 
           } else if (link.type === "effect" && (link.source_state || link.target_state)) {
             // R-ES: State-specified effect → split into input half (→first) + output half (last→)
             // Input half: object(source_state) → first subprocess
-            result.push({ link, visualSource: otherEnd, visualTarget: first, aggregated: true });
+            result.push({ link, visualSource: otherEnd, visualTarget: first, aggregated: true, splitHalf: "input" });
             // Output half: last subprocess → object(target_state)
-            result.push({ link, visualSource: last, visualTarget: otherEnd, aggregated: true });
+            result.push({ link, visualSource: last, visualTarget: otherEnd, aggregated: true, splitHalf: "output" });
           } else {
             // Agent/instrument/basic effect → all subprocesses
             for (const spId of subprocessesByY) {
@@ -395,7 +397,7 @@ export function resolveLinksForOpd(model: Model, opdId: string): ResolvedLink[] 
     }
   }
 
-  return result.filter(rl => {
+  const afterVisual03 = result.filter(rl => {
     if (!rl.aggregated) return true;
     if (!["instrument", "agent"].includes(rl.link.type)) return true;
     // Rule 1: source is part of whole that already has direct link of same type
@@ -404,6 +406,35 @@ export function resolveLinksForOpd(model: Model, opdId: string): ResolvedLink[] 
     // Rule 2: source already has a direct link to same process → resolved enabling is redundant
     if (directParticipants.has(`${rl.visualSource}|${rl.visualTarget}`)) return false;
     return true;
+  });
+
+  // R-OZ: Out-zoom precedence — when multiple aggregated link types connect the same
+  // object-process pair, keep only the highest precedence type.
+  // Precedence: consumption = result > effect > agent > instrument (ISO §14 lines 784-796)
+  const OZ_PRECEDENCE: Record<string, number> = {
+    consumption: 5, result: 5, input: 5, output: 5,
+    effect: 4,
+    agent: 3,
+    instrument: 2,
+  };
+  const aggPairBest = new Map<string, number>(); // "obj|proc" → best precedence
+  for (const rl of afterVisual03) {
+    if (!rl.aggregated) continue;
+    const objId = model.things.get(rl.visualSource)?.kind === "object" ? rl.visualSource : rl.visualTarget;
+    const procId = objId === rl.visualSource ? rl.visualTarget : rl.visualSource;
+    const pairKey = `${objId}|${procId}`;
+    const prec = OZ_PRECEDENCE[rl.link.type] ?? 0;
+    const best = aggPairBest.get(pairKey) ?? -1;
+    if (prec > best) aggPairBest.set(pairKey, prec);
+  }
+
+  return afterVisual03.filter(rl => {
+    if (!rl.aggregated) return true;
+    const prec = OZ_PRECEDENCE[rl.link.type] ?? 0;
+    const objId = model.things.get(rl.visualSource)?.kind === "object" ? rl.visualSource : rl.visualTarget;
+    const procId = objId === rl.visualSource ? rl.visualTarget : rl.visualSource;
+    const pairKey = `${objId}|${procId}`;
+    return prec >= (aggPairBest.get(pairKey) ?? 0);
   });
 }
 

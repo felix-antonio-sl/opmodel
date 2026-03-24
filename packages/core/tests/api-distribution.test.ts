@@ -170,23 +170,23 @@ describe("R-ES: Effect Split in in-zoom distribution", () => {
     expect(effects).toHaveLength(2);
   });
 
-  it("input half targets first subprocess with source_state", () => {
+  it("input half targets first subprocess with splitHalf='input'", () => {
     const m = buildEffectSplitModel();
     const resolved = resolveLinksForOpd(m, "opd-sd1");
     const effects = resolved.filter(r => r.link.id === "lnk-effect-io");
-    // Input half: obj-x (with s1) → first subprocess (P1)
     const inputHalf = effects.find(r => r.visualTarget === "proc-p1");
     expect(inputHalf).toBeDefined();
     expect(inputHalf!.visualSource).toBe("obj-x");
+    expect(inputHalf!.splitHalf).toBe("input");
   });
 
-  it("output half targets last subprocess with target_state", () => {
+  it("output half targets last subprocess with splitHalf='output'", () => {
     const m = buildEffectSplitModel();
     const resolved = resolveLinksForOpd(m, "opd-sd1");
     const effects = resolved.filter(r => r.link.id === "lnk-effect-io");
-    // Output half: last subprocess (P3) → obj-x (with s2)
     const outputHalf = effects.find(r => r.visualSource === "proc-p3");
     expect(outputHalf).toBeDefined();
+    expect(outputHalf!.splitHalf).toBe("output");
     expect(outputHalf!.visualTarget).toBe("obj-x");
   });
 
@@ -205,6 +205,14 @@ describe("R-ES: Effect Split in in-zoom distribution", () => {
     expect(effects).toHaveLength(3); // all subprocesses
   });
 
+  it("split halves are marked with splitHalf field", () => {
+    const m = buildEffectSplitModel();
+    const resolved = resolveLinksForOpd(m, "opd-sd1");
+    const effects = resolved.filter(r => r.link.id === "lnk-effect-io");
+    const halves = effects.map(r => r.splitHalf).sort();
+    expect(halves).toEqual(["input", "output"]);
+  });
+
   it("input-specified effect (only source_state) splits into 2", () => {
     let m = buildEffectSplitModel();
     // Replace with input-specified only
@@ -218,5 +226,70 @@ describe("R-ES: Effect Split in in-zoom distribution", () => {
     const resolved = resolveLinksForOpd(m, "opd-sd1");
     const effects = resolved.filter(r => r.link.id === "lnk-effect-in");
     expect(effects).toHaveLength(2);
+  });
+});
+
+// === R-OZ: Out-zoom precedence ===
+
+describe("R-OZ: Out-zoom precedence (aggregated link consolidation)", () => {
+  function buildOutZoomModel(): Model {
+    let m = createModel("oz-test");
+    m = unwrap(addThing(m, { id: "proc-main", kind: "process", name: "Main", essence: "informatical", affiliation: "systemic" }));
+    m = unwrap(addThing(m, { id: "obj-x", kind: "object", name: "X", essence: "physical", affiliation: "systemic" }));
+    m = unwrap(addThing(m, { id: "proc-p1", kind: "process", name: "P1", essence: "informatical", affiliation: "systemic" }));
+    m = unwrap(addThing(m, { id: "proc-p2", kind: "process", name: "P2", essence: "informatical", affiliation: "systemic" }));
+    m = unwrap(addAppearance(m, { thing: "proc-main", opd: "opd-sd", x: 200, y: 100, w: 150, h: 80 }));
+    m = unwrap(addAppearance(m, { thing: "obj-x", opd: "opd-sd", x: 400, y: 100, w: 100, h: 60 }));
+    m = unwrap(refineThing(m, "proc-main", "opd-sd", "in-zoom", "opd-sd1", "SD1"));
+    m = unwrap(removeThing(m, "opd-sd1-sub-1"));
+    m = unwrap(removeThing(m, "opd-sd1-sub-2"));
+    m = unwrap(removeThing(m, "opd-sd1-sub-3"));
+    m = unwrap(addAppearance(m, { thing: "proc-p1", opd: "opd-sd1", x: 200, y: 50, w: 120, h: 60, internal: true }));
+    m = unwrap(addAppearance(m, { thing: "proc-p2", opd: "opd-sd1", x: 200, y: 150, w: 120, h: 60, internal: true }));
+    return m;
+  }
+
+  it("consumption beats agent — only consumption shown in parent", () => {
+    let m = buildOutZoomModel();
+    m = unwrap(addLink(m, { id: "lnk-c", type: "consumption", source: "obj-x", target: "proc-p1" }));
+    m = unwrap(addLink(m, { id: "lnk-a", type: "agent", source: "obj-x", target: "proc-p2" }));
+    const resolved = resolveLinksForOpd(m, "opd-sd");
+    const aggLinks = resolved.filter(r => r.aggregated);
+    expect(aggLinks).toHaveLength(1);
+    expect(aggLinks[0]!.link.type).toBe("consumption");
+  });
+
+  it("effect beats agent — only effect shown in parent", () => {
+    let m = buildOutZoomModel();
+    m = unwrap(addLink(m, { id: "lnk-e", type: "effect", source: "obj-x", target: "proc-p1" }));
+    m = unwrap(addLink(m, { id: "lnk-a", type: "agent", source: "obj-x", target: "proc-p2" }));
+    const resolved = resolveLinksForOpd(m, "opd-sd");
+    const aggLinks = resolved.filter(r => r.aggregated);
+    expect(aggLinks).toHaveLength(1);
+    expect(aggLinks[0]!.link.type).toBe("effect");
+  });
+
+  it("same precedence — consumption suppresses result on consumed object (VISUAL-03)", () => {
+    let m = buildOutZoomModel();
+    m = unwrap(addLink(m, { id: "lnk-c", type: "consumption", source: "obj-x", target: "proc-p1" }));
+    m = unwrap(addLink(m, { id: "lnk-r", type: "result", source: "proc-p2", target: "obj-x" }));
+    const resolved = resolveLinksForOpd(m, "opd-sd");
+    const aggLinks = resolved.filter(r => r.aggregated);
+    // VISUAL-03: result on internally-consumed object is suppressed
+    expect(aggLinks).toHaveLength(1);
+    expect(aggLinks[0]!.link.type).toBe("consumption");
+  });
+
+  it("direct links not affected by precedence filter", () => {
+    let m = buildOutZoomModel();
+    // Direct link in SD (not aggregated)
+    m = unwrap(addLink(m, { id: "lnk-agent-direct", type: "agent", source: "obj-x", target: "proc-main" }));
+    // Aggregated consumption from subprocess
+    m = unwrap(addLink(m, { id: "lnk-c", type: "consumption", source: "obj-x", target: "proc-p1" }));
+    const resolved = resolveLinksForOpd(m, "opd-sd");
+    const types = resolved.map(r => r.link.type);
+    // Both should show — direct agent is not affected by precedence
+    expect(types).toContain("agent");
+    expect(types).toContain("consumption");
   });
 });
