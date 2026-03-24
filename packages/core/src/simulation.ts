@@ -524,24 +524,13 @@ export function resolveOpdFiber(model: Model, opdId: string): OpdFiber {
     implicitCandidates.push({ anchorId, candidateId, thing });
   }
 
-  // Second pass: position ghosts near their anchor when possible, fallback to grid
+  // Second pass: position ghosts in a clean grid to the right of explicit things
   let gridIndex = 0;
-  for (const { anchorId, candidateId, thing } of implicitCandidates) {
-    const anchor = things.get(anchorId)?.appearance;
+  for (const { candidateId, thing } of implicitCandidates) {
     const w = thing.kind === "process" ? 140 : 120;
     const h = 60;
-
-    // Try anchor-relative: place to the right of the anchor
-    let x: number;
-    let y: number;
-    if (anchor) {
-      // Place ghost to the right outside any explicit bounding box
-      x = ghostStartX + (gridIndex % ghostCols) * ghostColWidth;
-      y = Math.max(minTop, anchor.y) + Math.floor(gridIndex / ghostCols) * ghostRowHeight;
-    } else {
-      x = ghostStartX + (gridIndex % ghostCols) * ghostColWidth;
-      y = minTop + Math.floor(gridIndex / ghostCols) * ghostRowHeight;
-    }
+    const x = ghostStartX + (gridIndex % ghostCols) * ghostColWidth;
+    const y = minTop + Math.floor(gridIndex / ghostCols) * ghostRowHeight;
 
     things.set(candidateId, {
       thing,
