@@ -1512,13 +1512,24 @@ export function validate(model: Model): InvariantError[] {
 
   // I-17: Process must have at least one transformation link (no orphan processes)
   // Exempt in-zoomed processes: their transformation is delegated to subprocesses (ISO §14.2.2.4.1)
+  // Exempt subprocess internals of in-zoom OPDs: they are WIP placeholders until user connects links
   const inZoomedProcessIds = new Set(
     [...model.opds.values()]
       .filter(o => o.refines && o.refinement_type === "in-zoom")
       .map(o => o.refines!)
   );
+  const internalSubprocessIds = new Set<string>();
+  for (const app of model.appearances.values()) {
+    if (app.internal === true) {
+      const thing = model.things.get(app.thing);
+      const opd = model.opds.get(app.opd);
+      if (thing?.kind === "process" && opd?.refinement_type === "in-zoom" && opd.refines !== app.thing) {
+        internalSubprocessIds.add(app.thing);
+      }
+    }
+  }
   for (const [id, thing] of model.things) {
-    if (thing.kind === "process" && !inZoomedProcessIds.has(id)) {
+    if (thing.kind === "process" && !inZoomedProcessIds.has(id) && !internalSubprocessIds.has(id)) {
       const hasTransformLink = [...model.links.values()].some(
         l => (l.source === id || l.target === id) &&
         ["effect", "consumption", "result", "input", "output"].includes(l.type)

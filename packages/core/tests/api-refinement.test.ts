@@ -302,11 +302,10 @@ describe("validate() refinement checks", () => {
     // buildTestModel has lnk-2: consumption beans→proc-make-coffee
     m = unwrap(refineThing(m, "proc-make-coffee", "opd-sd", "in-zoom", "opd-sd1", "SD1"));
     const errors = validate(m);
-    // I-CONTOUR-RESTRICT (consumption link to in-zoomed) + I-17 (auto-created placeholders have no links yet)
-    expect(errors.some(e => e.code === "I-CONTOUR-RESTRICT")).toBe(true);
-    const nonPlaceholderErrors = errors.filter(e => e.code !== "I-17");
-    expect(nonPlaceholderErrors).toHaveLength(1);
-    expect(nonPlaceholderErrors[0]!.code).toBe("I-CONTOUR-RESTRICT");
+    // Only I-CONTOUR-RESTRICT expected (consumption link to in-zoomed process)
+    // Auto-created placeholders are exempt from I-17 (internal subprocesses of in-zoom)
+    expect(errors.every(e => e.code === "I-CONTOUR-RESTRICT")).toBe(true);
+    expect(errors.length).toBe(1);
   });
 });
 
