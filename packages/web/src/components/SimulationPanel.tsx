@@ -6,9 +6,9 @@
    via the Command algebra.
    ═══════════════════════════════════════════════════ */
 
-import { useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import type { Model } from "@opmodel/core";
-import { createInitialState } from "@opmodel/core";
+import { createInitialState, runMonteCarloSimulation, type MonteCarloResult } from "@opmodel/core";
 import type { Command, SimulationUIState } from "../lib/commands";
 
 interface Props {
@@ -218,6 +218,59 @@ export function SimulationPanel({ model, simulation, dispatch }: Props) {
           </table>
         </div>
       )}
+
+      {/* Monte Carlo */}
+      {isTerminal && (() => {
+        const [mc, setMc] = useState<MonteCarloResult | null>(null);
+        const [running, setRunning] = useState(false);
+        return (
+          <div className="sim-panel__summary">
+            <div className="sim-panel__summary-title">Monte Carlo</div>
+            <button
+              disabled={running}
+              style={{ fontSize: 10, padding: "3px 8px", cursor: "pointer" }}
+              onClick={() => {
+                setRunning(true);
+                setTimeout(() => {
+                  const result = runMonteCarloSimulation(model, 100);
+                  setMc(result);
+                  setRunning(false);
+                }, 10);
+              }}
+            >
+              {running ? "Running..." : mc ? `Re-run (${mc.runs} runs)` : "Run 100x"}
+            </button>
+            {mc && (
+              <div style={{ marginTop: 6, fontSize: 10 }}>
+                <div>Completed: {mc.completedCount}/{mc.runs} ({Math.round(mc.completedCount/mc.runs*100)}%)</div>
+                <div>Deadlocked: {mc.deadlockedCount}/{mc.runs}</div>
+                <div>Avg steps: {mc.avgSteps.toFixed(1)}{mc.avgDuration != null ? ` | Avg duration: ${mc.avgDuration.toFixed(1)}` : ""}</div>
+                {Object.entries(mc.assertionPassRate).length > 0 && (
+                  <div style={{ marginTop: 4 }}>
+                    <div style={{ fontWeight: 600 }}>Assertion pass rates:</div>
+                    {Object.entries(mc.assertionPassRate).map(([id, rate]) => {
+                      const assertion = model.assertions.get(id);
+                      return (
+                        <div key={id} style={{ color: rate >= 0.95 ? "#48bb78" : rate >= 0.5 ? "#ed8936" : "#f56565" }}>
+                          {Math.round(rate * 100)}% — {assertion?.predicate ?? id}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                {Object.entries(mc.exceptionRate).length > 0 && (
+                  <div style={{ marginTop: 4 }}>
+                    <div style={{ fontWeight: 600 }}>Exception rates:</div>
+                    {Object.entries(mc.exceptionRate).map(([key, rate]) => (
+                      <div key={key} style={{ color: "#f56565" }}>{Math.round(rate * 100)}% — {key}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Simulation summary */}
       {isTerminal && (
