@@ -588,18 +588,18 @@ const INCOMPLETE_PHRASES: Record<string, string> = {
 };
 
 /** Convert ISO 19450 multiplicity symbol to OPL phrase. Returns null for default (1). */
-function multiplicityPhrase(mult: string | undefined): string | null {
+function multiplicityPhrase(mult: string | undefined, isES = false): string | null {
   if (!mult || mult === "1") return null;
   switch (mult) {
-    case "?": return "an optional";
-    case "*": return "zero or more";
-    case "+": return "at least one";
+    case "?": return isES ? "un opcional" : "an optional";
+    case "*": return isES ? "cero o más" : "zero or more";
+    case "+": return isES ? "al menos un" : "at least one";
     default: {
       const match = mult.match(/^(\d+)\.\.(\d+|\*)$/);
       if (match) {
         const [, min, max] = match;
-        if (max === "*") return `${min} or more`;
-        return `${min} to ${max}`;
+        if (max === "*") return isES ? `${min} o más` : `${min} or more`;
+        return isES ? `${min} a ${max}` : `${min} to ${max}`;
       }
       return mult; // fallback: raw value
     }
@@ -607,8 +607,8 @@ function multiplicityPhrase(mult: string | undefined): string | null {
 }
 
 /** Apply multiplicity phrase to a name: "at least one Wheel" or just "Wheel" */
-function withMultiplicity(name: string, mult: string | undefined): string {
-  const phrase = multiplicityPhrase(mult);
+function withMultiplicity(name: string, mult: string | undefined, isES = false): string {
+  const phrase = multiplicityPhrase(mult, isES);
   return phrase ? `${phrase} ${name}` : name;
 }
 
@@ -635,7 +635,7 @@ function renderLinkSentence(s: OplLinkSentence, v: OplVocab): string {
       if (s.sourceStateName) {
         return `${s.targetName} ${v.consumes} ${ss(s.sourceStateName, s.sourceName)}.`;
       }
-      return `${s.targetName} ${v.consumes} ${withMultiplicity(s.sourceName, s.multiplicitySource)}.`;
+      return `${s.targetName} ${v.consumes} ${withMultiplicity(s.sourceName, s.multiplicitySource, isES)}.`;
     }
     case "effect": {
       // TS3-TS5: Process changes Object from A to B / Proceso cambia Objeto de A a B
@@ -680,7 +680,7 @@ function renderLinkSentence(s: OplLinkSentence, v: OplVocab): string {
     }
     case "aggregation": {
       // RF1: Whole consists of Parts / Todo consta de Partes
-      const partName = withMultiplicity(s.targetName, s.multiplicityTarget);
+      const partName = withMultiplicity(s.targetName, s.multiplicityTarget, isES);
       if (s.incomplete) {
         return `${s.sourceName} ${v.consistsOf} ${partName} ${v.and} ${v.atLeastOneOtherPart}.`;
       }
@@ -688,7 +688,7 @@ function renderLinkSentence(s: OplLinkSentence, v: OplVocab): string {
     }
     case "exhibition": {
       // RF2: Exhibitor exhibits Feature / Exhibidor exhibe Atributo
-      const featureName = withMultiplicity(s.targetName, s.multiplicityTarget);
+      const featureName = withMultiplicity(s.targetName, s.multiplicityTarget, isES);
       if (s.incomplete) {
         return `${s.sourceName} ${v.exhibitsWord} ${featureName} ${v.and} ${v.atLeastOneOtherFeature}.`;
       }
@@ -832,14 +832,14 @@ function renderModifierSentence(s: OplModifierSentence, v: OplVocab): string {
 function renderGroupedStructural(s: OplGroupedStructuralSentence, v: OplVocab): string {
   const isES = v === ES_VOCAB;
   const incPhrases: Record<string, string> = isES
-    ? { aggregation: v.atLeastOneOtherPart, exhibition: v.atLeastOneOtherFeature, generalization: v.atLeastOneOtherSpecialization }
+    ? { aggregation: v.atLeastOneOtherPart, exhibition: v.atLeastOneOtherFeature, generalization: v.atLeastOneOtherSpecialization, classification: "al menos otra instancia" }
     : INCOMPLETE_PHRASES;
   const phrase = incPhrases[s.linkType] ?? (isES ? "al menos otro" : "at least one other");
 
   switch (s.linkType) {
     case "aggregation": {
       const qualifiedNames = s.childNames.map((name, i) =>
-        withMultiplicity(name, s.childMultiplicities?.[i])
+        withMultiplicity(name, s.childMultiplicities?.[i], isES)
       );
       if (s.semiFolded) {
         return isES
@@ -851,7 +851,7 @@ function renderGroupedStructural(s: OplGroupedStructuralSentence, v: OplVocab): 
 
     case "exhibition": {
       const qualifiedNames = s.childNames.map((name, i) =>
-        withMultiplicity(name, s.childMultiplicities?.[i])
+        withMultiplicity(name, s.childMultiplicities?.[i], isES)
       );
       const attrs = qualifiedNames.filter((_, i) => s.childKinds[i] === "object");
       const ops = qualifiedNames.filter((_, i) => s.childKinds[i] === "process");
@@ -892,11 +892,15 @@ function renderGroupedStructural(s: OplGroupedStructuralSentence, v: OplVocab): 
     }
 
     case "classification": {
-      const list = formatList(s.childNames, s.incomplete, phrase);
+      const list = formatList(s.childNames, s.incomplete, phrase, v);
       if (s.childNames.length === 1) {
-        return `${s.childNames[0]} is an instance of ${s.parentName}.`;
+        return isES
+          ? `${s.childNames[0]} ${v.isInstanceOf} ${s.parentName}.`
+          : `${s.childNames[0]} is an instance of ${s.parentName}.`;
       }
-      return `${list} are instances of ${s.parentName}.`;
+      return isES
+        ? `${list} son instancias de ${s.parentName}.`
+        : `${list} are instances of ${s.parentName}.`;
     }
 
     default:

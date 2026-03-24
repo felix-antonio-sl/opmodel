@@ -37,6 +37,9 @@ describe("OPL-ES", () => {
     expect(text).not.toContain("changes");
     expect(text).not.toContain("triggers");
     expect(text).not.toContain("in that sequence");
+    expect(text).not.toContain("or more");
+    expect(text).not.toContain("is an instance of");
+    expect(text).not.toContain("are instances of");
   });
 
   it("SD OPL-ES edge label", () => {
@@ -45,6 +48,15 @@ describe("OPL-ES", () => {
     // SD is root, no edge label
     const sd1 = render(expose(r.value, "opd-sd1"));
     expect(sd1).toContain("se refina por descomposición de");
+  });
+
+  it("SD3 multiplicity renders in Spanish", () => {
+    const r = loadModel(fixture);
+    if (!r.ok) throw new Error("load failed");
+    const text = render(expose(r.value, "opd-sd3"));
+    expect(text).toContain("o más");
+    expect(text).not.toContain("or more");
+    expect(text).not.toContain("is an instance of");
   });
 
   it("SD3 unfold in Spanish", () => {
