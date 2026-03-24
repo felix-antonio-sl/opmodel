@@ -51,7 +51,9 @@ function sentenceCategory(sentence: OplSentence): "thing" | "link" | "modifier" 
 }
 
 function renderSentence(sentence: OplSentence, doc: OplDocument): string {
-  return render({ ...doc, sentences: [sentence] });
+  // Strip refinementEdge to avoid prepending it to every individual sentence
+  const { refinementEdge, ...rest } = doc;
+  return render({ ...rest, sentences: [sentence] });
 }
 
 function sentenceClass(sentence: OplSentence, selectedThing: string | null): string {
@@ -84,8 +86,22 @@ export function OplSentencesView({ model, opdId, selectedThing }: Props) {
       s.kind === "fan"
   );
 
+  // R-OPL-3: Refinement edge label (once at top, not per sentence)
+  const edgeLabel = doc.refinementEdge
+    ? (() => {
+        const e = doc.refinementEdge;
+        const verb = e.refinementType === "in-zoom" ? "in-zooming" : "unfolding";
+        return `${e.parentOpdName} is refined by ${verb} ${e.refinedThingName} in ${e.childOpdName}.`;
+      })()
+    : null;
+
   return (
     <div className="opl-panel__content">
+      {edgeLabel && (
+        <div className="opl-sentence opl-sentence--thing" style={{ fontStyle: "italic" }}>
+          {edgeLabel}
+        </div>
+      )}
       {thingSentences.map((sentence, i) => (
         <div key={`t-${i}`} className={sentenceClass(sentence, selectedThing)}>
           {renderSentence(sentence, doc)}
