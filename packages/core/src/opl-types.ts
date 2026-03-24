@@ -14,6 +14,7 @@ export interface OplThingDeclaration {
   thingKind: Kind;
   essence: Essence;
   affiliation: Affiliation;
+  perseverance?: "static" | "dynamic";
   alias?: string;
   exhibitorName?: string;
 }

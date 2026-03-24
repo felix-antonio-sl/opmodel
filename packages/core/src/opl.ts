@@ -202,6 +202,7 @@ export function expose(model: Model, opdId: string): OplDocument {
       thingKind: thing.kind,
       essence: thing.essence,
       affiliation: thing.affiliation,
+      perseverance: thing.perseverance,
     };
     if (renderSettings.aliasVisibility && thing.computational && "alias" in thing.computational) {
       declaration.alias = (thing.computational as ComputationalObject).alias;
@@ -995,6 +996,9 @@ function renderSentence(s: OplSentence, settings: OplRenderSettings): string {
       }
       if (s.affiliation !== "systemic") {
         text += `, ${affiliationMap[s.affiliation] ?? s.affiliation}`;
+      }
+      if (s.perseverance === "dynamic") {
+        text += settings.locale === "es" ? ", dinámico" : ", dynamic";
       }
       if (s.alias && settings.aliasVisibility) {
         text += ` (alias: ${s.alias})`;

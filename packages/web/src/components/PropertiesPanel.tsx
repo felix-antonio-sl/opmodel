@@ -665,6 +665,27 @@ export function PropertiesPanel({ model, thingId, opdId, dispatch }: Props) {
         </select>
       </div>
 
+      {/* Perseverance (ISO §4 line 93) */}
+      {thing.kind === "object" && (
+        <div className="props-panel__section">
+          <label className="props-panel__label">Perseverance</label>
+          <select
+            className="props-panel__select"
+            value={thing.perseverance ?? "static"}
+            onChange={(e) =>
+              dispatch({
+                tag: "updateThingProps",
+                thingId,
+                patch: { perseverance: e.target.value as "static" | "dynamic" },
+              })
+            }
+          >
+            <option value="static">static (persistent)</option>
+            <option value="dynamic">dynamic (temporal)</option>
+          </select>
+        </div>
+      )}
+
       {/* Notes */}
       <div className="props-panel__section">
         <label className="props-panel__label">Notes</label>
