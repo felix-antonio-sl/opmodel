@@ -31,7 +31,7 @@ export {
   createHistory, pushHistory, undo, redo,
 } from "./history";
 export {
-  expose, applyOplEdit, render, oplSlug, editsFrom,
+  expose, applyOplEdit, render, renderAll, oplSlug, editsFrom,
 } from "./opl";
 export type {
   OplSentence, OplThingDeclaration, OplStateEnumeration, OplDuration,

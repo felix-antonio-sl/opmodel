@@ -1133,6 +1133,42 @@ export function render(doc: OplDocument): string {
   return lines.join("\n");
 }
 
+// === Full-model OPL export ===
+
+/** Render OPL for all OPDs in the model, sorted hierarchically (root first, depth-first). */
+export function renderAll(model: Model): string {
+  // Build hierarchy: root OPDs first, then children depth-first
+  const opdEntries = [...model.opds.entries()];
+  const childrenOf = new Map<string | null, Array<[string, typeof model.opds extends Map<any, infer V> ? V : never]>>();
+  for (const [id, opd] of opdEntries) {
+    const parent = opd.parent_opd;
+    if (!childrenOf.has(parent)) childrenOf.set(parent, []);
+    childrenOf.get(parent)!.push([id, opd]);
+  }
+
+  const sorted: Array<[string, typeof model.opds extends Map<any, infer V> ? V : never]> = [];
+  function walk(parentId: string | null) {
+    const children = childrenOf.get(parentId) ?? [];
+    // Sort children by name for deterministic output
+    children.sort((a, b) => a[1].name.localeCompare(b[1].name));
+    for (const entry of children) {
+      sorted.push(entry);
+      walk(entry[0]);
+    }
+  }
+  walk(null);
+
+  const sections: string[] = [];
+  for (const [id, opd] of sorted) {
+    const doc = expose(model, id);
+    const text = render(doc);
+    if (text.trim()) {
+      sections.push(`=== ${opd.name} ===\n${text}`);
+    }
+  }
+  return sections.join("\n\n");
+}
+
 // === OPL Slug & ID generation ===
 
 export function oplSlug(name: string): string {

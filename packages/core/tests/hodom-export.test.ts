@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { loadModel } from "../src/serialization";
-import { expose, render } from "../src/opl";
+import { renderAll } from "../src/opl";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 
@@ -10,40 +10,35 @@ const fixture = readFileSync(
 );
 
 describe("HODOM OPL Export", () => {
-  it("generates complete OPL for all OPDs", () => {
+  it("renderAll generates complete OPL for all OPDs", () => {
     const r = loadModel(fixture);
     if (!r.ok) throw new Error("load failed");
     
-    const lines: string[] = [];
-    for (const opd of r.value.opds.values()) {
-      const doc = expose(r.value, opd.id);
-      const text = render(doc);
-      if (text) {
-        if (lines.length > 0) lines.push("");
-        lines.push(`=== ${opd.name} ===`);
-        lines.push(text);
-      }
-    }
+    const fullExport = renderAll(r.value);
     
-    const fullExport = lines.join("\n");
-    
-    // Should have all 6 OPD headers
+    // Should have all 6 OPD headers in hierarchical order
     expect(fullExport).toContain("=== SD ===");
     expect(fullExport).toContain("=== SD1 ===");
     expect(fullExport).toContain("=== SD1.1 ===");
     expect(fullExport).toContain("=== SD1.2 ===");
     expect(fullExport).toContain("=== SD2 ===");
     expect(fullExport).toContain("=== SD3 ===");
+
+    // Hierarchical order: SD before SD1 before SD1.1
+    const sdIdx = fullExport.indexOf("=== SD ===");
+    const sd1Idx = fullExport.indexOf("=== SD1 ===");
+    const sd11Idx = fullExport.indexOf("=== SD1.1 ===");
+    expect(sdIdx).toBeLessThan(sd1Idx);
+    expect(sd1Idx).toBeLessThan(sd11Idx);
     
-    // Key content checks (OPL-ES: "es un objeto" instead of "is an object")
+    // Key content checks (OPL-ES default: "es un objeto")
     expect(fullExport).toContain("Paciente es un objeto");
     expect(fullExport).toContain("Hospitalización Domiciliaria");
-    // No issues
     expect(fullExport).not.toContain("unspecified state");
     
     // Word count
     const wordCount = fullExport.split(/\s+/).length;
-    console.log(`Export: ${fullExport.split("\n").length} lines, ${wordCount} words`);
+    console.log(`renderAll: ${fullExport.split("\n").length} lines, ${wordCount} words`);
     expect(wordCount).toBeGreaterThan(1000);
   });
 });
