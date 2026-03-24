@@ -965,7 +965,10 @@ export function updateAppearance(
   const existing = model.appearances.get(key);
   if (!existing) return err({ code: "NOT_FOUND", message: `Appearance not found: ${key}`, entity: key });
   const cleaned = cleanPatch(patch as Record<string, unknown>);
-  const updated = { ...existing, ...cleaned } as Appearance;
+  // null values = delete optional fields (same pattern as updateThingProps)
+  const merged = { ...existing, ...cleaned } as Record<string, unknown>;
+  for (const [k, v] of Object.entries(merged)) { if (v === null) delete merged[k]; }
+  const updated = merged as Appearance;
   if (updated.internal) {
     const opdEntity = model.opds.get(opd);
     if (!opdEntity || !opdEntity.refines) {

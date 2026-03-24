@@ -929,7 +929,7 @@ export function PropertiesPanel({ model, thingId, opdId, dispatch }: Props) {
                     tag: "updateAppearance",
                     thingId,
                     opdId,
-                    patch: { semi_folded: e.target.checked || undefined },
+                    patch: { semi_folded: e.target.checked ? true : null },
                   })
                 }
               />
