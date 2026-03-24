@@ -83,7 +83,7 @@ describe("HODOM OPL audit", () => {
   it("SD1 renders assertions", () => {
     const doc = expose(m, "opd-sd1");
     const text = render(doc);
-    expect(text).toContain("[safety]");
+    expect(text).toContain("[seguridad]"); // OPL-ES: safety → seguridad
     expect(text).toContain("Consentimiento firmado");
   });
 

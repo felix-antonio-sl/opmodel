@@ -1076,8 +1076,12 @@ function renderSentence(s: OplSentence, settings: OplRenderSettings): string {
     }
     case "requirement":
       return `[${s.reqCode}] ${s.name}: ${s.description} (${v.appliesTo} ${s.targetName}).`;
-    case "assertion":
-      return `[${s.category}] ${s.predicate}`;
+    case "assertion": {
+      const catLabel = v === ES_VOCAB
+        ? { safety: "seguridad", liveness: "vivacidad", correctness: "correctitud" }[s.category] ?? s.category
+        : s.category;
+      return `[${catLabel}] ${s.predicate}`;
+    }
     case "scenario":
       return `[${v.scenario}: ${s.name}] ${s.linkCount} ${v.linksOnPath} "${s.pathLabels.join(", ")}"`;
   }
