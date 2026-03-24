@@ -6,7 +6,7 @@
    into Model mutations or UI state transitions.
    ═══════════════════════════════════════════════════ */
 
-import type { Model, Thing, Link, State, Fan, Modifier, InvariantError, RefinementType, OplEdit, SimulationTrace, Settings, Meta } from "@opmodel/core";
+import type { Model, Thing, Link, State, Fan, Modifier, InvariantError, RefinementType, OplEdit, SimulationTrace, Settings, Meta, Requirement, Assertion, Scenario } from "@opmodel/core";
 import {
   updateAppearance,
   updateThing,
@@ -15,6 +15,15 @@ import {
   updateOPD,
   updateMeta,
   updateSettings,
+  addRequirement,
+  removeRequirement,
+  updateRequirement,
+  addAssertion,
+  removeAssertion,
+  updateAssertion,
+  addScenario,
+  removeScenario,
+  updateScenario,
   addThing,
   addState,
   addLink,
@@ -92,6 +101,16 @@ export type Command =
   | { tag: "addThingToView"; thingId: string; opdId: string }
   | { tag: "updateSettings"; patch: Partial<Settings> }
   | { tag: "updateMeta"; patch: Partial<Omit<Meta, "created" | "modified">> }
+  /* ─── Requirements, Assertions, Scenarios ─── */
+  | { tag: "addRequirement"; requirement: Requirement }
+  | { tag: "removeRequirement"; requirementId: string }
+  | { tag: "updateRequirement"; requirementId: string; patch: Partial<Omit<Requirement, "id">> }
+  | { tag: "addAssertion"; assertion: Assertion }
+  | { tag: "removeAssertion"; assertionId: string }
+  | { tag: "updateAssertion"; assertionId: string; patch: Partial<Omit<Assertion, "id">> }
+  | { tag: "addScenario"; scenario: Scenario }
+  | { tag: "removeScenario"; scenarioId: string }
+  | { tag: "updateScenario"; scenarioId: string; patch: Partial<Omit<Scenario, "id">> }
   /* ─── Simulation Commands ─── */
   | { tag: "startSimulation" }
   | { tag: "stepSimulation"; direction: 1 | -1 }
@@ -313,6 +332,29 @@ export function interpret(cmd: Command): Effect {
         type: "modelMutation",
         apply: (m) => updateMeta(m, cmd.patch),
       };
+
+    /* ─── Requirements, Assertions, Scenarios ─── */
+
+    case "addRequirement":
+      return { type: "modelMutation", apply: (m) => addRequirement(m, cmd.requirement) };
+    case "removeRequirement":
+      return { type: "modelMutation", apply: (m) => removeRequirement(m, cmd.requirementId) };
+    case "updateRequirement":
+      return { type: "modelMutation", apply: (m) => updateRequirement(m, cmd.requirementId, cmd.patch) };
+
+    case "addAssertion":
+      return { type: "modelMutation", apply: (m) => addAssertion(m, cmd.assertion) };
+    case "removeAssertion":
+      return { type: "modelMutation", apply: (m) => removeAssertion(m, cmd.assertionId) };
+    case "updateAssertion":
+      return { type: "modelMutation", apply: (m) => updateAssertion(m, cmd.assertionId, cmd.patch) };
+
+    case "addScenario":
+      return { type: "modelMutation", apply: (m) => addScenario(m, cmd.scenario) };
+    case "removeScenario":
+      return { type: "modelMutation", apply: (m) => removeScenario(m, cmd.scenarioId) };
+    case "updateScenario":
+      return { type: "modelMutation", apply: (m) => updateScenario(m, cmd.scenarioId, cmd.patch) };
 
     /* ─── OPDs (R-NT-4: View OPDs) ─── */
 

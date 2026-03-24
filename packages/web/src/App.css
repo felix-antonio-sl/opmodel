@@ -2606,3 +2606,23 @@ body,
   background: var(--accent) !important;
   color: var(--bg) !important;
 }
+
+/* Requirements/Assertions rows */
+.props-panel__req-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.props-panel__input--sm {
+  flex: 1;
+  font-size: 10px !important;
+  padding: 2px 4px !important;
+}
+
+.props-panel__select--sm {
+  font-size: 10px !important;
+  padding: 2px 4px !important;
+  min-width: 70px;
+}

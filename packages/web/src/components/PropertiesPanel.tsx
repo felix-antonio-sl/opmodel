@@ -967,6 +967,75 @@ export function PropertiesPanel({ model, thingId, opdId, dispatch }: Props) {
         );
       })()}
 
+      {/* Requirements on this thing */}
+      {(() => {
+        const reqs = [...model.requirements.values()].filter(r => r.target === thingId);
+        return (
+          <div className="props-panel__section">
+            <label className="props-panel__label">Requirements ({reqs.length})</label>
+            {reqs.map(r => (
+              <div key={r.id} className="props-panel__req-row">
+                <input
+                  className="props-panel__input props-panel__input--sm"
+                  value={r.name}
+                  onChange={(e) => dispatch({ tag: "updateRequirement", requirementId: r.id, patch: { name: e.target.value } })}
+                  placeholder="Requirement name"
+                />
+                <button className="props-panel__remove-btn" onClick={() => dispatch({ tag: "removeRequirement", requirementId: r.id })}>✕</button>
+              </div>
+            ))}
+            <button
+              className="props-panel__add-btn"
+              onClick={() => {
+                const id = `req-${Date.now().toString(36)}`;
+                dispatch({ tag: "addRequirement", requirement: { id, target: thingId, name: "New Requirement" } });
+              }}
+            >
+              + Requirement
+            </button>
+          </div>
+        );
+      })()}
+
+      {/* Assertions on this thing */}
+      {(() => {
+        const asserts = [...model.assertions.values()].filter(a => a.target === thingId);
+        return (
+          <div className="props-panel__section">
+            <label className="props-panel__label">Assertions ({asserts.length})</label>
+            {asserts.map(a => (
+              <div key={a.id} className="props-panel__req-row">
+                <input
+                  className="props-panel__input props-panel__input--sm"
+                  value={a.predicate}
+                  onChange={(e) => dispatch({ tag: "updateAssertion", assertionId: a.id, patch: { predicate: e.target.value } })}
+                  placeholder="Predicate"
+                />
+                <select
+                  className="props-panel__select props-panel__select--sm"
+                  value={a.category}
+                  onChange={(e) => dispatch({ tag: "updateAssertion", assertionId: a.id, patch: { category: e.target.value as any } })}
+                >
+                  <option value="safety">Safety</option>
+                  <option value="liveness">Liveness</option>
+                  <option value="correctness">Correctness</option>
+                </select>
+                <button className="props-panel__remove-btn" onClick={() => dispatch({ tag: "removeAssertion", assertionId: a.id })}>✕</button>
+              </div>
+            ))}
+            <button
+              className="props-panel__add-btn"
+              onClick={() => {
+                const id = `assert-${Date.now().toString(36)}`;
+                dispatch({ tag: "addAssertion", assertion: { id, target: thingId, predicate: "New assertion", category: "safety", enabled: true } });
+              }}
+            >
+              + Assertion
+            </button>
+          </div>
+        );
+      })()}
+
       <button
         className="props-panel__delete-btn"
         onClick={() => dispatch({ tag: "removeThing", thingId })}
