@@ -1022,6 +1022,14 @@ export function runSimulation(
   for (let i = 0; i < maxSteps; i++) {
     let executed = false;
 
+    // Guard: ensure state integrity after mutations (defensive)
+    if (!(currentState.waitingProcesses instanceof Set)) {
+      currentState = { ...currentState, waitingProcesses: new Set() };
+    }
+    if (!(currentState.objects instanceof Map)) {
+      break; // Corrupted state — stop simulation
+    }
+
     // Phase 1: Re-evaluar procesos en espera primero (against currentState, not snapshot)
     for (const waitingId of [...currentState.waitingProcesses]) {
       const precond = evaluatePrecondition(model, currentState, waitingId);
