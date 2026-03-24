@@ -8,7 +8,7 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import type { Model } from "@opmodel/core";
-import { createInitialState, runMonteCarloSimulation, type MonteCarloResult } from "@opmodel/core";
+import { createInitialState, runSimulation } from "@opmodel/core";
 import type { Command, SimulationUIState } from "../lib/commands";
 
 interface Props {
@@ -221,7 +221,7 @@ export function SimulationPanel({ model, simulation, dispatch }: Props) {
 
       {/* Monte Carlo */}
       {isTerminal && (() => {
-        const [mc, setMc] = useState<MonteCarloResult | null>(null);
+        const [mc, setMc] = useState<{ runs: number; completedCount: number; deadlockedCount: number; avgSteps: number; avgDuration: number | null; assertionPassRate: Record<string, number>; exceptionRate: Record<string, number> } | null>(null);
         const [running, setRunning] = useState(false);
         return (
           <div className="sim-panel__summary">
@@ -232,7 +232,30 @@ export function SimulationPanel({ model, simulation, dispatch }: Props) {
               onClick={() => {
                 setRunning(true);
                 setTimeout(() => {
-                  const result = runMonteCarloSimulation(model, 100);
+                  // Inline Monte Carlo: run simulation 100x
+                const runs = 100;
+                let completedCount = 0, deadlockedCount = 0, totalSteps = 0, totalDuration = 0, durationCount = 0;
+                const aPassCounts: Record<string, number> = {}, aTotalCounts: Record<string, number> = {}, excCounts: Record<string, number> = {};
+                for (let i = 0; i < runs; i++) {
+                  const t = runSimulation(model);
+                  totalSteps += t.steps.length;
+                  if (t.completed) completedCount++;
+                  if (t.deadlocked) deadlockedCount++;
+                  if (t.totalDuration != null) { totalDuration += t.totalDuration; durationCount++; }
+                  if (t.assertionResults) for (const ar of t.assertionResults) {
+                    aTotalCounts[ar.assertionId] = (aTotalCounts[ar.assertionId] ?? 0) + 1;
+                    if (ar.passed) aPassCounts[ar.assertionId] = (aPassCounts[ar.assertionId] ?? 0) + 1;
+                  }
+                  for (const s of t.steps) if (s.exceptionTriggered && s.processName) {
+                    const k = `${s.processName} (${s.exceptionTriggered})`;
+                    excCounts[k] = (excCounts[k] ?? 0) + 1;
+                  }
+                }
+                const assertionPassRate: Record<string, number> = {};
+                for (const [id, total] of Object.entries(aTotalCounts)) assertionPassRate[id] = (aPassCounts[id] ?? 0) / total;
+                const exceptionRate: Record<string, number> = {};
+                for (const [k, c] of Object.entries(excCounts)) exceptionRate[k] = c / runs;
+                const result = { runs, completedCount, deadlockedCount, avgSteps: totalSteps / runs, avgDuration: durationCount > 0 ? totalDuration / durationCount : null, assertionPassRate, exceptionRate };
                   setMc(result);
                   setRunning(false);
                 }, 10);
