@@ -66,6 +66,7 @@ export interface OplLinkSentence {
   multiplicityTarget?: string;
   exceptionType?: "overtime" | "undertime";
   probability?: number;
+  pathLabel?: string;
 }
 
 export interface OplModifierSentence {

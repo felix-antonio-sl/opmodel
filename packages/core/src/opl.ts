@@ -369,6 +369,9 @@ export function expose(model: Model, opdId: string): OplDocument {
     if (link.probability != null) {
       sentence.probability = link.probability;
     }
+    if (link.path_label) {
+      sentence.pathLabel = link.path_label;
+    }
     sentences.push(sentence);
   }
 
@@ -886,7 +889,14 @@ function renderSentence(s: OplSentence, settings: OplRenderSettings): string {
       return `${s.thingName} requires ${s.nominal}${s.unit}.`;
     }
     case "link":
-      return renderLinkSentence(s);
+    {
+      let text = renderLinkSentence(s);
+      if (s.pathLabel) {
+        // Annotate with scenario path label: "sentence. [path: emergencia]" → "sentence [path: emergencia]."
+        text = text.slice(0, -1) + ` [path: ${s.pathLabel}].`;
+      }
+      return text;
+    }
     case "modifier": {
       return renderModifierSentence(s);
     }
