@@ -762,6 +762,36 @@ body,
 
 /* ── Breadcrumb overlay ── */
 
+.canvas-zoom-controls {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  display: flex;
+  gap: 4px;
+  z-index: 10;
+}
+
+.canvas-zoom-controls button {
+  width: 28px;
+  height: 28px;
+  font-size: 13px;
+  font-weight: 700;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-panel);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.canvas-zoom-controls button:hover {
+  background: var(--accent);
+  color: var(--bg);
+}
+
 .canvas-breadcrumb {
   position: absolute;
   top: 12px;

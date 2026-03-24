@@ -1262,6 +1262,29 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
     setPanning(false);
   }, [dragTarget, dragDelta, draggedThings, appearances, opdId, dispatch]);
 
+  const fitToContent = useCallback(() => {
+    if (!svgRef.current || appearances.size === 0) return;
+    const svgRect = svgRef.current.getBoundingClientRect();
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const app of appearances.values()) {
+      minX = Math.min(minX, app.x);
+      minY = Math.min(minY, app.y);
+      maxX = Math.max(maxX, app.x + app.w);
+      maxY = Math.max(maxY, app.y + app.h);
+    }
+    if (minX === Infinity) return;
+    const pad = 60;
+    const contentW = maxX - minX + pad * 2;
+    const contentH = maxY - minY + pad * 2;
+    const scaleX = svgRect.width / contentW;
+    const scaleY = svgRect.height / contentH;
+    const newZoom = Math.min(2, Math.max(0.3, Math.min(scaleX, scaleY)));
+    const newPanX = (svgRect.width - contentW * newZoom) / 2 - (minX - pad) * newZoom;
+    const newPanY = (svgRect.height - contentH * newZoom) / 2 - (minY - pad) * newZoom;
+    setZoom(newZoom);
+    setPan({ x: newPanX, y: newPanY });
+  }, [appearances]);
+
   const onWheel = useCallback(
     (e: React.WheelEvent) => {
       e.preventDefault();
@@ -1413,6 +1436,12 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
 
   return (
     <div className={`opd-canvas ${cursorClass}`}>
+      <div className="canvas-zoom-controls">
+        <button title="Zoom In" onClick={() => setZoom(z => Math.min(3, z * 1.2))}>+</button>
+        <button title="Zoom Out" onClick={() => setZoom(z => Math.max(0.3, z * 0.83))}>−</button>
+        <button title="Fit to Content (F)" onClick={fitToContent}>⊡</button>
+        <button title="Reset Zoom" onClick={() => { setZoom(1); setPan({ x: 40, y: 20 }); }}>1:1</button>
+      </div>
       <div className="canvas-breadcrumb">
         {opdAncestors(model, opdId).map((ancestor, i, arr) => (
           <span key={ancestor.id}>
