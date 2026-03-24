@@ -882,6 +882,16 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
   // Clear multi-select when OPD changes
   useEffect(() => { setMultiSelect(new Set()); }, [opdId]);
 
+  // Select all (Ctrl+A)
+  useEffect(() => {
+    const handler = () => {
+      if (simulation) return;
+      setMultiSelect(new Set(appearances.keys()));
+    };
+    window.addEventListener("opmodel:selectAll", handler);
+    return () => window.removeEventListener("opmodel:selectAll", handler);
+  }, [appearances, simulation]);
+
   // Batch delete for multi-select
   useEffect(() => {
     if (multiSelect.size < 2) return;

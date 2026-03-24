@@ -207,6 +207,13 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
         e.preventDefault();
         save();
       }
+      if ((e.metaKey || e.ctrlKey) && e.key === "a") {
+        const target = e.target as HTMLElement;
+        if (target.tagName === "INPUT" || target.tagName === "SELECT" || target.tagName === "TEXTAREA") return;
+        e.preventDefault();
+        // Ctrl+A handled by canvas via custom event
+        window.dispatchEvent(new CustomEvent("opmodel:selectAll"));
+      }
       if ((e.metaKey || e.ctrlKey) && e.key === "d") {
         e.preventDefault();
         if (ui.selectedThing && !ui.simulation) {
@@ -623,6 +630,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
               <kbd>⌘Z</kbd><span>Undo</span>
               <kbd>⌘⇧Z</kbd><span>Redo</span>
               <kbd>⌘S</kbd><span>Save</span>
+              <kbd>⌘A</kbd><span>Select All</span>
               <kbd>⌘D</kbd><span>Duplicate Thing</span>
               <kbd>⌘F</kbd><span>Search</span>
               <kbd>⌘↑</kbd><span>Parent OPD</span>
