@@ -598,6 +598,7 @@ function LinkLine({
   isMergedPair,
   isInputHalf,
   isOutputHalf,
+  isError,
 }: {
   link: Link;
   sourceRect: Rect;
@@ -609,10 +610,11 @@ function LinkLine({
   isMergedPair?: boolean;
   isInputHalf?: boolean;
   isOutputHalf?: boolean;
+  isError?: boolean;
 }) {
   const srcCenter = center(sourceRect);
   const tgtCenter = center(targetRect);
-  const color = LINK_COLORS[link.type] ?? "#505878";
+  const color = isError ? "var(--error-stroke, #e53e3e)" : LINK_COLORS[link.type] ?? "#505878";
 
   // Self-loop (invocation self-invocation): bezier arc above the process
   if (link.type === "invocation" && sourceRect.x === targetRect.x && sourceRect.y === targetRect.y) {
@@ -1688,6 +1690,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
                   isMergedPair={isMergedPair}
                   isInputHalf={isInputHalf}
                   isOutputHalf={isOutputHalf}
+                  isError={errorEntities?.has(link.id)}
                 />
               </g>
             );
