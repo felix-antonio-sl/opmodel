@@ -1663,8 +1663,8 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
                 {/* Triangle symbol */}
                 {triangleSvg}
                 {/* Branches: base → each child */}
-                {branches.map(b => (
-                  <g key={b.link.id}>
+                {branches.map((b, bi) => (
+                  <g key={`${b.link.id}__${bi}`}>
                     <line x1={b.origin.x} y1={b.origin.y} x2={b.endpoint.x} y2={b.endpoint.y}
                       className="link-line" stroke={color}
                       onClick={(e) => { e.stopPropagation(); dispatch({ tag: "selectThing", thingId: b.link.id }); }}

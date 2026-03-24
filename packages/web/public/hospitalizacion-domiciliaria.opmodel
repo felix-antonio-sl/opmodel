@@ -90,7 +90,8 @@
     {"category":"correctness","enabled":true,"id":"ast-domicilio-apto","predicate":"Visita Domiciliaria requiere Domicilio apto","target":"lnk-domicilio-instr-visita"},
     {"category":"correctness","enabled":true,"id":"ast-paciente-egresado","predicate":"after Egreso, Paciente is egresado","target":"proc-egreso"},
     {"category":"liveness","enabled":true,"id":"ast-regulacion-24-7","predicate":"Regulación Médica siempre disponible (24/7)","target":"proc-regulacion-medica"},
-    {"category":"safety","enabled":true,"id":"ast-servicio-autorizado","predicate":"Hospitalización Domiciliaria requiere Servicio autorizado","target":"proc-hd"}
+    {"category":"safety","enabled":true,"id":"ast-servicio-autorizado","predicate":"Hospitalización Domiciliaria requiere Servicio autorizado","target":"proc-hd"},
+    {"category":"liveness","enabled":true,"id":"ast-autorizacion-vigente","predicate":"Autorización Sanitaria debe estar vigente para operar","target":"proc-autorizacion-seremi"}
   ],
   "fans": [
     {"direction":"diverging","id":"fan-egreso-xor","members":["lnk-egreso-effect-paciente","lnk-egreso-effect-plan"],"type":"xor"},
