@@ -18,7 +18,6 @@ interface BugReport {
   viewport: string;
 }
 
-const STORAGE_KEY = "opmodel:bug-reports";
 const SEVERITY_COLORS: Record<string, string> = {
   CRITICAL: "#e53e3e",
   HIGH: "#dd6b20",
@@ -26,14 +25,23 @@ const SEVERITY_COLORS: Record<string, string> = {
   LOW: "#38a169",
 };
 
-function loadBugs(): BugReport[] {
+async function loadBugsFromServer(): Promise<BugReport[]> {
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+    const res = await fetch("/api/dev/bugs");
+    return res.ok ? await res.json() : [];
   } catch { return []; }
 }
 
-function saveBugs(bugs: BugReport[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(bugs));
+async function saveBugToServer(bug: BugReport): Promise<void> {
+  await fetch("/api/dev/bugs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(bug),
+  });
+}
+
+async function deleteBugFromServer(id: string): Promise<void> {
+  await fetch(`/api/dev/bugs/${id}`, { method: "DELETE" });
 }
 
 interface Props {
@@ -46,7 +54,10 @@ interface Props {
 export function BugCapture({ model, opdId, selectedThing, errors }: Props) {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<"form" | "list">("form");
-  const [bugs, setBugs] = useState<BugReport[]>(loadBugs);
+  const [bugs, setBugs] = useState<BugReport[]>([]);
+
+  // Load bugs from server on mount
+  useEffect(() => { loadBugsFromServer().then(setBugs); }, []);
   const [title, setTitle] = useState("");
   const [severity, setSeverity] = useState<BugReport["severity"]>("MEDIUM");
   const [description, setDescription] = useState("");
@@ -98,7 +109,7 @@ export function BugCapture({ model, opdId, selectedThing, errors }: Props) {
     };
     const updated = [bug, ...bugs];
     setBugs(updated);
-    saveBugs(updated);
+    saveBugToServer(bug);
     setTitle("");
     setDescription("");
     setScreenshot(undefined);
@@ -109,7 +120,7 @@ export function BugCapture({ model, opdId, selectedThing, errors }: Props) {
   const handleDelete = (id: string) => {
     const updated = bugs.filter(b => b.id !== id);
     setBugs(updated);
-    saveBugs(updated);
+    deleteBugFromServer(id);
   };
 
   const handleExport = () => {
