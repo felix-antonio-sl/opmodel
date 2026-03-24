@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { loadModel, createModel, isOk, validate, saveModel, expose, render, type Model, type Thing } from "@opmodel/core";
+import { loadModel, createModel, isOk, validate, saveModel, expose, render, renderAll, exportMarkdown, type Model, type Thing } from "@opmodel/core";
 import { useModelStore } from "./hooks/useModelStore";
 import { OpdTree } from "./components/OpdTree";
 import { OpdCanvas } from "./components/OpdCanvas";
@@ -72,17 +72,12 @@ function FileMenu({ model, onNew, onLoadExample, onImport, onSave }: {
   };
 
   const exportOpl = () => {
-    const lines: string[] = [];
-    for (const opd of model.opds.values()) {
-      const doc = expose(model, opd.id);
-      const text = render(doc);
-      if (text) {
-        if (lines.length > 0) lines.push("");
-        lines.push(`=== ${opd.name} ===`);
-        lines.push(text);
-      }
-    }
-    downloadBlob(new Blob([lines.join("\n")], { type: "text/plain" }), `${baseName}.opl.txt`);
+    downloadBlob(new Blob([renderAll(model)], { type: "text/plain" }), `${baseName}.opl.txt`);
+    setOpen(false);
+  };
+
+  const exportMd = () => {
+    downloadBlob(new Blob([exportMarkdown(model)], { type: "text/markdown" }), `${baseName}.md`);
     setOpen(false);
   };
 
@@ -160,6 +155,7 @@ function FileMenu({ model, onNew, onLoadExample, onImport, onSave }: {
           ))}
           <div style={{ borderTop: "1px solid var(--border)", margin: "4px 0" }} />
           <button className="file-menu__item" onClick={exportOpl}>Export OPL text</button>
+          <button className="file-menu__item" onClick={exportMd}>Export Markdown</button>
           <button className="file-menu__item" onClick={exportSvg}>Export SVG</button>
           <button className="file-menu__item" onClick={exportPng}>Export PNG</button>
         </div>
