@@ -145,3 +145,72 @@ describe("exportMarkdown", () => {
     expect(md).toContain("Water is an object");
   });
 });
+
+describe("renderAll edge cases", () => {
+  it("empty model produces empty output (no sentences)", () => {
+    const m = createModel("Empty");
+    const full = renderAll(m);
+    // Empty model has SD OPD but no things → no OPL sentences → header skipped
+    expect(full).toBe("");
+  });
+
+  it("model with multiple OPDs orders hierarchically", () => {
+    let m = buildModelWithLang("en");
+    // The default model only has opd-sd
+    const full = renderAll(m);
+    expect(full).toContain("=== SD ===");
+    // Should not have undefined headers
+    expect(full).not.toContain("undefined");
+  });
+});
+
+describe("OPL duration rendering", () => {
+  it("renders nominal duration", () => {
+    let m = buildModelWithLang("en");
+    const proc = m.things.get("proc-1")!;
+    m = { ...m, things: new Map(m.things).set("proc-1", {
+      ...proc,
+      duration: { nominal: 120, unit: "s" },
+    }) };
+    const text = render(expose(m, "opd-sd"));
+    expect(text).toContain("requires 120s");
+  });
+
+  it("renders min-nominal-max duration", () => {
+    let m = buildModelWithLang("en");
+    const proc = m.things.get("proc-1")!;
+    m = { ...m, things: new Map(m.things).set("proc-1", {
+      ...proc,
+      duration: { nominal: 60, min: 30, max: 90, unit: "min" },
+    }) };
+    const text = render(expose(m, "opd-sd"));
+    expect(text).toContain("30–60–90min");
+  });
+
+  it("renders duration in Spanish", () => {
+    let m = buildModelWithLang("es");
+    const proc = m.things.get("proc-1")!;
+    m = { ...m, things: new Map(m.things).set("proc-1", {
+      ...proc,
+      duration: { nominal: 45, unit: "min" },
+    }) };
+    const text = render(expose(m, "opd-sd"));
+    expect(text).toContain("requiere 45min");
+  });
+});
+
+describe("OPL affiliation rendering", () => {
+  it("renders environmental affiliation", () => {
+    let m = buildModelWithLang("en");
+    const water = m.things.get("obj-1")!;
+    m = { ...m, things: new Map(m.things).set("obj-1", { ...water, affiliation: "environmental" }) };
+    const text = render(expose(m, "opd-sd"));
+    expect(text).toContain("environmental");
+  });
+
+  it("does not render systemic (default)", () => {
+    const m = buildModelWithLang("en");
+    const text = render(expose(m, "opd-sd"));
+    expect(text).not.toContain("systemic");
+  });
+});
