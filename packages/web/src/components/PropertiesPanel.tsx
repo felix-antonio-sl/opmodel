@@ -631,6 +631,18 @@ export function PropertiesPanel({ model, thingId, opdId, dispatch }: Props) {
         </select>
       </div>
 
+      {/* Notes */}
+      <div className="props-panel__section">
+        <label className="props-panel__label">Notes</label>
+        <textarea
+          className="props-panel__textarea"
+          value={thing.notes ?? ""}
+          onChange={(e) => dispatch({ tag: "updateThingProps", thingId, patch: { notes: e.target.value || undefined } })}
+          placeholder="Add notes..."
+          rows={2}
+        />
+      </div>
+
       {/* Duration — only for processes */}
       {thing.kind === "process" && (
         <DurationSection thing={thing} dispatch={dispatch} />

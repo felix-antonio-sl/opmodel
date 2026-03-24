@@ -2680,3 +2680,16 @@ body,
   color: var(--text-muted);
   margin-left: 4px;
 }
+
+/* Properties panel textarea */
+.props-panel__textarea {
+  width: 100%;
+  font-size: 11px;
+  padding: 4px 6px;
+  background: var(--bg-secondary, #2a2a2a);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text);
+  resize: vertical;
+  font-family: inherit;
+}
