@@ -18,6 +18,7 @@ const STORAGE_KEY = "opmodel:current";
 const EXAMPLES = [
   { name: "Coffee Making", file: "coffee-making.opmodel" },
   { name: "OnStar Driver Rescuing", file: "driver-rescuing.opmodel" },
+  { name: "Hospitalización Domiciliaria", file: "hospitalizacion-domiciliaria.opmodel" },
 ];
 
 function downloadBlob(blob: Blob, filename: string) {
