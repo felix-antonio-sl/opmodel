@@ -421,6 +421,8 @@ function ThingNode({
 
   const className = `thing-group${isSelected ? " thing-group--selected" : ""}${isDragging ? " thing-group--dragging" : ""}${isLinkSource ? " thing-group--link-source" : ""}`;
 
+  const tooltip = `${thing.name} (${thing.kind}, ${thing.essence}${thing.affiliation === "environmental" ? ", environmental" : ""})${thing.duration ? ` — ${thing.duration.nominal}${thing.duration.unit}` : ""}`;
+
   return (
     <g
       className={className}
@@ -438,6 +440,7 @@ function ThingNode({
         onDoubleClick();
       }}
     >
+      <title>{tooltip}</title>
       {thing.kind === "process" ? (
         <ellipse
           className="thing-shape"
