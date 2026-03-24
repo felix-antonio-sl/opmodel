@@ -6,6 +6,8 @@ import { loadModel } from "../src/serialization";
 import { addThing, addLink, addState, addModifier, addOPD, addAppearance } from "../src/api";
 import type { Thing, Link, State, Modifier } from "../src/types";
 import type { Model } from "../src/types";
+import type { SimulationEvent } from "../src/simulation";
+import { isOk } from "../src/result";
 import {
   createInitialState,
   evaluatePrecondition,
@@ -946,5 +948,51 @@ describe("invocation links (SIM-BUG-02)", () => {
     const bExecuted = trace.steps.filter(s => s.processName === "Step B" && !s.skipped);
     expect(bExecuted.length).toBe(0);
     expect(trace.deadlocked).toBe(true);
+  });
+});
+
+describe("duration and exception handling", () => {
+  it("records process duration from thing.duration", () => {
+    let m = createModel("DurationTest");
+    const proc: Thing = {
+      id: "proc-1", kind: "process", name: "Long Task",
+      essence: "informatical", affiliation: "systemic",
+      duration: { nominal: 60, min: 30, max: 90, unit: "min" },
+    };
+    let r = addThing(m, proc); m = isOk(r) ? r.value : m;
+    r = addAppearance(m, { thing: "proc-1", opd: "opd-sd", x: 0, y: 0, w: 120, h: 60 });
+    m = isOk(r) ? r.value : m;
+
+    const state = createInitialState(m);
+    const event: SimulationEvent = { kind: "manual", targetId: "proc-1" };
+    const step = simulationStep(m, state, event);
+    expect(step.duration).toBeDefined();
+    expect(step.duration).toBeGreaterThan(0);
+  });
+
+  it("detects overtime when duration exceeds max", () => {
+    let m = createModel("OvertimeTest");
+    const proc: Thing = {
+      id: "proc-1", kind: "process", name: "Fast Task",
+      essence: "informatical", affiliation: "systemic",
+      duration: { nominal: 10, min: 5, max: 15, unit: "min",
+        distribution: { name: "uniform", params: {} } },
+    };
+    let r = addThing(m, proc); m = isOk(r) ? r.value : m;
+    r = addAppearance(m, { thing: "proc-1", opd: "opd-sd", x: 0, y: 0, w: 120, h: 60 });
+    m = isOk(r) ? r.value : m;
+
+    const state = createInitialState(m);
+    const event: SimulationEvent = { kind: "manual", targetId: "proc-1" };
+    // Use rng that always returns 1.0 -> duration = min + 1.0 * (max - min) = max
+    // Actually we need > max, so test with nominal that exceeds max
+    // Override: make nominal > max to force overtime
+    const overtime_m = { ...m, things: new Map(m.things) };
+    overtime_m.things.set("proc-1", {
+      ...proc,
+      duration: { nominal: 100, max: 15, unit: "min" as const },
+    });
+    const step2 = simulationStep(overtime_m, state, event);
+    expect(step2.exceptionTriggered).toBe("overtime");
   });
 });

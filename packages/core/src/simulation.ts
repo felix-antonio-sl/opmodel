@@ -54,6 +54,8 @@ export interface SimulationStep {
   parentProcessId?: string;   // Present when executing a subprocess (in-zoom)
   opdContext?: string;         // OPD ID where subprocess lives
   invokedBy?: string;          // Process that triggered this via invocation link (ISO §9.5.2.5.1)
+  duration?: number;            // Simulated duration of this step (nominal, or random if distribution)
+  exceptionTriggered?: "overtime" | "undertime"; // Exception condition detected
 }
 
 /** Traza coinductiva de simulación */
@@ -948,6 +950,33 @@ export function simulationStep(
     step.resultIds.push(objId);
   }
 
+  // Duration simulation: compute elapsed time and check exception conditions
+  const processThing = model.things.get(processId);
+  if (processThing?.duration) {
+    const d = processThing.duration;
+    // Simulate actual duration (use nominal, or random within min-max if distribution exists)
+    let actualDuration = d.nominal;
+    if (d.distribution?.name === "uniform" && d.min != null && d.max != null) {
+      actualDuration = d.min + rng() * (d.max - d.min);
+    } else if (d.distribution?.name === "normal" && d.distribution.params) {
+      // Box-Muller approximation for normal
+      const mean = d.distribution.params.mean ?? d.nominal;
+      const sd = d.distribution.params.sd ?? (d.max != null ? (d.max - d.nominal) / 3 : d.nominal * 0.1);
+      const u1 = rng() || 0.001;
+      const u2 = rng();
+      actualDuration = mean + sd * Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+    }
+    step.duration = actualDuration;
+    step.newState.timestamp += actualDuration;
+
+    // Check exception conditions (ISO §9.5.4)
+    if (d.max != null && actualDuration > d.max) {
+      step.exceptionTriggered = "overtime";
+    } else if (d.min != null && actualDuration < d.min) {
+      step.exceptionTriggered = "undertime";
+    }
+  }
+
   return step;
 }
 
@@ -1103,6 +1132,21 @@ export function runSimulation(
         currentState = stepResult.newState;
         completedProcesses.add(ep.id);
         const invoked = processInvocations(ep.id);
+
+        // Exception handling (ISO §9.5.4): if duration triggered overtime/undertime,
+        // find and schedule the exception handler process
+        if (stepResult.exceptionTriggered && stepResult.processId) {
+          for (const link of model.links.values()) {
+            if (link.type !== "exception" || link.source !== stepResult.processId) continue;
+            // Match exception type: overtime=default, undertime if link.exception_type matches
+            const linkType = link.exception_type ?? "overtime";
+            if (linkType === stepResult.exceptionTriggered) {
+              completedProcesses.delete(link.target);
+              pendingInvocations.set(link.target, stepResult.processId);
+            }
+          }
+        }
+
         if (invoked) {
           // Invocation re-enabled a process — invalidate wave snapshot
           currentWaveOrder = null;

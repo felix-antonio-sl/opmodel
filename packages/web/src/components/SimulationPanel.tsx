@@ -169,6 +169,16 @@ export function SimulationPanel({ model, simulation, dispatch }: Props) {
                     (invoked by {model.things.get(step.invokedBy)?.name ?? step.invokedBy})
                   </span>
                 )}
+                {step.duration != null && (
+                  <span style={{ fontSize: 9, color: "var(--text-muted)", marginLeft: 4 }}>
+                    [{step.duration.toFixed(1)}]
+                  </span>
+                )}
+                {step.exceptionTriggered && (
+                  <span style={{ fontSize: 9, color: "var(--error-stroke, #e53e3e)", marginLeft: 4, fontWeight: 600 }}>
+                    ⚠ {step.exceptionTriggered}
+                  </span>
+                )}
               </div>
               <StepEffects step={step} model={model} />
             </li>
