@@ -68,4 +68,32 @@ describe("HODOM OPL audit", () => {
     const text = render(doc);
     expect(text).toContain("Capacitación del Cuidador changes Cuidador from no capacitado to capacitado");
   });
+
+  it("SD1 renders requirements from normativa", () => {
+    const doc = expose(m, "opd-sd1");
+    const text = render(doc);
+    expect(text).toContain("[R-03]");
+    expect(text).toContain("DS 1/2022");
+    expect(text).toContain("Consentimiento Informado Obligatorio");
+  });
+
+  it("SD1 renders assertions", () => {
+    const doc = expose(m, "opd-sd1");
+    const text = render(doc);
+    expect(text).toContain("[safety]");
+    expect(text).toContain("Consentimiento firmado");
+  });
+
+  it("SD1 renders path labels for scenarios", () => {
+    const doc = expose(m, "opd-sd1");
+    const text = render(doc);
+    expect(text).toContain("[path: flujo-normal]");
+  });
+
+  it("SD1.2 renders emergency path labels", () => {
+    const doc = expose(m, "opd-sd1-2");
+    const text = render(doc);
+    expect(text).toContain("[path: emergencia]");
+    expect(text).toContain("Regulación Médica triggers Respuesta a Emergencia");
+  });
 });
