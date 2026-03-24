@@ -2639,3 +2639,44 @@ body,
   width: 100%;
   outline: none;
 }
+
+/* Alignment toolbar */
+.canvas-align-toolbar {
+  position: absolute;
+  top: 52px;
+  right: 16px;
+  display: flex;
+  gap: 4px;
+  z-index: 10;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  align-items: center;
+}
+
+.canvas-align-toolbar button {
+  width: 26px;
+  height: 26px;
+  font-size: 14px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--bg-secondary, #2a2a2a);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.canvas-align-toolbar button:hover {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.canvas-align-toolbar__count {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-left: 4px;
+}

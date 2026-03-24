@@ -1467,6 +1467,44 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
 
   return (
     <div className={`opd-canvas ${cursorClass}`}>
+      {multiSelect.size >= 2 && (
+        <div className="canvas-align-toolbar">
+          <button title="Align Left" onClick={() => {
+            const apps = [...multiSelect].map(id => ({ id, app: appearances.get(id) })).filter(e => e.app);
+            const minX = Math.min(...apps.map(e => e.app!.x));
+            const moves = apps.filter(e => e.app!.x !== minX).map(e => ({ thingId: e.id, opdId, x: minX, y: e.app!.y }));
+            if (moves.length > 0) dispatch({ tag: "moveThings", moves });
+          }}>⫷</button>
+          <button title="Align Right" onClick={() => {
+            const apps = [...multiSelect].map(id => ({ id, app: appearances.get(id) })).filter(e => e.app);
+            const maxR = Math.max(...apps.map(e => e.app!.x + e.app!.w));
+            const moves = apps.filter(e => e.app!.x + e.app!.w !== maxR).map(e => ({ thingId: e.id, opdId, x: maxR - e.app!.w, y: e.app!.y }));
+            if (moves.length > 0) dispatch({ tag: "moveThings", moves });
+          }}>⫸</button>
+          <button title="Align Top" onClick={() => {
+            const apps = [...multiSelect].map(id => ({ id, app: appearances.get(id) })).filter(e => e.app);
+            const minY = Math.min(...apps.map(e => e.app!.y));
+            const moves = apps.filter(e => e.app!.y !== minY).map(e => ({ thingId: e.id, opdId, x: e.app!.x, y: minY }));
+            if (moves.length > 0) dispatch({ tag: "moveThings", moves });
+          }}>⊤</button>
+          <button title="Align Bottom" onClick={() => {
+            const apps = [...multiSelect].map(id => ({ id, app: appearances.get(id) })).filter(e => e.app);
+            const maxB = Math.max(...apps.map(e => e.app!.y + e.app!.h));
+            const moves = apps.filter(e => e.app!.y + e.app!.h !== maxB).map(e => ({ thingId: e.id, opdId, x: e.app!.x, y: maxB - e.app!.h }));
+            if (moves.length > 0) dispatch({ tag: "moveThings", moves });
+          }}>⊥</button>
+          <button title="Distribute Horizontally" onClick={() => {
+            const apps = [...multiSelect].map(id => ({ id, app: appearances.get(id) })).filter(e => e.app).sort((a, b) => a.app!.x - b.app!.x);
+            if (apps.length < 3) return;
+            const first = apps[0].app!.x;
+            const last = apps[apps.length - 1].app!.x;
+            const step = (last - first) / (apps.length - 1);
+            const moves = apps.slice(1, -1).map((e, i) => ({ thingId: e.id, opdId, x: snap(first + step * (i + 1)), y: e.app!.y }));
+            if (moves.length > 0) dispatch({ tag: "moveThings", moves });
+          }}>⫴</button>
+          <span className="canvas-align-toolbar__count">{multiSelect.size}</span>
+        </div>
+      )}
       <div className="canvas-zoom-controls">
         <button title="Zoom In" onClick={() => setZoom(z => Math.min(3, z * 1.2))}>+</button>
         <button title="Zoom Out" onClick={() => setZoom(z => Math.max(0.3, z * 0.83))}>−</button>
