@@ -8,6 +8,7 @@ import { PropertiesPanel } from "./components/PropertiesPanel";
 import { Toolbar } from "./components/Toolbar";
 import { SimulationPanel } from "./components/SimulationPanel";
 import { ValidationPanel } from "./components/ValidationPanel";
+import { BugCapture } from "./components/BugCapture";
 import type { NlConfig } from "@opmodel/nl";
 import { createProvider, createPipeline } from "@opmodel/nl";
 import { NlSettingsModal } from "./components/NlSettingsModal";
@@ -531,6 +532,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
           onClose={() => setShowNlSettings(false)}
         />
       )}
+      <BugCapture model={model} opdId={ui.currentOpd} selectedThing={ui.selectedThing} errors={errors} />
     </div>
   );
 }
