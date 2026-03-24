@@ -1198,6 +1198,22 @@ export function runSimulation(
           }
         }
 
+        // Event trigger: state changes fire event-linked processes (ISO §8.2.1)
+        for (const sc of stepResult.stateChanges) {
+          if (!sc.toState) continue;
+          for (const link of model.links.values()) {
+            const mod = [...model.modifiers.values()].find(m => m.over === link.id && m.type === "event");
+            if (!mod) continue;
+            if (link.source !== sc.objectId) continue;
+            // Event fires: schedule the target process
+            const targetProc = model.things.get(link.target);
+            if (targetProc?.kind === "process") {
+              completedProcesses.delete(link.target);
+              pendingInvocations.set(link.target, stepResult.processId ?? "");
+            }
+          }
+        }
+
         if (invoked) {
           // Invocation re-enabled a process — invalidate wave snapshot
           currentWaveOrder = null;

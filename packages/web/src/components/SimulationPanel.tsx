@@ -323,6 +323,21 @@ export function SimulationPanel({ model, simulation, dispatch }: Props) {
               ))}
             </div>
           )}
+          <button
+            style={{ marginTop: 6, fontSize: 10, padding: "3px 8px", cursor: "pointer" }}
+            onClick={() => {
+              const data = JSON.stringify({ trace, model: { name: model.meta.name } }, null, 2);
+              const blob = new Blob([data], { type: "application/json" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `${model.meta.name.toLowerCase().replace(/\s+/g, "-")}-sim-trace.json`;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+            }}
+          >Export Trace JSON</button>
         </div>
       )}
     </div>
