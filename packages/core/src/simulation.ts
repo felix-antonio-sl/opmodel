@@ -1516,3 +1516,47 @@ export function getPostprocessSet(
 
   return result;
 }
+
+/** Render simulation trace as human-readable OPL-like text */
+export function renderTrace(model: Model, trace: SimulationTrace): string {
+  const lines: string[] = [];
+  lines.push(`Simulation of ${model.meta.name}: ${trace.steps.length} steps, ${trace.completed ? "completed" : trace.deadlocked ? "deadlocked" : "in progress"}`);
+  if (trace.totalDuration != null) lines.push(`Total duration: ${trace.totalDuration.toFixed(1)}`);
+  lines.push("");
+
+  for (const step of trace.steps) {
+    if (step.skipped) continue;
+    const proc = step.processName ?? step.processId ?? "?";
+    let line = `${step.step}. ${proc}`;
+    if (step.invokedBy) {
+      const invoker = model.things.get(step.invokedBy)?.name ?? step.invokedBy;
+      line += ` (invoked by ${invoker})`;
+    }
+    if (step.duration != null) line += ` [${step.duration.toFixed(1)}]`;
+    if (step.exceptionTriggered) line += ` ⚠ ${step.exceptionTriggered}`;
+    lines.push(line);
+
+    for (const id of step.consumptionIds) {
+      lines.push(`   consumed ${model.things.get(id)?.name ?? id}`);
+    }
+    for (const id of step.resultIds) {
+      lines.push(`   created ${model.things.get(id)?.name ?? id}`);
+    }
+    for (const sc of step.stateChanges) {
+      const obj = model.things.get(sc.objectId)?.name ?? sc.objectId;
+      const from = sc.fromState ? model.states.get(sc.fromState)?.name : "—";
+      const to = sc.toState ? model.states.get(sc.toState)?.name : "—";
+      lines.push(`   ${obj}: ${from} → ${to}`);
+    }
+  }
+
+  if (trace.assertionResults && trace.assertionResults.length > 0) {
+    lines.push("");
+    lines.push("Assertions:");
+    for (const ar of trace.assertionResults) {
+      lines.push(`  ${ar.passed ? "✓" : "✗"} [${ar.category}] ${ar.name}${ar.reason ? ` — ${ar.reason}` : ""}`);
+    }
+  }
+
+  return lines.join("\n");
+}

@@ -47,6 +47,7 @@ export {
   simulationStep,
   runSimulation,
   runMonteCarloSimulation,
+  renderTrace,
   type MonteCarloResult,
   type AssertionResult,
   chooseFanBranch,
