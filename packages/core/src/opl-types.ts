@@ -64,6 +64,8 @@ export interface OplLinkSentence {
   targetKind?: Kind;
   multiplicitySource?: string;
   multiplicityTarget?: string;
+  exceptionType?: "overtime" | "undertime";
+  probability?: number;
 }
 
 export interface OplModifierSentence {

@@ -363,6 +363,12 @@ export function expose(model: Model, opdId: string): OplDocument {
     if (link.multiplicity_target) {
       sentence.multiplicityTarget = link.multiplicity_target;
     }
+    if (link.exception_type) {
+      sentence.exceptionType = link.exception_type;
+    }
+    if (link.probability != null) {
+      sentence.probability = link.probability;
+    }
     sentences.push(sentence);
   }
 
@@ -495,20 +501,18 @@ function renderLinkSentence(s: OplLinkSentence): string {
     }
     case "effect": {
       // State-specified effect (ISO 19450 9.3.3)
+      const prob = s.probability != null ? ` (probability ${Math.round(s.probability * 100)}%)` : "";
       if (s.sourceStateName && s.targetStateName) {
-        // Input-output-specified: "Process changes Object from input-state to output-state"
-        return `${processName} changes ${objectName} from ${s.sourceStateName} to ${s.targetStateName}.`;
+        return `${processName} changes ${objectName} from ${s.sourceStateName} to ${s.targetStateName}${prob}.`;
       }
       if (s.sourceStateName && !s.targetStateName) {
-        // Input-specified: "Process changes Object from input-state"
-        return `${processName} changes ${objectName} from ${s.sourceStateName}.`;
+        return `${processName} changes ${objectName} from ${s.sourceStateName}${prob}.`;
       }
       if (!s.sourceStateName && s.targetStateName) {
-        // Output-specified: "Process changes Object to output-state"
-        return `${processName} changes ${objectName} to ${s.targetStateName}.`;
+        return `${processName} changes ${objectName} to ${s.targetStateName}${prob}.`;
       }
       // Basic effect
-      return `${s.sourceName} affects ${s.targetName}.`;
+      return `${s.sourceName} affects ${s.targetName}${prob}.`;
     }
     case "result": {
       // State-specified result: "Process yields S Object"
@@ -560,7 +564,12 @@ function renderLinkSentence(s: OplLinkSentence): string {
     }
     case "classification": return `${s.targetName} is an instance of ${s.sourceName}.`;
     case "invocation": return `${s.sourceName} invokes ${s.targetName}.`;
-    case "exception": return `${s.sourceName} handles exception from ${s.targetName}.`;
+    case "exception": {
+      const excType = s.exceptionType === "overtime" ? "overtime exception"
+        : s.exceptionType === "undertime" ? "undertime exception"
+        : "exception";
+      return `${s.targetName} handles ${excType} from ${s.sourceName}.`;
+    }
     case "tagged": {
       // ISO §10.2.2: null-tagged defaults — "relates to" (uni/bi), "are related" (reciprocal)
       const defaultTag = s.direction === "reciprocal" ? "are related" : "relates to";
