@@ -67,6 +67,13 @@ export function SettingsPanel({ model, dispatch, onClose }: Props) {
           </select>
         </SettingRow>
 
+        <SettingRow label="Created">
+          <span style={{ fontSize: 10, color: "var(--text-muted)" }}>{new Date(model.meta.created).toLocaleString()}</span>
+        </SettingRow>
+        <SettingRow label="Modified">
+          <span style={{ fontSize: 10, color: "var(--text-muted)" }}>{new Date(model.meta.modified).toLocaleString()}</span>
+        </SettingRow>
+
         <div className="settings-panel__section-title">OPL</div>
 
         <SettingRow label="Language">
