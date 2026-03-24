@@ -1,4 +1,4 @@
-# Handoff: Sesion 15 — Refinement Visual Rules (9 Gaps + 5 Bugfixes)
+# Handoff: Sesion 15 — Refinement Visual Rules (12 Gaps + 7 Bugfixes)
 
 **Fecha**: 2026-03-24
 **Sesion**: 15
@@ -6,7 +6,7 @@
 
 ## Resumen ejecutivo
 
-Auditoria completa de `docs/superpowers/specs/2026-03-24-refinement-visual-rules.md` (Rev.2, 85+ reglas, 20 secciones) contra el codigo actual. Identificados 9 gaps prioritarios (P0+P1). Todos implementados con TDD. Spec bumped a Rev.3 con tabla de 42 filas auditada. Luego ronda de testing manual con 5 bugfixes adicionales. 786 tests green (+19 total), 0 regresiones.
+Auditoria completa de `docs/superpowers/specs/2026-03-24-refinement-visual-rules.md` (Rev.2→Rev.3). 12 gaps resueltos (P0+P1+P2 parcial), 7 bugfixes de testing manual. 11 commits totales. 767→798 tests (+31), 0 regresiones.
 
 ## Gaps resueltos
 
@@ -111,10 +111,19 @@ Inside objects creados dentro de un in-zoom (ej: o1 creado en SD1) aparecian com
 
 | Metrica | Inicio sesion | Fin sesion |
 |---------|---------------|------------|
-| Tests | 767 | 786 (+19) |
-| Gaps resueltos (spec) | 0/9 P0+P1 | 9/9 P0+P1 |
-| Bugfixes post-testing | 0 | 5 |
-| Commits totales | 0 | 6 |
+| Tests | 767 | 798 (+31) |
+| Gaps resueltos (spec) | 0 | 12 (P0:4, P1:5, P2:3) |
+| Bugfixes post-testing | 0 | 7 |
+| Commits totales | 0 | 11 |
+
+### Gaps P2 resueltos (post-bugfix)
+
+| Gap | Commit | Descripcion |
+|-----|--------|-------------|
+| R-ES | `655f590` | Effect split automatico: state-specified → input(first) + output(last) |
+| R-OZ | `fc466a6` | Out-zoom precedence: consumption > effect > agent > instrument |
+| R-SF-3 | `0010f2d` | Extract part: click en semi-fold entry materializa appearance |
+| R-SF-6/9 | `0010f2d` | Links a semi-fold parts: virtual appearances + rect fallback |
 
 ## Pendientes para sesion 16
 
