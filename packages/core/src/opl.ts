@@ -210,8 +210,11 @@ export function expose(model: Model, opdId: string): OplDocument {
     sortedLinks = sortedLinks.filter(l => {
       const isStructural = STRUCTURAL_TYPES.has(l.type);
       const touchesContainer = l.source === containerThingId || l.target === containerThingId;
+      // Container links: only structural (aggregation, exhibition, etc.) — not procedural (effect, agent, etc.)
       if (touchesContainer && !isStructural) return false;
-      if (!touchesContainer && !internalThings.has(l.source) && !internalThings.has(l.target)) return false;
+      // Non-container links: keep structural links between any visible things;
+      // for procedural links, require at least one internal thing
+      if (!touchesContainer && !isStructural && !internalThings.has(l.source) && !internalThings.has(l.target)) return false;
       return true;
     });
   }
