@@ -1028,13 +1028,35 @@ export function runSimulation(
   initialState?: ModelState,
   maxSteps: number = 100,
   rng: () => number = Math.random,
+  scenarioId?: string,
 ): SimulationTrace {
   const state = initialState ?? createInitialState(model);
   const steps: SimulationStep[] = [];
   let currentState = state;
 
   // Expand in-zoomed processes into executable leaves (ISO §14.2.1)
-  const executableProcesses = getExecutableProcesses(model);
+  let executableProcesses = getExecutableProcesses(model);
+
+  // Scenario filter: only execute processes connected by links on this scenario's path
+  if (scenarioId) {
+    const scenario = model.scenarios.get(scenarioId);
+    if (scenario && scenario.path_labels.length > 0) {
+      const pathLabels = new Set(scenario.path_labels);
+      const scenarioLinks = [...model.links.values()].filter(l => l.path_label && pathLabels.has(l.path_label));
+      const scenarioProcessIds = new Set<string>();
+      for (const link of scenarioLinks) {
+        const src = model.things.get(link.source);
+        const tgt = model.things.get(link.target);
+        if (src?.kind === "process") scenarioProcessIds.add(src.id);
+        if (tgt?.kind === "process") scenarioProcessIds.add(tgt.id);
+      }
+      if (scenarioProcessIds.size > 0) {
+        executableProcesses = executableProcesses.filter(ep =>
+          scenarioProcessIds.has(ep.id) || (ep.parentProcessId && scenarioProcessIds.has(ep.parentProcessId))
+        );
+      }
+    }
+  }
 
   // Track completed processes — a process executes at most once per simulation
   // (re-activation via invocation link — ISO §9.5.2.5.1)
