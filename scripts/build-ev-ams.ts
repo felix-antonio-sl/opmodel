@@ -217,10 +217,10 @@ m = unwrap(addOPD(m, { id: "opd-sd1-1", name: "SD1.1", opd_type: "hierarchical",
 
 // 4 specializations of AEV Fleet Operating (generalization-specialization)
 const sd11Procs = [
-  { id: "proc-trip-req", name: "Trip Requesting", x: 100, y: 100 },
-  { id: "proc-nav", name: "Autonomous Navigating", x: 400, y: 100 },
-  { id: "proc-charging", name: "Battery Fast Charging", x: 100, y: 300 },
-  { id: "proc-danger-mon", name: "Road Danger Monitoring", x: 400, y: 300 },
+  { id: "proc-trip-req", name: "Trip Requesting", x: 90, y: 120 },
+  { id: "proc-charging", name: "Battery Fast Charging", x: 370, y: 120 },
+  { id: "proc-nav", name: "Autonomous Navigating", x: 700, y: 120 },
+  { id: "proc-danger-mon", name: "Road Danger Monitoring", x: 700, y: 320 },
 ];
 
 for (const sp of sd11Procs) {
@@ -229,7 +229,7 @@ for (const sp of sd11Procs) {
 }
 
 // Container
-m = unwrap(addAppearance(m, { thing: "proc-fleet-op", opd: "opd-sd1-1", x: 50, y: 40, w: 650, h: 380, internal: true }));
+m = unwrap(addAppearance(m, { thing: "proc-fleet-op", opd: "opd-sd1-1", x: 40, y: 50, w: 980, h: 420, internal: true }));
 
 // Generalization links: each specialization IS-A Fleet Operating
 for (const sp of sd11Procs) {
@@ -289,29 +289,32 @@ m = unwrap(addState(m, { id: "s-loc-dest", parent: "obj-location", name: "destin
 const electricGrid: Thing = { id: "obj-electric-grid", kind: "object", name: "Electric Grid", essence: "physical", affiliation: "environmental" };
 m = unwrap(addThing(m, electricGrid));
 
-// SD1.1 appearances
+// SD1.1 appearances — trip lane (left), battery lane (center), nav/safety lane (right)
 const sd11Objs = [
-  { id: "obj-trip-assignment", x: 40, y: 460 },
-  { id: "obj-trip-status", x: 40, y: 540 },
-  { id: "obj-mobile-app", x: 40, y: 620 },
-  { id: "obj-commuter-group", x: 40, y: 700 },
-  { id: "obj-battery-pack", x: 280, y: 460 },
-  { id: "obj-charge-level", x: 280, y: 540 },
-  { id: "obj-battery-temperature", x: 280, y: 620 },
-  { id: "obj-cycle-count", x: 280, y: 700 },
-  { id: "obj-cooling-system", x: 280, y: 780 },
-  { id: "obj-thermal-energy", x: 280, y: 860 },
-  { id: "obj-sensor-suite", x: 550, y: 460 },
-  { id: "obj-road-danger", x: 550, y: 540 },
-  { id: "obj-charging-station", x: 550, y: 620 },
-  { id: "obj-gps-sat", x: 760, y: 100 },
-  { id: "obj-location", x: 760, y: 200 },
-  { id: "obj-electric-grid", x: 760, y: 300 },
-  { id: "obj-road-network", x: 760, y: 400 },
-  { id: "obj-urban-trips", x: 40, y: 860 },
+  { id: "obj-mobile-app", x: 40, y: 520, w: 190, h: 50 },
+  { id: "obj-commuter-group", x: 40, y: 600, w: 200, h: 50 },
+  { id: "obj-trip-status", x: 60, y: 690, w: 210, h: 64 },
+  { id: "obj-trip-assignment", x: 60, y: 780, w: 210, h: 50 },
+  { id: "obj-urban-trips", x: 60, y: 860, w: 210, h: 50 },
+
+  { id: "obj-battery-pack", x: 390, y: 520, w: 220, h: 56 },
+  { id: "obj-charge-level", x: 310, y: 620, w: 180, h: 64 },
+  { id: "obj-battery-temperature", x: 520, y: 620, w: 190, h: 64 },
+  { id: "obj-cycle-count", x: 410, y: 715, w: 180, h: 50 },
+  { id: "obj-cooling-system", x: 310, y: 810, w: 180, h: 50 },
+  { id: "obj-thermal-energy", x: 520, y: 810, w: 180, h: 50 },
+  { id: "obj-charging-station", x: 420, y: 900, w: 210, h: 50 },
+
+  { id: "obj-nav-software", x: 860, y: 40, w: 220, h: 50 },
+  { id: "obj-gps-sat", x: 880, y: 120, w: 210, h: 50 },
+  { id: "obj-road-network", x: 880, y: 200, w: 220, h: 50 },
+  { id: "obj-electric-grid", x: 880, y: 280, w: 200, h: 50 },
+  { id: "obj-location", x: 880, y: 360, w: 210, h: 64 },
+  { id: "obj-sensor-suite", x: 860, y: 520, w: 210, h: 50 },
+  { id: "obj-road-danger", x: 860, y: 620, w: 230, h: 64 },
 ];
 for (const o of sd11Objs) {
-  m = unwrap(addAppearance(m, { thing: o.id, opd: "opd-sd1-1", x: o.x, y: o.y, w: 200, h: 50 }));
+  m = unwrap(addAppearance(m, { thing: o.id, opd: "opd-sd1-1", x: o.x, y: o.y, w: o.w, h: o.h }));
 }
 
 // SD1.1 links
@@ -322,7 +325,7 @@ m = unwrap(addLink(m, { id: "lnk-trip-instrument", type: "instrument", source: "
 m = unwrap(addLink(m, { id: "lnk-nav-effect-loc", type: "effect", source: "proc-nav", target: "obj-location", source_state: "s-loc-origin", target_state: "s-loc-dest" }));
 m = unwrap(addLink(m, { id: "lnk-nav-effect-trip", type: "effect", source: "proc-nav", target: "obj-trip-status", source_state: "s-trip-assigned", target_state: "s-trip-completed" }));
 m = unwrap(addLink(m, { id: "lnk-nav-instrument-sw", type: "instrument", source: "obj-nav-software", target: "proc-nav" }));
-m = unwrap(addAppearance(m, { thing: "obj-nav-software", opd: "opd-sd1-1", x: 760, y: 40, w: 200, h: 50 }));
+
 m = unwrap(addLink(m, { id: "lnk-nav-instrument-road", type: "instrument", source: "obj-road-network", target: "proc-nav" }));
 m = unwrap(addLink(m, { id: "lnk-nav-instrument-gps", type: "instrument", source: "obj-gps-sat", target: "proc-nav", multiplicity_source: "+" }));
 m = unwrap(addLink(m, { id: "lnk-charging-effect", type: "effect", source: "proc-charging", target: "obj-charge-level", source_state: "s-charge-depleted", target_state: "s-charge-full" }));
@@ -353,20 +356,20 @@ m = unwrap(addLink(m, { id: "lnk-tagged-cools", type: "tagged", source: "obj-coo
 m = unwrap(addOPD(m, { id: "opd-sd1-1-1", name: "SD1.1.1", opd_type: "hierarchical", parent_opd: "opd-sd1-1", refines: "proc-danger-mon", refinement_type: "in-zoom" }));
 
 const sd111Procs = [
-  { id: "proc-sensing", name: "Environment Sensing", y: 80 },
-  { id: "proc-detecting", name: "Object Detecting", y: 180 },
-  { id: "proc-assessing", name: "Threat Assessing", y: 280 },
-  { id: "proc-alerting", name: "Alert Issuing", y: 380 },
-  { id: "proc-visual-warning", name: "Visual Warning Displaying", y: 480 },
-  { id: "proc-emergency-braking", name: "Emergency Braking Initiating", y: 580 },
+  { id: "proc-sensing", name: "Environment Sensing", x: 120, y: 110, w: 220 },
+  { id: "proc-detecting", name: "Object Detecting", x: 120, y: 220, w: 220 },
+  { id: "proc-assessing", name: "Threat Assessing", x: 420, y: 220, w: 220 },
+  { id: "proc-alerting", name: "Alert Issuing", x: 420, y: 360, w: 200 },
+  { id: "proc-visual-warning", name: "Visual Warning Displaying", x: 180, y: 500, w: 250 },
+  { id: "proc-emergency-braking", name: "Emergency Braking Initiating", x: 610, y: 500, w: 250 },
 ];
 
 for (const sp of sd111Procs) {
   m = unwrap(addThing(m, { id: sp.id, kind: "process", name: sp.name, essence: "informatical", affiliation: "systemic" }));
-  m = unwrap(addAppearance(m, { thing: sp.id, opd: "opd-sd1-1-1", x: 220, y: sp.y, w: 230, h: 60, internal: true }));
+  m = unwrap(addAppearance(m, { thing: sp.id, opd: "opd-sd1-1-1", x: sp.x, y: sp.y, w: sp.w, h: 60, internal: true }));
 }
 
-m = unwrap(addAppearance(m, { thing: "proc-danger-mon", opd: "opd-sd1-1-1", x: 120, y: 20, w: 420, h: 660, internal: true }));
+m = unwrap(addAppearance(m, { thing: "proc-danger-mon", opd: "opd-sd1-1-1", x: 70, y: 50, w: 870, h: 560, internal: true }));
 
 // Threat Level object with XOR states
 const threatLevel: Thing = { id: "obj-threat-level", kind: "object", name: "Threat Level", essence: "informatical", affiliation: "systemic" };
@@ -384,14 +387,14 @@ m = unwrap(addThing(m, brakeStatus));
 m = unwrap(addState(m, { id: "s-brake-idle", parent: "obj-brake-status", name: "idle", initial: true, final: false, default: true }));
 m = unwrap(addState(m, { id: "s-brake-engaged", parent: "obj-brake-status", name: "engaged", initial: false, final: true, default: false }));
 
-m = unwrap(addAppearance(m, { thing: "obj-threat-level", opd: "opd-sd1-1-1", x: 610, y: 250, w: 180, h: 60 }));
-m = unwrap(addAppearance(m, { thing: "obj-sensor-suite", opd: "opd-sd1-1-1", x: 610, y: 80, w: 180, h: 50 }));
-m = unwrap(addAppearance(m, { thing: "obj-road-danger", opd: "opd-sd1-1-1", x: 610, y: 380, w: 200, h: 50 }));
-m = unwrap(addAppearance(m, { thing: "obj-detection-signal", opd: "opd-sd1-1-1", x: 610, y: 180, w: 180, h: 50 }));
-m = unwrap(addAppearance(m, { thing: "obj-warning-display", opd: "opd-sd1-1-1", x: 610, y: 500, w: 180, h: 50 }));
-m = unwrap(addAppearance(m, { thing: "obj-brake-status", opd: "opd-sd1-1-1", x: 610, y: 600, w: 180, h: 60 }));
-for (const [thing, y] of [["obj-camera-set", 80], ["obj-lidar-set", 140], ["obj-radar-set", 200], ["obj-ultrasonic-set", 260]] as const) {
-  m = unwrap(addAppearance(m, { thing, opd: "opd-sd1-1-1", x: 840, y, w: 170, h: 44 }));
+m = unwrap(addAppearance(m, { thing: "obj-sensor-suite", opd: "opd-sd1-1-1", x: 690, y: 90, w: 200, h: 50 }));
+m = unwrap(addAppearance(m, { thing: "obj-detection-signal", opd: "opd-sd1-1-1", x: 395, y: 120, w: 200, h: 50 }));
+m = unwrap(addAppearance(m, { thing: "obj-threat-level", opd: "opd-sd1-1-1", x: 690, y: 235, w: 220, h: 72 }));
+m = unwrap(addAppearance(m, { thing: "obj-road-danger", opd: "opd-sd1-1-1", x: 690, y: 360, w: 230, h: 64 }));
+m = unwrap(addAppearance(m, { thing: "obj-warning-display", opd: "opd-sd1-1-1", x: 170, y: 420, w: 210, h: 50 }));
+m = unwrap(addAppearance(m, { thing: "obj-brake-status", opd: "opd-sd1-1-1", x: 700, y: 440, w: 220, h: 68 }));
+for (const [thing, y] of [["obj-camera-set", 90], ["obj-lidar-set", 150], ["obj-radar-set", 210], ["obj-ultrasonic-set", 270]] as const) {
+  m = unwrap(addAppearance(m, { thing, opd: "opd-sd1-1-1", x: 940, y, w: 180, h: 44 }));
 }
 
 // Detection chain + invocation
@@ -427,10 +430,10 @@ const sd12Procs = [
 
 for (const sp of sd12Procs) {
   m = unwrap(addThing(m, { id: sp.id, kind: "process", name: sp.name, essence: "physical", affiliation: "systemic" }));
-  m = unwrap(addAppearance(m, { thing: sp.id, opd: "opd-sd1-2", x: 200, y: sp.y, w: 220, h: 60, internal: true }));
+  m = unwrap(addAppearance(m, { thing: sp.id, opd: "opd-sd1-2", x: 220, y: sp.y, w: 240, h: 60, internal: true }));
 }
 
-m = unwrap(addAppearance(m, { thing: "proc-mfg", opd: "opd-sd1-2", x: 120, y: 20, w: 380, h: 540, internal: true }));
+m = unwrap(addAppearance(m, { thing: "proc-mfg", opd: "opd-sd1-2", x: 140, y: 20, w: 420, h: 540, internal: true }));
 
 // Generalization: robots + robot line aggregation
 const weldingRobot: Thing = { id: "obj-welding-robot", kind: "object", name: "Welding Robot", essence: "physical", affiliation: "systemic" };
@@ -439,12 +442,12 @@ const paintingRobot: Thing = { id: "obj-painting-robot", kind: "object", name: "
 m = unwrap(addThing(m, weldingRobot));
 m = unwrap(addThing(m, assemblyRobot));
 m = unwrap(addThing(m, paintingRobot));
-m = unwrap(addAppearance(m, { thing: "obj-welding-robot", opd: "opd-sd1-2", x: 600, y: 80, w: 160, h: 50 }));
-m = unwrap(addAppearance(m, { thing: "obj-assembly-robot", opd: "opd-sd1-2", x: 600, y: 150, w: 170, h: 50 }));
-m = unwrap(addAppearance(m, { thing: "obj-painting-robot", opd: "opd-sd1-2", x: 600, y: 220, w: 170, h: 50 }));
-m = unwrap(addAppearance(m, { thing: "obj-robot-line", opd: "opd-sd1-2", x: 600, y: 300, w: 200, h: 50 }));
-m = unwrap(addAppearance(m, { thing: "obj-raw-materials", opd: "opd-sd1-2", x: 30, y: 80, w: 160, h: 50 }));
-m = unwrap(addAppearance(m, { thing: "obj-aev-assembly", opd: "opd-sd1-2", x: 600, y: 440, w: 180, h: 50 }));
+m = unwrap(addAppearance(m, { thing: "obj-raw-materials", opd: "opd-sd1-2", x: 30, y: 85, w: 175, h: 50 }));
+m = unwrap(addAppearance(m, { thing: "obj-welding-robot", opd: "opd-sd1-2", x: 670, y: 70, w: 180, h: 50 }));
+m = unwrap(addAppearance(m, { thing: "obj-assembly-robot", opd: "opd-sd1-2", x: 670, y: 140, w: 180, h: 50 }));
+m = unwrap(addAppearance(m, { thing: "obj-painting-robot", opd: "opd-sd1-2", x: 670, y: 210, w: 190, h: 50 }));
+m = unwrap(addAppearance(m, { thing: "obj-robot-line", opd: "opd-sd1-2", x: 670, y: 300, w: 220, h: 56 }));
+m = unwrap(addAppearance(m, { thing: "obj-aev-assembly", opd: "opd-sd1-2", x: 670, y: 445, w: 210, h: 52 }));
 
 // Generalization links: Welding Robot and Assembly Robot are Industrial Robot (using robot-line as general)
 m = unwrap(addLink(m, { id: "lnk-gen-welding", type: "generalization", source: "obj-welding-robot", target: "obj-robot-line" }));

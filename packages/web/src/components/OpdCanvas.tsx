@@ -11,6 +11,7 @@ import {
   type Point,
   type Rect,
 } from "../lib/geometry";
+import { LINK_COLORS, statePillLayout } from "../lib/visual-rules";
 
 /* ─── Props ─── */
 
@@ -37,25 +38,6 @@ function opdAncestors(model: Model, opdId: string): OPD[] {
   return chain;
 }
 
-/* ─── Link type → color mapping ─── */
-
-const LINK_COLORS: Record<string, string> = {
-  agent: "#2b6cb0",
-  instrument: "#2b6cb0",
-  consumption: "#16794a",
-  effect: "#16794a",
-  result: "#16794a",
-  input: "#16794a",
-  output: "#16794a",
-  aggregation: "#6b5fad",
-  exhibition: "#6b5fad",
-  generalization: "#6b5fad",
-  classification: "#6b5fad",
-  tagged: "#6b5fad",
-  invocation: "#c05621",
-  exception: "#c05621",
-};
-
 /* ─── Helpers ─── */
 
 function edgePoint(kind: "object" | "process", rect: Rect, target: Point): Point {
@@ -80,15 +62,13 @@ function statePillRect(
 ): Rect | null {
   const idx = visibleStates.findIndex((s) => s.id === stateId);
   if (idx === -1) return null;
-  const pillW = Math.min(50, (app.w - 12) / visibleStates.length - 4);
-  const pillH = 16;
-  const totalPillW = visibleStates.length * (pillW + 4) - 4;
-  const startX = app.x + (app.w - totalPillW) / 2;
+  const layout = statePillLayout(app.w, visibleStates.length, "compact");
+  const startX = app.x + layout.startXOffset;
   return {
-    x: startX + idx * (pillW + 4),
+    x: startX + idx * (layout.pillW + 4),
     y: app.y + app.h - 4,
-    w: pillW,
-    h: pillH,
+    w: layout.pillW,
+    h: layout.pillH,
   };
 }
 
@@ -553,8 +533,9 @@ function ThingNode({
           {states.map((state, i) => {
             const minPillW = 30;
             const maxVisibleH = Math.min(states.length, Math.max(2, Math.floor((w - 8) / (minPillW + 4))));
-            const pillW = Math.min(55, (w - 8) / maxVisibleH - 4);
-            const pillH = 16;
+            const layout = statePillLayout(w, maxVisibleH, "default");
+            const pillW = layout.pillW;
+            const pillH = layout.pillH;
             const visibleCount = Math.min(states.length, maxVisibleH);
             if (i >= visibleCount) return null; // overflow — truncated
             const totalPillW = visibleCount * (pillW + 4) - 4;

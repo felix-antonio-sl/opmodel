@@ -1,0 +1,144 @@
+import type { Appearance, Link, State, Thing } from "@opmodel/core";
+import type { Rect } from "./geometry";
+import { VISUAL_RULES, estimatedStateTextCapacity, statePillLayout } from "./visual-rules";
+
+export interface OverlapFinding {
+  kind: "overlap";
+  aThing: string;
+  bThing: string;
+  area: number;
+}
+
+export interface OrphanFinding {
+  kind: "orphan";
+  thing: string;
+}
+
+export interface TruncatedStateFinding {
+  kind: "truncated-state";
+  thing: string;
+  state: string;
+  capacity: number;
+}
+
+export interface DegenerateBoundsFinding {
+  kind: "degenerate-bounds";
+  width: number;
+  height: number;
+  aspectRatio: number;
+}
+
+export type VisualFinding = OverlapFinding | OrphanFinding | TruncatedStateFinding | DegenerateBoundsFinding;
+
+function intersectionArea(a: Rect, b: Rect): number {
+  const x = Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x));
+  const y = Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
+  return x * y;
+}
+
+function appearanceRect(a: Pick<Appearance, "x" | "y" | "w" | "h">): Rect {
+  return { x: a.x, y: a.y, w: a.w, h: a.h };
+}
+
+export function findNonContainerOverlaps(appearances: Appearance[]): OverlapFinding[] {
+  const visible = appearances.filter((a) => !a.internal);
+  const findings: OverlapFinding[] = [];
+  for (let i = 0; i < visible.length; i++) {
+    for (let j = i + 1; j < visible.length; j++) {
+      const area = intersectionArea(appearanceRect(visible[i]), appearanceRect(visible[j]));
+      if (area > 0) {
+        findings.push({ kind: "overlap", aThing: visible[i].thing, bThing: visible[j].thing, area });
+      }
+    }
+  }
+  return findings.sort((a, b) => b.area - a.area);
+}
+
+export function findVisibleOrphans(appearances: Appearance[], links: Link[]): OrphanFinding[] {
+  const ids = new Set(appearances.map((a) => a.thing));
+  const connected = new Set<string>();
+  for (const link of links) {
+    if (ids.has(link.source) && ids.has(link.target)) {
+      connected.add(link.source);
+      connected.add(link.target);
+    }
+  }
+  return appearances
+    .filter((a) => !connected.has(a.thing))
+    .map((a) => ({ kind: "orphan" as const, thing: a.thing }));
+}
+
+export function findTruncatedStateBoxes(
+  appearances: Appearance[],
+  statesByThing: Map<string, State[]>,
+  thingsById?: Map<string, Thing>,
+): TruncatedStateFinding[] {
+  const findings: TruncatedStateFinding[] = [];
+  for (const app of appearances) {
+    const thing = thingsById?.get(app.thing);
+    if (thing?.kind === "process") continue;
+    const states = statesByThing.get(app.thing) ?? [];
+    if (states.length === 0) continue;
+    const layout = statePillLayout(app.w, states.length, "compact");
+    const capacity = estimatedStateTextCapacity(layout.pillW);
+    for (const state of states) {
+      if (state.name.length > capacity) {
+        findings.push({ kind: "truncated-state", thing: app.thing, state: state.id, capacity });
+      }
+    }
+  }
+  return findings;
+}
+
+export function contentBounds(appearances: Appearance[]): Rect | null {
+  if (appearances.length === 0) return null;
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const a of appearances) {
+    minX = Math.min(minX, a.x);
+    minY = Math.min(minY, a.y);
+    maxX = Math.max(maxX, a.x + a.w);
+    maxY = Math.max(maxY, a.y + a.h);
+  }
+  return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+}
+
+export function findDegenerateBounds(appearances: Appearance[]): DegenerateBoundsFinding[] {
+  const bounds = contentBounds(appearances);
+  if (!bounds) return [];
+  const width = bounds.w;
+  const height = bounds.h;
+  const aspectRatio = Math.max(width / Math.max(height, 1), height / Math.max(width, 1));
+  if (
+    width < VISUAL_RULES.lint.minContentWidth ||
+    height < VISUAL_RULES.lint.minContentHeight ||
+    aspectRatio > VISUAL_RULES.lint.degenerateAspectRatio
+  ) {
+    return [{ kind: "degenerate-bounds", width, height, aspectRatio }];
+  }
+  return [];
+}
+
+export interface AuditVisualOpdArgs {
+  appearances: Appearance[];
+  links: Link[];
+  things?: Iterable<Thing>;
+  states?: Iterable<State>;
+}
+
+export function auditVisualOpd({ appearances, links, things, states }: AuditVisualOpdArgs): VisualFinding[] {
+  const thingsById = things ? new Map([...things].map((t) => [t.id, t])) : undefined;
+  const statesByThing = new Map<string, State[]>();
+  if (states) {
+    for (const state of states) {
+      const list = statesByThing.get(state.parent) ?? [];
+      list.push(state);
+      statesByThing.set(state.parent, list);
+    }
+  }
+  return [
+    ...findNonContainerOverlaps(appearances),
+    ...findVisibleOrphans(appearances, links),
+    ...findTruncatedStateBoxes(appearances, statesByThing, thingsById),
+    ...findDegenerateBounds(appearances),
+  ];
+}
