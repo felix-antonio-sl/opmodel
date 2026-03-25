@@ -300,7 +300,6 @@ export function SimulationPanel({ model, simulation, dispatch }: Props) {
               </div>
             )}
           </div>
-        );
       )}
 
       {/* Simulation summary */}
