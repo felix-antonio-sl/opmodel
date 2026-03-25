@@ -118,8 +118,9 @@ function applyRelaxationPass(apps: Appearance[], iterations = 3): Appearance[] {
     }
   }
 
-  for (let pass = 0; pass < 2; pass++) {
+  for (let pass = 0; pass < 3; pass++) {
     const findings = auditVisualOpd({ appearances: relaxed, links: [] });
+
     for (const finding of findings) {
       if (finding.kind === "tight-spacing") {
         const a = visible.find((app) => app.thing === finding.aThing);
@@ -156,6 +157,34 @@ function applyRelaxationPass(apps: Appearance[], iterations = 3): Appearance[] {
         app.y = Math.max(0, app.y);
       }
     }
+  }
+
+  for (let fixPass = 0; fixPass < 3; fixPass++) {
+    const finalFindings = auditVisualOpd({ appearances: relaxed, links: [] });
+    let fixed = false;
+    for (const finding of finalFindings) {
+      if (finding.kind !== "overlap") continue;
+      const aIdx = relaxed.findIndex((app) => app.thing === finding.aThing);
+      const bIdx = relaxed.findIndex((app) => app.thing === finding.bThing);
+      if (aIdx < 0 || bIdx < 0) continue;
+      const a = relaxed[aIdx];
+      const b = relaxed[bIdx];
+      if (isPinned(a) && isPinned(b)) continue;
+      const overlapX = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
+      const overlapY = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+      if (overlapX <= 0 || overlapY <= 0) continue;
+      // Move both non-pinned nodes apart by splitting the correction
+      const halfGap = Math.ceil(gap / 2);
+      if (overlapX <= overlapY) {
+        if (!isPinned(a)) relaxed[aIdx] = { ...a, x: Math.max(0, a.x - Math.ceil(overlapX / 2) - halfGap) };
+        if (!isPinned(b)) relaxed[bIdx] = { ...b, x: b.x + Math.ceil(overlapX / 2) + halfGap };
+      } else {
+        if (!isPinned(a)) relaxed[aIdx] = { ...a, y: Math.max(0, a.y - Math.ceil(overlapY / 2) - halfGap) };
+        if (!isPinned(b)) relaxed[bIdx] = { ...b, y: b.y + Math.ceil(overlapY / 2) + halfGap };
+      }
+      fixed = true;
+    }
+    if (!fixed) break;
   }
 
   return relaxed;
