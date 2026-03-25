@@ -1,4 +1,5 @@
 import type { Model, Thing, State, Link, LinkType, FanType, ModifierType, RefinementType, OPD, Duration, TimeUnit, ValueType, FunctionType, ComputationalObject, ComputationalProcess } from "@opmodel/core";
+import { getCompoundStates } from "@opmodel/core";
 import type { Command } from "../lib/commands";
 import { genId } from "../lib/ids";
 
@@ -1137,6 +1138,25 @@ export function PropertiesPanel({ model, thingId, opdId, dispatch }: Props) {
             >
               + Assertion
             </button>
+          </div>
+        );
+      })()}
+
+      {/* Compound State Space (3.2) */}
+      {thing.kind === "object" && (() => {
+        const cs = getCompoundStates(model, thingId);
+        if (cs.length === 0) return null;
+        return (
+          <div className="props-panel__section">
+            <label className="props-panel__label">Compound States ({cs.length})</label>
+            <div style={{ maxHeight: 120, overflowY: "auto", fontSize: 9 }}>
+              {cs.slice(0, 20).map((entry: any, i: number) => (
+                <div key={i} style={{ padding: "1px 0", color: "var(--text-muted)" }}>
+                  {entry.attributes.map((a: any) => `${a.name}=${a.state}`).join(" × ")}
+                </div>
+              ))}
+              {cs.length > 20 && <div style={{ fontStyle: "italic" }}>...{cs.length - 20} more</div>}
+            </div>
           </div>
         );
       })()}

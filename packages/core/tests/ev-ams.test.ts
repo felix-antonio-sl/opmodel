@@ -3,6 +3,7 @@ import { loadModel } from "../src/serialization";
 import { validate } from "../src/api";
 import { expose, render, renderAll, modelStats } from "../src/opl";
 import { runSimulation } from "../src/simulation";
+import { getCompoundStates } from "../src/compound-states";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 
@@ -174,3 +175,12 @@ describe("EV-AMS Canonical Example", () => {
     expect(nonContour).toHaveLength(0);
   });
 });
+
+  it("computes compound states for Battery Pack (if exhibited)", () => {
+    const r = loadModel(fixture);
+    if (!r.ok) throw new Error("load failed");
+    // Battery Pack exhibits Charge Level which has 2 states
+    const cs = getCompoundStates(r.value, "obj-battery-pack");
+    // Should have at least the Charge Level states
+    expect(cs.length).toBeGreaterThanOrEqual(2);
+  });

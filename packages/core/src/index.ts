@@ -41,6 +41,7 @@ export type {
 } from "./opl-types";
 export type { ModelStats } from "./opl";
 export { verifyMethodology, type CheckResult } from "./methodology";
+export { getCompoundStates, type CompoundStateEntry } from "./compound-states";
 export { exportMarkdown } from "./export-md";
 export {
   createInitialState,
