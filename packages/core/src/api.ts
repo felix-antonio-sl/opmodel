@@ -1556,6 +1556,7 @@ export function validate(model: Model): InvariantError[] {
         const procId = inZoomedProcessIds.has(link.source) ? link.source : link.target;
         errors.push({
           code: "I-CONTOUR-RESTRICT",
+          severity: "warning",
           message: `${link.type} link ${id} targets in-zoomed process ${procId} — must target subprocesses (ISO §10.5.2)`,
           entity: id,
         });

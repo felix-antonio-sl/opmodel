@@ -2110,6 +2110,10 @@ body,
   font-size: 11px;
   border-bottom: 1px solid var(--border);
 }
+.validation-panel__item--warning { opacity: 0.75; }
+.validation-panel__item--warning .validation-panel__code { color: #ed8936; }
+.validation-panel__item--info { opacity: 0.6; }
+.validation-panel__item--info .validation-panel__code { color: var(--accent); }
 .validation-panel__item--clickable {
   cursor: pointer;
 }

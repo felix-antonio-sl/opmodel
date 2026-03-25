@@ -86,7 +86,9 @@ export function ValidationPanel({ model, errors, dispatch, onClose }: Props) {
     <div className="validation-panel">
       <div className="validation-panel__header">
         <span className="validation-panel__title">
-          Validation — {errors.length} {errors.length === 1 ? "error" : "errors"}
+          Validation — {errors.filter(e => !e.severity || e.severity === "error").length} errors
+          {errors.filter(e => e.severity === "warning").length > 0 && `, ${errors.filter(e => e.severity === "warning").length} warnings`}
+          {errors.filter(e => e.severity === "info").length > 0 && `, ${errors.filter(e => e.severity === "info").length} info`}
         </span>
         <button className="validation-panel__close" onClick={onClose}>×</button>
       </div>
@@ -97,7 +99,7 @@ export function ValidationPanel({ model, errors, dispatch, onClose }: Props) {
           errors.map((err, i) => (
             <div
               key={i}
-              className={`validation-panel__item${err.entity ? " validation-panel__item--clickable" : ""}`}
+              className={`validation-panel__item validation-panel__item--${err.severity ?? "error"}${err.entity ? " validation-panel__item--clickable" : ""}`}
               onClick={() => handleClick(err)}
             >
               <span className="validation-panel__code">{err.code}</span>
