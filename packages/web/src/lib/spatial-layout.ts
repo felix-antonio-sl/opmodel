@@ -320,16 +320,37 @@ function findStructuralClusters(links: Link[], visibleThings: Set<string>): Stru
   return [...groups.values()].filter((g) => g.childIds.length >= 1);
 }
 
+function estimateDurationTextWidth(thing: Thing): number {
+  if (!thing.duration) return 0;
+  const d = thing.duration;
+  const text = `${d.min != null ? `${d.min}–` : ""}${d.nominal}${d.max != null ? `–${d.max}` : ""} ${d.unit}`;
+  return text.length * 7 + 36;
+}
+
 function autoSizeAppearance(model: Model, app: Appearance): { w: number; h: number } {
   const thing = model.things.get(app.thing);
   if (!thing) return { w: app.w, h: app.h };
+
   const stateNames = [...model.states.values()].filter((s) => s.parent === app.thing).map((s) => s.name);
-  const nameLen = thing.name.length;
-  const nameW = Math.max(nameLen * 8 + 24, VISUAL_RULES.size.minObjectWidth);
-  let w = thing.kind === "process" ? Math.max(nameW, VISUAL_RULES.size.minProcessWidth) : nameW;
+  const badgeLeft = thing.computational ? 16 : 0;
+  const badgeRight = !app.internal ? 14 : 0;
+  const labelPadding = 28 + badgeLeft + badgeRight;
+  const nameW = thing.name.length * 8 + labelPadding;
+  const durationW = thing.kind === "process" ? estimateDurationTextWidth(thing) : 0;
+
+  let w = thing.kind === "process"
+    ? Math.max(nameW, durationW, VISUAL_RULES.size.minProcessWidth)
+    : Math.max(nameW, VISUAL_RULES.size.minObjectWidth);
+
   if (stateNames.length > 0) w = Math.max(w, minimumWidthForStateNames(stateNames));
+  if (thing.kind === "object" && stateNames.length > 0 && thing.computational) w += 12;
   w = Math.max(w, app.w);
-  const h = Math.max(app.h, stateNames.length > 0 ? 68 : VISUAL_RULES.size.minHeight);
+
+  let h = Math.max(app.h, VISUAL_RULES.size.minHeight);
+  if (stateNames.length > 0) h = Math.max(h, 68);
+  if (thing.kind === "process" && thing.duration) h = Math.max(h, stateNames.length > 0 ? 84 : 72);
+  if (thing.computational && h < 56) h = 56;
+
   return { w, h };
 }
 

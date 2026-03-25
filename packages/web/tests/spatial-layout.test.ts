@@ -207,4 +207,44 @@ describe("spatial layout engine", () => {
     const suggestion = suggestLayoutForOpd(m, "opd-sd");
     expect(suggestion.strategy).toBe("sd-balanced");
   });
+
+  it("auto-sizes duration processes and computational stateful objects", () => {
+    let m = createModel("Sizing");
+    m = withThing(m, {
+      id: "proc-monitor",
+      kind: "process",
+      name: "Advanced Continuous Monitoring",
+      essence: "physical",
+      affiliation: "systemic",
+      duration: { min: 15, nominal: 30, max: 90, unit: "min" },
+    });
+    m = withThing(m, {
+      id: "obj-signal",
+      kind: "object",
+      name: "Physiological Signal Index",
+      essence: "informatical",
+      affiliation: "systemic",
+      computational: { value: 0, value_type: "float", unit: "%" },
+    });
+    m = withThing(m, { id: "obj-nurse", kind: "object", name: "Nurse", essence: "physical", affiliation: "systemic" });
+    m = withAppearance(m, "proc-monitor", "opd-sd", 0, 0, 120, 40);
+    m = withAppearance(m, "obj-signal", "opd-sd", 0, 0, 120, 40);
+    m = withAppearance(m, "obj-nurse", "opd-sd", 0, 0, 120, 40);
+    const s1 = addState(m, { id: "sig-ok", parent: "obj-signal", name: "within configured tolerance" });
+    if (!isOk(s1)) throw new Error(s1.error.message);
+    m = s1.value;
+    const s2 = addState(m, { id: "sig-alert", parent: "obj-signal", name: "persistent multi-factor instability" });
+    if (!isOk(s2)) throw new Error(s2.error.message);
+    m = s2.value;
+    m = withLink(m, { id: "l1", type: "agent", source: "obj-nurse", target: "proc-monitor" });
+    m = withLink(m, { id: "l2", type: "result", source: "proc-monitor", target: "obj-signal" });
+
+    const suggestion = suggestLayoutForOpd(m, "opd-sd");
+    const procPatch = suggestion.patches.find((p) => p.thingId === "proc-monitor")?.patch;
+    const signalPatch = suggestion.patches.find((p) => p.thingId === "obj-signal")?.patch;
+    expect((procPatch?.h ?? 0)).toBeGreaterThanOrEqual(72);
+    expect((procPatch?.w ?? 0)).toBeGreaterThan(180);
+    expect((signalPatch?.h ?? 0)).toBeGreaterThanOrEqual(68);
+    expect((signalPatch?.w ?? 0)).toBeGreaterThan(180);
+  });
 });
