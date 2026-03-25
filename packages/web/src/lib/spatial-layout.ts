@@ -1,4 +1,4 @@
-import type { Appearance, Link, Model, Thing } from "@opmodel/core";
+import type { Appearance, Fan, Link, Model, Thing } from "@opmodel/core";
 import { auditVisualOpd, type VisualFinding } from "./visual-lint";
 import { VISUAL_RULES, minimumWidthForStateNames } from "./visual-rules";
 
@@ -9,7 +9,7 @@ export interface AppearancePatch {
 }
 
 export interface LayoutSuggestion {
-  strategy: "in-zoom-sequential" | "unfold-grid" | "none";
+  strategy: "in-zoom-sequential" | "unfold-grid" | "branching-control" | "none";
   patches: AppearancePatch[];
   findings: VisualFinding[];
 }
@@ -56,6 +56,100 @@ function classifyExternalLane(model: Model, app: Appearance, links: Link[]): "le
   if (thing?.affiliation === "environmental") return "right";
   if (rel.some((l) => l.type === "instrument")) return "right";
   return "right";
+}
+
+function branchProcessIdsForFan(fan: Fan, links: Link[], internalProcessIds: Set<string>): string[] {
+  const ids = new Set<string>();
+  for (const memberId of fan.members) {
+    const link = links.find((l) => l.id === memberId);
+    if (!link) continue;
+    if (internalProcessIds.has(link.source)) ids.add(link.source);
+    if (internalProcessIds.has(link.target)) ids.add(link.target);
+  }
+  return [...ids];
+}
+
+function layoutBranchingControl(model: Model, opdId: string, apps: Appearance[], links: Link[], fans: Fan[], refines?: string): LayoutSuggestion {
+  const patches: AppearancePatch[] = [];
+  const container = refines ? apps.find((a) => a.thing === refines) : undefined;
+  const internal = apps.filter((a) => a.internal && a.thing !== refines).sort(sortByPosition);
+  const external = apps.filter((a) => !a.internal).sort(sortByPosition);
+  if (!container || internal.length === 0) return { strategy: "none", patches: [], findings: [] };
+
+  const internalProcessIds = new Set(internal.map((a) => a.thing));
+  const diverging = fans.find((f) => f.direction === "diverging" && (f.type === "xor" || f.type === "or" || f.type === "and"));
+  if (!diverging) return { strategy: "none", patches: [], findings: [] };
+
+  const branchIds = branchProcessIdsForFan(diverging, links, internalProcessIds);
+  const branches = internal.filter((a) => branchIds.includes(a.thing)).sort(sortByPosition);
+  const trunk = internal.filter((a) => !branchIds.includes(a.thing)).sort(sortByPosition);
+  if (branches.length === 0) return { strategy: "none", patches: [], findings: [] };
+
+  const containerX = container.x;
+  const containerY = container.y;
+  const trunkY = containerY + 110;
+  const branchYBase = containerY + 420;
+  const trunkW = 220;
+  const trunkGap = 70;
+  const trunkStartX = containerX + 80;
+  trunk.forEach((app, i) => {
+    patches.push({
+      thingId: app.thing,
+      opdId,
+      patch: { x: trunkStartX + i * (trunkW + trunkGap), y: trunkY + (i === 0 ? -70 : i === 1 ? 0 : 70), w: Math.max(app.w, 220), h: Math.max(app.h, 60) },
+    });
+  });
+
+  const branchXs = [containerX + 100, containerX + 390, containerX + 690];
+  branches.forEach((app, i) => {
+    const x = branchXs[i] ?? (containerX + 100 + i * 250);
+    const y = branchYBase + (i === 1 ? -60 : 20);
+    patches.push({ thingId: app.thing, opdId, patch: { x, y, w: Math.max(app.w, 230), h: Math.max(app.h, 60) } });
+  });
+
+  const targetContainerW = Math.max(container.w, 980);
+  const targetContainerH = Math.max(container.h, 560);
+  patches.push({ thingId: container.thing, opdId, patch: { w: targetContainerW, h: targetContainerH } });
+
+  const patchedInternals = internal.map((app) => {
+    const patch = patches.find((p) => p.thingId === app.thing)?.patch;
+    return patch ? { ...app, ...patch } : app;
+  });
+  const processCenters = new Map(patchedInternals.map((a) => [a.thing, a.y + a.h / 2]));
+
+  const laneBaseLeft = containerX - 260;
+  const laneBaseRight = containerX + targetContainerW + 60;
+  const leftEntries: Array<{ app: Appearance; y: number; h: number; w: number }> = [];
+  const rightEntries: Array<{ app: Appearance; y: number; h: number; w: number }> = [];
+  for (const app of external) {
+    const connected = linkedProcesses(app, internalProcessIds, links);
+    const centerY = average(connected.map((id) => processCenters.get(id) ?? containerY + 120)) || containerY + 120;
+    const thing = model.things.get(app.thing);
+    const h = Math.max(app.h, thing?.kind === "object" && [...model.states.values()].some((s) => s.parent === app.thing) ? 68 : 50);
+    const w = preferredWidth(model, app, thing);
+    const y = centerY - h / 2;
+    const lane = classifyExternalLane(model, app, links);
+    (lane === "left" ? leftEntries : rightEntries).push({ app, y, h, w });
+  }
+
+  for (const entry of resolveLaneOverlaps(leftEntries.map((e) => ({ thingId: e.app.thing, y: e.y, h: e.h })))) {
+    const full = leftEntries.find((e) => e.app.thing === entry.thingId)!;
+    patches.push({ thingId: entry.thingId, opdId, patch: { x: laneBaseLeft, y: entry.y, w: full.w, h: full.h } });
+  }
+  for (const entry of resolveLaneOverlaps(rightEntries.map((e) => ({ thingId: e.app.thing, y: e.y, h: e.h })))) {
+    const full = rightEntries.find((e) => e.app.thing === entry.thingId)!;
+    patches.push({ thingId: entry.thingId, opdId, patch: { x: laneBaseRight, y: entry.y, w: full.w, h: full.h } });
+  }
+
+  const patchedApps = apps.map((app) => {
+    const p = patches.find((x) => x.thingId === app.thing);
+    return p ? { ...app, ...p.patch } : app;
+  });
+  return {
+    strategy: "branching-control",
+    patches,
+    findings: auditVisualOpd({ appearances: patchedApps, links, things: model.things.values(), states: model.states.values() }),
+  };
 }
 
 function layoutInZoom(model: Model, opdId: string, apps: Appearance[], links: Link[], refines?: string): LayoutSuggestion {
@@ -208,8 +302,13 @@ export function suggestLayoutForOpd(model: Model, opdId: string): LayoutSuggesti
   const apps = [...model.appearances.values()].filter((a) => a.opd === opdId);
   const ids = new Set(apps.map((a) => a.thing));
   const links = [...model.links.values()].filter((l) => ids.has(l.source) && ids.has(l.target));
+  const fans = [...model.fans.values()].filter((f) => f.members.some((id) => links.some((l) => l.id === id)));
   if (!opd) return { strategy: "none", patches: [], findings: [] };
-  if (opd.refinement_type === "in-zoom") return layoutInZoom(model, opdId, apps, links, opd.refines ?? undefined);
+  if (opd.refinement_type === "in-zoom") {
+    const branching = layoutBranchingControl(model, opdId, apps, links, fans, opd.refines ?? undefined);
+    if (branching.strategy !== "none") return branching;
+    return layoutInZoom(model, opdId, apps, links, opd.refines ?? undefined);
+  }
   if (opd.refinement_type === "unfold") return layoutUnfold(model, opdId, apps, links, opd.refines ?? undefined);
   return {
     strategy: "none",

@@ -591,6 +591,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
         <ValidationPanel
           model={model}
           errors={errors}
+          visualFindings={visualFindings}
           dispatch={dispatch}
           onClose={() => setShowValidation(false)}
         />

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   addAppearance,
+  addFan,
   addLink,
   addThing,
   createModel,
@@ -32,6 +33,45 @@ function withLink(model: Model, link: Link): Model {
 }
 
 describe("spatial layout engine", () => {
+  it("suggests branching control layout for in-zoom OPDs with diverging fans", () => {
+    let m = createModel("Branch");
+    m = withThing(m, { id: "proc-main", kind: "process", name: "Main", essence: "physical", affiliation: "systemic" });
+    m = withAppearance(m, "proc-main", "opd-sd", 100, 100, 200, 80);
+    const ref = refineThing(m, "proc-main", "opd-sd", "in-zoom", "opd-sd1", "SD1");
+    if (!isOk(ref)) throw new Error(ref.error.message);
+    m = ref.value;
+    for (const id of ["proc-sense", "proc-assess", "proc-alert", "proc-warning", "proc-brake"]) {
+      m = withThing(m, { id, kind: "process", name: id, essence: "physical", affiliation: "systemic" });
+      m = withAppearance(m, id, "opd-sd1", 0, 0, 120, 60, true);
+    }
+    for (const id of ["obj-left", "obj-right", "obj-threat"]) {
+      m = withThing(m, { id, kind: "object", name: id, essence: "physical", affiliation: "systemic" });
+      m = withAppearance(m, id, "opd-sd1", 0, 0, 120, 50);
+    }
+    m = withLink(m, { id: "l1", type: "agent", source: "obj-left", target: "proc-sense" });
+    m = withLink(m, { id: "l2", type: "effect", source: "proc-assess", target: "obj-threat" });
+    m = withLink(m, { id: "l3", type: "instrument", source: "obj-threat", target: "proc-alert" });
+    m = withLink(m, { id: "l4", type: "instrument", source: "obj-threat", target: "proc-warning" });
+    m = withLink(m, { id: "l5", type: "instrument", source: "obj-threat", target: "proc-brake" });
+    m = withLink(m, { id: "l6", type: "result", source: "proc-warning", target: "obj-right" });
+    const fan = addFan(m, { id: "fan-1", type: "xor", direction: "diverging", members: ["l3", "l4", "l5"] });
+    if (!isOk(fan)) throw new Error(fan.error.message);
+    m = fan.value;
+
+    const suggestion = suggestLayoutForOpd(m, "opd-sd1");
+    expect(suggestion.strategy).toBe("branching-control");
+    const patched = [...m.appearances.values()]
+      .filter((a) => a.opd === "opd-sd1")
+      .map((a) => {
+        const patch = suggestion.patches.find((p) => p.thingId === a.thing)?.patch;
+        return patch ? { ...a, ...patch } : a;
+      });
+    const ids = new Set(patched.map((a) => a.thing));
+    const links = [...m.links.values()].filter((l) => ids.has(l.source) && ids.has(l.target));
+    expect(findNonContainerOverlaps(patched)).toEqual([]);
+    expect(findVisibleOrphans(patched, links)).toEqual([]);
+  });
+
   it("suggests sequential in-zoom layout with no visible overlap/orphans", () => {
     let m = createModel("Layout");
     m = withThing(m, { id: "proc-main", kind: "process", name: "Main", essence: "physical", affiliation: "systemic" });
