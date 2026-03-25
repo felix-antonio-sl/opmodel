@@ -100,11 +100,11 @@ m = unwrap(addLink(m, { id: "lnk-instrument-charging", type: "instrument", sourc
 m = unwrap(addLink(m, { id: "lnk-instrument-road", type: "instrument", source: "obj-road-network", target: "proc-aev-providing" }));
 
 // Consumption
-m = unwrap(addLink(m, { id: "lnk-consume-raw", type: "consumption", source: "obj-raw-materials", target: "proc-aev-providing" }));
-m = unwrap(addLink(m, { id: "lnk-consume-energy", type: "consumption", source: "obj-electric-energy", target: "proc-aev-providing" }));
+m = unwrap(addLink(m, { id: "lnk-consume-raw", type: "consumption", source: "obj-raw-materials", target: "proc-aev-providing", distributed: true }));
+m = unwrap(addLink(m, { id: "lnk-consume-energy", type: "consumption", source: "obj-electric-energy", target: "proc-aev-providing", distributed: true }));
 
 // Result
-m = unwrap(addLink(m, { id: "lnk-result-trips", type: "result", source: "proc-aev-providing", target: "obj-urban-trips" }));
+m = unwrap(addLink(m, { id: "lnk-result-trips", type: "result", source: "proc-aev-providing", target: "obj-urban-trips", distributed: true }));
 
 // Problem occurrence
 m = unwrap(addLink(m, { id: "lnk-problem-mob", type: "effect", source: "proc-fossil-using", target: "obj-mobility-convenience" }));
@@ -180,8 +180,8 @@ m = unwrap(addAppearance(m, { thing: "obj-road-network", opd: "opd-sd1", x: 30, 
 m = unwrap(addAppearance(m, { thing: "obj-aev", opd: "opd-sd1", x: 700, y: 400, w: 200, h: 60 }));
 
 // SD1 links
-m = unwrap(addLink(m, { id: "lnk-mfg-consume-raw", type: "consumption", source: "obj-raw-materials", target: "proc-mfg" }));
-m = unwrap(addLink(m, { id: "lnk-mfg-result-assembly", type: "result", source: "proc-mfg", target: "obj-aev-assembly" }));
+m = unwrap(addLink(m, { id: "lnk-mfg-consume-raw", type: "consumption", source: "obj-raw-materials", target: "proc-mfg", distributed: true }));
+m = unwrap(addLink(m, { id: "lnk-mfg-result-assembly", type: "result", source: "proc-mfg", target: "obj-aev-assembly", distributed: true }));
 m = unwrap(addLink(m, { id: "lnk-mfg-agent", type: "agent", source: "obj-mfg-eng-group", target: "proc-mfg" }));
 m = unwrap(addLink(m, { id: "lnk-mfg-instrument", type: "instrument", source: "obj-robot-line", target: "proc-mfg" }));
 m = unwrap(addLink(m, { id: "lnk-mfg-effect-quality", type: "effect", source: "proc-mfg", target: "obj-mfg-quality", target_state: "s-qual-assembled" }));
@@ -367,6 +367,13 @@ m = unwrap(addLink(m, { id: "lnk-chassis-consume", type: "consumption", source: 
 // Result: Final Inspecting yields AEV Assembly
 m = unwrap(addLink(m, { id: "lnk-inspect-result", type: "result", source: "proc-final-inspect", target: "obj-aev-assembly" }));
 
+// Fix: Add transformee links for processes that lack them
+m = unwrap(addLink(m, { id: "lnk-alert-effect", type: "effect", source: "proc-alerting", target: "obj-road-danger", target_state: "s-danger-alert" }));
+m = unwrap(addLink(m, { id: "lnk-battery-install-effect", type: "effect", source: "proc-battery-install", target: "obj-aev-assembly" }));
+m = unwrap(addLink(m, { id: "lnk-detecting-effect", type: "effect", source: "proc-detecting", target: "obj-threat-level" }));
+m = unwrap(addLink(m, { id: "lnk-fleet-effect-mob", type: "effect", source: "proc-fleet-op", target: "obj-mobility-convenience", source_state: "s-mob-limited", target_state: "s-mob-enhanced" }));
+m = unwrap(addLink(m, { id: "lnk-sensing-effect", type: "effect", source: "proc-sensing", target: "obj-road-danger" }));
+m = unwrap(addLink(m, { id: "lnk-sw-loading-effect", type: "effect", source: "proc-sw-loading", target: "obj-aev-assembly" }));
 // ===== SAVE =====
 const outPath = resolve(__dirname, "../tests/ev-ams.opmodel");
 writeFileSync(outPath, saveModel(m));

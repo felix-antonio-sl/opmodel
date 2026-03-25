@@ -1857,7 +1857,7 @@ export function validate(model: Model): InvariantError[] {
     const name = thing.name.trim();
     if (PLURAL_PATTERNS.test(name) && !VALID_SUFFIXES.test(name) && name.length > 3) {
       // Skip common non-plural words ending in 's'
-      if (!/(?:bus|gas|atlas|status|process|analysis|basis|crisis|diagnosis)$/i.test(name)) {
+      if (!/(?:bus|gas|atlas|status|process|analysis|basis|crisis|diagnosis|readiness|ness|ams|ics|ous)$/i.test(name)) {
         errors.push({ code: "I-SINGULAR", severity: "info", message: `"${name}" may be plural — use Set/Group suffix per OPM Singular Name Principle`, entity: id });
       }
     }
