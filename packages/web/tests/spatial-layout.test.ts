@@ -329,6 +329,34 @@ describe("spatial layout engine", () => {
     expect(findTightSpacing(patched).length).toBe(0);
   });
 
+  it("keeps left-lane agents on the left during relaxation", () => {
+    let m = createModel("Lane aware");
+    m = withThing(m, { id: "proc-main", kind: "process", name: "Main Coordination", essence: "physical", affiliation: "systemic" });
+    m = withThing(m, { id: "obj-agent-a", kind: "object", name: "Left Agent A", essence: "physical", affiliation: "systemic" });
+    m = withThing(m, { id: "obj-agent-b", kind: "object", name: "Left Agent B", essence: "physical", affiliation: "systemic" });
+    m = withThing(m, { id: "obj-result", kind: "object", name: "Result", essence: "physical", affiliation: "systemic" });
+    for (const id of ["proc-main", "obj-agent-a", "obj-agent-b", "obj-result"]) {
+      m = withAppearance(m, id, "opd-sd", 0, 0, 120, 40);
+    }
+    m = withLink(m, { id: "l1", type: "agent", source: "obj-agent-a", target: "proc-main" });
+    m = withLink(m, { id: "l2", type: "agent", source: "obj-agent-b", target: "proc-main" });
+    m = withLink(m, { id: "l3", type: "result", source: "proc-main", target: "obj-result" });
+
+    const suggestion = suggestLayoutForOpd(m, "opd-sd");
+    const patched = [...m.appearances.values()]
+      .filter((a) => a.opd === "opd-sd")
+      .map((a) => {
+        const patch = suggestion.patches.find((p) => p.thingId === a.thing)?.patch;
+        return patch ? { ...a, ...patch } : a;
+      });
+    const proc = patched.find((a) => a.thing === "proc-main")!;
+    const centerX = proc.x + proc.w / 2;
+    const leftA = patched.find((a) => a.thing === "obj-agent-a")!;
+    const leftB = patched.find((a) => a.thing === "obj-agent-b")!;
+    expect(leftA.x + leftA.w / 2).toBeLessThan(centerX);
+    expect(leftB.x + leftB.w / 2).toBeLessThan(centerX);
+  });
+
   it("respects pinned nodes during auto-layout and relaxation", () => {
     let m = createModel("Pinned");
     m = withThing(m, { id: "proc-main", kind: "process", name: "Main Coordination", essence: "physical", affiliation: "systemic" });

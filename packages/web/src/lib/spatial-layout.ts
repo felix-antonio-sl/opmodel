@@ -58,10 +58,29 @@ function rectsOverlap(a: Pick<Appearance, "x" | "y" | "w" | "h">, b: Pick<Appear
   );
 }
 
+function classifyBand(app: Appearance, centerX: number): "left" | "center" | "right" {
+  const mid = app.x + app.w / 2;
+  if (mid < centerX - 140) return "left";
+  if (mid > centerX + 140) return "right";
+  return "center";
+}
+
+function clampToBand(app: Appearance, band: "left" | "center" | "right", centerX: number): void {
+  const mid = app.x + app.w / 2;
+  if (band === "left" && mid > centerX - 40) {
+    app.x = Math.max(0, centerX - 40 - app.w / 2);
+  }
+  if (band === "right" && mid < centerX + 40) {
+    app.x = centerX + 40 - app.w / 2;
+  }
+}
+
 function applyRelaxationPass(apps: Appearance[], iterations = 3): Appearance[] {
   const relaxed = apps.map((app) => ({ ...app }));
   const visible = relaxed.filter((a) => !a.internal).sort((a, b) => sortByPosition(a, b));
   const gap = VISUAL_RULES.spacing.nodeGap;
+  const centerX = average(visible.map((a) => a.x + a.w / 2));
+  const bands = new Map(visible.map((app) => [app.thing, classifyBand(app, centerX)]));
 
   for (let pass = 0; pass < iterations; pass++) {
     for (let i = 0; i < visible.length; i++) {
@@ -85,6 +104,7 @@ function applyRelaxationPass(apps: Appearance[], iterations = 3): Appearance[] {
 
         if (overlapX <= overlapY) {
           target.x += Math.max(gap, overlapX + gap);
+          clampToBand(target, bands.get(target.thing) ?? "center", centerX);
         } else {
           target.y += Math.max(gap, overlapY + gap);
         }
@@ -101,8 +121,14 @@ function applyRelaxationPass(apps: Appearance[], iterations = 3): Appearance[] {
         if (!a || !b) continue;
         const nudge = Math.ceil((VISUAL_RULES.lint.minReadableGap - finding.gap) / 2) + 2;
         if (finding.axis === "x") {
-          if (!isPinned(a)) a.x = Math.max(0, a.x - nudge);
-          if (!isPinned(b)) b.x += nudge;
+          if (!isPinned(a)) {
+            a.x = Math.max(0, a.x - nudge);
+            clampToBand(a, bands.get(a.thing) ?? "center", centerX);
+          }
+          if (!isPinned(b)) {
+            b.x += nudge;
+            clampToBand(b, bands.get(b.thing) ?? "center", centerX);
+          }
         } else {
           if (!isPinned(a)) a.y = Math.max(0, a.y - nudge);
           if (!isPinned(b)) b.y += nudge;
@@ -112,7 +138,6 @@ function applyRelaxationPass(apps: Appearance[], iterations = 3): Appearance[] {
 
     const crowded = findings.find((f) => f.kind === "crowded-diagram");
     if (crowded) {
-      const centerX = average(visible.map((a) => a.x + a.w / 2));
       const centerY = average(visible.map((a) => a.y + a.h / 2));
       for (const app of visible) {
         if (isPinned(app)) continue;
@@ -120,6 +145,7 @@ function applyRelaxationPass(apps: Appearance[], iterations = 3): Appearance[] {
         const dy = app.y + app.h / 2 - centerY;
         app.x += dx >= 0 ? 10 : -10;
         app.y += dy >= 0 ? 8 : -8;
+        clampToBand(app, bands.get(app.thing) ?? "center", centerX);
         app.x = Math.max(0, app.x);
         app.y = Math.max(0, app.y);
       }
