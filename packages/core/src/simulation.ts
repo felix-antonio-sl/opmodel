@@ -473,6 +473,26 @@ export function resolveLinksForOpd(model: Model, opdId: string): ResolvedLink[] 
     return true;
   });
 
+  // R-IH: Structural inheritance — specializations inherit links from their generals
+  // Show inherited links as visual connections from the specialization
+  for (const thingId of appearances) {
+    const inherited = getInheritedLinks(model, thingId);
+    for (const iLink of inherited) {
+      // Remap: replace general endpoint with specialization
+      const generalId = iLink.source === thingId || iLink.target === thingId ? null :
+        (model.things.get(iLink.source)?.kind === "object" ? iLink.source : iLink.target);
+      if (!generalId) continue;
+      const vs = generalId === iLink.source ? thingId : iLink.source;
+      const vt = generalId === iLink.target ? thingId : iLink.target;
+      if (!appearances.has(vs) || !appearances.has(vt)) continue;
+      const key = `inherited|${iLink.type}|${vs}|${vt}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        result.push({ link: iLink, visualSource: vs, visualTarget: vt, aggregated: true });
+      }
+    }
+  }
+
   // R-OZ: Out-zoom precedence — when multiple aggregated link types connect the same
   // object-process pair, keep only the highest precedence type.
   // Precedence: consumption = result > effect > agent > instrument (ISO §14 lines 784-796)
