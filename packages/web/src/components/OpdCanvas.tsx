@@ -405,7 +405,10 @@ function ThingNode({
   const kindFill = thing.kind === "process"
     ? (isPhysical ? "var(--process-fill-physical)" : "var(--process-fill)")
     : (isPhysical ? "var(--object-fill-physical)" : "var(--object-fill)");
-  const fillColor = kindFill;
+  const fillColor = isContainer
+    ? (thing.kind === "process" ? "rgba(43, 108, 176, 0.03)" : "rgba(22, 121, 74, 0.03)")
+    : isExternal ? "var(--bg-canvas, #f0f1f4)"
+    : kindFill;
   // ISO §14.2: refined things show thick contour in both parent and child OPD
   const baseStroke = isPhysical ? 3.5 : 1.2;
   const strokeWidth = isContainer ? 2.5 : isExternal ? 1.0 : isRefined ? Math.max(baseStroke, 2.5) : baseStroke;

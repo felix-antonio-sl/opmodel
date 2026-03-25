@@ -627,12 +627,12 @@ body,
 
 .thing-badge-external {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 9px;
   fill: var(--text-muted);
   pointer-events: none;
   dominant-baseline: central;
-  text-anchor: middle;
-  opacity: 0.6;
+  text-anchor: end;
+  opacity: 0.5;
 }
 
 .thing-duration {
