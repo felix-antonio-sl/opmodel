@@ -470,7 +470,7 @@ function ThingNode({
       <text
         className={`thing-label${thing.kind === "process" ? " thing-label--process" : ""}${isContainer ? " thing-label--container" : ""}`}
         x={x + w / 2}
-        y={isContainer ? y + 16 : y + (hasStates ? h / 2 - 2 : totalH / 2)}
+        y={isContainer ? y - 6 : y + (hasStates ? h / 2 - 2 : totalH / 2)}
       >
         {thing.name}
       </text>

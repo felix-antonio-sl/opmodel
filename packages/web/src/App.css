@@ -30,12 +30,12 @@
 
   /* ── OPM entities (ISO 19450: object=green, process=blue) ── */
   --object-stroke: #16794a;
-  --object-fill: rgba(22, 121, 74, 0.04);
-  --object-fill-physical: rgba(22, 121, 74, 0.10);
+  --object-fill: rgba(22, 121, 74, 0.06);
+  --object-fill-physical: rgba(22, 121, 74, 0.14);
 
   --process-stroke: #2b6cb0;
-  --process-fill: rgba(43, 108, 176, 0.04);
-  --process-fill-physical: rgba(43, 108, 176, 0.10);
+  --process-fill: rgba(43, 108, 176, 0.06);
+  --process-fill-physical: rgba(43, 108, 176, 0.14);
 
   --state-bg: #f0f2f6;
   --state-border: #d0d4de;
@@ -174,7 +174,7 @@ body,
 .header__actions {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
 }
 
 .header__action {
@@ -618,11 +618,11 @@ body,
 }
 
 .thing-label--container {
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  fill: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  fill: var(--text-primary);
 }
 
 .thing-badge-external {
@@ -702,11 +702,15 @@ body,
 
 .link-label {
   font-family: var(--font-mono);
-  font-size: 9px;
-  fill: var(--text-muted);
+  font-size: 8px;
+  fill: var(--text-secondary);
   pointer-events: none;
   dominant-baseline: central;
   text-anchor: middle;
+  paint-order: stroke;
+  stroke: var(--bg-canvas, #f0f1f4);
+  stroke-width: 3px;
+  stroke-linejoin: round;
 }
 
 /* ── SVG Modifier badge ── */
@@ -1378,12 +1382,13 @@ body,
 
 .opl-sentence {
   font-family: var(--font-serif);
-  font-size: 13px;
-  line-height: 1.65;
+  font-size: 12px;
+  line-height: 1.6;
   color: var(--text-secondary);
-  padding: 3px 0;
+  padding: 4px 8px;
+  margin-bottom: 2px;
   transition: color 0.2s, background 0.2s;
-  border-radius: 2px;
+  border-radius: 3px;
 }
 
 .opl-sentence:hover {
@@ -1418,7 +1423,7 @@ body,
 .opl-divider {
   height: 1px;
   background: var(--border);
-  margin: 10px 0;
+  margin: 8px 8px;
 }
 
 /* ═══════════════════
@@ -1553,7 +1558,18 @@ body,
 }
 
 .status-bar__count {
-  color: var(--text-secondary);
+  color: var(--text-muted);
+  padding: 0 2px;
+}
+
+.status-bar__count::after {
+  content: "·";
+  margin-left: 6px;
+  color: var(--border);
+}
+
+.status-bar__count:last-of-type::after {
+  content: none;
 }
 
 .status-bar__spacer {
@@ -2743,8 +2759,11 @@ body,
 
 /* OPD tree thing count */
 .opd-tree__count {
-  font-size: 9px;
+  font-size: 8px;
   color: var(--text-muted);
-  margin-left: 4px;
-  opacity: 0.6;
+  margin-left: 6px;
+  background: var(--bg-hover, #ebedf2);
+  padding: 1px 5px;
+  border-radius: 8px;
+  font-weight: 500;
 }
