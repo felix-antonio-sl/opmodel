@@ -2092,9 +2092,66 @@ body,
   line-height: 1;
 }
 .validation-panel__close:hover { color: var(--text); }
+.validation-panel__summary {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-hover) 55%, transparent);
+}
+.validation-panel__chip {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+.validation-panel__chip--error { color: var(--error, #e53e3e); }
+.validation-panel__chip--warning { color: #dd6b20; }
+.validation-panel__chip--info { color: var(--accent); }
+.validation-panel__chip--visual { color: #805ad5; }
 .validation-panel__list {
   overflow-y: auto;
   flex: 1;
+}
+.validation-panel__section {
+  padding-bottom: 6px;
+}
+.validation-panel__section + .validation-panel__section {
+  border-top: 1px solid var(--border);
+}
+.validation-panel__section-title {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 6px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  background: var(--bg-panel);
+}
+.validation-panel__subsection-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+.validation-panel__subsection-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: rgba(128, 90, 213, 0.12);
+  color: #805ad5;
+  font-size: 9px;
 }
 .validation-panel__ok {
   padding: 16px;
@@ -2110,9 +2167,9 @@ body,
   font-size: 11px;
   border-bottom: 1px solid var(--border);
 }
-.validation-panel__item--warning { opacity: 0.75; }
+.validation-panel__item--warning { opacity: 0.85; }
 .validation-panel__item--warning .validation-panel__code { color: #ed8936; }
-.validation-panel__item--info { opacity: 0.6; }
+.validation-panel__item--info { opacity: 0.7; }
 .validation-panel__item--info .validation-panel__code { color: var(--accent); }
 .validation-panel__item--clickable {
   cursor: pointer;

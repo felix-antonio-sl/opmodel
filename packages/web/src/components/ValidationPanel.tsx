@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import type { Model, InvariantError } from "@opmodel/core";
 import type { Command } from "../lib/commands";
 import type { VisualFinding } from "../lib/visual-lint";
@@ -96,7 +97,40 @@ function visualFindingLabel(model: Model, finding: VisualFinding): string {
   }
 }
 
+function visualFindingEntity(finding: VisualFinding): string | null {
+  switch (finding.kind) {
+    case "overlap":
+      return finding.aThing;
+    case "orphan":
+      return finding.thing;
+    case "truncated-state":
+      return finding.thing;
+    case "degenerate-bounds":
+      return finding.thing;
+  }
+}
+
+function visualFindingKindLabel(kind: VisualFinding["kind"]): string {
+  switch (kind) {
+    case "overlap": return "Overlaps";
+    case "orphan": return "Orphans";
+    case "truncated-state": return "Truncated state pills";
+    case "degenerate-bounds": return "Degenerate bounds";
+  }
+}
+
 export function ValidationPanel({ model, errors, visualFindings = [], dispatch, onClose }: Props) {
+  const errorCount = errors.filter((e) => !e.severity || e.severity === "error").length;
+  const warningCount = errors.filter((e) => e.severity === "warning").length;
+  const infoCount = errors.filter((e) => e.severity === "info").length;
+
+  const groupedVisualFindings = useMemo(() => {
+    const order: VisualFinding["kind"][] = ["overlap", "orphan", "truncated-state", "degenerate-bounds"];
+    return order
+      .map((kind) => ({ kind, items: visualFindings.filter((finding) => finding.kind === kind) }))
+      .filter((group) => group.items.length > 0);
+  }, [visualFindings]);
+
   const handleClick = (err: InvariantError) => {
     if (!err.entity) return;
     const thingId = findThingForEntity(model, err.entity);
@@ -105,54 +139,79 @@ export function ValidationPanel({ model, errors, visualFindings = [], dispatch, 
     if (thingId) dispatch({ tag: "selectThing", thingId });
   };
 
+  const handleVisualClick = (finding: VisualFinding) => {
+    const entity = visualFindingEntity(finding);
+    if (!entity) return;
+    const opdId = findOpdForEntity(model, entity);
+    if (opdId) dispatch({ tag: "selectOpd", opdId });
+    dispatch({ tag: "selectThing", thingId: entity });
+  };
+
   return (
     <div className="validation-panel">
       <div className="validation-panel__header">
-        <span className="validation-panel__title">
-          Validation — {errors.filter(e => !e.severity || e.severity === "error").length} errors
-          {errors.filter(e => e.severity === "warning").length > 0 && `, ${errors.filter(e => e.severity === "warning").length} warnings`}
-          {errors.filter(e => e.severity === "info").length > 0 && `, ${errors.filter(e => e.severity === "info").length} info`}
-          {visualFindings.length > 0 && `, ${visualFindings.length} visual`}
-        </span>
+        <span className="validation-panel__title">Validation</span>
         <button className="validation-panel__close" onClick={onClose}>×</button>
+      </div>
+      <div className="validation-panel__summary">
+        <span className="validation-panel__chip validation-panel__chip--error">{errorCount} errors</span>
+        <span className="validation-panel__chip validation-panel__chip--warning">{warningCount} warnings</span>
+        <span className="validation-panel__chip validation-panel__chip--info">{infoCount} info</span>
+        <span className="validation-panel__chip validation-panel__chip--visual">{visualFindings.length} visual</span>
       </div>
       <div className="validation-panel__list">
         {errors.length === 0 && visualFindings.length === 0 ? (
           <div className="validation-panel__ok">All invariants and visual checks satisfied</div>
         ) : (
           <>
-            {errors.map((err, i) => (
-              <div
-                key={`err-${i}`}
-                className={`validation-panel__item validation-panel__item--${err.severity ?? "error"}${err.entity ? " validation-panel__item--clickable" : ""}`}
-                onClick={() => handleClick(err)}
-              >
-                <span className="validation-panel__code">{err.code}</span>
-                <span className="validation-panel__msg">{err.message}</span>
-                {err.entity && (
-                  <span className="validation-panel__entity">
-                    {entityLabel(model, err.entity)}
-                  </span>
-                )}
+            {errors.length > 0 && (
+              <div className="validation-panel__section">
+                <div className="validation-panel__section-title">Model validation</div>
+                {errors.map((err, i) => (
+                  <div
+                    key={`err-${i}`}
+                    className={`validation-panel__item validation-panel__item--${err.severity ?? "error"}${err.entity ? " validation-panel__item--clickable" : ""}`}
+                    onClick={() => handleClick(err)}
+                  >
+                    <span className="validation-panel__code">{err.code}</span>
+                    <span className="validation-panel__msg">{err.message}</span>
+                    {err.entity && (
+                      <span className="validation-panel__entity">
+                        {entityLabel(model, err.entity)}
+                      </span>
+                    )}
+                  </div>
+                ))}
               </div>
-            ))}
-            {visualFindings.map((finding, i) => {
-              const entity = finding.kind === "overlap" ? finding.aThing : finding.kind === "orphan" ? finding.thing : finding.kind === "truncated-state" ? finding.thing : undefined;
-              return (
-                <div
-                  key={`visual-${i}`}
-                  className={`validation-panel__item validation-panel__item--warning${entity ? " validation-panel__item--clickable" : ""}`}
-                  onClick={() => {
-                    if (!entity) return;
-                    dispatch({ tag: "selectThing", thingId: entity });
-                  }}
-                >
-                  <span className="validation-panel__code">VISUAL</span>
-                  <span className="validation-panel__msg">{visualFindingLabel(model, finding)}</span>
-                  {entity && <span className="validation-panel__entity">{thingLabel(model, entity)}</span>}
-                </div>
-              );
-            })}
+            )}
+
+            {groupedVisualFindings.length > 0 && (
+              <div className="validation-panel__section">
+                <div className="validation-panel__section-title">Visual validation</div>
+                {groupedVisualFindings.map((group) => (
+                  <div key={group.kind} className="validation-panel__subsection">
+                    <div className="validation-panel__subsection-title">
+                      {visualFindingKindLabel(group.kind)}
+                      <span className="validation-panel__subsection-count">{group.items.length}</span>
+                    </div>
+                    {group.items.map((finding, i) => {
+                      const entity = visualFindingEntity(finding);
+                      return (
+                        <div
+                          key={`${group.kind}-${i}`}
+                          className={`validation-panel__item validation-panel__item--warning${entity ? " validation-panel__item--clickable" : ""}`}
+                          onClick={() => handleVisualClick(finding)}
+                        >
+                          <span className="validation-panel__code">VISUAL</span>
+                          <span className="validation-panel__msg">{visualFindingLabel(model, finding)}</span>
+                          {entity && <span className="validation-panel__entity">{thingLabel(model, entity)}</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            )}
           </>
         )}
       </div>
