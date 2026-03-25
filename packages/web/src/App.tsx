@@ -38,7 +38,8 @@ const STORAGE_KEY = "opmodel:current";
 const EXAMPLES = [
   { name: "Coffee Making", file: "coffee-making.opmodel" },
   { name: "OnStar Driver Rescuing", file: "driver-rescuing.opmodel" },
-  { name: "Hospitalización Domiciliaria", file: "hospitalizacion-domiciliaria.opmodel" },
+  { name: "Hospitalización Domiciliaria (legacy)", file: "hospitalizacion-domiciliaria.opmodel" },
+  { name: "HODOM V2 (Metodología OPM)", file: "hodom-v2.opmodel" },
   { name: "EV-AMS (Canonical)", file: "ev-ams.opmodel" },
 ];
 

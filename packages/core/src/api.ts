@@ -1832,7 +1832,7 @@ export function validate(model: Model): InvariantError[] {
   for (const [id, thing] of model.things) {
     if (thing.kind !== "process") continue;
     const name = thing.name.trim();
-    const endsGerund = /(?:ing|ando|iendo|ción|sión)$/i.test(name);
+    const endsGerund = /(?:ing|ando|iendo|endo|ción|sión|idad|dad|ncia|miento|eso|ica)$/i.test(name);
     if (!endsGerund) {
       errors.push({ code: "I-GERUND", severity: "warning", message: `Process "${name}" should use gerund naming (-ing/-ando/-iendo)`, entity: id });
     }
