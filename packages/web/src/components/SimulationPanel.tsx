@@ -62,6 +62,8 @@ export function SimulationPanel({ model, simulation, dispatch }: Props) {
   /* ─── Active simulation ─── */
 
   const { trace, currentStepIndex, status, speed } = simulation;
+  const [mcResult, setMcResult] = useState<{ runs: number; completedCount: number; deadlockedCount: number; avgSteps: number; avgDuration: number | null; assertionPassRate: Record<string, number>; exceptionRate: Record<string, number> } | null>(null);
+  const [mcRunning, setMcRunning] = useState(false);
   const atStart = currentStepIndex <= -1;
   const atEnd = currentStepIndex >= trace.steps.length - 1;
   const isTerminal = status === "completed" || status === "deadlocked";
@@ -229,17 +231,14 @@ export function SimulationPanel({ model, simulation, dispatch }: Props) {
       )}
 
       {/* Monte Carlo */}
-      {isTerminal && (() => {
-        const [mc, setMc] = useState<{ runs: number; completedCount: number; deadlockedCount: number; avgSteps: number; avgDuration: number | null; assertionPassRate: Record<string, number>; exceptionRate: Record<string, number> } | null>(null);
-        const [running, setRunning] = useState(false);
-        return (
+      {isTerminal && (
           <div className="sim-panel__summary">
             <div className="sim-panel__summary-title">Monte Carlo</div>
             <button
-              disabled={running}
+              disabled={mcRunning}
               style={{ fontSize: 10, padding: "3px 8px", cursor: "pointer" }}
               onClick={() => {
-                setRunning(true);
+                setMcRunning(true);
                 setTimeout(() => {
                   // Inline Monte Carlo: run simulation 100x
                 const runs = 100;
@@ -265,22 +264,22 @@ export function SimulationPanel({ model, simulation, dispatch }: Props) {
                 const exceptionRate: Record<string, number> = {};
                 for (const [k, c] of Object.entries(excCounts)) exceptionRate[k] = c / runs;
                 const result = { runs, completedCount, deadlockedCount, avgSteps: totalSteps / runs, avgDuration: durationCount > 0 ? totalDuration / durationCount : null, assertionPassRate, exceptionRate };
-                  setMc(result);
-                  setRunning(false);
+                  setMcResult(result);
+                  setMcRunning(false);
                 }, 10);
               }}
             >
-              {running ? "Running..." : mc ? `Re-run (${mc.runs} runs)` : "Run 100x"}
+              {mcRunning ? "Running..." : mcResult ? `Re-run (${mcResult.runs} runs)` : "Run 100x"}
             </button>
-            {mc && (
+            {mcResult && (
               <div style={{ marginTop: 6, fontSize: 10 }}>
-                <div>Completed: {mc.completedCount}/{mc.runs} ({Math.round(mc.completedCount/mc.runs*100)}%)</div>
-                <div>Deadlocked: {mc.deadlockedCount}/{mc.runs}</div>
-                <div>Avg steps: {mc.avgSteps.toFixed(1)}{mc.avgDuration != null ? ` | Avg duration: ${mc.avgDuration.toFixed(1)}` : ""}</div>
-                {Object.entries(mc.assertionPassRate).length > 0 && (
+                <div>Completed: {mcResult.completedCount}/{mcResult.runs} ({Math.round(mcResult.completedCount/mcResult.runs*100)}%)</div>
+                <div>Deadlocked: {mcResult.deadlockedCount}/{mcResult.runs}</div>
+                <div>Avg steps: {mcResult.avgSteps.toFixed(1)}{mcResult.avgDuration != null ? ` | Avg duration: ${mcResult.avgDuration.toFixed(1)}` : ""}</div>
+                {Object.entries(mcResult.assertionPassRate).length > 0 && (
                   <div style={{ marginTop: 4 }}>
                     <div style={{ fontWeight: 600 }}>Assertion pass rates:</div>
-                    {Object.entries(mc.assertionPassRate).map(([id, rate]) => {
+                    {Object.entries(mcResult.assertionPassRate).map(([id, rate]) => {
                       const assertion = model.assertions.get(id);
                       return (
                         <div key={id} style={{ color: rate >= 0.95 ? "#48bb78" : rate >= 0.5 ? "#ed8936" : "#f56565" }}>
@@ -290,10 +289,10 @@ export function SimulationPanel({ model, simulation, dispatch }: Props) {
                     })}
                   </div>
                 )}
-                {Object.entries(mc.exceptionRate).length > 0 && (
+                {Object.entries(mcResult.exceptionRate).length > 0 && (
                   <div style={{ marginTop: 4 }}>
                     <div style={{ fontWeight: 600 }}>Exception rates:</div>
-                    {Object.entries(mc.exceptionRate).map(([key, rate]) => (
+                    {Object.entries(mcResult.exceptionRate).map(([key, rate]) => (
                       <div key={key} style={{ color: "#f56565" }}>{Math.round(rate * 100)}% — {key}</div>
                     ))}
                   </div>
@@ -302,7 +301,7 @@ export function SimulationPanel({ model, simulation, dispatch }: Props) {
             )}
           </div>
         );
-      })()}
+      )}
 
       {/* Simulation summary */}
       {isTerminal && (
