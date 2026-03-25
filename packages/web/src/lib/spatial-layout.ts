@@ -32,6 +32,10 @@ function average(values: number[]): number {
   return values.length === 0 ? 0 : values.reduce((a, b) => a + b, 0) / values.length;
 }
 
+function isPinned(app: Appearance | undefined): boolean {
+  return Boolean(app?.pinned);
+}
+
 function resolveLaneOverlaps(entries: Array<{ thingId: string; y: number; h: number }>, minGap = VISUAL_RULES.spacing.nodeGap) {
   const sorted = [...entries].sort((a, b) => a.y - b.y);
   for (let i = 1; i < sorted.length; i++) {
@@ -61,14 +65,24 @@ function applyRelaxationPass(apps: Appearance[], iterations = 3): Appearance[] {
         const a = visible[i];
         const b = visible[j];
         if (!rectsOverlap(a, b, gap)) continue;
+        if (isPinned(a) && isPinned(b)) continue;
 
         const overlapX = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
         const overlapY = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+        const target = isPinned(a) ? b : b;
+        if (isPinned(b) && !isPinned(a)) {
+          if (overlapX <= overlapY) {
+            a.x = Math.max(0, a.x - Math.max(gap, overlapX + gap));
+          } else {
+            a.y = Math.max(0, a.y - Math.max(gap, overlapY + gap));
+          }
+          continue;
+        }
 
         if (overlapX <= overlapY) {
-          b.x += Math.max(gap, overlapX + gap);
+          target.x += Math.max(gap, overlapX + gap);
         } else {
-          b.y += Math.max(gap, overlapY + gap);
+          target.y += Math.max(gap, overlapY + gap);
         }
       }
     }
@@ -83,8 +97,10 @@ function finalizeLayout(
   links: Link[],
   patches: AppearancePatch[],
 ): { patches: AppearancePatch[]; findings: VisualFinding[] } {
+  const pinnedIds = new Set(apps.filter((app) => app.pinned).map((app) => app.thing));
+  const effectivePatches = patches.filter((patch) => !pinnedIds.has(patch.thingId));
   const patchedApps = apps.map((app) => {
-    const p = patches.find((x) => x.thingId === app.thing);
+    const p = effectivePatches.find((x) => x.thingId === app.thing);
     return p ? { ...app, ...p.patch } : app;
   });
   const relaxedApps = applyRelaxationPass(patchedApps);
@@ -97,6 +113,7 @@ function finalizeLayout(
     } satisfies AppearancePatch;
   }).filter((patch) => {
     const original = apps.find((a) => a.thing === patch.thingId)!;
+    if (original.pinned) return false;
     return original.x !== patch.patch.x || original.y !== patch.patch.y || original.w !== patch.patch.w || original.h !== patch.patch.h;
   });
 
@@ -157,7 +174,7 @@ function layoutBranchingControl(model: Model, opdId: string, apps: Appearance[],
   const trunkW = 220;
   const trunkGap = 70;
   const trunkStartX = containerX + 80;
-  trunk.forEach((app, i) => {
+  trunk.filter((app) => !isPinned(app)).forEach((app, i) => {
     patches.push({
       thingId: app.thing,
       opdId,
@@ -166,7 +183,7 @@ function layoutBranchingControl(model: Model, opdId: string, apps: Appearance[],
   });
 
   const branchXs = [containerX + 100, containerX + 390, containerX + 690];
-  branches.forEach((app, i) => {
+  branches.filter((app) => !isPinned(app)).forEach((app, i) => {
     const x = branchXs[i] ?? (containerX + 100 + i * 250);
     const y = branchYBase + (i === 1 ? -60 : 20);
     patches.push({ thingId: app.thing, opdId, patch: { x, y, w: Math.max(app.w, 230), h: Math.max(app.h, 60) } });
@@ -174,7 +191,7 @@ function layoutBranchingControl(model: Model, opdId: string, apps: Appearance[],
 
   const targetContainerW = Math.max(container.w, 980);
   const targetContainerH = Math.max(container.h, 560);
-  patches.push({ thingId: container.thing, opdId, patch: { w: targetContainerW, h: targetContainerH } });
+  if (!isPinned(container)) patches.push({ thingId: container.thing, opdId, patch: { w: targetContainerW, h: targetContainerH } });
 
   const patchedInternals = internal.map((app) => {
     const patch = patches.find((p) => p.thingId === app.thing)?.patch;
@@ -230,7 +247,7 @@ function layoutInZoom(model: Model, opdId: string, apps: Appearance[], links: Li
   const processStartY = containerY + 70;
 
   const internalProcessIds = new Set(internal.map((a) => a.thing));
-  internal.forEach((app, i) => {
+  internal.filter((app) => !isPinned(app)).forEach((app, i) => {
     patches.push({
       thingId: app.thing,
       opdId,
@@ -241,7 +258,7 @@ function layoutInZoom(model: Model, opdId: string, apps: Appearance[], links: Li
   const lastInternalBottom = processStartY + (internal.length - 1) * (processH + processGap) + processH;
   const targetContainerW = Math.max(container.w, 420);
   const targetContainerH = Math.max(container.h, lastInternalBottom - containerY + 50);
-  patches.push({ thingId: container.thing, opdId, patch: { w: targetContainerW, h: targetContainerH } });
+  if (!isPinned(container)) patches.push({ thingId: container.thing, opdId, patch: { w: targetContainerW, h: targetContainerH } });
 
   const processCenters = new Map(internal.map((app, i) => [app.thing, processStartY + i * (processH + processGap) + processH / 2]));
 
@@ -294,7 +311,7 @@ function layoutUnfold(model: Model, opdId: string, apps: Appearance[], links: Li
   const processH = 60;
   const startX = container.x + 50;
   const startY = container.y + 70;
-  internal.forEach((app, idx) => {
+  internal.filter((app) => !isPinned(app)).forEach((app, idx) => {
     const col = idx % cols;
     const row = Math.floor(idx / cols);
     patches.push({
@@ -311,7 +328,7 @@ function layoutUnfold(model: Model, opdId: string, apps: Appearance[], links: Li
 
   const targetContainerW = Math.max(container.w, cols * cellW + 120);
   const targetContainerH = Math.max(container.h, rows * cellH + 140);
-  patches.push({ thingId: container.thing, opdId, patch: { w: targetContainerW, h: targetContainerH } });
+  if (!isPinned(container)) patches.push({ thingId: container.thing, opdId, patch: { w: targetContainerW, h: targetContainerH } });
 
   const internalProcessIds = new Set(internal.map((a) => a.thing));
   const processCenters = new Map(internal.map((app, idx) => {
@@ -477,15 +494,17 @@ function layoutStructuralCluster(
       : clusterBaseX + parentSize.w / 2;
     const parentX = Math.max(40, childBandCenter - parentSize.w / 2);
     const parentY = nextClusterY;
-    patches.push({ thingId: cluster.parentId, opdId, patch: { x: parentX, y: parentY, ...parentSize } });
+    if (!isPinned(parentApp)) patches.push({ thingId: cluster.parentId, opdId, patch: { x: parentX, y: parentY, ...parentSize } });
     placed.add(cluster.parentId);
 
     for (const child of childLayouts) {
-      patches.push({
-        thingId: child.app.thing,
-        opdId,
-        patch: { x: child.x, y: child.y, w: child.w, h: child.h },
-      });
+      if (!isPinned(child.app)) {
+        patches.push({
+          thingId: child.app.thing,
+          opdId,
+          patch: { x: child.x, y: child.y, w: child.w, h: child.h },
+        });
+      }
       placed.add(child.app.thing);
     }
 
@@ -499,7 +518,7 @@ function layoutStructuralCluster(
   let remainY = 40;
   for (const app of unplaced) {
     const size = autoSizeAppearance(model, app);
-    patches.push({ thingId: app.thing, opdId, patch: { x: remainX, y: remainY, ...size } });
+    if (!isPinned(app)) patches.push({ thingId: app.thing, opdId, patch: { x: remainX, y: remainY, ...size } });
     remainY += size.h + VISUAL_RULES.spacing.nodeGap;
   }
 
@@ -538,6 +557,7 @@ function layoutSdBalanced(
 
   // Main process center
   for (const proc of processes) {
+    if (isPinned(proc)) continue;
     const size = autoSizeAppearance(model, { ...proc, w: Math.max(proc.w, 300), h: Math.max(proc.h, 100) });
     const isMain = links.some((l) => l.type === "exhibition" && l.target === proc.thing);
     const y = isMain ? centerY : centerY + 200;
@@ -549,7 +569,7 @@ function layoutSdBalanced(
   for (const group of [agents, consumed]) {
     for (const app of group) {
       const size = autoSizeAppearance(model, app);
-      patches.push({ thingId: app.thing, opdId, patch: { x: 40, y: leftY, ...size } });
+      if (!isPinned(app)) patches.push({ thingId: app.thing, opdId, patch: { x: 40, y: leftY, ...size } });
       leftY += size.h + VISUAL_RULES.spacing.nodeGap;
     }
   }
@@ -558,7 +578,7 @@ function layoutSdBalanced(
   let rightY = 240;
   for (const app of instruments) {
     const size = autoSizeAppearance(model, app);
-    patches.push({ thingId: app.thing, opdId, patch: { x: 780, y: rightY, ...size } });
+    if (!isPinned(app)) patches.push({ thingId: app.thing, opdId, patch: { x: 780, y: rightY, ...size } });
     rightY += size.h + VISUAL_RULES.spacing.nodeGap;
   }
 
@@ -566,7 +586,7 @@ function layoutSdBalanced(
   let topX = 50;
   for (const app of exhibited) {
     const size = autoSizeAppearance(model, app);
-    patches.push({ thingId: app.thing, opdId, patch: { x: topX, y: 40, ...size } });
+    if (!isPinned(app)) patches.push({ thingId: app.thing, opdId, patch: { x: topX, y: 40, ...size } });
     topX += size.w + VISUAL_RULES.spacing.nodeGap;
   }
 
@@ -576,7 +596,7 @@ function layoutSdBalanced(
   for (const group of [results, remaining]) {
     for (const app of group) {
       const size = autoSizeAppearance(model, app);
-      patches.push({ thingId: app.thing, opdId, patch: { x: bottomX, y: bottomY, ...size } });
+      if (!isPinned(app)) patches.push({ thingId: app.thing, opdId, patch: { x: bottomX, y: bottomY, ...size } });
       bottomX += size.w + VISUAL_RULES.spacing.nodeGap;
       if (bottomX > 800) { bottomX = 40; bottomY += 80; }
     }

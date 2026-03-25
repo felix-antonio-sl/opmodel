@@ -21,8 +21,18 @@ function withThing(model: Model, thing: Thing): Model {
   return r.value;
 }
 
-function withAppearance(model: Model, thing: string, opd: string, x: number, y: number, w: number, h: number, internal = false): Model {
-  const r = addAppearance(model, { thing, opd, x, y, w, h, ...(internal ? { internal: true } : {}) });
+function withAppearance(
+  model: Model,
+  thing: string,
+  opd: string,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  internal = false,
+  pinned = false,
+): Model {
+  const r = addAppearance(model, { thing, opd, x, y, w, h, ...(internal ? { internal: true } : {}), ...(pinned ? { pinned: true } : {}) });
   if (!isOk(r)) throw new Error(r.error.message);
   return r.value;
 }
@@ -283,5 +293,30 @@ describe("spatial layout engine", () => {
         return patch ? { ...a, ...patch } : a;
       });
     expect(findNonContainerOverlaps(patched)).toEqual([]);
+  });
+
+  it("respects pinned nodes during auto-layout and relaxation", () => {
+    let m = createModel("Pinned");
+    m = withThing(m, { id: "proc-main", kind: "process", name: "Main Coordination", essence: "physical", affiliation: "systemic" });
+    m = withThing(m, { id: "obj-agent", kind: "object", name: "Pinned Agent", essence: "physical", affiliation: "systemic" });
+    m = withThing(m, { id: "obj-result", kind: "object", name: "Result", essence: "physical", affiliation: "systemic" });
+    m = withAppearance(m, "proc-main", "opd-sd", 0, 0, 120, 40);
+    m = withAppearance(m, "obj-agent", "opd-sd", 17, 23, 120, 40, false, true);
+    m = withAppearance(m, "obj-result", "opd-sd", 0, 0, 120, 40);
+    m = withLink(m, { id: "l1", type: "agent", source: "obj-agent", target: "proc-main" });
+    m = withLink(m, { id: "l2", type: "result", source: "proc-main", target: "obj-result" });
+
+    const suggestion = suggestLayoutForOpd(m, "opd-sd");
+    const agentPatch = suggestion.patches.find((p) => p.thingId === "obj-agent");
+    expect(agentPatch).toBeUndefined();
+    const patched = [...m.appearances.values()]
+      .filter((a) => a.opd === "opd-sd")
+      .map((a) => {
+        const patch = suggestion.patches.find((p) => p.thingId === a.thing)?.patch;
+        return patch ? { ...a, ...patch } : a;
+      });
+    const pinnedAgent = patched.find((a) => a.thing === "obj-agent");
+    expect(pinnedAgent?.x).toBe(17);
+    expect(pinnedAgent?.y).toBe(23);
   });
 });
