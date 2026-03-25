@@ -92,6 +92,40 @@ function applyRelaxationPass(apps: Appearance[], iterations = 3): Appearance[] {
     }
   }
 
+  for (let pass = 0; pass < 2; pass++) {
+    const findings = auditVisualOpd({ appearances: relaxed, links: [] });
+    for (const finding of findings) {
+      if (finding.kind === "tight-spacing") {
+        const a = visible.find((app) => app.thing === finding.aThing);
+        const b = visible.find((app) => app.thing === finding.bThing);
+        if (!a || !b) continue;
+        const nudge = Math.ceil((VISUAL_RULES.lint.minReadableGap - finding.gap) / 2) + 2;
+        if (finding.axis === "x") {
+          if (!isPinned(a)) a.x = Math.max(0, a.x - nudge);
+          if (!isPinned(b)) b.x += nudge;
+        } else {
+          if (!isPinned(a)) a.y = Math.max(0, a.y - nudge);
+          if (!isPinned(b)) b.y += nudge;
+        }
+      }
+    }
+
+    const crowded = findings.find((f) => f.kind === "crowded-diagram");
+    if (crowded) {
+      const centerX = average(visible.map((a) => a.x + a.w / 2));
+      const centerY = average(visible.map((a) => a.y + a.h / 2));
+      for (const app of visible) {
+        if (isPinned(app)) continue;
+        const dx = app.x + app.w / 2 - centerX;
+        const dy = app.y + app.h / 2 - centerY;
+        app.x += dx >= 0 ? 10 : -10;
+        app.y += dy >= 0 ? 8 : -8;
+        app.x = Math.max(0, app.x);
+        app.y = Math.max(0, app.y);
+      }
+    }
+  }
+
   return relaxed;
 }
 

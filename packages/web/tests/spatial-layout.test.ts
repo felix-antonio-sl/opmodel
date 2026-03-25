@@ -12,7 +12,7 @@ import {
   type Model,
   type Thing,
 } from "@opmodel/core";
-import { findNonContainerOverlaps, findVisibleOrphans } from "../src/lib/visual-lint";
+import { findNonContainerOverlaps, findTightSpacing, findVisibleOrphans } from "../src/lib/visual-lint";
 import { suggestLayoutForOpd } from "../src/lib/spatial-layout";
 
 function withThing(model: Model, thing: Thing): Model {
@@ -304,6 +304,29 @@ describe("spatial layout engine", () => {
         return patch ? { ...a, ...patch } : a;
       });
     expect(findNonContainerOverlaps(patched)).toEqual([]);
+  });
+
+  it("uses visual findings to reduce tight spacing after layout", () => {
+    let m = createModel("Tight");
+    m = withThing(m, { id: "proc-main", kind: "process", name: "Main Coordination", essence: "physical", affiliation: "systemic" });
+    m = withThing(m, { id: "obj-agent-a", kind: "object", name: "Agent Alpha", essence: "physical", affiliation: "systemic" });
+    m = withThing(m, { id: "obj-agent-b", kind: "object", name: "Agent Beta", essence: "physical", affiliation: "systemic" });
+    m = withThing(m, { id: "obj-agent-c", kind: "object", name: "Agent Gamma", essence: "physical", affiliation: "systemic" });
+    for (const id of ["proc-main", "obj-agent-a", "obj-agent-b", "obj-agent-c"]) {
+      m = withAppearance(m, id, "opd-sd", 0, 0, 120, 40);
+    }
+    m = withLink(m, { id: "l1", type: "agent", source: "obj-agent-a", target: "proc-main" });
+    m = withLink(m, { id: "l2", type: "agent", source: "obj-agent-b", target: "proc-main" });
+    m = withLink(m, { id: "l3", type: "agent", source: "obj-agent-c", target: "proc-main" });
+
+    const suggestion = suggestLayoutForOpd(m, "opd-sd");
+    const patched = [...m.appearances.values()]
+      .filter((a) => a.opd === "opd-sd")
+      .map((a) => {
+        const patch = suggestion.patches.find((p) => p.thingId === a.thing)?.patch;
+        return patch ? { ...a, ...patch } : a;
+      });
+    expect(findTightSpacing(patched).length).toBe(0);
   });
 
   it("respects pinned nodes during auto-layout and relaxation", () => {
