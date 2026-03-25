@@ -918,6 +918,27 @@ export function PropertiesPanel({ model, thingId, opdId, dispatch }: Props) {
                     </select>
                   </div>
                 )}
+                {/* Tagged link: tag editor */}
+                {l.type === "tagged" && (
+                  <div style={{ display: "flex", gap: 4, marginTop: 2, alignItems: "center" }}>
+                    <span style={{ fontSize: 9, color: "var(--text-muted)" }}>tag:</span>
+                    <input
+                      className="props-panel__input props-panel__input--sm"
+                      value={l.tag ?? ""}
+                      onChange={(e) => dispatch({ tag: "updateLink", linkId: l.id, patch: { tag: e.target.value || undefined } })}
+                      placeholder="e.g. represents, connected to"
+                      style={{ flex: 1 }}
+                    />
+                  </div>
+                )}
+                {/* Ordered aggregation flag */}
+                {(l.type === "aggregation") && (
+                  <label style={{ display: "flex", gap: 4, fontSize: 9, marginTop: 2, alignItems: "center" }}>
+                    <input type="checkbox" checked={l.ordered ?? false}
+                      onChange={(e) => dispatch({ tag: "updateLink", linkId: l.id, patch: { ordered: e.target.checked || undefined } })} />
+                    ordered
+                  </label>
+                )}
                 {/* Modifiers (event/condition) */}
                 {(() => {
                   const mods = [...model.modifiers.values()].filter(m => m.over === l.id);
