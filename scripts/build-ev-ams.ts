@@ -203,20 +203,181 @@ m = { ...m, assertions: new Map([
   ["ast-readiness", { id: "ast-readiness", target: "obj-op-readiness", predicate: "after Autonomous Electric Vehicle Providing, Operational Readiness is fleet-active", category: "correctness" as const, enabled: true }],
 ]) };
 
+// ===== SD1.1 — AEV Fleet Operating Unfold (Gen-Spec, async) =====
+m = unwrap(addOPD(m, { id: "opd-sd1-1", name: "SD1.1", opd_type: "hierarchical", parent_opd: "opd-sd1", refines: "proc-fleet-op", refinement_type: "unfold" }));
+
+// 4 specializations of AEV Fleet Operating (generalization-specialization)
+const sd11Procs = [
+  { id: "proc-trip-req", name: "Trip Requesting", x: 100, y: 100 },
+  { id: "proc-nav", name: "Autonomous Navigating", x: 400, y: 100 },
+  { id: "proc-charging", name: "Battery Fast Charging", x: 100, y: 300 },
+  { id: "proc-danger-mon", name: "Road Danger Monitoring", x: 400, y: 300 },
+];
+
+for (const sp of sd11Procs) {
+  m = unwrap(addThing(m, { id: sp.id, kind: "process", name: sp.name, essence: "physical", affiliation: "systemic" }));
+  m = unwrap(addAppearance(m, { thing: sp.id, opd: "opd-sd1-1", x: sp.x, y: sp.y, w: 250, h: 60, internal: true }));
+}
+
+// Container
+m = unwrap(addAppearance(m, { thing: "proc-fleet-op", opd: "opd-sd1-1", x: 50, y: 40, w: 650, h: 380, internal: true }));
+
+// Generalization links: each specialization IS-A Fleet Operating
+for (const sp of sd11Procs) {
+  m = unwrap(addLink(m, { id: `lnk-gen-${sp.id}`, type: "generalization", source: sp.id, target: "proc-fleet-op" }));
+}
+
+// SD1.1 objects
+const tripAssignment: Thing = { id: "obj-trip-assignment", kind: "object", name: "Trip Assignment", essence: "informatical", affiliation: "systemic" };
+m = unwrap(addThing(m, tripAssignment));
+const batteryPack: Thing = { id: "obj-battery-pack", kind: "object", name: "Battery Pack", essence: "physical", affiliation: "systemic" };
+m = unwrap(addThing(m, batteryPack));
+const chargeLevel: Thing = { id: "obj-charge-level", kind: "object", name: "Charge Level", essence: "informatical", affiliation: "systemic" };
+m = unwrap(addThing(m, chargeLevel));
+m = unwrap(addState(m, { id: "s-charge-depleted", parent: "obj-charge-level", name: "depleted", initial: true, final: false, default: true }));
+m = unwrap(addState(m, { id: "s-charge-full", parent: "obj-charge-level", name: "fully charged", initial: false, final: true, default: false }));
+const sensorSuite: Thing = { id: "obj-sensor-suite", kind: "object", name: "Sensor Suite", essence: "physical", affiliation: "systemic" };
+m = unwrap(addThing(m, sensorSuite));
+const roadDangerRep: Thing = { id: "obj-road-danger", kind: "object", name: "Road Danger Representation", essence: "informatical", affiliation: "systemic" };
+m = unwrap(addThing(m, roadDangerRep));
+m = unwrap(addState(m, { id: "s-danger-none", parent: "obj-road-danger", name: "not detected", initial: true, final: false, default: true }));
+m = unwrap(addState(m, { id: "s-danger-alert", parent: "obj-road-danger", name: "alert issued", initial: false, final: true, default: false }));
+const mobileApp: Thing = { id: "obj-mobile-app", kind: "object", name: "Mobile Application", essence: "informatical", affiliation: "systemic" };
+m = unwrap(addThing(m, mobileApp));
+const gpsSat: Thing = { id: "obj-gps-sat", kind: "object", name: "GPS Satellite Set", essence: "physical", affiliation: "environmental" };
+m = unwrap(addThing(m, gpsSat));
+const location: Thing = { id: "obj-location", kind: "object", name: "Location", essence: "informatical", affiliation: "systemic" };
+m = unwrap(addThing(m, location));
+m = unwrap(addState(m, { id: "s-loc-origin", parent: "obj-location", name: "origin", initial: true, final: false, default: true }));
+m = unwrap(addState(m, { id: "s-loc-dest", parent: "obj-location", name: "destination", initial: false, final: true, default: false }));
+const electricGrid: Thing = { id: "obj-electric-grid", kind: "object", name: "Electric Grid", essence: "physical", affiliation: "environmental" };
+m = unwrap(addThing(m, electricGrid));
+
+// SD1.1 appearances
+const sd11Objs = [
+  { id: "obj-trip-assignment", x: 50, y: 460 },
+  { id: "obj-battery-pack", x: 300, y: 460 },
+  { id: "obj-charge-level", x: 300, y: 540 },
+  { id: "obj-sensor-suite", x: 550, y: 460 },
+  { id: "obj-road-danger", x: 550, y: 540 },
+  { id: "obj-mobile-app", x: 50, y: 540 },
+  { id: "obj-gps-sat", x: 750, y: 100 },
+  { id: "obj-location", x: 750, y: 200 },
+  { id: "obj-electric-grid", x: 750, y: 300 },
+  { id: "obj-commuter-group", x: 50, y: 620 },
+];
+for (const o of sd11Objs) {
+  m = unwrap(addAppearance(m, { thing: o.id, opd: "opd-sd1-1", x: o.x, y: o.y, w: 200, h: 50 }));
+}
+
+// SD1.1 links
+m = unwrap(addLink(m, { id: "lnk-trip-result", type: "result", source: "proc-trip-req", target: "obj-trip-assignment" }));
+m = unwrap(addLink(m, { id: "lnk-trip-agent", type: "agent", source: "obj-commuter-group", target: "proc-trip-req" }));
+m = unwrap(addLink(m, { id: "lnk-trip-instrument", type: "instrument", source: "obj-mobile-app", target: "proc-trip-req" }));
+m = unwrap(addLink(m, { id: "lnk-nav-effect-loc", type: "effect", source: "proc-nav", target: "obj-location", source_state: "s-loc-origin", target_state: "s-loc-dest" }));
+m = unwrap(addLink(m, { id: "lnk-nav-instrument-sw", type: "instrument", source: "obj-nav-software", target: "proc-nav" }));
+m = unwrap(addAppearance(m, { thing: "obj-nav-software", opd: "opd-sd1-1", x: 750, y: 50, w: 200, h: 50 }));
+m = unwrap(addLink(m, { id: "lnk-nav-instrument-gps", type: "instrument", source: "obj-gps-sat", target: "proc-nav" }));
+m = unwrap(addLink(m, { id: "lnk-charging-effect", type: "effect", source: "proc-charging", target: "obj-charge-level", source_state: "s-charge-depleted", target_state: "s-charge-full" }));
+m = unwrap(addLink(m, { id: "lnk-charging-instrument-grid", type: "instrument", source: "obj-electric-grid", target: "proc-charging" }));
+m = unwrap(addLink(m, { id: "lnk-danger-effect", type: "effect", source: "proc-danger-mon", target: "obj-road-danger", source_state: "s-danger-none", target_state: "s-danger-alert" }));
+m = unwrap(addLink(m, { id: "lnk-danger-instrument", type: "instrument", source: "obj-sensor-suite", target: "proc-danger-mon" }));
+// Exhibition: Battery Pack exhibits Charge Level
+m = unwrap(addLink(m, { id: "lnk-exhibit-charge", type: "exhibition", source: "obj-battery-pack", target: "obj-charge-level" }));
+// Exhibition: AEV exhibits Location
+m = unwrap(addLink(m, { id: "lnk-exhibit-location", type: "exhibition", source: "obj-aev", target: "obj-location" }));
+// Tagged: Trip Assignment represents Urban Trip
+m = unwrap(addLink(m, { id: "lnk-tagged-represents", type: "tagged", source: "obj-trip-assignment", target: "obj-urban-trips", tag: "represents" }));
+m = unwrap(addAppearance(m, { thing: "obj-urban-trips", opd: "opd-sd1-1", x: 50, y: 700, w: 180, h: 50 }));
+
+// ===== SD1.1.1 — Road Danger Monitoring In-Zoom (sync + XOR) =====
+m = unwrap(addOPD(m, { id: "opd-sd1-1-1", name: "SD1.1.1", opd_type: "hierarchical", parent_opd: "opd-sd1-1", refines: "proc-danger-mon", refinement_type: "in-zoom" }));
+
+const sd111Procs = [
+  { id: "proc-sensing", name: "Environment Sensing", y: 80 },
+  { id: "proc-detecting", name: "Object Detecting", y: 180 },
+  { id: "proc-assessing", name: "Threat Assessing", y: 280 },
+  { id: "proc-alerting", name: "Alert Issuing", y: 380 },
+];
+
+for (const sp of sd111Procs) {
+  m = unwrap(addThing(m, { id: sp.id, kind: "process", name: sp.name, essence: "informatical", affiliation: "systemic" }));
+  m = unwrap(addAppearance(m, { thing: sp.id, opd: "opd-sd1-1-1", x: 200, y: sp.y, w: 200, h: 60, internal: true }));
+}
+
+m = unwrap(addAppearance(m, { thing: "proc-danger-mon", opd: "opd-sd1-1-1", x: 120, y: 20, w: 360, h: 460, internal: true }));
+
+// Threat Level object with XOR states
+const threatLevel: Thing = { id: "obj-threat-level", kind: "object", name: "Threat Level", essence: "informatical", affiliation: "systemic" };
+m = unwrap(addThing(m, threatLevel));
+m = unwrap(addState(m, { id: "s-threat-unassessed", parent: "obj-threat-level", name: "unassessed", initial: true, final: false, default: true }));
+m = unwrap(addState(m, { id: "s-threat-none", parent: "obj-threat-level", name: "none", initial: false, final: false, default: false }));
+m = unwrap(addState(m, { id: "s-threat-warning", parent: "obj-threat-level", name: "warning", initial: false, final: false, default: false }));
+m = unwrap(addState(m, { id: "s-threat-critical", parent: "obj-threat-level", name: "critical", initial: false, final: true, default: false }));
+
+m = unwrap(addAppearance(m, { thing: "obj-threat-level", opd: "opd-sd1-1-1", x: 550, y: 250, w: 180, h: 60 }));
+m = unwrap(addAppearance(m, { thing: "obj-sensor-suite", opd: "opd-sd1-1-1", x: 550, y: 80, w: 180, h: 50 }));
+m = unwrap(addAppearance(m, { thing: "obj-road-danger", opd: "opd-sd1-1-1", x: 550, y: 380, w: 200, h: 50 }));
+
+// Invocation: Object Detecting invokes Threat Assessing
+m = unwrap(addLink(m, { id: "lnk-invocation-detect-assess", type: "invocation", source: "proc-detecting", target: "proc-assessing" }));
+// Effect: Threat Assessing changes Threat Level
+m = unwrap(addLink(m, { id: "lnk-assess-effect", type: "effect", source: "proc-assessing", target: "obj-threat-level", source_state: "s-threat-unassessed", target_state: "s-threat-none" }));
+// Instrument: Sensor Suite → Environment Sensing
+m = unwrap(addLink(m, { id: "lnk-sensing-instrument", type: "instrument", source: "obj-sensor-suite", target: "proc-sensing" }));
+
+// ===== SD1.2 — AEV Manufacturing In-Zoom (sync + parallel) =====
+m = unwrap(addOPD(m, { id: "opd-sd1-2", name: "SD1.2", opd_type: "hierarchical", parent_opd: "opd-sd1", refines: "proc-mfg", refinement_type: "in-zoom" }));
+
+const sd12Procs = [
+  { id: "proc-chassis", name: "Chassis Assembling", y: 80 },
+  { id: "proc-battery-install", name: "Battery Pack Installing", y: 200 },
+  { id: "proc-sw-loading", name: "Software Loading", y: 320 },
+  { id: "proc-final-inspect", name: "Final Inspecting", y: 440 },
+];
+
+for (const sp of sd12Procs) {
+  m = unwrap(addThing(m, { id: sp.id, kind: "process", name: sp.name, essence: "physical", affiliation: "systemic" }));
+  m = unwrap(addAppearance(m, { thing: sp.id, opd: "opd-sd1-2", x: 200, y: sp.y, w: 220, h: 60, internal: true }));
+}
+
+m = unwrap(addAppearance(m, { thing: "proc-mfg", opd: "opd-sd1-2", x: 120, y: 20, w: 380, h: 540, internal: true }));
+
+// Generalization: robots
+const weldingRobot: Thing = { id: "obj-welding-robot", kind: "object", name: "Welding Robot", essence: "physical", affiliation: "systemic" };
+const assemblyRobot: Thing = { id: "obj-assembly-robot", kind: "object", name: "Assembly Robot", essence: "physical", affiliation: "systemic" };
+m = unwrap(addThing(m, weldingRobot));
+m = unwrap(addThing(m, assemblyRobot));
+m = unwrap(addAppearance(m, { thing: "obj-welding-robot", opd: "opd-sd1-2", x: 600, y: 80, w: 160, h: 50 }));
+m = unwrap(addAppearance(m, { thing: "obj-assembly-robot", opd: "opd-sd1-2", x: 600, y: 200, w: 170, h: 50 }));
+m = unwrap(addAppearance(m, { thing: "obj-robot-line", opd: "opd-sd1-2", x: 600, y: 300, w: 200, h: 50 }));
+m = unwrap(addAppearance(m, { thing: "obj-raw-materials", opd: "opd-sd1-2", x: 30, y: 80, w: 160, h: 50 }));
+m = unwrap(addAppearance(m, { thing: "obj-aev-assembly", opd: "opd-sd1-2", x: 600, y: 440, w: 180, h: 50 }));
+
+// Generalization links: Welding Robot and Assembly Robot are Industrial Robot (using robot-line as general)
+m = unwrap(addLink(m, { id: "lnk-gen-welding", type: "generalization", source: "obj-welding-robot", target: "obj-robot-line" }));
+m = unwrap(addLink(m, { id: "lnk-gen-assembly", type: "generalization", source: "obj-assembly-robot", target: "obj-robot-line" }));
+
+// Agent links for robots
+m = unwrap(addLink(m, { id: "lnk-welding-agent", type: "agent", source: "obj-welding-robot", target: "proc-chassis" }));
+m = unwrap(addLink(m, { id: "lnk-assembly-agent", type: "agent", source: "obj-assembly-robot", target: "proc-battery-install" }));
+
+// Consumption: Chassis Assembling consumes Raw Material Set
+m = unwrap(addLink(m, { id: "lnk-chassis-consume", type: "consumption", source: "obj-raw-materials", target: "proc-chassis" }));
+// Result: Final Inspecting yields AEV Assembly
+m = unwrap(addLink(m, { id: "lnk-inspect-result", type: "result", source: "proc-final-inspect", target: "obj-aev-assembly" }));
+
 // ===== SAVE =====
 const outPath = resolve(__dirname, "../tests/ev-ams.opmodel");
 writeFileSync(outPath, saveModel(m));
 const webPath = resolve(__dirname, "../packages/web/public/ev-ams.opmodel");
 writeFileSync(webPath, saveModel(m));
 
-// Validate
 const errors = validate(m);
 const hard = errors.filter(e => !e.severity || e.severity === "error");
 const warnings = errors.filter(e => e.severity === "warning" || e.severity === "info");
 console.log(`EV-AMS built: ${m.things.size} things, ${m.states.size} states, ${m.links.size} links, ${m.opds.size} OPDs`);
 console.log(`Validation: ${hard.length} errors, ${warnings.length} warnings`);
-if (hard.length > 0) {
-  for (const e of hard) console.log(`  ERROR: ${e.code} — ${e.message}`);
-}
+if (hard.length > 0) for (const e of hard) console.log(`  ERROR: ${e.code} — ${e.message}`);
 for (const w of warnings.slice(0, 5)) console.log(`  ${w.severity}: ${w.code} — ${w.message}`);
 console.log(`Saved to ${outPath}`);

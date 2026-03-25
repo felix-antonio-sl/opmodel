@@ -18,15 +18,15 @@ describe("EV-AMS Canonical Example", () => {
     const r = loadModel(fixture);
     if (!r.ok) throw new Error("load failed");
     const stats = modelStats(r.value);
-    expect(stats.things.total).toBeGreaterThanOrEqual(25);
-    expect(stats.things.objects).toBeGreaterThanOrEqual(18);
-    expect(stats.things.processes).toBeGreaterThanOrEqual(6);
+    expect(stats.things.total).toBeGreaterThanOrEqual(49);
+    expect(stats.things.objects).toBeGreaterThanOrEqual(30);
+    expect(stats.things.processes).toBeGreaterThanOrEqual(15);
   });
 
-  it("has 2 OPDs (SD + SD1)", () => {
+  it("has 5 OPDs (SD + SD1 + SD1.1 + SD1.1.1 + SD1.2)", () => {
     const r = loadModel(fixture);
     if (!r.ok) throw new Error("load failed");
-    expect(r.value.opds.size).toBe(2);
+    expect(r.value.opds.size).toBe(5);
   });
 
   it("has states for key objects", () => {
@@ -114,6 +114,54 @@ describe("EV-AMS Canonical Example", () => {
     const trace = runSimulation(r.value);
     expect(trace.steps.length).toBeGreaterThan(0);
     expect(trace.completed || trace.deadlocked).toBe(true);
+  });
+
+  it("SD1.1 OPL has generalization specializations", () => {
+    const r = loadModel(fixture);
+    if (!r.ok) throw new Error("load failed");
+    const text = render(expose(r.value, "opd-sd1-1"));
+    expect(text).toContain("Trip Requesting");
+    expect(text).toContain("Road Danger Monitoring");
+    expect(text).toContain("Battery Fast Charging");
+  });
+
+  it("SD1.1.1 OPL has invocation and threat assessment", () => {
+    const r = loadModel(fixture);
+    if (!r.ok) throw new Error("load failed");
+    const text = render(expose(r.value, "opd-sd1-1-1"));
+    expect(text).toContain("Environment Sensing");
+    expect(text).toContain("Threat Assessing");
+    expect(text).toContain("Threat Level");
+  });
+
+  it("SD1.2 has robot generalization", () => {
+    const r = loadModel(fixture);
+    if (!r.ok) throw new Error("load failed");
+    const text = render(expose(r.value, "opd-sd1-2"));
+    expect(text).toContain("Welding Robot");
+    expect(text).toContain("Assembly Robot");
+    expect(text).toContain("Chassis Assembling");
+  });
+
+  it("has tagged structural link (represents)", () => {
+    const r = loadModel(fixture);
+    if (!r.ok) throw new Error("load failed");
+    const tagged = [...r.value.links.values()].filter(l => l.type === "tagged" && l.tag === "represents");
+    expect(tagged.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("has invocation link", () => {
+    const r = loadModel(fixture);
+    if (!r.ok) throw new Error("load failed");
+    const invocations = [...r.value.links.values()].filter(l => l.type === "invocation");
+    expect(invocations.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("has generalization links", () => {
+    const r = loadModel(fixture);
+    if (!r.ok) throw new Error("load failed");
+    const gens = [...r.value.links.values()].filter(l => l.type === "generalization");
+    expect(gens.length).toBeGreaterThanOrEqual(4); // 4 fleet specializations + 2 robot generalizations
   });
 
   it("no hard validation errors", () => {
