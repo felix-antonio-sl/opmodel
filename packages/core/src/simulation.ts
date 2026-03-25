@@ -177,7 +177,14 @@ export function getExecutableProcesses(model: Model, maxDepth: number = 10): Exe
   }
 
   // Sort: by order (Y), then by ID for stability
-  result.sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
+  // Sort by Y-order, then by duration (shortest first for time-based scheduling)
+  result.sort((a, b) => {
+    if (a.order !== b.order) return a.order - b.order;
+    const durA = model.things.get(a.id)?.duration?.nominal ?? Infinity;
+    const durB = model.things.get(b.id)?.duration?.nominal ?? Infinity;
+    if (durA !== durB) return durA - durB;
+    return a.id.localeCompare(b.id);
+  });
 
   return result;
 }
