@@ -73,6 +73,12 @@ function clampToBand(app: Appearance, band: "left" | "center" | "right", centerX
   if (band === "right" && mid < centerX + 40) {
     app.x = centerX + 40 - app.w / 2;
   }
+  if (band === "center") {
+    const desired = centerX - app.w / 2;
+    const maxDrift = 120;
+    if (app.x < desired - maxDrift) app.x = desired - maxDrift;
+    if (app.x > desired + maxDrift) app.x = desired + maxDrift;
+  }
 }
 
 function applyRelaxationPass(apps: Appearance[], iterations = 3): Appearance[] {

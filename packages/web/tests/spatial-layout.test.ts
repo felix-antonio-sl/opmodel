@@ -357,6 +357,33 @@ describe("spatial layout engine", () => {
     expect(leftB.x + leftB.w / 2).toBeLessThan(centerX);
   });
 
+  it("keeps center-band process within bounded lateral drift", () => {
+    let m = createModel("Center band");
+    m = withThing(m, { id: "proc-main", kind: "process", name: "Main Coordination", essence: "physical", affiliation: "systemic" });
+    m = withThing(m, { id: "obj-left-a", kind: "object", name: "Left A", essence: "physical", affiliation: "systemic" });
+    m = withThing(m, { id: "obj-left-b", kind: "object", name: "Left B", essence: "physical", affiliation: "systemic" });
+    m = withThing(m, { id: "obj-right-a", kind: "object", name: "Right A", essence: "physical", affiliation: "systemic" });
+    m = withThing(m, { id: "obj-right-b", kind: "object", name: "Right B", essence: "physical", affiliation: "systemic" });
+    for (const id of ["proc-main", "obj-left-a", "obj-left-b", "obj-right-a", "obj-right-b"]) {
+      m = withAppearance(m, id, "opd-sd", 0, 0, 120, 40);
+    }
+    m = withLink(m, { id: "l1", type: "agent", source: "obj-left-a", target: "proc-main" });
+    m = withLink(m, { id: "l2", type: "agent", source: "obj-left-b", target: "proc-main" });
+    m = withLink(m, { id: "l3", type: "result", source: "proc-main", target: "obj-right-a" });
+    m = withLink(m, { id: "l4", type: "result", source: "proc-main", target: "obj-right-b" });
+
+    const suggestion = suggestLayoutForOpd(m, "opd-sd");
+    const patched = [...m.appearances.values()]
+      .filter((a) => a.opd === "opd-sd")
+      .map((a) => {
+        const patch = suggestion.patches.find((p) => p.thingId === a.thing)?.patch;
+        return patch ? { ...a, ...patch } : a;
+      });
+    const proc = patched.find((a) => a.thing === "proc-main")!;
+    expect(proc.x).toBeGreaterThanOrEqual(260);
+    expect(proc.x).toBeLessThanOrEqual(500);
+  });
+
   it("respects pinned nodes during auto-layout and relaxation", () => {
     let m = createModel("Pinned");
     m = withThing(m, { id: "proc-main", kind: "process", name: "Main Coordination", essence: "physical", affiliation: "systemic" });
