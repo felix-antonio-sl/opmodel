@@ -112,6 +112,28 @@ describe("interpret — modelMutation commands", () => {
     expect(appProc!.y).toBe(40);
   });
 
+  it("updateAppearancesBatch → modelMutation that batch-updates geometry", () => {
+    const cmd: Command = {
+      tag: "updateAppearancesBatch",
+      updates: [
+        { thingId: "obj-1", opdId: "opd-sd", patch: { x: 12, y: 22, w: 180 } },
+        { thingId: "proc-1", opdId: "opd-sd", patch: { x: 44, y: 66, h: 90 } },
+      ],
+    };
+    const effect = interpret(cmd);
+    expect(effect.type).toBe("modelMutation");
+
+    if (effect.type !== "modelMutation") return;
+    const m = modelWithThings();
+    const result = effect.apply(m);
+    expect(isOk(result)).toBe(true);
+    if (!isOk(result)) return;
+    const appObj = result.value.appearances.get("obj-1::opd-sd");
+    const appProc = result.value.appearances.get("proc-1::opd-sd");
+    expect(appObj).toMatchObject({ x: 12, y: 22, w: 180 });
+    expect(appProc).toMatchObject({ x: 44, y: 66, h: 90 });
+  });
+
   it("resizeThing → modelMutation that updates appearance dimensions", () => {
     const cmd: Command = { tag: "resizeThing", thingId: "obj-1", opdId: "opd-sd", w: 200, h: 100 };
     const effect = interpret(cmd);

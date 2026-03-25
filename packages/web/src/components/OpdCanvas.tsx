@@ -11,7 +11,8 @@ import {
   type Point,
   type Rect,
 } from "../lib/geometry";
-import { LINK_COLORS, statePillLayout } from "../lib/visual-rules";
+import { LINK_COLORS, paddedBounds, statePillLayout } from "../lib/visual-rules";
+import { suggestLayoutForOpd } from "../lib/spatial-layout";
 
 /* ─── Props ─── */
 
@@ -1372,17 +1373,25 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
       maxY = Math.max(maxY, app.y + app.h);
     }
     if (minX === Infinity) return;
-    const pad = 60;
-    const contentW = maxX - minX + pad * 2;
-    const contentH = maxY - minY + pad * 2;
-    const scaleX = svgRect.width / contentW;
-    const scaleY = svgRect.height / contentH;
+    const bounds = paddedBounds({ x: minX, y: minY, w: maxX - minX, h: maxY - minY });
+    const scaleX = svgRect.width / bounds.w;
+    const scaleY = svgRect.height / bounds.h;
     const newZoom = Math.min(2, Math.max(0.3, Math.min(scaleX, scaleY)));
-    const newPanX = (svgRect.width - contentW * newZoom) / 2 - (minX - pad) * newZoom;
-    const newPanY = (svgRect.height - contentH * newZoom) / 2 - (minY - pad) * newZoom;
+    const newPanX = (svgRect.width - bounds.w * newZoom) / 2 - bounds.x * newZoom;
+    const newPanY = (svgRect.height - bounds.h * newZoom) / 2 - bounds.y * newZoom;
     setZoom(newZoom);
     setPan({ x: newPanX, y: newPanY });
   }, [appearances]);
+
+  const autoLayoutCurrentOpd = useCallback(() => {
+    const suggestion = suggestLayoutForOpd(model, opdId);
+    if (suggestion.patches.length === 0) return;
+    const ok = dispatch({
+      tag: "updateAppearancesBatch",
+      updates: suggestion.patches.map((p) => ({ thingId: p.thingId, opdId: p.opdId, patch: p.patch as Record<string, unknown> })),
+    });
+    if (ok) setTimeout(() => fitToContent(), 0);
+  }, [model, opdId, dispatch, fitToContent]);
 
   const onWheel = useCallback(
     (e: React.WheelEvent) => {
@@ -1577,6 +1586,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
         <button title="Zoom In" onClick={() => setZoom(z => Math.min(3, z * 1.2))}>+</button>
         <button title="Zoom Out" onClick={() => setZoom(z => Math.max(0.3, z * 0.83))}>−</button>
         <button title="Fit to Content (F)" onClick={fitToContent}>⊡</button>
+        <button title="Auto Layout Current OPD" onClick={autoLayoutCurrentOpd}>⇄</button>
         <button title="Reset Zoom" onClick={() => { setZoom(1); setPan({ x: 40, y: 20 }); }}>1:1</button>
         <button
           title="Filter Links"

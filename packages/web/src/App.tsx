@@ -25,6 +25,7 @@ import { PropertiesPanel } from "./components/PropertiesPanel";
 import { Toolbar } from "./components/Toolbar";
 import { SimulationPanel } from "./components/SimulationPanel";
 import { ValidationPanel } from "./components/ValidationPanel";
+import { auditVisualOpd } from "./lib/visual-lint";
 import { BugCapture } from "./components/BugCapture";
 import type { NlConfig } from "@opmodel/nl";
 import { createProvider, createPipeline } from "@opmodel/nl";
@@ -351,6 +352,12 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
     for (const e of errors) { if (e.entity) set.add(e.entity); }
     return set;
   }, [errors]);
+  const visualFindings = useMemo(() => {
+    const appearances = [...model.appearances.values()].filter((a) => a.opd === ui.currentOpd);
+    const ids = new Set(appearances.map((a) => a.thing));
+    const links = [...model.links.values()].filter((l) => ids.has(l.source) && ids.has(l.target));
+    return auditVisualOpd({ appearances, links, things: model.things.values(), states: model.states.values() });
+  }, [model, ui.currentOpd]);
 
   return (
     <div className="app">
@@ -605,6 +612,9 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
           title="Methodology verification checklist"
           style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: "var(--accent)" }}
         >✓ Verify</button>
+        <div className="status-bar__indicator" title={`Visual audit for ${ui.currentOpd}`}>
+          <span>{visualFindings.length === 0 ? "Visual OK" : `${visualFindings.length} visual`}</span>
+        </div>
         <div className="status-bar__sep" />
         <span className="status-bar__count">{model.things.size} things</span>
         <span className="status-bar__count">{model.states.size} states</span>

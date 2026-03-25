@@ -55,6 +55,7 @@ export function findNonContainerOverlaps(appearances: Appearance[]): OverlapFind
 }
 
 export function findVisibleOrphans(appearances: Appearance[], links: Link[]): OrphanFinding[] {
+  const visible = appearances.filter((a) => !a.internal);
   const ids = new Set(appearances.map((a) => a.thing));
   const connected = new Set<string>();
   for (const link of links) {
@@ -63,7 +64,7 @@ export function findVisibleOrphans(appearances: Appearance[], links: Link[]): Or
       connected.add(link.target);
     }
   }
-  return appearances
+  return visible
     .filter((a) => !connected.has(a.thing))
     .map((a) => ({ kind: "orphan" as const, thing: a.thing }));
 }
