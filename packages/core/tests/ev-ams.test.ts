@@ -24,10 +24,10 @@ describe("EV-AMS Canonical Example", () => {
     expect(stats.things.processes).toBeGreaterThanOrEqual(15);
   });
 
-  it("has 5 OPDs (SD + SD1 + SD1.1 + SD1.1.1 + SD1.2)", () => {
+  it("has 6 OPDs (SD + SD1 + SD1.1 + SD1.1.1 + SD1.2 + SD1.2.1)", () => {
     const r = loadModel(fixture);
     if (!r.ok) throw new Error("load failed");
-    expect(r.value.opds.size).toBe(5);
+    expect(r.value.opds.size).toBe(6);
   });
 
   it("has states for key objects", () => {
@@ -135,20 +135,53 @@ describe("EV-AMS Canonical Example", () => {
     expect(text).toContain("Threat Level");
   });
 
-  it("SD1.2 has robot generalization", () => {
+  it("SD1.2 has robot generalization + AEV classification", () => {
     const r = loadModel(fixture);
     if (!r.ok) throw new Error("load failed");
     const text = render(expose(r.value, "opd-sd1-2"));
     expect(text).toContain("Welding Robot");
     expect(text).toContain("Assembly Robot");
     expect(text).toContain("Chassis Assembling");
+    const cls = [...r.value.links.values()].filter(l => l.type === "classification" && l.source === "obj-aev");
+    expect(cls).toHaveLength(2);
   });
 
-  it("has tagged structural link (represents)", () => {
+  it("SD1.2.1 has parallel final inspection subprocesses", () => {
     const r = loadModel(fixture);
     if (!r.ok) throw new Error("load failed");
-    const tagged = [...r.value.links.values()].filter(l => l.type === "tagged" && l.tag === "represents");
-    expect(tagged.length).toBeGreaterThanOrEqual(1);
+    const text = render(expose(r.value, "opd-sd1-2-1"));
+    expect(text).toContain("Mechanical Inspecting");
+    expect(text).toContain("Software Validating");
+    expect(text).toMatch(/parallel|paralelo/);
+  });
+
+  it("has tagged structural links (represents, cools)", () => {
+    const r = loadModel(fixture);
+    if (!r.ok) throw new Error("load failed");
+    const tagged = [...r.value.links.values()].filter(l => l.type === "tagged");
+    expect(tagged.some(l => l.tag === "represents")).toBe(true);
+    expect(tagged.some(l => l.tag === "cools")).toBe(true);
+  });
+
+  it("has Battery Pack exhibition hierarchy", () => {
+    const r = loadModel(fixture);
+    if (!r.ok) throw new Error("load failed");
+    const exhibits = [...r.value.links.values()].filter(l => l.type === "exhibition" && l.source === "obj-battery-pack");
+    expect(exhibits.map(l => l.target)).toEqual(expect.arrayContaining(["obj-charge-level", "obj-battery-temperature", "obj-cycle-count"]));
+  });
+
+  it("has classification instances for AEV", () => {
+    const r = loadModel(fixture);
+    if (!r.ok) throw new Error("load failed");
+    const cls = [...r.value.links.values()].filter(l => l.type === "classification" && l.source === "obj-aev");
+    expect(cls.map(l => l.target)).toEqual(expect.arrayContaining(["obj-aev-001", "obj-aev-002"]));
+  });
+
+  it("has XOR fan for threat assessment outcomes", () => {
+    const r = loadModel(fixture);
+    if (!r.ok) throw new Error("load failed");
+    const fans = [...r.value.fans.values()].filter(f => f.type === "xor");
+    expect(fans.some(f => f.members.includes("lnk-alert-none-condition") && f.members.includes("lnk-visual-warning-condition") && f.members.includes("lnk-braking-critical-event"))).toBe(true);
   });
 
   it("has invocation link", () => {
