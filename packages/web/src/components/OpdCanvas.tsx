@@ -998,8 +998,10 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
   // SubModel shared things — for visual badge
   const sharedThingIds = useMemo(() => {
     const set = new Set<string>();
-    for (const sub of model.subModels.values()) {
-      for (const id of sub.shared_things) set.add(id);
+    if (model.subModels) {
+      for (const sub of model.subModels.values()) {
+        for (const id of sub.shared_things) set.add(id);
+      }
     }
     return set;
   }, [model.subModels]);
