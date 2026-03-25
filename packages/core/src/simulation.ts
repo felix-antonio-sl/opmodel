@@ -1052,7 +1052,6 @@ export function runSimulation(
   let executableProcesses = getExecutableProcesses(model);
 
   // Scenario filter: only execute processes connected by links on this scenario's path
-  if (scenarioId) {
     const scenario = model.scenarios.get(scenarioId);
     if (scenario && scenario.path_labels.length > 0) {
       const pathLabels = new Set(scenario.path_labels);
@@ -1068,13 +1067,13 @@ export function runSimulation(
         executableProcesses = executableProcesses.filter(ep =>
           scenarioProcessIds.has(ep.id) || (ep.parentProcessId && scenarioProcessIds.has(ep.parentProcessId))
         );
-      }
     }
   }
 
   // Track completed processes — a process executes at most once per simulation
   // (re-activation via invocation link — ISO §9.5.2.5.1)
   const completedProcesses = new Set<string>();
+  const allowedProcessIds = new Set(executableProcesses.map(ep => ep.id));
   const selfInvocationCount = new Map<string, number>();
   const waitingSince = new Map<string, number>(); // processId → step when started waiting
   const MAX_WAIT_STEPS = 20; // Max steps a process can wait before being timed out
@@ -1139,6 +1138,8 @@ export function runSimulation(
 
     // Phase 1: Re-evaluar procesos en espera primero (against currentState, not snapshot)
     for (const waitingId of [...currentState.waitingProcesses]) {
+      // Scenario filter: skip processes not in allowed set
+      if (!allowedProcessIds.has(waitingId)) continue;
       // Track waiting duration — timeout if exceeded
       if (!waitingSince.has(waitingId)) waitingSince.set(waitingId, i);
       if (i - (waitingSince.get(waitingId) ?? 0) > MAX_WAIT_STEPS) {
@@ -1247,7 +1248,7 @@ export function runSimulation(
             if (link.source !== sc.objectId) continue;
             // Event fires: schedule the target process
             const targetProc = model.things.get(link.target);
-            if (targetProc?.kind === "process") {
+            if (targetProc?.kind === "process" && allowedProcessIds.has(link.target)) {
               completedProcesses.delete(link.target);
               pendingInvocations.set(link.target, stepResult.processId ?? "");
             }

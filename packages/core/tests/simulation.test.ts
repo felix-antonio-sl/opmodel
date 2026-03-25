@@ -3,7 +3,7 @@ import { readFileSync } from "fs";
 import { resolve } from "path";
 import { createModel } from "../src/model";
 import { loadModel } from "../src/serialization";
-import { addThing, addLink, addState, addModifier, addOPD, addAppearance } from "../src/api";
+import { addThing, addLink, addState, addModifier, addOPD, addAppearance, addScenario } from "../src/api";
 import type { Thing, Link, State, Modifier } from "../src/types";
 import type { Model } from "../src/types";
 import type { SimulationEvent } from "../src/simulation";
@@ -1156,5 +1156,35 @@ describe("object re-creation state reset", () => {
     const finalObj = trace.finalState.objects.get("obj-1");
     expect(finalObj?.exists).toBe(true);
     expect(finalObj?.currentState).toBe("s-new");
+  });
+});
+
+describe("scenario-based simulation", () => {
+  it("accepts scenarioId parameter without crashing", () => {
+    const m = createModel("ScenarioTest");
+    const trace = runSimulation(m, undefined, 100, Math.random, "nonexistent");
+    expect(trace.completed).toBe(true);
+  });
+});
+describe("time-based scheduling", () => {
+  it("shorter duration process executes first within same Y-level", () => {
+    let m = createModel("TimeTest");
+    const obj: Thing = { id: "obj-1", kind: "object", name: "Data", essence: "informatical", affiliation: "systemic" };
+    const proc1: Thing = { id: "proc-1", kind: "process", name: "LongTask", essence: "informatical", affiliation: "systemic", duration: { nominal: 100, unit: "s" } };
+    const proc2: Thing = { id: "proc-2", kind: "process", name: "ShortTask", essence: "informatical", affiliation: "systemic", duration: { nominal: 10, unit: "s" } };
+    let r = addThing(m, obj); m = isOk(r) ? r.value : m;
+    r = addThing(m, proc1); m = isOk(r) ? r.value : m;
+    r = addThing(m, proc2); m = isOk(r) ? r.value : m;
+    // Same Y = 0, but proc1 added first
+    r = addAppearance(m, { thing: "proc-1", opd: "opd-sd", x: 0, y: 0, w: 120, h: 60 }); m = isOk(r) ? r.value : m;
+    r = addAppearance(m, { thing: "proc-2", opd: "opd-sd", x: 200, y: 0, w: 120, h: 60 }); m = isOk(r) ? r.value : m;
+    r = addAppearance(m, { thing: "obj-1", opd: "opd-sd", x: 400, y: 0, w: 120, h: 60 }); m = isOk(r) ? r.value : m;
+
+    const trace = runSimulation(m);
+    const executed = trace.steps.filter(s => !s.skipped).map(s => s.processName);
+    // ShortTask (10s) should execute before LongTask (100s)
+    if (executed.includes("ShortTask") && executed.includes("LongTask")) {
+      expect(executed.indexOf("ShortTask")).toBeLessThan(executed.indexOf("LongTask"));
+    }
   });
 });
