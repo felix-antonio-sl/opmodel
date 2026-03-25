@@ -1378,7 +1378,8 @@ function verifyAssertions(model: Model, finalState: ModelState, steps: Simulatio
       const proc = [...model.things.values()].find(t => t.name.toLowerCase() === procName?.trim());
       const obj = [...model.things.values()].find(t => t.name.toLowerCase() === objName?.trim());
       if (proc && obj) {
-        const wasExecuted = steps.some(s => s.processId === proc.id && !s.skipped);
+        // Check if process was executed directly OR via subprocesses (in-zoom)
+        const wasExecuted = steps.some(s => !s.skipped && (s.processId === proc.id || s.parentProcessId === proc.id));
         const objState = finalState.objects?.get(obj.id);
         const targetState = [...model.states.values()].find(s => s.parent === obj.id && s.name.toLowerCase() === stateName?.trim());
         if (wasExecuted && objState && targetState && objState.currentState === targetState.id) {
