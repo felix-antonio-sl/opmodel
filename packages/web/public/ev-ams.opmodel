@@ -111,9 +111,11 @@
     {"id":"lnk-inspect-result","source":"proc-final-inspect","target":"obj-aev-assembly","type":"result"},
     {"id":"lnk-instrument-charging","source":"obj-charging-stations","target":"proc-aev-providing","type":"instrument"},
     {"id":"lnk-instrument-nav","source":"obj-nav-software","target":"proc-aev-providing","type":"instrument"},
+    {"id":"lnk-instrument-regulations","source":"obj-regulations","target":"proc-aev-providing","type":"instrument"},
     {"id":"lnk-instrument-road","source":"obj-road-network","target":"proc-aev-providing","type":"instrument"},
     {"id":"lnk-instrument-robot","source":"obj-robot-line","target":"proc-aev-providing","type":"instrument"},
     {"id":"lnk-instrument-system","source":"obj-ev-ams","target":"proc-aev-providing","type":"instrument"},
+    {"id":"lnk-instrument-weather","source":"obj-weather","target":"proc-aev-providing","type":"instrument"},
     {"id":"lnk-invocation-detect-assess","source":"proc-detecting","target":"proc-assessing","type":"invocation"},
     {"id":"lnk-mfg-agent","source":"obj-mfg-eng-group","target":"proc-mfg","type":"agent"},
     {"distributed":true,"id":"lnk-mfg-consume-raw","source":"obj-raw-materials","target":"proc-mfg","type":"consumption"},
@@ -137,8 +139,8 @@
     {"id":"lnk-welding-agent","source":"obj-welding-robot","target":"proc-chassis","type":"agent"}
   ],
   "meta": {
-      "created": "2026-03-25T10:42:36.373Z",
-      "modified": "2026-03-25T10:42:36.377Z",
+      "created": "2026-03-25T10:54:08.191Z",
+      "modified": "2026-03-25T10:54:08.196Z",
       "name": "EV-AMS: Autonomous Electric Vehicle Manufacturing & Operation",
       "system_type": "socio-technical"
   },

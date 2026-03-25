@@ -374,6 +374,9 @@ m = unwrap(addLink(m, { id: "lnk-detecting-effect", type: "effect", source: "pro
 m = unwrap(addLink(m, { id: "lnk-fleet-effect-mob", type: "effect", source: "proc-fleet-op", target: "obj-mobility-convenience", source_state: "s-mob-limited", target_state: "s-mob-enhanced" }));
 m = unwrap(addLink(m, { id: "lnk-sensing-effect", type: "effect", source: "proc-sensing", target: "obj-road-danger" }));
 m = unwrap(addLink(m, { id: "lnk-sw-loading-effect", type: "effect", source: "proc-sw-loading", target: "obj-aev-assembly" }));
+// Fix: connect environmental objects to main process
+m = unwrap(addLink(m, { id: "lnk-instrument-regulations", type: "instrument", source: "obj-regulations", target: "proc-aev-providing" }));
+m = unwrap(addLink(m, { id: "lnk-instrument-weather", type: "instrument", source: "obj-weather", target: "proc-aev-providing" }));
 // ===== SAVE =====
 const outPath = resolve(__dirname, "../tests/ev-ams.opmodel");
 writeFileSync(outPath, saveModel(m));
