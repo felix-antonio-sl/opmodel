@@ -2,6 +2,10 @@ import { describe, it, expect } from "vitest";
 import { createModel } from "../src/model";
 import { addThing, addLink, addAppearance, validate } from "../src/api";
 import { isOk } from "../src/result";
+import { verifyMethodology } from "../src/methodology";
+import { loadModel } from "../src/serialization";
+import { readFileSync } from "fs";
+import { resolve } from "path";
 import type { Thing, Link } from "../src/types";
 
 function buildModel() {
@@ -96,5 +100,25 @@ describe("Methodology validation (P0)", () => {
       expect(e.severity).toBeDefined();
       expect(e.severity).not.toBe("error");
     }
+  });
+});
+
+describe("verifyMethodology checklist", () => {
+  it("returns checks for SD, SD1, and global levels", () => {
+    const m = buildModel();
+    const checks = verifyMethodology(m);
+    expect(checks.length).toBeGreaterThanOrEqual(10);
+    expect(checks.some(c => c.level === "SD")).toBe(true);
+    expect(checks.some(c => c.level === "global")).toBe(true);
+  });
+
+  it("EV-AMS passes most SD checks", () => {
+    const fixture = readFileSync(resolve(__dirname, "../../../tests/ev-ams.opmodel"), "utf8");
+    const r = loadModel(fixture);
+    if (!r.ok) throw new Error("load failed");
+    const checks = verifyMethodology(r.value);
+    const sdChecks = checks.filter(c => c.level === "SD");
+    const sdPassed = sdChecks.filter(c => c.passed).length;
+    expect(sdPassed).toBeGreaterThanOrEqual(7);
   });
 });

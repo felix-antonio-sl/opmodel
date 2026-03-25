@@ -30,6 +30,7 @@ import type { NlConfig } from "@opmodel/nl";
 import { createProvider, createPipeline } from "@opmodel/nl";
 import { NlSettingsModal } from "./components/NlSettingsModal";
 import { SettingsPanel } from "./components/SettingsPanel";
+import { VerificationChecklist } from "./components/VerificationChecklist";
 
 const STORAGE_KEY = "opmodel:current";
 
@@ -202,6 +203,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
   const [showValidation, setShowValidation] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showVerification, setShowVerification] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
   const nlPipeline = useMemo(() => {
@@ -592,6 +594,12 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
           <div className={`status-bar__dot status-bar__dot--${isValid ? "ok" : "error"}`} />
           <span>{isValid ? (errors.length > 0 ? `${errors.length} hints` : "Valid") : `${hardErrors.length} errors`}</span>
         </div>
+        <button
+          className="status-bar__indicator status-bar__indicator--clickable"
+          onClick={() => setShowVerification(true)}
+          title="Methodology verification checklist"
+          style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: "var(--accent)" }}
+        >✓ Verify</button>
         <div className="status-bar__sep" />
         <span className="status-bar__count">{model.things.size} things</span>
         <span className="status-bar__count">{model.states.size} states</span>
@@ -672,6 +680,9 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
             <button className="help-dialog__close" onClick={() => setShowHelp(false)}>Close</button>
           </div>
         </div>
+      )}
+      {showVerification && (
+        <VerificationChecklist model={model} onClose={() => setShowVerification(false)} />
       )}
       {showSettings && (
         <SettingsPanel model={model} dispatch={dispatch} onClose={() => setShowSettings(false)} />

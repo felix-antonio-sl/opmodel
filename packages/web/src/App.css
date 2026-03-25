@@ -2767,3 +2767,38 @@ body,
   border-radius: 8px;
   font-weight: 500;
 }
+
+/* Verification Checklist */
+.verification-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  display: flex; align-items: center; justify-content: center; z-index: 200;
+}
+.verification-panel {
+  background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px;
+  width: 440px; max-height: 80vh; overflow-y: auto; box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+}
+.verification-header {
+  display: flex; align-items: center; gap: 8px; padding: 14px 16px;
+  border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg-panel);
+}
+.verification-title { font-size: 13px; font-weight: 700; flex: 1; }
+.verification-score { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
+.verification-score--good { background: rgba(72,187,120,0.15); color: #48bb78; }
+.verification-score--warn { background: rgba(237,137,54,0.15); color: #ed8936; }
+.verification-score--bad { background: rgba(245,101,101,0.15); color: #f56565; }
+.verification-close { background: none; border: none; color: var(--text-muted); font-size: 14px; cursor: pointer; padding: 2px 6px; }
+.verification-group { padding: 4px 0; }
+.verification-group-title {
+  font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--text-muted); padding: 8px 16px 4px;
+}
+.verification-check {
+  display: flex; gap: 8px; padding: 6px 16px; align-items: flex-start;
+}
+.verification-check--pass { opacity: 0.7; }
+.verification-check--fail { }
+.verification-icon { font-size: 12px; margin-top: 1px; min-width: 16px; }
+.verification-check--pass .verification-icon { color: #48bb78; }
+.verification-content { flex: 1; }
+.verification-label { font-size: 12px; font-weight: 500; color: var(--text-primary); }
+.verification-detail { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
