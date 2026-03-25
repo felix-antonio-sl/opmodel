@@ -111,24 +111,24 @@ m = unwrap(addLink(m, { id: "lnk-problem-mob", type: "effect", source: "proc-fos
 
 // ===== SD APPEARANCES =====
 const SD_THINGS = [
-  { id: "proc-aev-providing", x: 350, y: 300, w: 300, h: 100 },
-  { id: "obj-commuter-group", x: 50, y: 50, w: 200, h: 60 },
-  { id: "obj-mobility-convenience", x: 300, y: 50, w: 200, h: 60 },
-  { id: "obj-aev", x: 600, y: 50, w: 250, h: 60 },
-  { id: "obj-op-readiness", x: 600, y: 150, w: 200, h: 60 },
-  { id: "obj-mfg-eng-group", x: 50, y: 200, w: 220, h: 50 },
-  { id: "obj-fleet-op-group", x: 50, y: 300, w: 200, h: 50 },
-  { id: "obj-ev-ams", x: 350, y: 150, w: 180, h: 60 },
-  { id: "obj-robot-line", x: 700, y: 250, w: 200, h: 50 },
-  { id: "obj-nav-software", x: 700, y: 320, w: 250, h: 50 },
-  { id: "obj-charging-stations", x: 700, y: 390, w: 230, h: 50 },
-  { id: "obj-raw-materials", x: 50, y: 450, w: 180, h: 50 },
-  { id: "obj-electric-energy", x: 250, y: 450, w: 160, h: 50 },
-  { id: "obj-urban-trips", x: 600, y: 450, w: 180, h: 50 },
-  { id: "obj-road-network", x: 700, y: 460, w: 200, h: 50 },
-  { id: "obj-regulations", x: 50, y: 550, w: 160, h: 50 },
-  { id: "obj-weather", x: 250, y: 550, w: 140, h: 50 },
-  { id: "proc-fossil-using", x: 450, y: 550, w: 300, h: 70 },
+  { id: "proc-aev-providing", x: 360, y: 285, w: 320, h: 110 },
+  { id: "obj-commuter-group", x: 50, y: 40, w: 220, h: 60 },
+  { id: "obj-mobility-convenience", x: 320, y: 40, w: 230, h: 70 },
+  { id: "obj-aev", x: 650, y: 40, w: 280, h: 60 },
+  { id: "obj-op-readiness", x: 650, y: 140, w: 250, h: 72 },
+  { id: "obj-mfg-eng-group", x: 40, y: 190, w: 240, h: 50 },
+  { id: "obj-fleet-op-group", x: 40, y: 290, w: 220, h: 50 },
+  { id: "obj-ev-ams", x: 390, y: 150, w: 200, h: 60 },
+  { id: "obj-robot-line", x: 760, y: 240, w: 220, h: 50 },
+  { id: "obj-nav-software", x: 760, y: 310, w: 270, h: 50 },
+  { id: "obj-charging-stations", x: 760, y: 380, w: 250, h: 50 },
+  { id: "obj-raw-materials", x: 40, y: 440, w: 190, h: 50 },
+  { id: "obj-electric-energy", x: 250, y: 440, w: 170, h: 50 },
+  { id: "obj-urban-trips", x: 580, y: 455, w: 200, h: 50 },
+  { id: "obj-road-network", x: 790, y: 525, w: 220, h: 50 },
+  { id: "obj-regulations", x: 40, y: 540, w: 180, h: 50 },
+  { id: "obj-weather", x: 250, y: 540, w: 160, h: 50 },
+  { id: "proc-fossil-using", x: 430, y: 575, w: 340, h: 70 },
 ];
 
 for (const a of SD_THINGS) {
@@ -148,11 +148,11 @@ const sd1Procs = [
 
 for (const sp of sd1Procs) {
   m = unwrap(addThing(m, { id: sp.id, kind: "process", name: sp.name, essence: "physical", affiliation: "systemic" }));
-  m = unwrap(addAppearance(m, { thing: sp.id, opd: "opd-sd1", x: 280, y: sp.y, w: 240, h: 60, internal: true }));
+  m = unwrap(addAppearance(m, { thing: sp.id, opd: "opd-sd1", x: 335, y: sp.y, w: 230, h: 60, internal: true }));
 }
 
 // Container
-m = unwrap(addAppearance(m, { thing: "proc-aev-providing", opd: "opd-sd1", x: 200, y: 20, w: 400, h: 540, internal: true }));
+m = unwrap(addAppearance(m, { thing: "proc-aev-providing", opd: "opd-sd1", x: 230, y: 20, w: 430, h: 540, internal: true }));
 
 // SD1 objects
 const aevAssembly: Thing = { id: "obj-aev-assembly", kind: "object", name: "AEV Assembly", essence: "physical", affiliation: "systemic" };
@@ -172,18 +172,17 @@ const testEquipment: Thing = { id: "obj-test-equipment", kind: "object", name: "
 m = unwrap(addThing(m, testEquipment));
 
 // SD1 external appearances
-m = unwrap(addAppearance(m, { thing: "obj-aev-assembly", opd: "opd-sd1", x: 700, y: 100, w: 180, h: 60 }));
-m = unwrap(addAppearance(m, { thing: "obj-mfg-quality", opd: "opd-sd1", x: 700, y: 200, w: 220, h: 60 }));
-m = unwrap(addAppearance(m, { thing: "obj-test-report", opd: "opd-sd1", x: 700, y: 320, w: 160, h: 50 }));
-m = unwrap(addAppearance(m, { thing: "obj-raw-materials", opd: "opd-sd1", x: 30, y: 80, w: 150, h: 50 }));
-m = unwrap(addAppearance(m, { thing: "obj-robot-line", opd: "opd-sd1", x: 30, y: 160, w: 180, h: 50 }));
-m = unwrap(addAppearance(m, { thing: "obj-mfg-eng-group", opd: "opd-sd1", x: 30, y: 240, w: 200, h: 50 }));
-m = unwrap(addAppearance(m, { thing: "obj-quality-engineer", opd: "opd-sd1", x: 30, y: 300, w: 180, h: 50 }));
-m = unwrap(addAppearance(m, { thing: "obj-fleet-op-group", opd: "opd-sd1", x: 30, y: 440, w: 180, h: 50 }));
-m = unwrap(addAppearance(m, { thing: "obj-test-equipment", opd: "opd-sd1", x: 30, y: 360, w: 170, h: 50 }));
-m = unwrap(addAppearance(m, { thing: "obj-nav-software", opd: "opd-sd1", x: 30, y: 520, w: 170, h: 50 }));
-m = unwrap(addAppearance(m, { thing: "obj-road-network", opd: "opd-sd1", x: 30, y: 520, w: 180, h: 50 }));
-m = unwrap(addAppearance(m, { thing: "obj-aev", opd: "opd-sd1", x: 700, y: 400, w: 200, h: 60 }));
+m = unwrap(addAppearance(m, { thing: "obj-aev-assembly", opd: "opd-sd1", x: 735, y: 90, w: 195, h: 60 }));
+m = unwrap(addAppearance(m, { thing: "obj-mfg-quality", opd: "opd-sd1", x: 715, y: 190, w: 270, h: 76 }));
+m = unwrap(addAppearance(m, { thing: "obj-test-report", opd: "opd-sd1", x: 745, y: 315, w: 180, h: 50 }));
+m = unwrap(addAppearance(m, { thing: "obj-raw-materials", opd: "opd-sd1", x: 30, y: 75, w: 165, h: 50 }));
+m = unwrap(addAppearance(m, { thing: "obj-robot-line", opd: "opd-sd1", x: 30, y: 145, w: 200, h: 50 }));
+m = unwrap(addAppearance(m, { thing: "obj-mfg-eng-group", opd: "opd-sd1", x: 30, y: 215, w: 210, h: 50 }));
+m = unwrap(addAppearance(m, { thing: "obj-quality-engineer", opd: "opd-sd1", x: 30, y: 285, w: 195, h: 50 }));
+m = unwrap(addAppearance(m, { thing: "obj-test-equipment", opd: "opd-sd1", x: 30, y: 355, w: 190, h: 50 }));
+m = unwrap(addAppearance(m, { thing: "obj-fleet-op-group", opd: "opd-sd1", x: 30, y: 445, w: 195, h: 50 }));
+m = unwrap(addAppearance(m, { thing: "obj-nav-software", opd: "opd-sd1", x: 30, y: 515, w: 215, h: 50 }));
+m = unwrap(addAppearance(m, { thing: "obj-road-network", opd: "opd-sd1", x: 30, y: 585, w: 220, h: 50 }));
 
 // SD1 links
 m = unwrap(addLink(m, { id: "lnk-mfg-consume-raw", type: "consumption", source: "obj-raw-materials", target: "proc-mfg", distributed: true }));
@@ -471,9 +470,7 @@ const vin: Thing = { id: "obj-vin", kind: "object", name: "VIN", essence: "infor
 m = unwrap(addThing(m, aev001));
 m = unwrap(addThing(m, aev002));
 m = unwrap(addThing(m, vin));
-m = unwrap(addAppearance(m, { thing: "obj-aev-001", opd: "opd-sd1-2", x: 820, y: 420, w: 140, h: 50 }));
-m = unwrap(addAppearance(m, { thing: "obj-aev-002", opd: "opd-sd1-2", x: 820, y: 490, w: 140, h: 50 }));
-m = unwrap(addAppearance(m, { thing: "obj-vin", opd: "opd-sd1-2", x: 820, y: 560, w: 120, h: 50 }));
+
 m = unwrap(addLink(m, { id: "lnk-cls-aev-001", type: "classification", source: "obj-aev", target: "obj-aev-001" }));
 m = unwrap(addLink(m, { id: "lnk-cls-aev-002", type: "classification", source: "obj-aev", target: "obj-aev-002" }));
 m = unwrap(addLink(m, { id: "lnk-exhibit-vin", type: "exhibition", source: "obj-aev-001", target: "obj-vin" }));
@@ -481,19 +478,19 @@ m = unwrap(addLink(m, { id: "lnk-exhibit-vin", type: "exhibition", source: "obj-
 // Final Inspecting in-zoom with parallel subprocesses
 m = unwrap(addOPD(m, { id: "opd-sd1-2-1", name: "SD1.2.1", opd_type: "hierarchical", parent_opd: "opd-sd1-2", refines: "proc-final-inspect", refinement_type: "in-zoom" }));
 for (const sp of [
-  { id: "proc-mechanical-inspecting", name: "Mechanical Inspecting", x: 180, y: 140 },
-  { id: "proc-software-validating", name: "Software Validating", x: 500, y: 140 },
+  { id: "proc-mechanical-inspecting", name: "Mechanical Inspecting", x: 210, y: 135 },
+  { id: "proc-software-validating", name: "Software Validating", x: 510, y: 135 },
 ] as const) {
   m = unwrap(addThing(m, { id: sp.id, kind: "process", name: sp.name, essence: "physical", affiliation: "systemic" }));
-  m = unwrap(addAppearance(m, { thing: sp.id, opd: "opd-sd1-2-1", x: sp.x, y: sp.y, w: 230, h: 60, internal: true }));
+  m = unwrap(addAppearance(m, { thing: sp.id, opd: "opd-sd1-2-1", x: sp.x, y: sp.y, w: 220, h: 60, internal: true }));
 }
-m = unwrap(addAppearance(m, { thing: "proc-final-inspect", opd: "opd-sd1-2-1", x: 120, y: 60, w: 680, h: 220, internal: true }));
+m = unwrap(addAppearance(m, { thing: "proc-final-inspect", opd: "opd-sd1-2-1", x: 170, y: 70, w: 610, h: 200, internal: true }));
 const inspectionStatus: Thing = { id: "obj-inspection-status", kind: "object", name: "Inspection Status", essence: "informatical", affiliation: "systemic" };
 m = unwrap(addThing(m, inspectionStatus));
 m = unwrap(addState(m, { id: "s-inspection-pending", parent: "obj-inspection-status", name: "pending", initial: true, final: false, default: true }));
 m = unwrap(addState(m, { id: "s-inspection-approved", parent: "obj-inspection-status", name: "approved", initial: false, final: true, default: false }));
-m = unwrap(addAppearance(m, { thing: "obj-inspection-status", opd: "opd-sd1-2-1", x: 840, y: 140, w: 180, h: 60 }));
-m = unwrap(addAppearance(m, { thing: "obj-aev-assembly", opd: "opd-sd1-2-1", x: 840, y: 220, w: 180, h: 50 }));
+m = unwrap(addAppearance(m, { thing: "obj-inspection-status", opd: "opd-sd1-2-1", x: 830, y: 130, w: 210, h: 68 }));
+m = unwrap(addAppearance(m, { thing: "obj-aev-assembly", opd: "opd-sd1-2-1", x: 835, y: 225, w: 195, h: 52 }));
 m = unwrap(addLink(m, { id: "lnk-mech-inspection-effect", type: "effect", source: "proc-mechanical-inspecting", target: "obj-inspection-status", source_state: "s-inspection-pending", target_state: "s-inspection-approved" }));
 m = unwrap(addLink(m, { id: "lnk-sw-validation-effect", type: "effect", source: "proc-software-validating", target: "obj-aev-assembly" }));
 
