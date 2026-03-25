@@ -1829,8 +1829,11 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
             const TRI_H = hasInner ? 14 : 12;           // fixed height, not variable
             const TRI_HALF = hasInner ? 9 : 7;           // fixed half-width
 
-            // Trunk: parent edge → apex
-            const trunkStart = edgePoint(parentThing.kind, parentRect, centroid);
+            // Trunk: parent edge → apex (inside container for unfold OPDs)
+            const isParentContainer = fork.parentId === containerThingId;
+            const trunkStart = isParentContainer
+              ? { x: parentCtr.x + dir.x * 20, y: parentCtr.y + dir.y * 20 } // inside container
+              : edgePoint(parentThing.kind, parentRect, centroid);
             const apex = { x: trunkStart.x + dir.x * TRUNK, y: trunkStart.y + dir.y * TRUNK };
             const baseCtr = { x: apex.x + dir.x * TRI_H, y: apex.y + dir.y * TRI_H };
             const baseL = { x: baseCtr.x - perp.x * TRI_HALF, y: baseCtr.y - perp.y * TRI_HALF };
