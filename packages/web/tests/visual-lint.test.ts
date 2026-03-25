@@ -5,6 +5,7 @@ import { resolve } from "path";
 import {
   auditVisualOpd,
   contentBounds,
+  findCrowdedDiagrams,
   findDegenerateBounds,
   findNonContainerOverlaps,
   findTruncatedStateBoxes,
@@ -71,6 +72,21 @@ describe("visual-lint", () => {
       makeAppearance("b", 150, 90, 80, 40),
     ]);
     expect(bounds).toEqual({ x: 10, y: 20, w: 220, h: 110 });
+  });
+
+  it("detects crowded diagrams even without direct overlaps", () => {
+    const findings = findCrowdedDiagrams([
+      makeAppearance("a", 0, 0, 120, 60),
+      makeAppearance("b", 126, 0, 120, 60),
+      makeAppearance("c", 252, 0, 120, 60),
+      makeAppearance("d", 378, 0, 120, 60),
+      makeAppearance("e", 0, 66, 120, 60),
+      makeAppearance("f", 126, 66, 120, 60),
+      makeAppearance("g", 252, 66, 120, 60),
+      makeAppearance("h", 378, 66, 120, 60),
+    ]);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({ kind: "crowded-diagram", nodeCount: 8 });
   });
 
   it("audits EV-AMS with no overlap/orphan findings", () => {

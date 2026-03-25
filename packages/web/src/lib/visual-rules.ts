@@ -46,6 +46,8 @@ export const VISUAL_RULES = {
     degenerateAspectRatio: 4,
     minContentWidth: 120,
     minContentHeight: 80,
+    crowdedNodeCount: 8,
+    crowdedFillRatio: 0.48,
   },
 } as const;
 

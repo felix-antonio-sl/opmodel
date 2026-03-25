@@ -94,6 +94,8 @@ function visualFindingLabel(model: Model, finding: VisualFinding): string {
     }
     case "degenerate-bounds":
       return `Degenerate bounds — ${Math.round(finding.width)}×${Math.round(finding.height)} (ratio ${finding.aspectRatio.toFixed(1)})`;
+    case "crowded-diagram":
+      return `Crowded diagram — ${finding.nodeCount} nodes in ${Math.round(finding.width)}×${Math.round(finding.height)} (fill ${(finding.fillRatio * 100).toFixed(0)}%)`;
   }
 }
 
@@ -106,7 +108,9 @@ function visualFindingEntity(finding: VisualFinding): string | null {
     case "truncated-state":
       return finding.thing;
     case "degenerate-bounds":
-      return finding.thing;
+      return null;
+    case "crowded-diagram":
+      return null;
   }
 }
 
@@ -116,6 +120,7 @@ function visualFindingKindLabel(kind: VisualFinding["kind"]): string {
     case "orphan": return "Orphans";
     case "truncated-state": return "Truncated state pills";
     case "degenerate-bounds": return "Degenerate bounds";
+    case "crowded-diagram": return "Crowded diagrams";
   }
 }
 
@@ -125,7 +130,7 @@ export function ValidationPanel({ model, errors, visualFindings = [], dispatch, 
   const infoCount = errors.filter((e) => e.severity === "info").length;
 
   const groupedVisualFindings = useMemo(() => {
-    const order: VisualFinding["kind"][] = ["overlap", "orphan", "truncated-state", "degenerate-bounds"];
+    const order: VisualFinding["kind"][] = ["overlap", "orphan", "truncated-state", "degenerate-bounds", "crowded-diagram"];
     return order
       .map((kind) => ({ kind, items: visualFindings.filter((finding) => finding.kind === kind) }))
       .filter((group) => group.items.length > 0);

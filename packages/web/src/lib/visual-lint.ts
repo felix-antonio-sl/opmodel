@@ -28,7 +28,15 @@ export interface DegenerateBoundsFinding {
   aspectRatio: number;
 }
 
-export type VisualFinding = OverlapFinding | OrphanFinding | TruncatedStateFinding | DegenerateBoundsFinding;
+export interface CrowdedDiagramFinding {
+  kind: "crowded-diagram";
+  nodeCount: number;
+  fillRatio: number;
+  width: number;
+  height: number;
+}
+
+export type VisualFinding = OverlapFinding | OrphanFinding | TruncatedStateFinding | DegenerateBoundsFinding | CrowdedDiagramFinding;
 
 function intersectionArea(a: Rect, b: Rect): number {
   const x = Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x));
@@ -119,6 +127,19 @@ export function findDegenerateBounds(appearances: Appearance[]): DegenerateBound
   return [];
 }
 
+export function findCrowdedDiagrams(appearances: Appearance[]): CrowdedDiagramFinding[] {
+  const visible = appearances.filter((a) => !a.internal);
+  const bounds = contentBounds(visible);
+  if (!bounds || visible.length < VISUAL_RULES.lint.crowdedNodeCount) return [];
+  const contentArea = visible.reduce((sum, a) => sum + a.w * a.h, 0);
+  const boundsArea = Math.max(bounds.w * bounds.h, 1);
+  const fillRatio = contentArea / boundsArea;
+  if (fillRatio >= VISUAL_RULES.lint.crowdedFillRatio) {
+    return [{ kind: "crowded-diagram", nodeCount: visible.length, fillRatio, width: bounds.w, height: bounds.h }];
+  }
+  return [];
+}
+
 export interface AuditVisualOpdArgs {
   appearances: Appearance[];
   links: Link[];
@@ -141,5 +162,6 @@ export function auditVisualOpd({ appearances, links, things, states }: AuditVisu
     ...findVisibleOrphans(appearances, links),
     ...findTruncatedStateBoxes(appearances, statesByThing, thingsById),
     ...findDegenerateBounds(appearances),
+    ...findCrowdedDiagrams(appearances),
   ];
 }
