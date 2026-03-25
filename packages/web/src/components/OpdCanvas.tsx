@@ -883,6 +883,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
   const [hiddenLinkTypes, setHiddenLinkTypes] = useState<Set<string>>(new Set());
   const [showLinkFilter, setShowLinkFilter] = useState(false);
   const [hideLinkLabels, setHideLinkLabels] = useState(false);
+  const [showGhosts, setShowGhosts] = useState(false);
 
   const toggleLinkCategory = (category: string) => {
     setHiddenLinkTypes(prev => {
@@ -1627,6 +1628,11 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
             <input type="checkbox" checked={hideLinkLabels} onChange={(e) => setHideLinkLabels(e.target.checked)} />
             <span>Hide labels</span>
           </label>
+          <label className="canvas-link-filter__row">
+            <input type="checkbox" checked={showGhosts} onChange={(e) => setShowGhosts(e.target.checked)} />
+            <span>Show ghosts</span>
+            <span className="canvas-link-filter__count">{[...fiber.things.values()].filter(e => e.implicit).length}</span>
+          </label>
           {hiddenLinkTypes.size > 0 && (
             <button className="canvas-link-filter__reset" onClick={() => setHiddenLinkTypes(new Set())}>
               Show All
@@ -2087,8 +2093,8 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
             );
           })}
 
-          {/* DA-9: Implicit things (connected but no stored appearance) — ghosted */}
-          {[...fiber.things.entries()]
+          {/* DA-9: Implicit things (connected but no stored appearance) — ghosted, hidden by default */}
+          {showGhosts && [...fiber.things.entries()]
             .filter(([, entry]) => entry.implicit)
             .map(([thingId, entry]) => {
             const { thing, appearance: app } = entry;
