@@ -394,7 +394,7 @@ function ThingNode({
   const { w, h } = appearance;
   const hasStates = states.length > 0;
   const hasSemiFold = semiFoldEntries && semiFoldEntries.length > 0;
-  const semiFoldH = hasSemiFold ? semiFoldEntries.length * 14 + (semiFoldHidden ? 14 : 0) + 8 : 0;
+  const semiFoldH = hasSemiFold ? semiFoldEntries.length * 16 + (semiFoldHidden ? 16 : 0) + 10 : 0;
   const extraH = (hasStates ? 24 : 0) + semiFoldH;
   const totalH = h + extraH;
 
@@ -529,15 +529,15 @@ function ThingNode({
           <line x1={x + 8} y1={y + h - 2} x2={x + w - 8} y2={y + h - 2}
             stroke="var(--border)" strokeWidth={0.5} />
           {semiFoldEntries!.map((entry, i) => (
-            <text key={i} x={x + 12} y={y + h + 10 + i * 14}
-              fontSize={9} fill="var(--text-muted)" textAnchor="start" dominantBaseline="middle"
+            <text key={i} x={x + 14} y={y + h + 12 + i * 16}
+              fontSize={9} fill="var(--text-secondary)" textAnchor="start" dominantBaseline="middle"
               style={{ cursor: onExtractPart ? "pointer" : undefined }}
               onClick={onExtractPart ? (e) => { e.stopPropagation(); onExtractPart(entry.thingId); } : undefined}>
               {entry.linkType === "aggregation" ? "◇ " : "◈ "}{entry.name}
             </text>
           ))}
           {semiFoldHidden! > 0 && (
-            <text x={x + 12} y={y + h + 10 + semiFoldEntries!.length * 14}
+            <text x={x + 14} y={y + h + 12 + semiFoldEntries!.length * 16}
               fontSize={9} fill="var(--text-muted)" fontStyle="italic" textAnchor="start" dominantBaseline="middle">
               + {semiFoldHidden} more
             </text>
@@ -548,9 +548,13 @@ function ThingNode({
       {hasStates && (
         <g>
           {states.map((state, i) => {
-            const pillW = Math.min(50, (w - 12) / states.length - 4);
+            const minPillW = 30;
+            const maxVisibleH = Math.min(states.length, Math.max(2, Math.floor((w - 8) / (minPillW + 4))));
+            const pillW = Math.min(55, (w - 8) / maxVisibleH - 4);
             const pillH = 16;
-            const totalPillW = states.length * (pillW + 4) - 4;
+            const visibleCount = Math.min(states.length, maxVisibleH);
+            if (i >= visibleCount) return null; // overflow — truncated
+            const totalPillW = visibleCount * (pillW + 4) - 4;
             const startX = x + (w - totalPillW) / 2;
             const px = startX + i * (pillW + 4);
             const py = y + h - 4;
@@ -592,11 +596,16 @@ function ThingNode({
                   x={px + pillW / 2}
                   y={py + pillH / 2}
                 >
-                  {state.name}
+                  {state.name.length > Math.floor(pillW / 5) ? state.name.substring(0, Math.floor(pillW / 5)) + "…" : state.name}
                 </text>
               </g>
             );
           })}
+          {states.length > Math.min(states.length, Math.max(2, Math.floor((w - 8) / 34))) && (
+            <text fontSize={8} fill="var(--text-muted)" x={x + w - 8} y={y + h + 6} textAnchor="end">
+              +{states.length - Math.min(states.length, Math.max(2, Math.floor((w - 8) / 34)))}
+            </text>
+          )}
         </g>
       )}
 
