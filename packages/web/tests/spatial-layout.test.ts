@@ -3,6 +3,7 @@ import {
   addAppearance,
   addFan,
   addLink,
+  addState,
   addThing,
   createModel,
   refineThing,
@@ -138,5 +139,72 @@ describe("spatial layout engine", () => {
     const links = [...m.links.values()].filter((l) => ids.has(l.source) && ids.has(l.target));
     expect(findNonContainerOverlaps(patched)).toEqual([]);
     expect(findVisibleOrphans(patched, links)).toEqual([]);
+  });
+
+  it("suggests structural cluster layout for structural OPDs", () => {
+    let m = createModel("Structural");
+    for (const [id, name] of [["obj-service", "Service"], ["obj-team", "Clinical Team"], ["obj-vehicle", "Vehicle"], ["obj-status", "Service Status"]] as const) {
+      m = withThing(m, { id, kind: "object", name, essence: "physical", affiliation: "systemic" });
+      m = withAppearance(m, id, "opd-sd", 0, 0, 100, 40);
+    }
+    m = withLink(m, { id: "agg-1", type: "aggregation", source: "obj-service", target: "obj-team" });
+    m = withLink(m, { id: "agg-2", type: "aggregation", source: "obj-service", target: "obj-vehicle" });
+    m = withLink(m, { id: "exh-1", type: "exhibition", source: "obj-service", target: "obj-status" });
+
+    const suggestion = suggestLayoutForOpd(m, "opd-sd");
+    expect(suggestion.strategy).toBe("structural-cluster");
+    const parentPatch = suggestion.patches.find((p) => p.thingId === "obj-service")?.patch;
+    const childPatch = suggestion.patches.find((p) => p.thingId === "obj-team")?.patch;
+    expect(parentPatch?.y).toBeLessThan(childPatch?.y ?? 0);
+  });
+
+  it("suggests balanced SD layout and auto-sizes stateful objects", () => {
+    let m = createModel("SD");
+    m = withThing(m, { id: "proc-care", kind: "process", name: "Clinical Care Coordination", essence: "physical", affiliation: "systemic" });
+    m = withThing(m, { id: "obj-nurse", kind: "object", name: "Advanced Practice Nurse", essence: "physical", affiliation: "systemic" });
+    m = withThing(m, { id: "obj-kit", kind: "object", name: "Monitoring Equipment Set", essence: "physical", affiliation: "systemic" });
+    m = withThing(m, { id: "obj-patient", kind: "object", name: "Patient Care Status", essence: "informatical", affiliation: "systemic" });
+    m = withThing(m, { id: "obj-record", kind: "object", name: "Clinical Record", essence: "informatical", affiliation: "systemic" });
+    m = withAppearance(m, "proc-care", "opd-sd", 0, 0, 100, 40);
+    m = withAppearance(m, "obj-nurse", "opd-sd", 0, 0, 100, 40);
+    m = withAppearance(m, "obj-kit", "opd-sd", 0, 0, 100, 40);
+    m = withAppearance(m, "obj-patient", "opd-sd", 0, 0, 100, 40);
+    m = withAppearance(m, "obj-record", "opd-sd", 0, 0, 100, 40);
+    const s1 = addState(m, { id: "st-1", parent: "obj-patient", name: "hemodynamically stable" });
+    if (!isOk(s1)) throw new Error(s1.error.message);
+    m = s1.value;
+    const s2 = addState(m, { id: "st-2", parent: "obj-patient", name: "requires emergency escalation" });
+    if (!isOk(s2)) throw new Error(s2.error.message);
+    m = s2.value;
+    m = withLink(m, { id: "l1", type: "agent", source: "obj-nurse", target: "proc-care" });
+    m = withLink(m, { id: "l2", type: "instrument", source: "obj-kit", target: "proc-care" });
+    m = withLink(m, { id: "l3", type: "result", source: "proc-care", target: "obj-record" });
+    m = withLink(m, { id: "l4", type: "consumption", source: "obj-patient", target: "proc-care" });
+
+    const suggestion = suggestLayoutForOpd(m, "opd-sd");
+    expect(suggestion.strategy).toBe("sd-balanced");
+    const patientPatch = suggestion.patches.find((p) => p.thingId === "obj-patient")?.patch;
+    expect((patientPatch?.w ?? 0)).toBeGreaterThan(100);
+  });
+
+  it("keeps mixed SD OPDs on sd-balanced when structure is not dominant", () => {
+    let m = createModel("Mixed SD");
+    for (const [id, kind, name] of [
+      ["proc-care", "process", "Clinical Care"] as const,
+      ["obj-nurse", "object", "Nurse"] as const,
+      ["obj-kit", "object", "Equipment"] as const,
+      ["obj-record", "object", "Record"] as const,
+      ["obj-patient-status", "object", "Patient Status"] as const,
+    ]) {
+      m = withThing(m, { id, kind, name, essence: "physical", affiliation: "systemic" });
+      m = withAppearance(m, id, "opd-sd", 0, 0, 100, 40);
+    }
+    m = withLink(m, { id: "l1", type: "agent", source: "obj-nurse", target: "proc-care" });
+    m = withLink(m, { id: "l2", type: "instrument", source: "obj-kit", target: "proc-care" });
+    m = withLink(m, { id: "l3", type: "result", source: "proc-care", target: "obj-record" });
+    m = withLink(m, { id: "l4", type: "exhibition", source: "obj-record", target: "obj-patient-status" });
+
+    const suggestion = suggestLayoutForOpd(m, "opd-sd");
+    expect(suggestion.strategy).toBe("sd-balanced");
   });
 });

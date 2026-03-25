@@ -9,7 +9,7 @@ export interface AppearancePatch {
 }
 
 export interface LayoutSuggestion {
-  strategy: "in-zoom-sequential" | "unfold-grid" | "branching-control" | "none";
+  strategy: "in-zoom-sequential" | "unfold-grid" | "branching-control" | "structural-cluster" | "sd-balanced" | "none";
   patches: AppearancePatch[];
   findings: VisualFinding[];
 }
@@ -297,6 +297,200 @@ function layoutUnfold(model: Model, opdId: string, apps: Appearance[], links: Li
   };
 }
 
+const STRUCTURAL_TYPES = new Set(["aggregation", "exhibition", "generalization", "classification", "tagged"]);
+
+interface StructuralCluster {
+  parentId: string;
+  childIds: string[];
+  type: string;
+}
+
+function findStructuralClusters(links: Link[], visibleThings: Set<string>): StructuralCluster[] {
+  const groups = new Map<string, StructuralCluster>();
+  for (const link of links) {
+    if (!STRUCTURAL_TYPES.has(link.type)) continue;
+    if (!visibleThings.has(link.source) || !visibleThings.has(link.target)) continue;
+    // Convention: parent is source for aggregation/exhibition/classification, target for generalization
+    const parentId = link.type === "generalization" ? link.target : link.source;
+    const childId = link.type === "generalization" ? link.source : link.target;
+    const key = `${link.type}::${parentId}`;
+    if (!groups.has(key)) groups.set(key, { parentId, childIds: [], type: link.type });
+    groups.get(key)!.childIds.push(childId);
+  }
+  return [...groups.values()].filter((g) => g.childIds.length >= 1);
+}
+
+function autoSizeAppearance(model: Model, app: Appearance): { w: number; h: number } {
+  const thing = model.things.get(app.thing);
+  if (!thing) return { w: app.w, h: app.h };
+  const stateNames = [...model.states.values()].filter((s) => s.parent === app.thing).map((s) => s.name);
+  const nameLen = thing.name.length;
+  const nameW = Math.max(nameLen * 8 + 24, VISUAL_RULES.size.minObjectWidth);
+  let w = thing.kind === "process" ? Math.max(nameW, VISUAL_RULES.size.minProcessWidth) : nameW;
+  if (stateNames.length > 0) w = Math.max(w, minimumWidthForStateNames(stateNames));
+  w = Math.max(w, app.w);
+  const h = Math.max(app.h, stateNames.length > 0 ? 68 : VISUAL_RULES.size.minHeight);
+  return { w, h };
+}
+
+function structuralDominanceScore(apps: Appearance[], links: Link[]): number {
+  if (apps.length === 0 || links.length === 0) return 0;
+  const visibleThings = new Set(apps.map((a) => a.thing));
+  const structuralLinks = links.filter((l) => STRUCTURAL_TYPES.has(l.type));
+  if (structuralLinks.length === 0) return 0;
+  const clusters = findStructuralClusters(links, visibleThings);
+  const clusteredThings = new Set<string>();
+  for (const cluster of clusters) {
+    clusteredThings.add(cluster.parentId);
+    for (const childId of cluster.childIds) clusteredThings.add(childId);
+  }
+  const structuralLinkRatio = structuralLinks.length / links.length;
+  const clusteredThingRatio = clusteredThings.size / Math.max(visibleThings.size, 1);
+  const multiChildBonus = clusters.some((c) => c.childIds.length >= 2) ? 0.15 : 0;
+  return structuralLinkRatio * 0.6 + clusteredThingRatio * 0.4 + multiChildBonus;
+}
+
+function layoutStructuralCluster(
+  model: Model, opdId: string, apps: Appearance[], links: Link[],
+): LayoutSuggestion {
+  const visibleThings = new Set(apps.map((a) => a.thing));
+  const clusters = findStructuralClusters(links, visibleThings);
+  if (clusters.length === 0) return { strategy: "none", patches: [], findings: [] };
+
+  const patches: AppearancePatch[] = [];
+  const placed = new Set<string>();
+  let nextClusterY = 40;
+
+  for (const cluster of clusters) {
+    const parentApp = apps.find((a) => a.thing === cluster.parentId);
+    if (!parentApp) continue;
+    const childApps = cluster.childIds.map((id) => apps.find((a) => a.thing === id)).filter(Boolean) as Appearance[];
+    if (childApps.length === 0) continue;
+
+    const parentSize = autoSizeAppearance(model, parentApp);
+    const parentX = 300;
+    const parentY = nextClusterY;
+    patches.push({ thingId: cluster.parentId, opdId, patch: { x: parentX, y: parentY, ...parentSize } });
+    placed.add(cluster.parentId);
+
+    const childStartY = parentY + parentSize.h + 40;
+    const childGap = 20;
+    let childX = parentX - 50;
+    childApps.forEach((childApp, i) => {
+      const childSize = autoSizeAppearance(model, childApp);
+      patches.push({
+        thingId: childApp.thing,
+        opdId,
+        patch: { x: childX, y: childStartY + i * (childSize.h + childGap), ...childSize },
+      });
+      placed.add(childApp.thing);
+    });
+    nextClusterY = childStartY + childApps.length * (70 + childGap) + 40;
+  }
+
+  // Place remaining unplaced things
+  const unplaced = apps.filter((a) => !placed.has(a.thing));
+  let remainX = 650;
+  let remainY = 40;
+  for (const app of unplaced) {
+    const size = autoSizeAppearance(model, app);
+    patches.push({ thingId: app.thing, opdId, patch: { x: remainX, y: remainY, ...size } });
+    remainY += size.h + VISUAL_RULES.spacing.nodeGap;
+  }
+
+  const patchedApps = apps.map((app) => {
+    const p = patches.find((x) => x.thingId === app.thing);
+    return p ? { ...app, ...p.patch } : app;
+  });
+  return {
+    strategy: "structural-cluster",
+    patches,
+    findings: auditVisualOpd({ appearances: patchedApps, links, things: model.things.values(), states: model.states.values() }),
+  };
+}
+
+function layoutSdBalanced(
+  model: Model, opdId: string, apps: Appearance[], links: Link[],
+): LayoutSuggestion {
+  const patches: AppearancePatch[] = [];
+
+  // Classify things into semantic bands
+  const processes = apps.filter((a) => model.things.get(a.thing)?.kind === "process");
+  const objects = apps.filter((a) => model.things.get(a.thing)?.kind === "object");
+  const agents = objects.filter((a) => links.some((l) => l.type === "agent" && l.source === a.thing));
+  const instruments = objects.filter((a) => links.some((l) => l.type === "instrument" && l.source === a.thing) && !agents.some((ag) => ag.thing === a.thing));
+  const consumed = objects.filter((a) => links.some((l) => l.type === "consumption" && l.source === a.thing));
+  const results = objects.filter((a) => links.some((l) => l.type === "result" && l.target === a.thing));
+  const exhibited = objects.filter((a) => links.some((l) => l.type === "exhibition" && (l.source === a.thing || l.target === a.thing)));
+  const remaining = objects.filter((a) =>
+    !agents.some((x) => x.thing === a.thing) &&
+    !instruments.some((x) => x.thing === a.thing) &&
+    !consumed.some((x) => x.thing === a.thing) &&
+    !results.some((x) => x.thing === a.thing) &&
+    !exhibited.some((x) => x.thing === a.thing)
+  );
+
+  // Layout bands
+  const centerX = 380;
+  const centerY = 300;
+
+  // Main process center
+  for (const proc of processes) {
+    const size = autoSizeAppearance(model, { ...proc, w: Math.max(proc.w, 300), h: Math.max(proc.h, 100) });
+    const isMain = links.some((l) => l.type === "exhibition" && l.target === proc.thing);
+    const y = isMain ? centerY : centerY + 200;
+    patches.push({ thingId: proc.thing, opdId, patch: { x: centerX, y, ...size } });
+  }
+
+  // Left band: agents + consumed
+  let leftY = 180;
+  for (const group of [agents, consumed]) {
+    for (const app of group) {
+      const size = autoSizeAppearance(model, app);
+      patches.push({ thingId: app.thing, opdId, patch: { x: 40, y: leftY, ...size } });
+      leftY += size.h + VISUAL_RULES.spacing.nodeGap;
+    }
+  }
+
+  // Right band: instruments
+  let rightY = 240;
+  for (const app of instruments) {
+    const size = autoSizeAppearance(model, app);
+    patches.push({ thingId: app.thing, opdId, patch: { x: 780, y: rightY, ...size } });
+    rightY += size.h + VISUAL_RULES.spacing.nodeGap;
+  }
+
+  // Top band: exhibited attributes + beneficiary
+  let topX = 50;
+  for (const app of exhibited) {
+    const size = autoSizeAppearance(model, app);
+    patches.push({ thingId: app.thing, opdId, patch: { x: topX, y: 40, ...size } });
+    topX += size.w + VISUAL_RULES.spacing.nodeGap;
+  }
+
+  // Bottom band: results + remaining
+  let bottomY = centerY + 200;
+  let bottomX = 40;
+  for (const group of [results, remaining]) {
+    for (const app of group) {
+      const size = autoSizeAppearance(model, app);
+      patches.push({ thingId: app.thing, opdId, patch: { x: bottomX, y: bottomY, ...size } });
+      bottomX += size.w + VISUAL_RULES.spacing.nodeGap;
+      if (bottomX > 800) { bottomX = 40; bottomY += 80; }
+    }
+  }
+
+  const patchedApps = apps.map((app) => {
+    const p = patches.find((x) => x.thingId === app.thing);
+    return p ? { ...app, ...p.patch } : app;
+  });
+  return {
+    strategy: "sd-balanced",
+    patches,
+    findings: auditVisualOpd({ appearances: patchedApps, links, things: model.things.values(), states: model.states.values() }),
+  };
+}
+
 export function suggestLayoutForOpd(model: Model, opdId: string): LayoutSuggestion {
   const opd = model.opds.get(opdId);
   const apps = [...model.appearances.values()].filter((a) => a.opd === opdId);
@@ -310,6 +504,16 @@ export function suggestLayoutForOpd(model: Model, opdId: string): LayoutSuggesti
     return layoutInZoom(model, opdId, apps, links, opd.refines ?? undefined);
   }
   if (opd.refinement_type === "unfold") return layoutUnfold(model, opdId, apps, links, opd.refines ?? undefined);
+
+  // SD-level or view OPDs: prefer structural layout only when the OPD is actually dominated by structure
+  const structuralScore = structuralDominanceScore(apps, links);
+  if (structuralScore >= 0.65) {
+    const structural = layoutStructuralCluster(model, opdId, apps, links);
+    if (structural.strategy !== "none") return structural;
+  }
+  if (!opd.parent_opd || opd.opd_type === "view") {
+    return layoutSdBalanced(model, opdId, apps, links);
+  }
   return {
     strategy: "none",
     patches: [],
