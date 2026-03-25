@@ -381,6 +381,8 @@ function layoutStructuralCluster(
   const patches: AppearancePatch[] = [];
   const placed = new Set<string>();
   let nextClusterY = 40;
+  const clusterBaseX = 120;
+  const clusterMaxWidth = 760;
 
   for (const cluster of clusters) {
     const parentApp = apps.find((a) => a.thing === cluster.parentId);
@@ -389,29 +391,55 @@ function layoutStructuralCluster(
     if (childApps.length === 0) continue;
 
     const parentSize = autoSizeAppearance(model, parentApp);
-    const parentX = 300;
+    const childGapX = cluster.type === "exhibition" ? 24 : 32;
+    const rowGapY = cluster.type === "generalization" ? 48 : 36;
+    const childStartY = nextClusterY + parentSize.h + 42;
+
+    const childLayouts: Array<{ app: Appearance; x: number; y: number; w: number; h: number }> = [];
+    let cursorX = clusterBaseX;
+    let cursorY = childStartY;
+    let rowHeight = 0;
+    let minChildX = Infinity;
+    let maxChildRight = -Infinity;
+
+    for (const childApp of childApps) {
+      const childSize = autoSizeAppearance(model, childApp);
+      if (cursorX > clusterBaseX && cursorX + childSize.w > clusterBaseX + clusterMaxWidth) {
+        cursorX = clusterBaseX;
+        cursorY += rowHeight + rowGapY;
+        rowHeight = 0;
+      }
+      childLayouts.push({ app: childApp, x: cursorX, y: cursorY, w: childSize.w, h: childSize.h });
+      minChildX = Math.min(minChildX, cursorX);
+      maxChildRight = Math.max(maxChildRight, cursorX + childSize.w);
+      rowHeight = Math.max(rowHeight, childSize.h);
+      cursorX += childSize.w + childGapX;
+    }
+
+    const childBandCenter = minChildX < Infinity && maxChildRight > -Infinity
+      ? (minChildX + maxChildRight) / 2
+      : clusterBaseX + parentSize.w / 2;
+    const parentX = Math.max(40, childBandCenter - parentSize.w / 2);
     const parentY = nextClusterY;
     patches.push({ thingId: cluster.parentId, opdId, patch: { x: parentX, y: parentY, ...parentSize } });
     placed.add(cluster.parentId);
 
-    const childStartY = parentY + parentSize.h + 40;
-    const childGap = 20;
-    let childX = parentX - 50;
-    childApps.forEach((childApp, i) => {
-      const childSize = autoSizeAppearance(model, childApp);
+    for (const child of childLayouts) {
       patches.push({
-        thingId: childApp.thing,
+        thingId: child.app.thing,
         opdId,
-        patch: { x: childX, y: childStartY + i * (childSize.h + childGap), ...childSize },
+        patch: { x: child.x, y: child.y, w: child.w, h: child.h },
       });
-      placed.add(childApp.thing);
-    });
-    nextClusterY = childStartY + childApps.length * (70 + childGap) + 40;
+      placed.add(child.app.thing);
+    }
+
+    const clusterBottom = childLayouts.reduce((max, child) => Math.max(max, child.y + child.h), childStartY);
+    nextClusterY = clusterBottom + 54;
   }
 
-  // Place remaining unplaced things
+  // Place remaining unplaced things in a separate right rail
   const unplaced = apps.filter((a) => !placed.has(a.thing));
-  let remainX = 650;
+  let remainX = 940;
   let remainY = 40;
   for (const app of unplaced) {
     const size = autoSizeAppearance(model, app);

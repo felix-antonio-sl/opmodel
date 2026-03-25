@@ -143,19 +143,31 @@ describe("spatial layout engine", () => {
 
   it("suggests structural cluster layout for structural OPDs", () => {
     let m = createModel("Structural");
-    for (const [id, name] of [["obj-service", "Service"], ["obj-team", "Clinical Team"], ["obj-vehicle", "Vehicle"], ["obj-status", "Service Status"]] as const) {
+    for (const [id, name] of [["obj-service", "Service"], ["obj-team", "Clinical Team"], ["obj-vehicle", "Vehicle"], ["obj-status", "Service Status"], ["obj-phone", "Telephone"], ["obj-stock", "Medication Stock"]] as const) {
       m = withThing(m, { id, kind: "object", name, essence: "physical", affiliation: "systemic" });
       m = withAppearance(m, id, "opd-sd", 0, 0, 100, 40);
     }
     m = withLink(m, { id: "agg-1", type: "aggregation", source: "obj-service", target: "obj-team" });
     m = withLink(m, { id: "agg-2", type: "aggregation", source: "obj-service", target: "obj-vehicle" });
+    m = withLink(m, { id: "agg-3", type: "aggregation", source: "obj-service", target: "obj-phone" });
+    m = withLink(m, { id: "agg-4", type: "aggregation", source: "obj-service", target: "obj-stock" });
     m = withLink(m, { id: "exh-1", type: "exhibition", source: "obj-service", target: "obj-status" });
 
     const suggestion = suggestLayoutForOpd(m, "opd-sd");
     expect(suggestion.strategy).toBe("structural-cluster");
     const parentPatch = suggestion.patches.find((p) => p.thingId === "obj-service")?.patch;
-    const childPatch = suggestion.patches.find((p) => p.thingId === "obj-team")?.patch;
-    expect(parentPatch?.y).toBeLessThan(childPatch?.y ?? 0);
+    const childPatches = ["obj-team", "obj-vehicle", "obj-status", "obj-phone", "obj-stock"]
+      .map((id) => suggestion.patches.find((p) => p.thingId === id)?.patch)
+      .filter(Boolean);
+    const teamPatch = suggestion.patches.find((p) => p.thingId === "obj-team")?.patch;
+    const vehiclePatch = suggestion.patches.find((p) => p.thingId === "obj-vehicle")?.patch;
+    expect(parentPatch?.y).toBeLessThan(teamPatch?.y ?? 0);
+    expect(teamPatch?.x).not.toBe(vehiclePatch?.x);
+    const parentCenter = (parentPatch?.x ?? 0) + (parentPatch?.w ?? 0) / 2;
+    const childrenMinX = Math.min(...childPatches.map((p) => p!.x ?? 0));
+    const childrenMaxRight = Math.max(...childPatches.map((p) => (p!.x ?? 0) + (p!.w ?? 0)));
+    expect(parentCenter).toBeGreaterThanOrEqual(childrenMinX);
+    expect(parentCenter).toBeLessThanOrEqual(childrenMaxRight);
   });
 
   it("suggests balanced SD layout and auto-sizes stateful objects", () => {
