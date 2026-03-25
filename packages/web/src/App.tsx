@@ -37,6 +37,7 @@ const EXAMPLES = [
   { name: "Coffee Making", file: "coffee-making.opmodel" },
   { name: "OnStar Driver Rescuing", file: "driver-rescuing.opmodel" },
   { name: "Hospitalización Domiciliaria", file: "hospitalizacion-domiciliaria.opmodel" },
+  { name: "EV-AMS (Canonical)", file: "ev-ams.opmodel" },
 ];
 
 function downloadBlob(blob: Blob, filename: string) {
