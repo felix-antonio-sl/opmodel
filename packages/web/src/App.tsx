@@ -1,4 +1,21 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, Component, type ErrorInfo, type ReactNode } from "react";
+
+class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
+  state = { error: null as Error | null };
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  componentDidCatch(error: Error, info: ErrorInfo) { console.error("React Error Boundary:", error, info); }
+  render() {
+    if (this.state.error) {
+      return <div style={{ padding: 20, color: "red", fontFamily: "monospace", whiteSpace: "pre-wrap" }}>
+        <h2>Error in OPModeling</h2>
+        <p>{this.state.error.message}</p>
+        <pre>{this.state.error.stack}</pre>
+        <button onClick={() => { localStorage.clear(); location.reload(); }}>Clear Storage & Reload</button>
+      </div>;
+    }
+    return this.props.children;
+  }
+}
 import { loadModel, createModel, isOk, validate, saveModel, expose, render, renderAll, exportMarkdown, type Model, type Thing } from "@opmodel/core";
 import { useModelStore } from "./hooks/useModelStore";
 import { OpdTree } from "./components/OpdTree";
@@ -740,5 +757,5 @@ export function App() {
     );
   }
 
-  return <Editor key={editorKey} initialModel={initialModel} onNew={handleNew} onLoadExample={handleLoadExample} onImport={handleImport} />;
+  return <ErrorBoundary><Editor key={editorKey} initialModel={initialModel} onNew={handleNew} onLoadExample={handleLoadExample} onImport={handleImport} /></ErrorBoundary>;
 }
