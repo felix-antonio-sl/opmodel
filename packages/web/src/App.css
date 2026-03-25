@@ -2806,3 +2806,28 @@ body,
 .verification-content { flex: 1; }
 .verification-label { font-size: 12px; font-weight: 500; color: var(--text-primary); }
 .verification-detail { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+/* SD Wizard */
+.wizard-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 250; }
+.wizard-panel { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px; width: 520px; max-height: 85vh; overflow-y: auto; box-shadow: 0 12px 48px rgba(0,0,0,0.3); }
+.wizard-header { display: flex; align-items: center; gap: 10px; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+.wizard-step-num { font-size: 11px; font-weight: 700; color: var(--accent); background: rgba(43,108,176,0.1); padding: 2px 8px; border-radius: 10px; }
+.wizard-step-title { font-size: 15px; font-weight: 700; flex: 1; }
+.wizard-close { background: none; border: none; color: var(--text-muted); font-size: 16px; cursor: pointer; }
+.wizard-desc { font-size: 12px; color: var(--text-muted); padding: 0 20px; margin: 8px 0; }
+.wizard-body { padding: 12px 20px 16px; }
+.wizard-label { display: block; font-size: 11px; font-weight: 600; color: var(--text-secondary); margin: 10px 0 4px; }
+.wizard-input { width: 100%; padding: 8px 10px; font-size: 13px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-surface); color: var(--text-primary); }
+.wizard-input:focus { outline: none; border-color: var(--accent); }
+.wizard-select { width: 100%; padding: 8px 10px; font-size: 13px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-surface); color: var(--text-primary); }
+.wizard-warn { font-size: 11px; color: #ed8936; margin-top: 4px; }
+.wizard-add { font-size: 11px; color: var(--accent); background: none; border: none; cursor: pointer; padding: 4px 0; }
+.wizard-remove { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 12px; }
+.wizard-footer { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-top: 1px solid var(--border); }
+.wizard-progress { display: flex; gap: 4px; }
+.wizard-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); }
+.wizard-dot--done { background: var(--accent); }
+.wizard-btn { padding: 8px 16px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; border: 1px solid var(--border); }
+.wizard-btn--primary { background: var(--accent); color: white; border-color: var(--accent); }
+.wizard-btn--primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.wizard-btn--secondary { background: transparent; color: var(--text-secondary); }

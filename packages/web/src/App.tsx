@@ -31,6 +31,7 @@ import { createProvider, createPipeline } from "@opmodel/nl";
 import { NlSettingsModal } from "./components/NlSettingsModal";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { VerificationChecklist } from "./components/VerificationChecklist";
+import { SdWizard } from "./components/SdWizard";
 
 const STORAGE_KEY = "opmodel:current";
 
@@ -164,7 +165,8 @@ function FileMenu({ model, onNew, onLoadExample, onImport, onSave }: {
           borderRadius: 4, boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
           minWidth: 160, padding: "4px 0",
         }}>
-          <button className="file-menu__item" onClick={() => { onNew(); setOpen(false); }}>New Model</button>
+          <button className="file-menu__item" onClick={() => { onNew(); setOpen(false); }}>New Empty Model</button>
+          <button className="file-menu__item" onClick={() => { (window as any).__openWizard?.(); setOpen(false); }} style={{ color: "var(--accent)" }}>✨ New with SD Wizard</button>
           <button className="file-menu__item" onClick={handleOpen}>Open...</button>
           <button className="file-menu__item" onClick={() => { onSave(); setOpen(false); }}>Save .opmodel</button>
           <div style={{ borderTop: "1px solid var(--border)", margin: "4px 0" }} />
@@ -204,6 +206,8 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
   const [showHelp, setShowHelp] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showVerification, setShowVerification] = useState(false);
+  const [showWizard, setShowWizard] = useState(false);
+  (window as any).__openWizard = () => setShowWizard(true);
   const [searchQuery, setSearchQuery] = useState("");
 
   const nlPipeline = useMemo(() => {
@@ -680,6 +684,17 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
             <button className="help-dialog__close" onClick={() => setShowHelp(false)}>Close</button>
           </div>
         </div>
+      )}
+      {showWizard && (
+        <SdWizard
+          onComplete={(newModel) => {
+            setShowWizard(false);
+            // Replace current model with wizard output
+            localStorage.setItem("opmodel:current", saveModel(newModel));
+            location.reload();
+          }}
+          onCancel={() => setShowWizard(false)}
+        />
       )}
       {showVerification && (
         <VerificationChecklist model={model} onClose={() => setShowVerification(false)} />
