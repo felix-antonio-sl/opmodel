@@ -36,7 +36,15 @@ export interface CrowdedDiagramFinding {
   height: number;
 }
 
-export type VisualFinding = OverlapFinding | OrphanFinding | TruncatedStateFinding | DegenerateBoundsFinding | CrowdedDiagramFinding;
+export interface TightSpacingFinding {
+  kind: "tight-spacing";
+  aThing: string;
+  bThing: string;
+  gap: number;
+  axis: "x" | "y";
+}
+
+export type VisualFinding = OverlapFinding | OrphanFinding | TruncatedStateFinding | DegenerateBoundsFinding | CrowdedDiagramFinding | TightSpacingFinding;
 
 function intersectionArea(a: Rect, b: Rect): number {
   const x = Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x));
@@ -46,6 +54,21 @@ function intersectionArea(a: Rect, b: Rect): number {
 
 function appearanceRect(a: Pick<Appearance, "x" | "y" | "w" | "h">): Rect {
   return { x: a.x, y: a.y, w: a.w, h: a.h };
+}
+
+function axisGap(a: Rect, b: Rect): { axis: "x" | "y"; gap: number } | null {
+  const overlapX = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
+  const overlapY = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+  if (overlapX > 0 && overlapY > 0) return null;
+  if (overlapY > 0) {
+    const gap = Math.max(b.x - (a.x + a.w), a.x - (b.x + b.w));
+    return { axis: "x", gap };
+  }
+  if (overlapX > 0) {
+    const gap = Math.max(b.y - (a.y + a.h), a.y - (b.y + b.h));
+    return { axis: "y", gap };
+  }
+  return null;
 }
 
 export function findNonContainerOverlaps(appearances: Appearance[]): OverlapFinding[] {
@@ -140,6 +163,24 @@ export function findCrowdedDiagrams(appearances: Appearance[]): CrowdedDiagramFi
   return [];
 }
 
+export function findTightSpacing(appearances: Appearance[]): TightSpacingFinding[] {
+  const visible = appearances.filter((a) => !a.internal);
+  const findings: TightSpacingFinding[] = [];
+  for (let i = 0; i < visible.length; i++) {
+    for (let j = i + 1; j < visible.length; j++) {
+      const a = appearanceRect(visible[i]);
+      const b = appearanceRect(visible[j]);
+      if (intersectionArea(a, b) > 0) continue;
+      const gap = axisGap(a, b);
+      if (!gap) continue;
+      if (gap.gap >= 0 && gap.gap < VISUAL_RULES.lint.minReadableGap) {
+        findings.push({ kind: "tight-spacing", aThing: visible[i].thing, bThing: visible[j].thing, gap: gap.gap, axis: gap.axis });
+      }
+    }
+  }
+  return findings.sort((a, b) => a.gap - b.gap);
+}
+
 export interface AuditVisualOpdArgs {
   appearances: Appearance[];
   links: Link[];
@@ -163,5 +204,6 @@ export function auditVisualOpd({ appearances, links, things, states }: AuditVisu
     ...findTruncatedStateBoxes(appearances, statesByThing, thingsById),
     ...findDegenerateBounds(appearances),
     ...findCrowdedDiagrams(appearances),
+    ...findTightSpacing(appearances),
   ];
 }

@@ -8,6 +8,7 @@ import {
   findCrowdedDiagrams,
   findDegenerateBounds,
   findNonContainerOverlaps,
+  findTightSpacing,
   findTruncatedStateBoxes,
   findVisibleOrphans,
 } from "../src/lib/visual-lint";
@@ -87,6 +88,16 @@ describe("visual-lint", () => {
     ]);
     expect(findings).toHaveLength(1);
     expect(findings[0]).toMatchObject({ kind: "crowded-diagram", nodeCount: 8 });
+  });
+
+  it("detects tight readable gaps between nearby nodes", () => {
+    const findings = findTightSpacing([
+      makeAppearance("a", 0, 0, 120, 60),
+      makeAppearance("b", 132, 0, 120, 60),
+      makeAppearance("c", 400, 0, 120, 60),
+    ]);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({ kind: "tight-spacing", aThing: "a", bThing: "b", axis: "x" });
   });
 
   it("audits EV-AMS with no overlap/orphan findings", () => {

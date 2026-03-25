@@ -48,6 +48,7 @@ export const VISUAL_RULES = {
     minContentHeight: 80,
     crowdedNodeCount: 8,
     crowdedFillRatio: 0.48,
+    minReadableGap: 16,
   },
 } as const;
 
