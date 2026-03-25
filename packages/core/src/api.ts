@@ -1849,6 +1849,28 @@ export function validate(model: Model): InvariantError[] {
     }
   }
 
+  // I-SINGULAR: Plural names should use Set/Group suffix
+  const PLURAL_PATTERNS = /(?:s|es|ies)$/i;
+  const VALID_SUFFIXES = /(?:Set|Group|Series|Class|Collection|Suite|Network|Line)$/;
+  for (const [id, thing] of model.things) {
+    const name = thing.name.trim();
+    if (PLURAL_PATTERNS.test(name) && !VALID_SUFFIXES.test(name) && name.length > 3) {
+      // Skip common non-plural words ending in 's'
+      if (!/(?:bus|gas|atlas|status|process|analysis|basis|crisis|diagnosis)$/i.test(name)) {
+        errors.push({ code: "I-SINGULAR", severity: "info", message: `"${name}" may be plural — use Set/Group suffix per OPM Singular Name Principle`, entity: id });
+      }
+    }
+  }
+
+  // I-EXHIBITION: System should exhibit main process (check for exhibition link from an object to the top-level process)
+  const topProcesses = [...model.things.values()].filter(t => t.kind === "process");
+  if (topProcesses.length > 0 && model.things.size > 5) {
+    const hasExhibition = [...model.links.values()].some(l => l.type === "exhibition");
+    if (!hasExhibition) {
+      errors.push({ code: "I-EXHIBITION", severity: "info", message: "No exhibition link found — system should exhibit its main process", entity: "model" });
+    }
+  }
+
   // I-ENVIRONMENT: Model should have ≥1 environmental object
   const hasEnvironmental = [...model.things.values()].some(t => t.affiliation === "environmental");
   if (!hasEnvironmental && model.things.size > 3) {
