@@ -259,4 +259,29 @@ describe("spatial layout engine", () => {
     expect((signalPatch?.h ?? 0)).toBeGreaterThanOrEqual(68);
     expect((signalPatch?.w ?? 0)).toBeGreaterThan(180);
   });
+
+  it("applies a relaxation pass to avoid visible overlaps after layout", () => {
+    let m = createModel("Relax");
+    m = withThing(m, { id: "proc-main", kind: "process", name: "Main Coordination", essence: "physical", affiliation: "systemic" });
+    m = withThing(m, { id: "obj-agent-a", kind: "object", name: "Agent A", essence: "physical", affiliation: "systemic" });
+    m = withThing(m, { id: "obj-agent-b", kind: "object", name: "Agent B", essence: "physical", affiliation: "systemic" });
+    m = withThing(m, { id: "obj-result-a", kind: "object", name: "Result A", essence: "physical", affiliation: "systemic" });
+    m = withThing(m, { id: "obj-result-b", kind: "object", name: "Result B", essence: "physical", affiliation: "systemic" });
+    for (const id of ["proc-main", "obj-agent-a", "obj-agent-b", "obj-result-a", "obj-result-b"]) {
+      m = withAppearance(m, id, "opd-sd", 0, 0, 120, 40);
+    }
+    m = withLink(m, { id: "l1", type: "agent", source: "obj-agent-a", target: "proc-main" });
+    m = withLink(m, { id: "l2", type: "agent", source: "obj-agent-b", target: "proc-main" });
+    m = withLink(m, { id: "l3", type: "result", source: "proc-main", target: "obj-result-a" });
+    m = withLink(m, { id: "l4", type: "result", source: "proc-main", target: "obj-result-b" });
+
+    const suggestion = suggestLayoutForOpd(m, "opd-sd");
+    const patched = [...m.appearances.values()]
+      .filter((a) => a.opd === "opd-sd")
+      .map((a) => {
+        const patch = suggestion.patches.find((p) => p.thingId === a.thing)?.patch;
+        return patch ? { ...a, ...patch } : a;
+      });
+    expect(findNonContainerOverlaps(patched)).toEqual([]);
+  });
 });

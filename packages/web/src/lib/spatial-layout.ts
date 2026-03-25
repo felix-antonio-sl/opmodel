@@ -41,6 +41,71 @@ function resolveLaneOverlaps(entries: Array<{ thingId: string; y: number; h: num
   return sorted;
 }
 
+function rectsOverlap(a: Pick<Appearance, "x" | "y" | "w" | "h">, b: Pick<Appearance, "x" | "y" | "w" | "h">, gap = 0): boolean {
+  return !(
+    a.x + a.w + gap <= b.x ||
+    b.x + b.w + gap <= a.x ||
+    a.y + a.h + gap <= b.y ||
+    b.y + b.h + gap <= a.y
+  );
+}
+
+function applyRelaxationPass(apps: Appearance[], iterations = 3): Appearance[] {
+  const relaxed = apps.map((app) => ({ ...app }));
+  const visible = relaxed.filter((a) => !a.internal).sort((a, b) => sortByPosition(a, b));
+  const gap = VISUAL_RULES.spacing.nodeGap;
+
+  for (let pass = 0; pass < iterations; pass++) {
+    for (let i = 0; i < visible.length; i++) {
+      for (let j = i + 1; j < visible.length; j++) {
+        const a = visible[i];
+        const b = visible[j];
+        if (!rectsOverlap(a, b, gap)) continue;
+
+        const overlapX = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
+        const overlapY = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+
+        if (overlapX <= overlapY) {
+          b.x += Math.max(gap, overlapX + gap);
+        } else {
+          b.y += Math.max(gap, overlapY + gap);
+        }
+      }
+    }
+  }
+
+  return relaxed;
+}
+
+function finalizeLayout(
+  model: Model,
+  apps: Appearance[],
+  links: Link[],
+  patches: AppearancePatch[],
+): { patches: AppearancePatch[]; findings: VisualFinding[] } {
+  const patchedApps = apps.map((app) => {
+    const p = patches.find((x) => x.thingId === app.thing);
+    return p ? { ...app, ...p.patch } : app;
+  });
+  const relaxedApps = applyRelaxationPass(patchedApps);
+  const relaxedPatches: AppearancePatch[] = relaxedApps.map((app) => {
+    const original = apps.find((a) => a.thing === app.thing)!;
+    return {
+      thingId: app.thing,
+      opdId: app.opd,
+      patch: { x: app.x, y: app.y, w: app.w, h: app.h },
+    } satisfies AppearancePatch;
+  }).filter((patch) => {
+    const original = apps.find((a) => a.thing === patch.thingId)!;
+    return original.x !== patch.patch.x || original.y !== patch.patch.y || original.w !== patch.patch.w || original.h !== patch.patch.h;
+  });
+
+  return {
+    patches: relaxedPatches,
+    findings: auditVisualOpd({ appearances: relaxedApps, links, things: model.things.values(), states: model.states.values() }),
+  };
+}
+
 function preferredWidth(model: Model, app: Appearance, thing: Thing | undefined): number {
   const stateNames = [...model.states.values()].filter((s) => s.parent === app.thing).map((s) => s.name);
   if (stateNames.length > 0) return Math.max(app.w, minimumWidthForStateNames(stateNames));
@@ -141,14 +206,11 @@ function layoutBranchingControl(model: Model, opdId: string, apps: Appearance[],
     patches.push({ thingId: entry.thingId, opdId, patch: { x: laneBaseRight, y: entry.y, w: full.w, h: full.h } });
   }
 
-  const patchedApps = apps.map((app) => {
-    const p = patches.find((x) => x.thingId === app.thing);
-    return p ? { ...app, ...p.patch } : app;
-  });
+  const finalized = finalizeLayout(model, apps, links, patches);
   return {
     strategy: "branching-control",
-    patches,
-    findings: auditVisualOpd({ appearances: patchedApps, links, things: model.things.values(), states: model.states.values() }),
+    patches: finalized.patches,
+    findings: finalized.findings,
   };
 }
 
@@ -208,15 +270,12 @@ function layoutInZoom(model: Model, opdId: string, apps: Appearance[], links: Li
     patches.push({ thingId: entry.thingId, opdId, patch: { x: laneBaseRight, y: entry.y, w: full.w, h: full.h } });
   }
 
-  const patchedApps = apps.map((app) => {
-    const p = patches.find((x) => x.thingId === app.thing);
-    return p ? { ...app, ...p.patch } : app;
-  });
+  const finalized = finalizeLayout(model, apps, links, patches);
 
   return {
     strategy: "in-zoom-sequential",
-    patches,
-    findings: auditVisualOpd({ appearances: patchedApps, links, things: model.things.values(), states: model.states.values() }),
+    patches: finalized.patches,
+    findings: finalized.findings,
   };
 }
 
@@ -285,15 +344,12 @@ function layoutUnfold(model: Model, opdId: string, apps: Appearance[], links: Li
     patches.push({ thingId: entry.thingId, opdId, patch: { x: laneBaseRight, y: entry.y, w: full.w, h: full.h } });
   }
 
-  const patchedApps = apps.map((app) => {
-    const p = patches.find((x) => x.thingId === app.thing);
-    return p ? { ...app, ...p.patch } : app;
-  });
+  const finalized = finalizeLayout(model, apps, links, patches);
 
   return {
     strategy: "unfold-grid",
-    patches,
-    findings: auditVisualOpd({ appearances: patchedApps, links, things: model.things.values(), states: model.states.values() }),
+    patches: finalized.patches,
+    findings: finalized.findings,
   };
 }
 
@@ -447,14 +503,11 @@ function layoutStructuralCluster(
     remainY += size.h + VISUAL_RULES.spacing.nodeGap;
   }
 
-  const patchedApps = apps.map((app) => {
-    const p = patches.find((x) => x.thingId === app.thing);
-    return p ? { ...app, ...p.patch } : app;
-  });
+  const finalized = finalizeLayout(model, apps, links, patches);
   return {
     strategy: "structural-cluster",
-    patches,
-    findings: auditVisualOpd({ appearances: patchedApps, links, things: model.things.values(), states: model.states.values() }),
+    patches: finalized.patches,
+    findings: finalized.findings,
   };
 }
 
@@ -529,14 +582,11 @@ function layoutSdBalanced(
     }
   }
 
-  const patchedApps = apps.map((app) => {
-    const p = patches.find((x) => x.thingId === app.thing);
-    return p ? { ...app, ...p.patch } : app;
-  });
+  const finalized = finalizeLayout(model, apps, links, patches);
   return {
     strategy: "sd-balanced",
-    patches,
-    findings: auditVisualOpd({ appearances: patchedApps, links, things: model.things.values(), states: model.states.values() }),
+    patches: finalized.patches,
+    findings: finalized.findings,
   };
 }
 
