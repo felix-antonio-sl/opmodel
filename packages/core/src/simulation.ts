@@ -958,6 +958,13 @@ export function simulationStep(
     if (obj) {
       obj.exists = false;
       step.consumptionIds.push(objId);
+      // Unfold cascade: consuming a whole also consumes its aggregation parts
+      for (const aggLink of model.links.values()) {
+        if (aggLink.type === "aggregation" && aggLink.source === objId) {
+          const partObj = step.newState.objects.get(aggLink.target);
+          if (partObj) { partObj.exists = false; step.consumptionIds.push(aggLink.target); }
+        }
+      }
     }
   }
 
@@ -1338,9 +1345,6 @@ export function runMonteCarloSimulation(
 
   for (let i = 0; i < runs; i++) {
     const rng = makeRng(i * 31337 + 42);
-    // Override simulation's rng by patching the model's fans
-    // Actually, runSimulation doesn't accept rng — we need to use simulationStep directly
-    // For simplicity, re-run with a deterministic approach
     const trace = runSimulation(model, undefined, maxSteps, rng);
 
     totalSteps += trace.steps.length;
