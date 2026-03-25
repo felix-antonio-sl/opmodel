@@ -304,8 +304,9 @@ describe("validate() refinement checks", () => {
     const errors = validate(m);
     // Only I-CONTOUR-RESTRICT expected (consumption link to in-zoomed process)
     // Auto-created placeholders are exempt from I-17 (internal subprocesses of in-zoom)
-    expect(errors.every(e => e.code === "I-CONTOUR-RESTRICT")).toBe(true);
-    expect(errors.length).toBe(1);
+    const hardErrors = errors.filter(e => !e.severity || e.severity === "error");
+    expect(hardErrors.every(e => e.code === "I-CONTOUR-RESTRICT")).toBe(true);
+    expect(hardErrors.length).toBe(1);
   });
 });
 

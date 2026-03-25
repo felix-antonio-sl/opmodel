@@ -25,7 +25,7 @@ export function executeValidate(opts: ValidateOptions = {}): ValidateResult {
   const errors = validate(model);
 
   return {
-    valid: errors.length === 0,
+    valid: errors.filter(e => !e.severity || e.severity === "error").length === 0,
     errors,
     summary: {
       things: model.things.size,

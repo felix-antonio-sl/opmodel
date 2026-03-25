@@ -2,6 +2,7 @@ export interface InvariantError {
   code: string;
   message: string;
   entity?: string;
+  severity?: "error" | "warning" | "info";
 }
 
 export type Result<T, E> = { ok: true; value: T } | { ok: false; error: E };

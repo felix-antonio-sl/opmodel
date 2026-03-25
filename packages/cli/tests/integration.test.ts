@@ -54,7 +54,7 @@ describe("Coffee Making System (end-to-end CLI)", () => {
     // 6. Validate — I-CONTOUR-RESTRICT expected for consumption/result on in-zoomed process
     const validateResult = executeValidate({ file: filePath });
     const contourErrors = validateResult.errors.filter((e: any) => e.code === "I-CONTOUR-RESTRICT");
-    const otherErrors = validateResult.errors.filter((e: any) => e.code !== "I-CONTOUR-RESTRICT");
+    const otherErrors = validateResult.errors.filter((e: any) => e.code !== "I-CONTOUR-RESTRICT" && (!e.severity || e.severity === "error"));
     expect(otherErrors).toHaveLength(0);
     expect(contourErrors.length).toBe(3); // 2 consumption + 1 result
     expect(validateResult.summary.things).toBe(5);
@@ -84,7 +84,7 @@ describe("Coffee Making System (end-to-end CLI)", () => {
     const afterRemove = executeValidate({ file: filePath });
     // Remaining: 1 consumption (beans) + 1 result (coffee) still target in-zoomed process
     const afterContour = afterRemove.errors.filter((e: any) => e.code === "I-CONTOUR-RESTRICT");
-    const afterOther = afterRemove.errors.filter((e: any) => e.code !== "I-CONTOUR-RESTRICT");
+    const afterOther = afterRemove.errors.filter((e: any) => e.code !== "I-CONTOUR-RESTRICT" && (!e.severity || e.severity === "error"));
     expect(afterOther).toHaveLength(0);
     expect(afterContour.length).toBe(2);
     expect(afterRemove.summary.things).toBe(4);

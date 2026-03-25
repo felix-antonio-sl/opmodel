@@ -60,7 +60,7 @@ describe("Coffee Making System (end-to-end)", () => {
     // Validate — I-CONTOUR-RESTRICT expected: consumption + result target in-zoomed process
     const errors = validate(m);
     const contourErrors = errors.filter(e => e.code === "I-CONTOUR-RESTRICT");
-    const otherErrors = errors.filter(e => e.code !== "I-CONTOUR-RESTRICT");
+    const otherErrors = errors.filter(e => e.code !== "I-CONTOUR-RESTRICT" && (!e.severity || e.severity === "error"));
     expect(otherErrors).toEqual([]);
     expect(contourErrors.length).toBe(2); // consumption + result
     expect(m.things.size).toBe(5);
@@ -79,6 +79,6 @@ describe("Coffee Making System (end-to-end)", () => {
     if (!isOk(result)) return;
 
     const errors = validate(result.value);
-    expect(errors).toEqual([]);
+    expect(errors.filter(e => !e.severity || e.severity === "error")).toEqual([]);
   });
 });

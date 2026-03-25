@@ -1825,6 +1825,36 @@ export function validate(model: Model): InvariantError[] {
     }
   }
 
+  // === Methodology Validation (§6-§7 OPM Methodology) ===
+
+  // I-GERUND: Process names should end in gerund (-ing, -ando, -iendo, -ción)
+  for (const [id, thing] of model.things) {
+    if (thing.kind !== "process") continue;
+    const name = thing.name.trim();
+    const endsGerund = /(?:ing|ando|iendo|ción|sión)$/i.test(name);
+    if (!endsGerund) {
+      errors.push({ code: "I-GERUND", severity: "warning", message: `Process "${name}" should use gerund naming (-ing/-ando/-iendo)`, entity: id });
+    }
+  }
+
+  // I-TRANSFORMEE: Every process should have ≥1 transforming link (effect/consumption/result)
+  const TRANSFORMING_TYPES = new Set(["effect", "consumption", "result"]);
+  for (const [id, thing] of model.things) {
+    if (thing.kind !== "process") continue;
+    const hasTransforming = [...model.links.values()].some(
+      l => TRANSFORMING_TYPES.has(l.type) && (l.source === id || l.target === id)
+    );
+    if (!hasTransforming) {
+      errors.push({ code: "I-TRANSFORMEE", severity: "warning", message: `Process "${thing.name}" has no transforming link (effect/consumption/result)`, entity: id });
+    }
+  }
+
+  // I-ENVIRONMENT: Model should have ≥1 environmental object
+  const hasEnvironmental = [...model.things.values()].some(t => t.affiliation === "environmental");
+  if (!hasEnvironmental && model.things.size > 3) {
+    errors.push({ code: "I-ENVIRONMENT", severity: "info", message: "Model has no environmental objects — consider identifying external context", entity: "model" });
+  }
+
   return errors;
 }
 

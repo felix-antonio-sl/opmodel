@@ -336,7 +336,8 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
   }, [model.meta.name]);
 
   const errors = validate(model);
-  const isValid = errors.length === 0;
+  const hardErrors = errors.filter(e => !e.severity || e.severity === "error");
+  const isValid = hardErrors.length === 0;
   const errorEntities = useMemo(() => {
     const set = new Set<string>();
     for (const e of errors) { if (e.entity) set.add(e.entity); }
@@ -588,7 +589,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
           title="Toggle validation panel"
         >
           <div className={`status-bar__dot status-bar__dot--${isValid ? "ok" : "error"}`} />
-          <span>{isValid ? "Valid" : `${errors.length} errors`}</span>
+          <span>{isValid ? (errors.length > 0 ? `${errors.length} hints` : "Valid") : `${hardErrors.length} errors`}</span>
         </div>
         <div className="status-bar__sep" />
         <span className="status-bar__count">{model.things.size} things</span>

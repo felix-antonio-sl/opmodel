@@ -29,7 +29,7 @@ describe("OnStar Driver Rescuing System", () => {
     it("loads fixture and validates with 0 errors", () => {
       const m = loadDriverRescuingModel();
       const errors = validate(m);
-      expect(errors).toEqual([]);
+      expect(errors.filter(e => !e.severity || e.severity === "error")).toEqual([]);
     });
 
     it("has correct entity counts", () => {

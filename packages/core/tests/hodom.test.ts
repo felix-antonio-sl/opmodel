@@ -121,7 +121,7 @@ describe("Hospitalización Domiciliaria fixture", () => {
     const result = loadModel(fixture);
     if (!result.ok) throw new Error("load failed");
     const errors = validate(result.value);
-    expect(errors).toEqual([]);
+    expect(errors.filter(e => !e.severity || e.severity === "error")).toEqual([]);
   });
 
   it("roundtrips through save/load", () => {
