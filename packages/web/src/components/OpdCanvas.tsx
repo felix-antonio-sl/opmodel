@@ -1816,12 +1816,12 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
             const dir = { x: dx / len, y: dy / len };
             const perp = { x: -dir.y, y: dir.x };
 
-            // Geometry constants
+            // Geometry constants — ISO §6: small, clean triangles
             const isSingle = childrenData.length === 1;
             const hasInner = fork.type === "exhibition" || fork.type === "classification";
-            const TRUNK = isSingle ? 8 : 14;             // closer to parent edge
-            const TRI_H = hasInner ? (isSingle ? 18 : 22) : (isSingle ? 14 : 18);
-            const TRI_HALF = isSingle ? (hasInner ? 10 : 8) : Math.max(hasInner ? 12 : 10, childrenData.length * 5);
+            const TRUNK = 10;
+            const TRI_H = hasInner ? 14 : 12;           // fixed height, not variable
+            const TRI_HALF = hasInner ? 9 : 7;           // fixed half-width
 
             // Trunk: parent edge → apex
             const trunkStart = edgePoint(parentThing.kind, parentRect, centroid);
@@ -1830,12 +1830,10 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
             const baseL = { x: baseCtr.x - perp.x * TRI_HALF, y: baseCtr.y - perp.y * TRI_HALF };
             const baseR = { x: baseCtr.x + perp.x * TRI_HALF, y: baseCtr.y + perp.y * TRI_HALF };
 
-            // Branch origins: project each child onto base line, clamp to base extent
-            const branches = childrenData.map(c => {
-              const childCtr = center(c.rect);
-              const projOffset = (childCtr.x - baseCtr.x) * perp.x + (childCtr.y - baseCtr.y) * perp.y;
-              const clamped = Math.max(-TRI_HALF, Math.min(TRI_HALF, projOffset));
-              const origin = { x: baseCtr.x + perp.x * clamped, y: baseCtr.y + perp.y * clamped };
+            // Branch origins: evenly spaced along base line, then route to each child
+            const branches = childrenData.map((c, idx) => {
+              const t = childrenData.length === 1 ? 0 : (idx / (childrenData.length - 1)) * 2 - 1; // -1..1
+              const origin = { x: baseCtr.x + perp.x * TRI_HALF * t, y: baseCtr.y + perp.y * TRI_HALF * t };
               const endpoint = edgePoint(c.thing.kind, c.rect, origin);
               return { ...c, origin, endpoint };
             });
