@@ -1001,6 +1001,22 @@ export function simulationStep(
       if (initialState) obj.currentState = initialState.id;
     }
     step.resultIds.push(objId);
+    // Unfold cascade: creating a whole also creates its aggregation parts
+    for (const aggLink of model.links.values()) {
+      if (aggLink.type === "aggregation" && aggLink.source === objId) {
+        let partObj = step.newState.objects.get(aggLink.target);
+        if (!partObj) {
+          partObj = { exists: true };
+          step.newState.objects.set(aggLink.target, partObj);
+        }
+        if (!partObj.exists) {
+          partObj.exists = true;
+          const initState = [...model.states.values()].find(s => s.parent === aggLink.target && s.initial);
+          if (initState) partObj.currentState = initState.id;
+          step.resultIds.push(aggLink.target);
+        }
+      }
+    }
   }
 
   // Duration simulation: compute elapsed time and check exception conditions
