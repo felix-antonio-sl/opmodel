@@ -9,6 +9,7 @@ import { getStructuralChildren, getInheritedLinks } from "./structural";
 
 /** Maximum self-invocation repetitions per process before stopping (ISO §9.5.2.5.2) */
 export const MAX_SELF_INVOCATIONS = 10;
+export const MAX_INVOCATION_CHAIN_DEPTH = 50;
 
 // === Tipos Coalgebraicos ===
 
@@ -1094,6 +1095,7 @@ export function runSimulation(
   const waitingSince = new Map<string, number>(); // processId → step when started waiting
   const MAX_WAIT_STEPS = 20; // Max steps a process can wait before being timed out
   const pendingInvocations = new Map<string, string>(); // targetId → sourceId (who invoked it)
+  let totalInvocations = 0; // Global guard against infinite invocation chains
 
   /** Phase 3: process invocation links from a just-completed process.
    *  Returns true if any invocation was triggered (for wave snapshot invalidation). */
@@ -1116,6 +1118,7 @@ export function runSimulation(
 
       // Re-enable target (override SIM-BUG-01 guard for invoked processes)
       completedProcesses.delete(targetId);
+      if (++totalInvocations > MAX_INVOCATION_CHAIN_DEPTH) continue;
       pendingInvocations.set(targetId, justCompleted);
       triggered = true;
     }
