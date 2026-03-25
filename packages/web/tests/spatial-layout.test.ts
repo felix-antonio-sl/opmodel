@@ -31,8 +31,19 @@ function withAppearance(
   h: number,
   internal = false,
   pinned = false,
+  autoSizing: boolean | undefined = undefined,
 ): Model {
-  const r = addAppearance(model, { thing, opd, x, y, w, h, ...(internal ? { internal: true } : {}), ...(pinned ? { pinned: true } : {}) });
+  const r = addAppearance(model, {
+    thing,
+    opd,
+    x,
+    y,
+    w,
+    h,
+    ...(internal ? { internal: true } : {}),
+    ...(pinned ? { pinned: true } : {}),
+    ...(autoSizing !== undefined ? { auto_sizing: autoSizing } : {}),
+  });
   if (!isOk(r)) throw new Error(r.error.message);
   return r.value;
 }
@@ -318,5 +329,38 @@ describe("spatial layout engine", () => {
     const pinnedAgent = patched.find((a) => a.thing === "obj-agent");
     expect(pinnedAgent?.x).toBe(17);
     expect(pinnedAgent?.y).toBe(23);
+  });
+
+  it("respects auto_sizing=false while still allowing repositioning", () => {
+    let m = createModel("AutoSizing");
+    m = withThing(m, {
+      id: "proc-monitor",
+      kind: "process",
+      name: "Advanced Continuous Monitoring",
+      essence: "physical",
+      affiliation: "systemic",
+      duration: { min: 15, nominal: 30, max: 90, unit: "min" },
+    });
+    m = withThing(m, {
+      id: "obj-signal",
+      kind: "object",
+      name: "Physiological Signal Index",
+      essence: "informatical",
+      affiliation: "systemic",
+      computational: { value: 0, value_type: "float", unit: "%" },
+    });
+    m = withThing(m, { id: "obj-nurse", kind: "object", name: "Nurse", essence: "physical", affiliation: "systemic" });
+    m = withAppearance(m, "proc-monitor", "opd-sd", 5, 7, 120, 40, false, false, false);
+    m = withAppearance(m, "obj-signal", "opd-sd", 0, 0, 120, 40);
+    m = withAppearance(m, "obj-nurse", "opd-sd", 0, 0, 120, 40);
+    m = withLink(m, { id: "l1", type: "agent", source: "obj-nurse", target: "proc-monitor" });
+    m = withLink(m, { id: "l2", type: "result", source: "proc-monitor", target: "obj-signal" });
+
+    const suggestion = suggestLayoutForOpd(m, "opd-sd");
+    const procPatch = suggestion.patches.find((p) => p.thingId === "proc-monitor")?.patch;
+    expect(procPatch).toBeDefined();
+    expect(procPatch?.x).not.toBeUndefined();
+    expect(procPatch?.w).toBeUndefined();
+    expect(procPatch?.h).toBeUndefined();
   });
 });

@@ -36,6 +36,10 @@ function isPinned(app: Appearance | undefined): boolean {
   return Boolean(app?.pinned);
 }
 
+function allowsAutoSizing(app: Appearance | undefined): boolean {
+  return app?.auto_sizing !== false;
+}
+
 function resolveLaneOverlaps(entries: Array<{ thingId: string; y: number; h: number }>, minGap = VISUAL_RULES.spacing.nodeGap) {
   const sorted = [...entries].sort((a, b) => a.y - b.y);
   for (let i = 1; i < sorted.length; i++) {
@@ -101,15 +105,23 @@ function finalizeLayout(
   const effectivePatches = patches.filter((patch) => !pinnedIds.has(patch.thingId));
   const patchedApps = apps.map((app) => {
     const p = effectivePatches.find((x) => x.thingId === app.thing);
-    return p ? { ...app, ...p.patch } : app;
+    if (!p) return app;
+    if (!allowsAutoSizing(app)) {
+      const { w: _w, h: _h, ...rest } = p.patch;
+      return { ...app, ...rest };
+    }
+    return { ...app, ...p.patch };
   });
   const relaxedApps = applyRelaxationPass(patchedApps);
   const relaxedPatches: AppearancePatch[] = relaxedApps.map((app) => {
     const original = apps.find((a) => a.thing === app.thing)!;
+    const patch: Partial<Pick<Appearance, "x" | "y" | "w" | "h">> = allowsAutoSizing(original)
+      ? { x: app.x, y: app.y, w: app.w, h: app.h }
+      : { x: app.x, y: app.y };
     return {
       thingId: app.thing,
       opdId: app.opd,
-      patch: { x: app.x, y: app.y, w: app.w, h: app.h },
+      patch,
     } satisfies AppearancePatch;
   }).filter((patch) => {
     const original = apps.find((a) => a.thing === patch.thingId)!;
