@@ -1128,3 +1128,33 @@ describe("simulation edge cases", () => {
     }
   });
 });
+
+describe("object re-creation state reset", () => {
+  it("re-created object gets initial state when no target_state specified", () => {
+    let m = createModel("ReCreateTest");
+    const obj: Thing = { id: "obj-1", kind: "object", name: "Item", essence: "physical", affiliation: "systemic" };
+    const proc1: Thing = { id: "proc-1", kind: "process", name: "Consume", essence: "informatical", affiliation: "systemic" };
+    const proc2: Thing = { id: "proc-2", kind: "process", name: "Produce", essence: "informatical", affiliation: "systemic" };
+    let r = addThing(m, obj); m = isOk(r) ? r.value : m;
+    r = addThing(m, proc1); m = isOk(r) ? r.value : m;
+    r = addThing(m, proc2); m = isOk(r) ? r.value : m;
+    r = addAppearance(m, { thing: "obj-1", opd: "opd-sd", x: 100, y: 0, w: 120, h: 60 }); m = isOk(r) ? r.value : m;
+    r = addAppearance(m, { thing: "proc-1", opd: "opd-sd", x: 0, y: 0, w: 120, h: 60 }); m = isOk(r) ? r.value : m;
+    r = addAppearance(m, { thing: "proc-2", opd: "opd-sd", x: 0, y: 100, w: 120, h: 60 }); m = isOk(r) ? r.value : m;
+
+    const s1: State = { id: "s-new", parent: "obj-1", name: "new", initial: true, final: false, default: true };
+    const s2: State = { id: "s-used", parent: "obj-1", name: "used", initial: false, final: false, default: false };
+    r = addState(m, s1); m = isOk(r) ? r.value : m;
+    r = addState(m, s2); m = isOk(r) ? r.value : m;
+
+    // proc1 consumes Item, proc2 produces Item (no target_state → should reset to initial)
+    r = addLink(m, { id: "lnk-1", type: "consumption", source: "obj-1", target: "proc-1" }); m = isOk(r) ? r.value : m;
+    r = addLink(m, { id: "lnk-2", type: "result", source: "proc-2", target: "obj-1" }); m = isOk(r) ? r.value : m;
+
+    const trace = runSimulation(m);
+    // After consume + produce, object should exist with initial state
+    const finalObj = trace.finalState.objects.get("obj-1");
+    expect(finalObj?.exists).toBe(true);
+    expect(finalObj?.currentState).toBe("s-new");
+  });
+});

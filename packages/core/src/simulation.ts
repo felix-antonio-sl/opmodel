@@ -981,6 +981,10 @@ export function simulationStep(
     obj.exists = true;
     if (link.target_state) {
       obj.currentState = link.target_state;
+    } else if (!obj.currentState) {
+      // ISO: re-created object resets to initial state
+      const initialState = [...model.states.values()].find(s => s.parent === objId && s.initial);
+      if (initialState) obj.currentState = initialState.id;
     }
     step.resultIds.push(objId);
   }
