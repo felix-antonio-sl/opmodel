@@ -220,8 +220,8 @@
       "opd": "opd-sd3",
       "semi_folded": true,
       "thing": "obj-equipo-clinico",
-      "w": 200,
-      "x": 270,
+      "w": 220,
+      "x": 180,
       "y": 80
     },
     {
@@ -243,13 +243,13 @@
       "y": 250
     },
     {
-      "h": 50,
+      "h": 60,
       "internal": true,
       "opd": "opd-sd3",
       "thing": "obj-estado-servicio",
-      "w": 220,
-      "x": 300,
-      "y": 500
+      "w": 260,
+      "x": 280,
+      "y": 560
     },
     {
       "h": 50,
@@ -306,13 +306,13 @@
       "y": 440
     },
     {
-      "h": 50,
+      "h": 60,
       "internal": true,
       "opd": "opd-sd3",
       "thing": "obj-medicamentos",
-      "w": 150,
-      "x": 500,
-      "y": 260
+      "w": 180,
+      "x": 480,
+      "y": 300
     },
     {
       "h": 50,
@@ -447,13 +447,13 @@
       "y": 380
     },
     {
-      "h": 50,
+      "h": 60,
       "internal": true,
       "opd": "opd-sd3",
       "thing": "obj-residuos",
-      "w": 150,
-      "x": 500,
-      "y": 380
+      "w": 180,
+      "x": 480,
+      "y": 420
     },
     {
       "h": 60,
@@ -476,13 +476,13 @@
       "y": 380
     },
     {
-      "h": 570,
+      "h": 720,
       "internal": true,
       "opd": "opd-sd3",
       "thing": "obj-servicio-hd",
-      "w": 560,
-      "x": 200,
-      "y": 30
+      "w": 700,
+      "x": 140,
+      "y": 20
     },
     {
       "h": 50,
@@ -503,13 +503,13 @@
       "y": 640
     },
     {
-      "h": 50,
+      "h": 60,
       "internal": true,
       "opd": "opd-sd3",
       "thing": "obj-telefono",
-      "w": 140,
-      "x": 270,
-      "y": 380
+      "w": 160,
+      "x": 180,
+      "y": 420
     },
     {
       "h": 50,
@@ -548,13 +548,13 @@
       "y": 540
     },
     {
-      "h": 50,
+      "h": 60,
       "internal": true,
       "opd": "opd-sd3",
       "thing": "obj-vehiculo",
-      "w": 180,
-      "x": 270,
-      "y": 260
+      "w": 200,
+      "x": 180,
+      "y": 300
     },
     {
       "h": 60,
