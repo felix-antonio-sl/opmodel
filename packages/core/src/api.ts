@@ -1796,6 +1796,35 @@ export function validate(model: Model): InvariantError[] {
     }
   }
 
+  // I-SUBPROCESS-ORDER: Warn when subprocesses in in-zoom have overlapping Y positions
+  // that could create ambiguous execution order
+  for (const [opdId, opd] of model.opds) {
+    if (!opd.refines || opd.refinement_type !== "in-zoom") continue;
+    const refinedThing = model.things.get(opd.refines);
+    if (!refinedThing || refinedThing.kind !== "process") continue;
+    const subs: Array<{ id: string; name: string; y: number; h: number }> = [];
+    for (const app of model.appearances.values()) {
+      if (app.opd !== opdId || app.thing === opd.refines) continue;
+      const thing = model.things.get(app.thing);
+      if (thing?.kind === "process") {
+        subs.push({ id: thing.id, name: thing.name, y: app.y, h: app.h });
+      }
+    }
+    subs.sort((a, b) => a.y - b.y);
+    for (let i = 0; i < subs.length - 1; i++) {
+      const curr = subs[i]!;
+      const next = subs[i + 1]!;
+      // Overlap: next starts before current ends (not just same Y = parallel)
+      if (next.y < curr.y + curr.h && Math.abs(next.y - curr.y) > 5) {
+        errors.push({
+          code: "I-SUBPROCESS-ORDER",
+          message: `Subprocesses "${curr.name}" and "${next.name}" overlap vertically in ${opd.name} — ambiguous execution order`,
+          entity: opdId,
+        });
+      }
+    }
+  }
+
   return errors;
 }
 

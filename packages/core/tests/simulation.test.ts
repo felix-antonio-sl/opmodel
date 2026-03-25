@@ -3,7 +3,7 @@ import { readFileSync } from "fs";
 import { resolve } from "path";
 import { createModel } from "../src/model";
 import { loadModel } from "../src/serialization";
-import { addThing, addLink, addState, addModifier, addOPD, addAppearance, addScenario } from "../src/api";
+import { addThing, addLink, addState, addModifier, addOPD, addAppearance, addScenario, validate } from "../src/api";
 import type { Thing, Link, State, Modifier } from "../src/types";
 import type { Model } from "../src/types";
 import type { SimulationEvent } from "../src/simulation";
@@ -1186,5 +1186,45 @@ describe("time-based scheduling", () => {
     if (executed.includes("ShortTask") && executed.includes("LongTask")) {
       expect(executed.indexOf("ShortTask")).toBeLessThan(executed.indexOf("LongTask"));
     }
+  });
+});
+
+describe("subprocess Y-order semantics", () => {
+  it("executes subprocesses in Y-order (top first)", () => {
+    const model = loadCoffeeMakingModel();
+    const trace = runSimulation(model);
+    const executed = trace.steps.filter(s => !s.skipped && s.parentProcessId).map(s => s.processName);
+    // Grinding (y=lowest) → Boiling → Brewing (y=highest)
+    expect(executed[0]).toBe("Grinding");
+    expect(executed[executed.length - 1]).toBe("Brewing");
+  });
+
+  it("parallel subprocesses at same Y have same order", () => {
+    let m = createModel("ParallelTest");
+    const container: Thing = { id: "proc-main", kind: "process", name: "Main", essence: "informatical", affiliation: "systemic" };
+    const sub1: Thing = { id: "proc-a", kind: "process", name: "TaskA", essence: "informatical", affiliation: "systemic" };
+    const sub2: Thing = { id: "proc-b", kind: "process", name: "TaskB", essence: "informatical", affiliation: "systemic" };
+    const sub3: Thing = { id: "proc-c", kind: "process", name: "TaskC", essence: "informatical", affiliation: "systemic" };
+    let r = addThing(m, container); m = isOk(r) ? r.value : m;
+    r = addThing(m, sub1); m = isOk(r) ? r.value : m;
+    r = addThing(m, sub2); m = isOk(r) ? r.value : m;
+    r = addThing(m, sub3); m = isOk(r) ? r.value : m;
+    r = addAppearance(m, { thing: "proc-main", opd: "opd-sd", x: 100, y: 50, w: 300, h: 400 }); m = isOk(r) ? r.value : m;
+    r = addOPD(m, { id: "opd-sd1", name: "SD1", opd_type: "hierarchical", parent_opd: "opd-sd", refines: "proc-main", refinement_type: "in-zoom" });
+    m = isOk(r) ? r.value : m;
+    // A and B at same Y (parallel), C below (sequential after)
+    r = addAppearance(m, { thing: "proc-main", opd: "opd-sd1", x: 50, y: 20, w: 400, h: 300, internal: true }); m = isOk(r) ? r.value : m;
+    r = addAppearance(m, { thing: "proc-a", opd: "opd-sd1", x: 100, y: 80, w: 150, h: 60, internal: true }); m = isOk(r) ? r.value : m;
+    r = addAppearance(m, { thing: "proc-b", opd: "opd-sd1", x: 280, y: 80, w: 150, h: 60, internal: true }); m = isOk(r) ? r.value : m;
+    r = addAppearance(m, { thing: "proc-c", opd: "opd-sd1", x: 150, y: 200, w: 150, h: 60, internal: true }); m = isOk(r) ? r.value : m;
+
+    const eps = getExecutableProcesses(m);
+    const subEps = eps.filter(ep => ep.parentProcessId === "proc-main");
+
+    const orderA = subEps.find(ep => ep.id === "proc-a")?.order;
+    const orderB = subEps.find(ep => ep.id === "proc-b")?.order;
+    const orderC = subEps.find(ep => ep.id === "proc-c")?.order;
+    expect(orderA).toBe(orderB); // same Y = parallel
+    expect(orderC).toBeGreaterThan(orderA!); // C after A/B
   });
 });

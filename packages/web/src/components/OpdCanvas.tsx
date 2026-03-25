@@ -2096,6 +2096,66 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
             );
           })}
 
+          {/* Subprocess execution order indicators (ISO §14.2.1, §D.4) */}
+          {containerThingId && (() => {
+            const opd = model.opds.get(opdId);
+            if (!opd || opd.refinement_type !== "in-zoom") return null;
+            // Collect internal subprocesses sorted by Y
+            const subs: Array<{ id: string; name: string; x: number; y: number; w: number; h: number }> = [];
+            for (const [id, app] of appearances) {
+              if (id === containerThingId) continue;
+              const thing = model.things.get(id);
+              if (thing?.kind === "process") {
+                subs.push({ id, name: thing.name, x: app.x, y: app.y, w: app.w, h: app.h });
+              }
+            }
+            subs.sort((a, b) => a.y - b.y || a.x - b.x);
+            if (subs.length < 2) return null;
+
+            // Group by Y for parallel detection
+            const groups: Array<typeof subs> = [];
+            for (const s of subs) {
+              const last = groups[groups.length - 1];
+              if (last && Math.abs(last[0]!.y - s.y) < 10) {
+                last.push(s);
+              } else {
+                groups.push([s]);
+              }
+            }
+
+            return (
+              <g className="subprocess-order">
+                {/* Sequence number badges */}
+                {groups.map((group, gi) => group.map((s, si) => (
+                  <g key={s.id}>
+                    <circle cx={s.x - 12} cy={s.y + s.h / 2} r={8}
+                      fill="var(--accent)" opacity={0.8} />
+                    <text x={s.x - 12} y={s.y + s.h / 2 + 1} textAnchor="middle"
+                      dominantBaseline="central" fontSize={9} fontWeight="bold" fill="white">
+                      {gi + 1}{group.length > 1 ? String.fromCharCode(97 + si) : ""}
+                    </text>
+                  </g>
+                )))}
+                {/* Connector arrows between sequential groups */}
+                {groups.slice(0, -1).map((group, gi) => {
+                  const nextGroup = groups[gi + 1]!;
+                  const fromY = Math.max(...group.map(s => s.y + s.h));
+                  const toY = Math.min(...nextGroup.map(s => s.y));
+                  const midX = (group[0]!.x + group[0]!.w / 2 + nextGroup[0]!.x + nextGroup[0]!.w / 2) / 2;
+                  if (toY - fromY < 10) return null;
+                  return (
+                    <g key={`seq-${gi}`}>
+                      <line x1={midX} y1={fromY + 4} x2={midX} y2={toY - 4}
+                        stroke="var(--accent)" strokeWidth={1} strokeDasharray="4,3" opacity={0.5} />
+                      <polygon points={`${midX - 3},${toY - 8} ${midX + 3},${toY - 8} ${midX},${toY - 3}`}
+                        fill="var(--accent)" opacity={0.5} />
+                    </g>
+                  );
+                })}
+              </g>
+            );
+          })()}
+
           {/* DA-9: Implicit things (connected but no stored appearance) — ghosted, hidden by default */}
           {showGhosts && [...fiber.things.entries()]
             .filter(([, entry]) => entry.implicit)
