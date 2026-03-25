@@ -11,6 +11,7 @@ import {
   findTightSpacing,
   findTruncatedStateBoxes,
   findVisibleOrphans,
+  visualFindingSeverity,
 } from "../src/lib/visual-lint";
 
 function makeAppearance(thing: string, x: number, y: number, w: number, h: number, internal = false): Appearance {
@@ -98,6 +99,15 @@ describe("visual-lint", () => {
     ]);
     expect(findings).toHaveLength(1);
     expect(findings[0]).toMatchObject({ kind: "tight-spacing", aThing: "a", bThing: "b", axis: "x" });
+  });
+
+  it("assigns explicit severities to visual findings", () => {
+    expect(visualFindingSeverity({ kind: "overlap", aThing: "a", bThing: "b", area: 10 })).toBe("error");
+    expect(visualFindingSeverity({ kind: "degenerate-bounds", width: 10, height: 10, aspectRatio: 1 })).toBe("error");
+    expect(visualFindingSeverity({ kind: "orphan", thing: "a" })).toBe("warning");
+    expect(visualFindingSeverity({ kind: "crowded-diagram", nodeCount: 9, fillRatio: 0.5, width: 100, height: 100 })).toBe("warning");
+    expect(visualFindingSeverity({ kind: "tight-spacing", aThing: "a", bThing: "b", gap: 4, axis: "x" })).toBe("warning");
+    expect(visualFindingSeverity({ kind: "truncated-state", thing: "a", state: "s", capacity: 4 })).toBe("info");
   });
 
   it("audits EV-AMS with no overlap/orphan findings", () => {

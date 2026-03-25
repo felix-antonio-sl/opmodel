@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import type { Model, InvariantError } from "@opmodel/core";
 import type { Command } from "../lib/commands";
-import type { VisualFinding } from "../lib/visual-lint";
+import { visualFindingSeverity, type VisualFinding } from "../lib/visual-lint";
 
 interface Props {
   model: Model;
@@ -133,6 +133,9 @@ export function ValidationPanel({ model, errors, visualFindings = [], dispatch, 
   const errorCount = errors.filter((e) => !e.severity || e.severity === "error").length;
   const warningCount = errors.filter((e) => e.severity === "warning").length;
   const infoCount = errors.filter((e) => e.severity === "info").length;
+  const visualErrorCount = visualFindings.filter((f) => visualFindingSeverity(f) === "error").length;
+  const visualWarningCount = visualFindings.filter((f) => visualFindingSeverity(f) === "warning").length;
+  const visualInfoCount = visualFindings.filter((f) => visualFindingSeverity(f) === "info").length;
 
   const groupedVisualFindings = useMemo(() => {
     const order: VisualFinding["kind"][] = ["overlap", "orphan", "truncated-state", "degenerate-bounds", "crowded-diagram", "tight-spacing"];
@@ -168,6 +171,9 @@ export function ValidationPanel({ model, errors, visualFindings = [], dispatch, 
         <span className="validation-panel__chip validation-panel__chip--warning">{warningCount} warnings</span>
         <span className="validation-panel__chip validation-panel__chip--info">{infoCount} info</span>
         <span className="validation-panel__chip validation-panel__chip--visual">{visualFindings.length} visual</span>
+        {visualErrorCount > 0 && <span className="validation-panel__chip validation-panel__chip--error">{visualErrorCount} visual errors</span>}
+        {visualWarningCount > 0 && <span className="validation-panel__chip validation-panel__chip--warning">{visualWarningCount} visual warnings</span>}
+        {visualInfoCount > 0 && <span className="validation-panel__chip validation-panel__chip--info">{visualInfoCount} visual info</span>}
       </div>
       <div className="validation-panel__list">
         {errors.length === 0 && visualFindings.length === 0 ? (
@@ -206,10 +212,11 @@ export function ValidationPanel({ model, errors, visualFindings = [], dispatch, 
                     </div>
                     {group.items.map((finding, i) => {
                       const entity = visualFindingEntity(finding);
+                      const severity = visualFindingSeverity(finding);
                       return (
                         <div
                           key={`${group.kind}-${i}`}
-                          className={`validation-panel__item validation-panel__item--warning${entity ? " validation-panel__item--clickable" : ""}`}
+                          className={`validation-panel__item validation-panel__item--${severity}${entity ? " validation-panel__item--clickable" : ""}`}
                           onClick={() => handleVisualClick(finding)}
                         >
                           <span className="validation-panel__code">VISUAL</span>

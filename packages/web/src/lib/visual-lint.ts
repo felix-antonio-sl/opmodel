@@ -45,6 +45,7 @@ export interface TightSpacingFinding {
 }
 
 export type VisualFinding = OverlapFinding | OrphanFinding | TruncatedStateFinding | DegenerateBoundsFinding | CrowdedDiagramFinding | TightSpacingFinding;
+export type VisualSeverity = "error" | "warning" | "info";
 
 function intersectionArea(a: Rect, b: Rect): number {
   const x = Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x));
@@ -181,6 +182,28 @@ export function findTightSpacing(appearances: Appearance[]): TightSpacingFinding
   return findings.sort((a, b) => a.gap - b.gap);
 }
 
+export function visualFindingSeverity(finding: VisualFinding): VisualSeverity {
+  switch (finding.kind) {
+    case "overlap":
+    case "degenerate-bounds":
+      return "error";
+    case "orphan":
+    case "crowded-diagram":
+    case "tight-spacing":
+      return "warning";
+    case "truncated-state":
+      return "info";
+  }
+}
+
+function visualFindingRank(finding: VisualFinding): number {
+  switch (visualFindingSeverity(finding)) {
+    case "error": return 0;
+    case "warning": return 1;
+    case "info": return 2;
+  }
+}
+
 export interface AuditVisualOpdArgs {
   appearances: Appearance[];
   links: Link[];
@@ -205,5 +228,9 @@ export function auditVisualOpd({ appearances, links, things, states }: AuditVisu
     ...findDegenerateBounds(appearances),
     ...findCrowdedDiagrams(appearances),
     ...findTightSpacing(appearances),
-  ];
+  ].sort((a, b) => {
+    const rank = visualFindingRank(a) - visualFindingRank(b);
+    if (rank !== 0) return rank;
+    return a.kind.localeCompare(b.kind);
+  });
 }
