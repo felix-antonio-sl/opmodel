@@ -57,6 +57,27 @@ function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+/** Inline computed styles from the live SVG into a cloned SVG for standalone export */
+function inlineSvgStyles(source: SVGSVGElement, clone: SVGSVGElement) {
+  const sourceElements = source.querySelectorAll("*");
+  const cloneElements = clone.querySelectorAll("*");
+  const styleProps = ["fill", "stroke", "stroke-width", "stroke-dasharray", "font-family", "font-size", "font-weight", "opacity", "filter", "dominant-baseline", "text-anchor", "paint-order"];
+  for (let i = 0; i < sourceElements.length && i < cloneElements.length; i++) {
+    const computed = window.getComputedStyle(sourceElements[i]!);
+    const cloneEl = cloneElements[i]! as SVGElement;
+    for (const prop of styleProps) {
+      const val = computed.getPropertyValue(prop);
+      if (val && val !== "none" && val !== "normal" && val !== "") {
+        // Only inline if the attribute uses a CSS variable or isn't already set
+        const existing = cloneEl.getAttribute(prop);
+        if (!existing || existing.includes("var(")) {
+          cloneEl.style.setProperty(prop, val);
+        }
+      }
+    }
+  }
+}
+
 function FileMenu({ model, onNew, onLoadExample, onImport, onSave, onAutoLayoutAll, onShowVisualReport }: {
   model: Model;
   onNew: () => void;
@@ -112,15 +133,19 @@ function FileMenu({ model, onNew, onLoadExample, onImport, onSave, onAutoLayoutA
     const svg = document.querySelector(".opd-canvas svg") as SVGSVGElement | null;
     if (!svg) return;
     const clone = svg.cloneNode(true) as SVGSVGElement;
-    // Remove grid and set viewBox to content
+    // Remove grid and background
     const grid = clone.querySelector("rect[fill='url(#grid-dots)']");
     grid?.remove();
+    const bgRect = clone.querySelector("rect[fill='var(--bg-canvas)']");
+    if (bgRect) bgRect.setAttribute("fill", "#f0f2f5");
     const bbox = svg.getBBox();
     const pad = 20;
     clone.setAttribute("viewBox", `${bbox.x - pad} ${bbox.y - pad} ${bbox.width + pad * 2} ${bbox.height + pad * 2}`);
     clone.setAttribute("width", String(bbox.width + pad * 2));
     clone.setAttribute("height", String(bbox.height + pad * 2));
     clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+    // Inline computed styles so SVG is standalone
+    inlineSvgStyles(svg, clone);
     const serializer = new XMLSerializer();
     downloadBlob(new Blob([serializer.serializeToString(clone)], { type: "image/svg+xml" }), `${baseName}.svg`);
     setOpen(false);
