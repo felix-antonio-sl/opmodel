@@ -343,6 +343,7 @@ function ThingNode({
   semiFoldHidden,
   onExtractPart,
   onMouseDown,
+  onContextMenu,
   onSelect,
   onDoubleClick,
 }: {
@@ -366,6 +367,7 @@ function ThingNode({
   semiFoldHidden?: number;
   onExtractPart?: (partThingId: string) => void;
   onMouseDown: (e: React.MouseEvent) => void;
+  onContextMenu?: (e: React.MouseEvent) => void;
   onSelect: () => void;
   onDoubleClick: () => void;
 }) {
@@ -420,6 +422,7 @@ function ThingNode({
         e.stopPropagation();
         onSelect();
       }}
+      onContextMenu={onContextMenu}
       onDoubleClick={(e) => {
         e.stopPropagation();
         onDoubleClick();
@@ -865,6 +868,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
   const [zoom, setZoom] = useState(1);
   const [hiddenLinkTypes, setHiddenLinkTypes] = useState<Set<string>>(new Set());
   const [showLinkFilter, setShowLinkFilter] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; thingId: string } | null>(null);
   const [hideLinkLabels, setHideLinkLabels] = useState(false);
   const [showGhosts, setShowGhosts] = useState(false);
 
@@ -1652,6 +1656,38 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
           )}
         </div>
       )}
+      {contextMenu && (() => {
+        const app = [...model.appearances.values()].find((a) => a.thing === contextMenu.thingId && a.opd === opdId);
+        const thing = model.things.get(contextMenu.thingId);
+        if (!app || !thing) return null;
+        return (
+          <div
+            className="canvas-context-menu"
+            style={{ position: "fixed", left: contextMenu.x, top: contextMenu.y, zIndex: 200 }}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <div className="canvas-context-menu__title">{thing.name}</div>
+            <button
+              className="canvas-context-menu__item"
+              onClick={() => {
+                dispatch({ tag: "updateAppearance", thingId: contextMenu.thingId, opdId, patch: { pinned: !app.pinned } });
+                setContextMenu(null);
+              }}
+            >
+              {app.pinned ? "📌 Unpin" : "📌 Pin position"}
+            </button>
+            <button
+              className="canvas-context-menu__item"
+              onClick={() => {
+                dispatch({ tag: "updateAppearance", thingId: contextMenu.thingId, opdId, patch: { auto_sizing: app.auto_sizing === false ? undefined : false } });
+                setContextMenu(null);
+              }}
+            >
+              {app.auto_sizing === false ? "📐 Enable auto-sizing" : "📐 Lock size"}
+            </button>
+          </div>
+        );
+      })()}
       <div className="canvas-breadcrumb">
         {opdAncestors(model, opdId).map((ancestor, i, arr) => (
           <span key={ancestor.id}>
@@ -1674,12 +1710,12 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
 
       <svg
         ref={svgRef}
-        onMouseDown={onMouseDown}
+        onMouseDown={(e) => { setContextMenu(null); onMouseDown(e); }}
         onMouseMove={onMouseMove}
         onMouseUp={onMouseUp}
         onMouseLeave={onMouseUp}
         onWheel={onWheel}
-        onClick={onCanvasClick}
+        onClick={(e) => { setContextMenu(null); onCanvasClick(e); }}
       >
         <SvgDefs />
 
@@ -2067,6 +2103,12 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
                     dispatch({ tag: "extractPart", partThingId, opdId, x: app.x + app.w + 40, y: app.y });
                   }}
                   onMouseDown={(e) => onThingMouseDown(thingId, e)}
+                  onContextMenu={(e: React.MouseEvent) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setContextMenu({ x: e.clientX, y: e.clientY, thingId });
+                    dispatch({ tag: "selectThing", thingId });
+                  }}
                   onSelect={() => {
                     if (mode === "addLink") {
                       if (!linkSource) {
