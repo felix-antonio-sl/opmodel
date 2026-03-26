@@ -3,7 +3,7 @@ import { loadModel, type Model } from "@opmodel/core";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { suggestLayoutForOpd } from "../src/lib/spatial-layout";
-import { visualFindingSeverity } from "../src/lib/visual-lint";
+import { computeVisualQuality, visualFindingSeverity } from "../src/lib/visual-lint";
 
 describe("EV-AMS visual audit via layout engine", () => {
   let model: Model;
@@ -44,8 +44,9 @@ describe("EV-AMS visual audit via layout engine", () => {
 
     console.log("\n=== EV-AMS Visual Audit ===");
     for (const r of report) {
+      const q = computeVisualQuality(suggestLayoutForOpd(model, r.opdId).findings);
       console.log(
-        `${r.opdId} [${r.name}] strategy=${r.strategy} patches=${r.patches} errors=${r.errors} warnings=${r.warnings} info=${r.info}`
+        `${r.opdId} [${r.name}] strategy=${r.strategy} patches=${r.patches} grade=${q.grade} score=${q.score} errors=${r.errors} warnings=${r.warnings} info=${r.info}`
       );
     }
 

@@ -3,7 +3,7 @@ import { loadModel, type Model } from "@opmodel/core";
 import { readFileSync, existsSync } from "fs";
 import { resolve } from "path";
 import { suggestLayoutForOpd } from "../src/lib/spatial-layout";
-import { visualFindingSeverity } from "../src/lib/visual-lint";
+import { computeVisualQuality, visualFindingSeverity } from "../src/lib/visual-lint";
 
 function auditFixture(name: string, path: string) {
   describe(`${name} visual audit via layout engine`, () => {
@@ -32,8 +32,9 @@ function auditFixture(name: string, path: string) {
         totalErrors += errors;
         totalWarnings += warnings;
         totalInfo += info;
+        const q = computeVisualQuality(suggestion.findings);
         console.log(
-          `${opd.id} [${opd.name}] strategy=${suggestion.strategy} patches=${suggestion.patches.length} errors=${errors} warnings=${warnings} info=${info}`
+          `${opd.id} [${opd.name}] strategy=${suggestion.strategy} patches=${suggestion.patches.length} grade=${q.grade} score=${q.score} errors=${errors} warnings=${warnings} info=${info}`
         );
       }
 
