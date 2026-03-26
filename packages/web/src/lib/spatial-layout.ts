@@ -159,9 +159,10 @@ function applyRelaxationPass(apps: Appearance[], iterations = 3): Appearance[] {
     }
   }
 
-  for (let fixPass = 0; fixPass < 3; fixPass++) {
+  for (let fixPass = 0; fixPass < 5; fixPass++) {
     const finalFindings = auditVisualOpd({ appearances: relaxed, links: [] });
     let fixed = false;
+
     for (const finding of finalFindings) {
       if (finding.kind !== "overlap") continue;
       const aIdx = relaxed.findIndex((app) => app.thing === finding.aThing);
@@ -173,7 +174,6 @@ function applyRelaxationPass(apps: Appearance[], iterations = 3): Appearance[] {
       const overlapX = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
       const overlapY = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
       if (overlapX <= 0 || overlapY <= 0) continue;
-      // Move both non-pinned nodes apart by splitting the correction
       const halfGap = Math.ceil(gap / 2);
       if (overlapX <= overlapY) {
         if (!isPinned(a)) relaxed[aIdx] = { ...a, x: Math.max(0, a.x - Math.ceil(overlapX / 2) - halfGap) };
@@ -184,6 +184,26 @@ function applyRelaxationPass(apps: Appearance[], iterations = 3): Appearance[] {
       }
       fixed = true;
     }
+
+    for (const finding of finalFindings) {
+      if (finding.kind !== "tight-spacing") continue;
+      const aIdx = relaxed.findIndex((app) => app.thing === finding.aThing);
+      const bIdx = relaxed.findIndex((app) => app.thing === finding.bThing);
+      if (aIdx < 0 || bIdx < 0) continue;
+      const a = relaxed[aIdx];
+      const b = relaxed[bIdx];
+      if (isPinned(a) && isPinned(b)) continue;
+      const nudge = Math.ceil((VISUAL_RULES.lint.minReadableGap - finding.gap) / 2) + 2;
+      if (finding.axis === "x") {
+        if (!isPinned(a)) relaxed[aIdx] = { ...a, x: Math.max(0, a.x - nudge) };
+        if (!isPinned(b)) relaxed[bIdx] = { ...b, x: b.x + nudge };
+      } else {
+        if (!isPinned(a)) relaxed[aIdx] = { ...a, y: Math.max(0, a.y - nudge) };
+        if (!isPinned(b)) relaxed[bIdx] = { ...b, y: b.y + nudge };
+      }
+      fixed = true;
+    }
+
     if (!fixed) break;
   }
 

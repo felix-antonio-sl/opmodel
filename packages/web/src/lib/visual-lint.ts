@@ -232,12 +232,12 @@ export function computeVisualQuality(findings: VisualFinding[]): VisualQualitySc
       score -= f.kind === "overlap" ? 15 : 10;
     } else if (sev === "warning") {
       warningCount++;
-      score -= f.kind === "crowded-diagram" ? 8 : f.kind === "tight-spacing" ? 4 : 3;
+      score -= f.kind === "crowded-diagram" ? 8 : f.kind === "tight-spacing" ? 4 : f.kind === "orphan" ? 1 : 3;
     } else {
       infoCount++;
-      score -= 1;
     }
   }
+  score -= Math.min(infoCount, 5);
 
   score = Math.max(0, Math.min(100, score));
   const grade: VisualQualityScore["grade"] =
