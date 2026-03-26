@@ -1088,7 +1088,16 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
                     {b === branches[0] && (
                       <text className="link-label"
                         x={baseCtr.x + dir.x * 8} y={baseCtr.y + dir.y * 8 - 7}>
-                        {fork.type}
+                        {fork.type}{fork.children.some(c => c.link.ordered) ? " {ordered}" : ""}
+                      </text>
+                    )}
+                    {/* Ordered aggregation: sequence number on branch */}
+                    {b.link.ordered && branches.length > 1 && (
+                      <text fontSize={8} fill={color} fontWeight="bold"
+                        x={b.origin.x + (b.endpoint.x - b.origin.x) * 0.3}
+                        y={b.origin.y + (b.endpoint.y - b.origin.y) * 0.3 - 6}
+                        textAnchor="middle">
+                        {bi + 1}
                       </text>
                     )}
                     {(() => {
