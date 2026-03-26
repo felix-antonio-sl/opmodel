@@ -220,12 +220,24 @@ function finalizeLayout(
   const effectivePatches = patches.filter((patch) => !pinnedIds.has(patch.thingId));
   const patchedApps = apps.map((app) => {
     const p = effectivePatches.find((x) => x.thingId === app.thing);
-    if (!p) return app;
-    if (!allowsAutoSizing(app)) {
-      const { w: _w, h: _h, ...rest } = p.patch;
-      return { ...app, ...rest };
+    let result = app;
+    if (p) {
+      if (!allowsAutoSizing(app)) {
+        const { w: _w, h: _h, ...rest } = p.patch;
+        result = { ...app, ...rest };
+      } else {
+        result = { ...app, ...p.patch };
+      }
     }
-    return { ...app, ...p.patch };
+    // Ensure minimum width for state pills even if not in layout patches
+    if (allowsAutoSizing(result) && !result.pinned) {
+      const minW = preferredWidth(model, result, model.things.get(result.thing));
+      const sized = autoSizeAppearance(model, result);
+      if (sized.w > result.w || sized.h > result.h) {
+        result = { ...result, w: Math.max(result.w, sized.w), h: Math.max(result.h, sized.h) };
+      }
+    }
+    return result;
   });
   const relaxedApps = applyRelaxationPass(patchedApps);
   const relaxedPatches: AppearancePatch[] = relaxedApps.map((app) => {

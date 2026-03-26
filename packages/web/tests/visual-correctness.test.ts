@@ -8,12 +8,13 @@
  */
 import { describe, expect, it } from "vitest";
 import {
-  loadModel, expose, render,
+  loadModel, expose, render, updateAppearance,
   type Model, type OPD, type Thing, type Link, type State, type Appearance,
 } from "@opmodel/core";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { resolveOpdFiber, resolveLinksForOpd } from "@opmodel/core";
+import { suggestLayoutForOpd } from "../src/lib/spatial-layout";
 
 interface VisualGap {
   opdId: string;
@@ -357,6 +358,37 @@ describe("Visual Correctness 360°", () => {
               // Allow if either endpoint is in semi-fold
               if (!srcExists && !tgtExists) {
                 console.warn(`  Link ${rl.link.type} in ${opd.name}: both endpoints missing visual`);
+              }
+            }
+          }
+        }
+      });
+
+      it("post-layout: no things too narrow for state pills", () => {
+        // Apply auto-layout and verify state pill width
+        let m = model;
+        for (const opd of m.opds.values()) {
+          const suggestion = suggestLayoutForOpd(m, opd.id);
+          for (const patch of suggestion.patches) {
+            const result = updateAppearance(m, patch.thingId, patch.opdId, patch.patch);
+            if (result.ok) m = result.value;
+          }
+        }
+        // Now check widths
+        for (const opd of m.opds.values()) {
+          const fiber = resolveOpdFiber(m, opd.id);
+          for (const [thingId, entry] of fiber.things) {
+            if (entry.implicit) continue;
+            const allStates = [...m.states.values()].filter(s => s.parent === thingId);
+            const suppressed = fiber.suppressedStates.get(thingId);
+            const visibleStates = suppressed
+              ? allStates.filter(s => !suppressed.has(s.id))
+              : allStates;
+            if (visibleStates.length > 0) {
+              const minW = visibleStates.length * 25; // rough min
+              const thing = m.things.get(thingId);
+              if (entry.appearance.w < minW) {
+                console.warn(`  Post-layout: "${thing?.name}" w=${entry.appearance.w} < ${minW} for ${visibleStates.length} states in ${opd.name}`);
               }
             }
           }
