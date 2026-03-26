@@ -34,6 +34,7 @@ import { NlSettingsModal } from "./components/NlSettingsModal";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { VerificationChecklist } from "./components/VerificationChecklist";
 import { SdWizard } from "./components/SdWizard";
+import { VisualReportPanel } from "./components/VisualReportPanel";
 
 const STORAGE_KEY = "opmodel:current";
 
@@ -56,13 +57,14 @@ function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-function FileMenu({ model, onNew, onLoadExample, onImport, onSave, onAutoLayoutAll }: {
+function FileMenu({ model, onNew, onLoadExample, onImport, onSave, onAutoLayoutAll, onShowVisualReport }: {
   model: Model;
   onNew: () => void;
   onLoadExample: (file: string) => void;
   onImport: (model: Model) => void;
   onSave: () => void;
   onAutoLayoutAll?: () => void;
+  onShowVisualReport?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -184,6 +186,7 @@ function FileMenu({ model, onNew, onLoadExample, onImport, onSave, onAutoLayoutA
           <button className="file-menu__item" onClick={exportMd}>Export Markdown</button>
           <button className="file-menu__item" onClick={exportSvg}>Export SVG</button>
           <button className="file-menu__item" onClick={exportPng}>Export PNG</button>
+          {onShowVisualReport && <button className="file-menu__item" onClick={() => { onShowVisualReport(); setOpen(false); }}>Visual Quality Report</button>}
           {onAutoLayoutAll && (
             <>
               <div style={{ borderTop: "1px solid var(--border)", margin: "4px 0" }} />
@@ -216,6 +219,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
   const [showHelp, setShowHelp] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showVerification, setShowVerification] = useState(false);
+  const [showVisualReport, setShowVisualReport] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
   (window as any).__openWizard = () => setShowWizard(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -442,6 +446,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
           onImport={onImport}
           onSave={save}
           onAutoLayoutAll={autoLayoutAll}
+          onShowVisualReport={() => setShowVisualReport(true)}
         />
         <div className="header__sep" />
         <div className="header__badge">v{model.opmodel}</div>
@@ -643,6 +648,9 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
           onClose={() => setShowValidation(false)}
         />
       )}
+      {showVisualReport && (
+        <VisualReportPanel model={model} onClose={() => setShowVisualReport(false)} />
+      )}
 
       {/* Status Bar */}
       <footer className="status-bar">
@@ -670,6 +678,12 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
             {visualQuality.grade} {visualQuality.score}
           </span>
         </div>
+        <button
+          className="status-bar__indicator status-bar__indicator--clickable"
+          onClick={() => setShowVisualReport(true)}
+          title="Open model-level visual quality report"
+          style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: "var(--accent)" }}
+        >📊 Visual Report</button>
         <div className="status-bar__sep" />
         <span className="status-bar__count">{model.things.size} things</span>
         <span className="status-bar__count">{model.states.size} states</span>
