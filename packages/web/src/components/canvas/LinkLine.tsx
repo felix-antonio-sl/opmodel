@@ -24,6 +24,7 @@ export function LinkLine({
   isOutputHalf,
   isError,
   hideLabel,
+  edgePath,
 }: {
   link: Link;
   sourceRect: Rect;
