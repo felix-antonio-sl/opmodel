@@ -210,15 +210,16 @@ export function LinkLine({
       {modifier && (() => {
         const isEvent = modifier.type === "event";
         const isSkip = !isEvent && modifier.condition_mode === "skip";
-        const badgeColor = isEvent ? "#d69e2e" : isSkip ? "#c05621" : "#3182ce";
+        const isNegated = modifier.negated === true;
+        const badgeColor = isEvent ? "#d69e2e" : isSkip ? "#c05621" : isNegated ? "#9b2c2c" : "#3182ce";
         const bx = mid.x + 12;
         const by = mid.y + 2;
         return (
           <g>
             <circle cx={bx} cy={by} r={8} fill={badgeColor} stroke="white" strokeWidth={1} />
             <text x={bx} y={by + 1} textAnchor="middle" dominantBaseline="central"
-              fill="white" fontSize={10} fontWeight="bold">
-              {isEvent ? "e" : "c"}
+              fill="white" fontSize={isNegated ? 8 : 10} fontWeight="bold">
+              {isEvent ? "e" : isNegated ? "¬c" : "c"}
             </text>
             {isSkip && (
               <line x1={bx - 3} y1={by + 4} x2={bx + 3} y2={by - 4}
