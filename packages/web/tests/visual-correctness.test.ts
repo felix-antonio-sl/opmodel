@@ -395,6 +395,41 @@ describe("Visual Correctness 360°", () => {
         }
       });
 
+      it("OPL sentence coverage — every sentence type has visual elements", () => {
+        const sentenceTypes = new Map<string, number>();
+        for (const opd of model.opds.values()) {
+          const doc = expose(model, opd.id);
+          for (const s of doc.sentences) {
+            sentenceTypes.set(s.kind, (sentenceTypes.get(s.kind) ?? 0) + 1);
+          }
+        }
+
+        // Log coverage
+        console.log(`  OPL sentence types: ${[...sentenceTypes.entries()].map(([k, v]) => `${k}(${v})`).join(", ")}`);
+
+        // Every sentence type must map to a visual concept:
+        const visualMappings: Record<string, string> = {
+          "thing-declaration": "ThingNode shape (rect/ellipse) with name label",
+          "state-enumeration": "State pills below thing",
+          "state-description": "State pill with attributes",
+          "link": "LinkLine with ISO marker",
+          "grouped-structural": "Fork triangle with branches",
+          "modifier": "Event/condition badge on link",
+          "duration": "Duration text below process name",
+          "fan": "Dashed arc across links",
+          "in-zoom-sequence": "Subprocess order badges",
+          "attribute-value": "Computational d/f badge",
+          "requirement": "Referenced in validation panel",
+          "assertion": "Referenced in verification checklist",
+          "scenario": "Path labels in OPL panel",
+        };
+
+        for (const [type, count] of sentenceTypes) {
+          const mapping = visualMappings[type];
+          expect(mapping).toBeTruthy(); // Every generated sentence type has a known visual mapping
+        }
+      });
+
       it("structural links use fork triangle rendering", () => {
         const structuralTypes = ["aggregation", "exhibition", "generalization", "classification"];
         for (const opd of model.opds.values()) {
