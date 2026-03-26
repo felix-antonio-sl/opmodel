@@ -13,6 +13,7 @@ import {
 } from "../lib/geometry";
 import { LINK_COLORS, paddedBounds, statePillLayout } from "../lib/visual-rules";
 import { suggestLayoutForOpd } from "../lib/spatial-layout";
+import { auditVisualOpd, computeVisualQuality } from "../lib/visual-lint";
 
 /* ─── Props ─── */
 
@@ -1383,14 +1384,33 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
     setPan({ x: newPanX, y: newPanY });
   }, [appearances]);
 
+  const [layoutToast, setLayoutToast] = useState<string | null>(null);
+
   const autoLayoutCurrentOpd = useCallback(() => {
+    const currentApps = [...model.appearances.values()].filter((a) => a.opd === opdId);
+    const ids = new Set(currentApps.map((a) => a.thing));
+    const currentLinks = [...model.links.values()].filter((l) => ids.has(l.source) && ids.has(l.target));
+    const beforeFindings = auditVisualOpd({ appearances: currentApps, links: currentLinks, things: model.things.values(), states: model.states.values() });
+    const before = computeVisualQuality(beforeFindings);
+
     const suggestion = suggestLayoutForOpd(model, opdId);
-    if (suggestion.patches.length === 0) return;
+    if (suggestion.patches.length === 0) {
+      setLayoutToast(`Already optimal — ${before.grade} ${before.score}`);
+      setTimeout(() => setLayoutToast(null), 3000);
+      return;
+    }
+    const after = computeVisualQuality(suggestion.findings);
     const ok = dispatch({
       tag: "updateAppearancesBatch",
       updates: suggestion.patches.map((p) => ({ thingId: p.thingId, opdId: p.opdId, patch: p.patch as Record<string, unknown> })),
     });
-    if (ok) setTimeout(() => fitToContent(), 0);
+    if (ok) {
+      const delta = after.score - before.score;
+      const arrow = delta > 0 ? "↑" : delta < 0 ? "↓" : "→";
+      setLayoutToast(`${before.grade} ${before.score} ${arrow} ${after.grade} ${after.score}`);
+      setTimeout(() => setLayoutToast(null), 4000);
+      setTimeout(() => fitToContent(), 0);
+    }
   }, [model, opdId, dispatch, fitToContent]);
 
   const onWheel = useCallback(
@@ -1587,6 +1607,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
         <button title="Zoom Out" onClick={() => setZoom(z => Math.max(0.3, z * 0.83))}>−</button>
         <button title="Fit to Content (F)" onClick={fitToContent}>⊡</button>
         <button title="Auto Layout Current OPD" onClick={autoLayoutCurrentOpd}>⇄</button>
+        {layoutToast && <span className="layout-toast">{layoutToast}</span>}
         <button title="Reset Zoom" onClick={() => { setZoom(1); setPan({ x: 40, y: 20 }); }}>1:1</button>
         <button
           title="Filter Links"
