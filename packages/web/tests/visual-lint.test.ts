@@ -8,6 +8,7 @@ import {
   findCrowdedDiagrams,
   findDegenerateBounds,
   findNonContainerOverlaps,
+  computeVisualQuality,
   findTightSpacing,
   findTruncatedStateBoxes,
   findVisibleOrphans,
@@ -99,6 +100,24 @@ describe("visual-lint", () => {
     ]);
     expect(findings).toHaveLength(1);
     expect(findings[0]).toMatchObject({ kind: "tight-spacing", aThing: "a", bThing: "b", axis: "x" });
+  });
+
+  it("computes visual quality scores", () => {
+    expect(computeVisualQuality([])).toMatchObject({ score: 100, grade: "A", errorCount: 0 });
+    expect(computeVisualQuality([
+      { kind: "overlap", aThing: "a", bThing: "b", area: 10 },
+    ])).toMatchObject({ grade: "B", errorCount: 1 });
+    expect(computeVisualQuality([
+      { kind: "overlap", aThing: "a", bThing: "b", area: 10 },
+      { kind: "overlap", aThing: "c", bThing: "d", area: 10 },
+      { kind: "crowded-diagram", nodeCount: 9, fillRatio: 0.5, width: 100, height: 100 },
+      { kind: "tight-spacing", aThing: "a", bThing: "b", gap: 4, axis: "x" },
+      { kind: "tight-spacing", aThing: "c", bThing: "d", gap: 4, axis: "y" },
+    ])).toMatchObject({ grade: "D" });
+    expect(computeVisualQuality([
+      { kind: "truncated-state", thing: "a", state: "s", capacity: 4 },
+      { kind: "truncated-state", thing: "b", state: "s2", capacity: 4 },
+    ])).toMatchObject({ grade: "A", infoCount: 2 });
   });
 
   it("assigns explicit severities to visual findings", () => {

@@ -211,6 +211,44 @@ export interface AuditVisualOpdArgs {
   states?: Iterable<State>;
 }
 
+export interface VisualQualityScore {
+  score: number;
+  grade: "A" | "B" | "C" | "D" | "F";
+  errorCount: number;
+  warningCount: number;
+  infoCount: number;
+}
+
+export function computeVisualQuality(findings: VisualFinding[]): VisualQualityScore {
+  let score = 100;
+  let errorCount = 0;
+  let warningCount = 0;
+  let infoCount = 0;
+
+  for (const f of findings) {
+    const sev = visualFindingSeverity(f);
+    if (sev === "error") {
+      errorCount++;
+      score -= f.kind === "overlap" ? 15 : 10;
+    } else if (sev === "warning") {
+      warningCount++;
+      score -= f.kind === "crowded-diagram" ? 8 : f.kind === "tight-spacing" ? 4 : 3;
+    } else {
+      infoCount++;
+      score -= 1;
+    }
+  }
+
+  score = Math.max(0, Math.min(100, score));
+  const grade: VisualQualityScore["grade"] =
+    score >= 90 ? "A" :
+    score >= 75 ? "B" :
+    score >= 60 ? "C" :
+    score >= 40 ? "D" : "F";
+
+  return { score, grade, errorCount, warningCount, infoCount };
+}
+
 export function auditVisualOpd({ appearances, links, things, states }: AuditVisualOpdArgs): VisualFinding[] {
   const thingsById = things ? new Map([...things].map((t) => [t.id, t])) : undefined;
   const statesByThing = new Map<string, State[]>();
