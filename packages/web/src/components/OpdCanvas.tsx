@@ -229,15 +229,26 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
   // Collect visible links
   const visibleLinks = useMemo((): VisualLinkEntry[] => {
     const resolved = fiber.links;
-    const entries: VisualLinkEntry[] = resolved.map(rl => ({
-      link: rl.link,
-      modifier: [...model.modifiers.values()].find((m) => m.over === rl.link.id),
-      visualSource: rl.visualSource,
-      visualTarget: rl.visualTarget,
-      labelOverride: rl.splitHalf as string | undefined,
-      isMergedPair: false,
-      aggregated: rl.aggregated,
-    }));
+    const entries: VisualLinkEntry[] = resolved.map(rl => {
+      // Enrich label with state transition for effect links
+      let labelOverride = rl.splitHalf as string | undefined;
+      if (!labelOverride && rl.link.source_state && rl.link.target_state) {
+        const fromState = model.states.get(rl.link.source_state);
+        const toState = model.states.get(rl.link.target_state);
+        if (fromState && toState) {
+          labelOverride = `${rl.link.type} (${fromState.name} → ${toState.name})`;
+        }
+      }
+      return {
+        link: rl.link,
+        modifier: [...model.modifiers.values()].find((m) => m.over === rl.link.id),
+        visualSource: rl.visualSource,
+        visualTarget: rl.visualTarget,
+        labelOverride,
+        isMergedPair: false,
+        aggregated: rl.aggregated,
+      };
+    });
 
     // Merge consumption+result pairs (DA-7)
     const pairs = findConsumptionResultPairs(model, resolved);
