@@ -26,6 +26,7 @@ import { Toolbar } from "./components/Toolbar";
 import { SimulationPanel } from "./components/SimulationPanel";
 import { ValidationPanel } from "./components/ValidationPanel";
 import { auditVisualOpd, computeVisualQuality } from "./lib/visual-lint";
+import { suggestLayoutForOpd } from "./lib/spatial-layout";
 import { BugCapture } from "./components/BugCapture";
 import type { NlConfig } from "@opmodel/nl";
 import { createProvider, createPipeline } from "@opmodel/nl";
@@ -55,12 +56,13 @@ function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-function FileMenu({ model, onNew, onLoadExample, onImport, onSave }: {
+function FileMenu({ model, onNew, onLoadExample, onImport, onSave, onAutoLayoutAll }: {
   model: Model;
   onNew: () => void;
   onLoadExample: (file: string) => void;
   onImport: (model: Model) => void;
   onSave: () => void;
+  onAutoLayoutAll?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -182,6 +184,12 @@ function FileMenu({ model, onNew, onLoadExample, onImport, onSave }: {
           <button className="file-menu__item" onClick={exportMd}>Export Markdown</button>
           <button className="file-menu__item" onClick={exportSvg}>Export SVG</button>
           <button className="file-menu__item" onClick={exportPng}>Export PNG</button>
+          {onAutoLayoutAll && (
+            <>
+              <div style={{ borderTop: "1px solid var(--border)", margin: "4px 0" }} />
+              <button className="file-menu__item" onClick={() => { onAutoLayoutAll(); setOpen(false); }}>⇄ Auto Layout All OPDs</button>
+            </>
+          )}
         </div>
       )}
     </div>
@@ -360,6 +368,43 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
   }, [model, ui.currentOpd]);
   const visualQuality = useMemo(() => computeVisualQuality(visualFindings), [visualFindings]);
 
+  const [layoutAllToast, setLayoutAllToast] = useState<string | null>(null);
+  const autoLayoutAll = useCallback(() => {
+    const opds = [...model.opds.values()];
+    let totalPatches = 0;
+    let beforeSum = 0;
+    let afterSum = 0;
+    const allUpdates: Array<{ thingId: string; opdId: string; patch: Record<string, unknown> }> = [];
+
+    for (const opd of opds) {
+      const apps = [...model.appearances.values()].filter((a) => a.opd === opd.id);
+      const ids = new Set(apps.map((a) => a.thing));
+      const links = [...model.links.values()].filter((l) => ids.has(l.source) && ids.has(l.target));
+      const beforeFindings = auditVisualOpd({ appearances: apps, links, things: model.things.values(), states: model.states.values() });
+      beforeSum += computeVisualQuality(beforeFindings).score;
+
+      const suggestion = suggestLayoutForOpd(model, opd.id);
+      afterSum += computeVisualQuality(suggestion.findings).score;
+      totalPatches += suggestion.patches.length;
+      for (const p of suggestion.patches) {
+        allUpdates.push({ thingId: p.thingId, opdId: p.opdId, patch: p.patch as Record<string, unknown> });
+      }
+    }
+
+    if (allUpdates.length === 0) {
+      setLayoutAllToast(`All OPDs optimal — avg ${Math.round(beforeSum / opds.length)}`);
+      setTimeout(() => setLayoutAllToast(null), 3000);
+      return;
+    }
+
+    dispatch({ tag: "updateAppearancesBatch", updates: allUpdates });
+    const avgBefore = Math.round(beforeSum / opds.length);
+    const avgAfter = Math.round(afterSum / opds.length);
+    const arrow = avgAfter > avgBefore ? "↑" : avgAfter < avgBefore ? "↓" : "→";
+    setLayoutAllToast(`${opds.length} OPDs — avg ${avgBefore} ${arrow} ${avgAfter} (${totalPatches} patches)`);
+    setTimeout(() => setLayoutAllToast(null), 5000);
+  }, [model, dispatch]);
+
   return (
     <div className="app">
       {/* Header */}
@@ -396,6 +441,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
           onLoadExample={onLoadExample}
           onImport={onImport}
           onSave={save}
+          onAutoLayoutAll={autoLayoutAll}
         />
         <div className="header__sep" />
         <div className="header__badge">v{model.opmodel}</div>
@@ -629,6 +675,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
         <span className="status-bar__count">{model.states.size} states</span>
         <span className="status-bar__count">{model.links.size} links</span>
         <span className="status-bar__count">{model.opds.size} OPDs</span>
+        {layoutAllToast && <span className="layout-toast" style={{ position: "relative", bottom: "auto" }}>{layoutAllToast}</span>}
         <div className="status-bar__spacer" />
         {ui.simulation && (
           <>
