@@ -109,18 +109,18 @@ export function autoLayoutModel(inputModel: Model): AutoLayoutResult {
 
     // 2. Create initial appearances for things without them
     let newAppCount = 0;
-    for (const thingId of thingsForOpd) {
-      if (existingApps.has(thingId)) continue;
+    const opdLinks = [...model.links.values()].filter(l =>
+      thingsForOpd.has(l.source) && thingsForOpd.has(l.target)
+    );
+    const needsAppearance = new Set([...thingsForOpd].filter(id => !existingApps.has(id)));
+    const initialPositions = computeInitialPositions(model, needsAppearance, opdLinks);
+
+    for (const thingId of needsAppearance) {
       const thing = model.things.get(thingId);
       if (!thing) continue;
 
       const size = computeThingSize(model, thing);
-      const links = [...model.links.values()].filter(l =>
-        (l.source === thingId || l.target === thingId) &&
-        (thingsForOpd.has(l.source) && thingsForOpd.has(l.target))
-      );
-      const role = classifyRole(thingId, thing, links);
-      const pos = initialPosition(role, newAppCount, thingsForOpd.size, opd);
+      const pos = initialPositions.get(thingId) ?? { x: 40 + newAppCount * 160, y: 60 };
       const isInternal = opd.refines === thingId;
 
       const result = addAppearance(model, {
@@ -236,30 +236,199 @@ function findThingsForOpd(model: Model, opd: OPD, existingApps: Set<string>): Se
   return thingIds;
 }
 
-/** Compute initial position based on role */
-function initialPosition(
-  role: ReturnType<typeof classifyRole>,
-  index: number,
-  totalThings: number,
-  opd: OPD,
-): { x: number; y: number } {
+/**
+ * Compute topology-aware initial positions for all things in an OPD.
+ * Uses the link graph to place things in logical lanes:
+ * - Left lane: enablers (agents, instruments)
+ * - Center band: main processes (top to bottom by dependency chain)
+ * - Right lane: transformer objects (inputs above, outputs below)
+ * - Bottom: structural children
+ */
+function computeInitialPositions(
+  model: Model,
+  thingIds: Set<string>,
+  links: Link[],
+): Map<string, { x: number; y: number }> {
+  const positions = new Map<string, { x: number; y: number }>();
   const GAP = VISUAL_RULES.spacing.nodeGap;
-  const COL_W = 200;
+  const COL_W = 220;
   const ROW_H = 100;
+  const LEFT_X = 40;
+  const CENTER_X = COL_W + GAP;
+  const RIGHT_X = CENTER_X + COL_W + GAP;
 
-  // Layout strategy: center band for processes, left/right for objects
-  switch (role) {
-    case "main-process":
-      return { x: COL_W + GAP, y: 60 + index * ROW_H };
-    case "enabler":
-      return { x: 40, y: 60 + index * ROW_H };
-    case "transformer-object":
-      return { x: COL_W * 2 + GAP * 2, y: 60 + index * ROW_H };
-    case "structural-parent":
-      return { x: COL_W, y: 40 };
-    case "structural-child":
-      return { x: 40 + (index % 4) * (COL_W * 0.6 + GAP), y: 160 + Math.floor(index / 4) * ROW_H };
-    default:
-      return { x: 40 + (index % 3) * (COL_W + GAP), y: 60 + Math.floor(index / 3) * ROW_H };
+  // Classify all things
+  const roles = new Map<string, ReturnType<typeof classifyRole>>();
+  for (const thingId of thingIds) {
+    const thing = model.things.get(thingId);
+    if (!thing) continue;
+    const thingLinks = links.filter(l => l.source === thingId || l.target === thingId);
+    roles.set(thingId, classifyRole(thingId, thing, thingLinks));
   }
+
+  // Group by role
+  const mainProcesses: string[] = [];
+  const enablers: string[] = [];
+  const transformerObjects: string[] = [];
+  const structuralParents: string[] = [];
+  const structuralChildren: string[] = [];
+  const others: string[] = [];
+
+  for (const [id, role] of roles) {
+    switch (role) {
+      case "main-process": mainProcesses.push(id); break;
+      case "enabler": enablers.push(id); break;
+      case "transformer-object": transformerObjects.push(id); break;
+      case "structural-parent": structuralParents.push(id); break;
+      case "structural-child": structuralChildren.push(id); break;
+      default: others.push(id); break;
+    }
+  }
+
+  // Sort main processes by dependency chain (topological sort via link order)
+  const processOrder = topologicalSortThings(mainProcesses, links);
+
+  // Sort transformer objects: inputs first (consumption sources), outputs last (result targets)
+  const inputObjects: string[] = [];
+  const outputObjects: string[] = [];
+  const neutralObjects: string[] = [];
+  for (const objId of transformerObjects) {
+    const isInput = links.some(l => l.source === objId && ["consumption", "input"].includes(l.type));
+    const isOutput = links.some(l => l.target === objId && ["result", "output"].includes(l.type));
+    if (isInput && !isOutput) inputObjects.push(objId);
+    else if (isOutput && !isInput) outputObjects.push(objId);
+    else neutralObjects.push(objId);
+  }
+
+  // Place main processes in center band
+  let centerY = 60;
+  for (const procId of processOrder) {
+    positions.set(procId, { x: CENTER_X, y: centerY });
+    centerY += ROW_H;
+  }
+
+  // Place enablers in left lane, aligned with their connected processes
+  let enablerY = 60;
+  for (const enId of enablers) {
+    // Try to align with connected process
+    const connectedProc = links.find(l =>
+      (l.source === enId || l.target === enId) &&
+      processOrder.includes(l.source === enId ? l.target : l.source)
+    );
+    const procPos = connectedProc
+      ? positions.get(connectedProc.source === enId ? connectedProc.target : connectedProc.source)
+      : null;
+    const y = procPos ? procPos.y : enablerY;
+    positions.set(enId, { x: LEFT_X, y });
+    enablerY = Math.max(enablerY, y + ROW_H);
+  }
+
+  // Place input objects in right lane, top section
+  let inputY = 40;
+  for (const objId of inputObjects) {
+    // Align with consuming process
+    const link = links.find(l => l.source === objId && processOrder.includes(l.target));
+    const procPos = link ? positions.get(link.target) : null;
+    const y = procPos ? Math.max(inputY, procPos.y - 20) : inputY;
+    positions.set(objId, { x: RIGHT_X, y });
+    inputY = y + ROW_H;
+  }
+
+  // Place neutral objects
+  for (const objId of neutralObjects) {
+    positions.set(objId, { x: RIGHT_X, y: inputY });
+    inputY += ROW_H;
+  }
+
+  // Place output objects in right lane, bottom section
+  let outputY = Math.max(inputY, centerY - ROW_H);
+  for (const objId of outputObjects) {
+    const link = links.find(l => l.target === objId && processOrder.includes(l.source));
+    const procPos = link ? positions.get(link.source) : null;
+    const y = procPos ? Math.max(outputY, procPos.y) : outputY;
+    positions.set(objId, { x: RIGHT_X, y });
+    outputY = y + ROW_H;
+  }
+
+  // Place structural parents centered
+  let structY = Math.max(centerY, outputY) + GAP;
+  for (const id of structuralParents) {
+    if (!positions.has(id)) {
+      positions.set(id, { x: CENTER_X, y: structY });
+      structY += ROW_H;
+    }
+  }
+
+  // Place structural children in grid below parent
+  let childIdx = 0;
+  for (const id of structuralChildren) {
+    if (!positions.has(id)) {
+      const col = childIdx % 3;
+      const row = Math.floor(childIdx / 3);
+      positions.set(id, { x: LEFT_X + col * (COL_W * 0.7 + GAP), y: structY + row * ROW_H });
+      childIdx++;
+    }
+  }
+
+  // Place remaining things
+  let otherIdx = 0;
+  for (const id of others) {
+    if (!positions.has(id)) {
+      const col = otherIdx % 3;
+      const row = Math.floor(otherIdx / 3);
+      positions.set(id, { x: LEFT_X + col * (COL_W + GAP), y: 60 + row * ROW_H });
+      otherIdx++;
+    }
+  }
+
+  return positions;
+}
+
+/** Topological sort of processes based on link dependencies */
+function topologicalSortThings(thingIds: string[], links: Link[]): string[] {
+  if (thingIds.length <= 1) return [...thingIds];
+
+  // Build dependency graph: process A → process B if A's output is B's input
+  const deps = new Map<string, Set<string>>();
+  for (const id of thingIds) deps.set(id, new Set());
+
+  for (const link of links) {
+    if (!thingIds.includes(link.source) || !thingIds.includes(link.target)) continue;
+    // result/output from source → consumption/input to target suggests source before target
+    if (["result", "output", "invocation"].includes(link.type)) {
+      deps.get(link.target)?.add(link.source);
+    }
+    if (["consumption", "input"].includes(link.type)) {
+      deps.get(link.source)?.add(link.target);
+    }
+  }
+
+  // Kahn's algorithm
+  const inDegree = new Map<string, number>();
+  for (const id of thingIds) inDegree.set(id, 0);
+  for (const [id, depSet] of deps) {
+    inDegree.set(id, depSet.size);
+  }
+
+  const queue = thingIds.filter(id => (inDegree.get(id) ?? 0) === 0);
+  const sorted: string[] = [];
+
+  while (queue.length > 0) {
+    const id = queue.shift()!;
+    sorted.push(id);
+    for (const [other, depSet] of deps) {
+      if (depSet.has(id)) {
+        depSet.delete(id);
+        inDegree.set(other, (inDegree.get(other) ?? 1) - 1);
+        if (inDegree.get(other) === 0) queue.push(other);
+      }
+    }
+  }
+
+  // Add any remaining (cycles) at the end
+  for (const id of thingIds) {
+    if (!sorted.includes(id)) sorted.push(id);
+  }
+
+  return sorted;
 }
