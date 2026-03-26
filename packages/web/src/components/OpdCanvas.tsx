@@ -11,6 +11,7 @@ import {
 import { LINK_COLORS, paddedBounds } from "../lib/visual-rules";
 import { suggestLayoutForOpd } from "../lib/spatial-layout";
 import { auditVisualOpd, computeVisualQuality } from "../lib/visual-lint";
+import { routeEdges, type EdgePath } from "../lib/edge-router";
 
 import { ThingNode } from "./canvas/ThingNode";
 import { LinkLine } from "./canvas/LinkLine";
@@ -350,6 +351,25 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
     }
     return ids;
   }, [visibleForks]);
+
+  // Edge routing: compute curved paths for links with crossings
+  const edgeRoutes = useMemo((): Map<string, EdgePath> => {
+    const routeInputs = filteredVisibleLinks
+      .filter(vl => !forkedLinkIds.has(vl.link.id))
+      .map(vl => {
+        const srcRect = getEffectiveRect(vl.visualSource);
+        const tgtRect = getEffectiveRect(vl.visualTarget);
+        const srcThing = model.things.get(vl.visualSource);
+        const tgtThing = model.things.get(vl.visualTarget);
+        if (!srcRect || !tgtRect || !srcThing || !tgtThing) return null;
+        const p1 = edgePoint(srcThing.kind, srcRect, center(tgtRect));
+        const p2 = edgePoint(tgtThing.kind, tgtRect, center(srcRect));
+        const key = vl.isInputHalf ? `${vl.link.id}__in` : vl.isOutputHalf ? `${vl.link.id}__out` : vl.link.id;
+        return { id: key, sourceId: vl.visualSource, targetId: vl.visualTarget, p1, p2 };
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null);
+    return routeEdges(routeInputs);
+  }, [filteredVisibleLinks, forkedLinkIds, model, getEffectiveRect]);
 
   /* ─── Mouse handlers ─── */
 
@@ -969,6 +989,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
                   isOutputHalf={isOutputHalf}
                   isError={errorEntities?.has(link.id)}
                   hideLabel={hideLinkLabels}
+                  edgePath={edgeRoutes.get(isInputHalf ? `${link.id}__in` : isOutputHalf ? `${link.id}__out` : link.id)}
                 />
               </g>
             );

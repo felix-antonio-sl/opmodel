@@ -2,10 +2,12 @@ import type { Link, Modifier } from "@opmodel/core";
 import {
   center,
   midpoint,
+  type Point,
   type Rect,
 } from "../../lib/geometry";
 import { LINK_COLORS } from "../../lib/visual-rules";
 import { edgePoint } from "./canvas-helpers";
+import type { EdgePath } from "../../lib/edge-router";
 
 /* ─── Link Renderer ─── */
 
@@ -35,6 +37,7 @@ export function LinkLine({
   isOutputHalf?: boolean;
   isError?: boolean;
   hideLabel?: boolean;
+  edgePath?: EdgePath;
 }) {
   const srcCenter = center(sourceRect);
   const tgtCenter = center(targetRect);
@@ -59,7 +62,7 @@ export function LinkLine({
 
   const p1 = edgePoint(sourceKind, sourceRect, tgtCenter);
   const p2 = edgePoint(targetKind, targetRect, srcCenter);
-  const mid = midpoint(p1, p2);
+  const mid = edgePath ? edgePath.labelPoint : midpoint(p1, p2);
 
   // ISO 19450 marker assignment per link type
   let markerEnd: string | undefined;
@@ -129,7 +132,13 @@ export function LinkLine({
   const isLightning = link.type === "invocation";
 
   let linkElement: React.ReactNode;
-  if (isLightning) {
+  if (edgePath && !isLightning) {
+    // Use pre-computed edge path (curved or straight)
+    linkElement = (
+      <path className="link-line" d={edgePath.d} fill="none" stroke={color}
+        markerEnd={markerEnd} markerStart={markerStart} />
+    );
+  } else if (isLightning) {
     // Zigzag path from p1 to p2
     const dx = p2.x - p1.x;
     const dy = p2.y - p1.y;
