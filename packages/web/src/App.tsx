@@ -79,6 +79,29 @@ function inlineSvgStyles(source: SVGSVGElement, clone: SVGSVGElement) {
   }
 }
 
+function QuickOpen({ onLoadExample }: { onLoadExample: (file: string) => void }) {
+  return (
+    <label className="header__quickopen" title="Load example fixture">
+      <span className="header__quickopen-label">Example</span>
+      <select
+        className="header__quickopen-select"
+        defaultValue=""
+        onChange={(e) => {
+          const file = e.target.value;
+          if (!file) return;
+          onLoadExample(file);
+          e.currentTarget.value = "";
+        }}
+      >
+        <option value="">Quick open…</option>
+        {EXAMPLES.map((ex) => (
+          <option key={ex.file} value={ex.file}>{ex.name}</option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 function FileMenu({ model, onNew, onLoadExample, onImport, onSave, onAutoLayoutAll, onShowVisualReport }: {
   model: Model;
   onNew: () => void;
@@ -469,6 +492,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
           </button>
         </div>
         <div className="header__sep" />
+        <QuickOpen onLoadExample={onLoadExample} />
         <FileMenu
           model={model}
           onNew={onNew}

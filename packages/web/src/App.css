@@ -177,6 +177,35 @@ body,
   gap: 4px;
 }
 
+.header__quickopen {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-surface);
+}
+
+.header__quickopen-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.header__quickopen-select {
+  min-width: 170px;
+  max-width: 240px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 11px;
+  outline: none;
+  cursor: pointer;
+}
+
 .header__action {
   width: 28px;
   height: 28px;
