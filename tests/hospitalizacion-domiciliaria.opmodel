@@ -355,7 +355,7 @@
       "opd": "opd-sd",
       "state_alignment": "right",
       "thing": "obj-paciente",
-      "w": 150,
+      "w": 190,
       "x": 80,
       "y": 150
     },
@@ -364,7 +364,7 @@
       "internal": false,
       "opd": "opd-sd1",
       "thing": "obj-paciente",
-      "w": 150,
+      "w": 190,
       "x": 30,
       "y": 150
     },
@@ -373,7 +373,7 @@
       "internal": false,
       "opd": "opd-sd1-1",
       "thing": "obj-paciente",
-      "w": 140,
+      "w": 190,
       "x": 30,
       "y": 150
     },
@@ -382,7 +382,7 @@
       "internal": false,
       "opd": "opd-sd1-2",
       "thing": "obj-paciente",
-      "w": 150,
+      "w": 190,
       "x": 30,
       "y": 190
     },
