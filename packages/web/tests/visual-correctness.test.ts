@@ -286,6 +286,7 @@ describe("Visual Correctness 360°", () => {
     { name: "Driver Rescuing", path: "tests/driver-rescuing.opmodel" },
     { name: "HODOM", path: "tests/hospitalizacion-domiciliaria.opmodel" },
     { name: "HODOM V2", path: "tests/hodom-v2.opmodel" },
+    { name: "HODOM HSC v0", path: "tests/hodom-hsc-v0.opmodel" },
     { name: "EV-AMS", path: "tests/ev-ams.opmodel" },
   ];
 

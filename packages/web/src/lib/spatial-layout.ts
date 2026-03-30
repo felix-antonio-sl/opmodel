@@ -43,8 +43,11 @@ function allowsAutoSizing(app: Appearance | undefined): boolean {
 function resolveLaneOverlaps(entries: Array<{ thingId: string; y: number; h: number }>, minGap = VISUAL_RULES.spacing.nodeGap) {
   const sorted = [...entries].sort((a, b) => a.y - b.y);
   for (let i = 1; i < sorted.length; i++) {
-    const prevBottom = sorted[i - 1].y + sorted[i - 1].h + minGap;
-    if (sorted[i].y < prevBottom) sorted[i].y = prevBottom;
+    const prev = sorted[i - 1];
+    const current = sorted[i];
+    if (!prev || !current) continue;
+    const prevBottom = prev.y + prev.h + minGap;
+    if (current.y < prevBottom) current.y = prevBottom;
   }
   return sorted;
 }
@@ -93,6 +96,7 @@ function applyRelaxationPass(apps: Appearance[], iterations = 3): Appearance[] {
       for (let j = i + 1; j < visible.length; j++) {
         const a = visible[i];
         const b = visible[j];
+        if (!a || !b) continue;
         if (!rectsOverlap(a, b, gap)) continue;
         if (isPinned(a) && isPinned(b)) continue;
 
@@ -170,6 +174,7 @@ function applyRelaxationPass(apps: Appearance[], iterations = 3): Appearance[] {
       if (aIdx < 0 || bIdx < 0) continue;
       const a = relaxed[aIdx];
       const b = relaxed[bIdx];
+      if (!a || !b) continue;
       if (isPinned(a) && isPinned(b)) continue;
       const overlapX = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
       const overlapY = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
@@ -192,6 +197,7 @@ function applyRelaxationPass(apps: Appearance[], iterations = 3): Appearance[] {
       if (aIdx < 0 || bIdx < 0) continue;
       const a = relaxed[aIdx];
       const b = relaxed[bIdx];
+      if (!a || !b) continue;
       if (isPinned(a) && isPinned(b)) continue;
       const nudge = Math.ceil((VISUAL_RULES.lint.minReadableGap - finding.gap) / 2) + 2;
       if (finding.axis === "x") {

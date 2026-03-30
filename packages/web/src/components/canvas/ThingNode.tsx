@@ -191,7 +191,7 @@ export function ThingNode({
       )}
       {isShared && (
         <text fontSize={8} fill="var(--accent-dim, #3a7bc8)" pointerEvents="none"
-          x={x + 3} y={y + totalH - 3} title="Shared with sub-model">⇌</text>
+          x={x + 3} y={y + totalH - 3}><title>Shared with sub-model</title>⇌</text>
       )}
 
       {hasSemiFold && (
@@ -285,7 +285,7 @@ export function ThingNode({
         <text
           x={x + w - 8} y={y + totalH - 4}
           fontSize={10} fill="var(--text-muted)" textAnchor="end"
-          fontWeight="bold" title="Hidden states">...</text>
+          fontWeight="bold"><title>Hidden states</title>...</text>
       )}
     </g>
   );

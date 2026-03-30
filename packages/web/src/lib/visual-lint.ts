@@ -77,9 +77,12 @@ export function findNonContainerOverlaps(appearances: Appearance[]): OverlapFind
   const findings: OverlapFinding[] = [];
   for (let i = 0; i < visible.length; i++) {
     for (let j = i + 1; j < visible.length; j++) {
-      const area = intersectionArea(appearanceRect(visible[i]), appearanceRect(visible[j]));
+      const a = visible[i];
+      const b = visible[j];
+      if (!a || !b) continue;
+      const area = intersectionArea(appearanceRect(a), appearanceRect(b));
       if (area > 0) {
-        findings.push({ kind: "overlap", aThing: visible[i].thing, bThing: visible[j].thing, area });
+        findings.push({ kind: "overlap", aThing: a.thing, bThing: b.thing, area });
       }
     }
   }
@@ -169,13 +172,16 @@ export function findTightSpacing(appearances: Appearance[]): TightSpacingFinding
   const findings: TightSpacingFinding[] = [];
   for (let i = 0; i < visible.length; i++) {
     for (let j = i + 1; j < visible.length; j++) {
-      const a = appearanceRect(visible[i]);
-      const b = appearanceRect(visible[j]);
+      const left = visible[i];
+      const right = visible[j];
+      if (!left || !right) continue;
+      const a = appearanceRect(left);
+      const b = appearanceRect(right);
       if (intersectionArea(a, b) > 0) continue;
       const gap = axisGap(a, b);
       if (!gap) continue;
       if (gap.gap >= 0 && gap.gap < VISUAL_RULES.lint.minReadableGap) {
-        findings.push({ kind: "tight-spacing", aThing: visible[i].thing, bThing: visible[j].thing, gap: gap.gap, axis: gap.axis });
+        findings.push({ kind: "tight-spacing", aThing: left.thing, bThing: right.thing, gap: gap.gap, axis: gap.axis });
       }
     }
   }

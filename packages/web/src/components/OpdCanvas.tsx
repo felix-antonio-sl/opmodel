@@ -56,7 +56,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
   const toggleLinkCategory = (category: string) => {
     setHiddenLinkTypes(prev => {
       const next = new Set(prev);
-      const types = LINK_CATEGORIES[category];
+      const types = LINK_CATEGORIES[category] ?? [];
       const allHidden = types.every(t => prev.has(t));
       for (const t of types) {
         if (allHidden) next.delete(t);
@@ -773,8 +773,11 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
           <button title="Distribute Horizontally" onClick={() => {
             const apps = [...multiSelect].map(id => ({ id, app: appearances.get(id) })).filter(e => e.app).sort((a, b) => a.app!.x - b.app!.x);
             if (apps.length < 3) return;
-            const first = apps[0].app!.x;
-            const last = apps[apps.length - 1].app!.x;
+            const firstApp = apps[0]?.app;
+            const lastApp = apps[apps.length - 1]?.app;
+            if (!firstApp || !lastApp) return;
+            const first = firstApp.x;
+            const last = lastApp.x;
             const step = (last - first) / (apps.length - 1);
             const moves = apps.slice(1, -1).map((e, i) => ({ thingId: e.id, opdId, x: snap(first + step * (i + 1)), y: e.app!.y }));
             if (moves.length > 0) dispatch({ tag: "moveThings", moves });

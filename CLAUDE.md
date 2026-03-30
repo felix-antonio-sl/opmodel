@@ -4,21 +4,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-OPModel is a specification and implementation workspace for **OPModeling** — a single-user power tool for Object Process Methodology (ISO 19450) modeling. The repository contains the Domain Engine core (`packages/core/`) with full CRUD operations, 30+ invariant guards, simulation engine, OPL bidirectional lens, and serialization. It also includes a CLI (`packages/cli/`), a web editor (`packages/web/`), specifications, audits, formal analysis, plans, and session logs.
-
-All documentation follows OPM (ISO 19450) guidelines and KODA Framework architectural principles.
+OPModel is a single-user power tool for **Object Process Methodology (ISO 19450)** modeling. The monorepo contains a Domain Engine core (`packages/core/`), a CLI (`packages/cli/`), a web editor (`packages/web/`), and a natural language layer (`packages/nl/`).
 
 ## Repository Structure
 
-- **packages/core/** — Domain Engine (TypeScript, zero dependencies). Types, Result monad, createModel, serialization, CRUD API, 37 invariant guards, OPL lens, simulation engine (with in-zoom recursion), OPD fiber computation (DA-9). 550+ tests.
-- **packages/cli/** — CLI `opmod` command (9 commands: new, add, remove, list, show, validate, update, refine, opl). 90+ tests.
-- **packages/web/** — Web editor (React, full CRUD, OPL panel with 3 tabs, undo/redo, import/export).
-- **docs/superpowers/specs/** — Product specifications and requirements. Central artifacts: `opm-modeling-app-backlog-lean.md`, `opm-data-model.md` (Rev.3), `opm-json-schema.json`.
-- **tests/** — Shared fixture files (e.g., `coffee-making.opmodel`).
-- **analysis/** — Formal foundations research. Read-only reference material.
+- **packages/core/** — Domain Engine (TypeScript, zero dependencies). Types, Result monad, createModel, serialization, CRUD API, 37+ invariant guards, OPL bidirectional lens, simulation engine (with in-zoom recursion), OPD fiber computation (DA-9). ~700+ tests.
+- **packages/cli/** — CLI `opmod` command (9 commands: new, add, remove, list, show, validate, update, refine, opl). ~90 tests. `stats` command exists in code but not wired to CLI.
+- **packages/web/** — Web editor (React/Vite, full CRUD, OPL panel with 3 tabs, undo/redo, simulation, visual lint/report, import/export SVG/PNG/OPL/Markdown, SD Wizard, bug capture). ~250 tests.
+- **packages/nl/** — Natural language layer (parse, resolve, prompt builders, LLM providers, pipeline). ~50 tests.
+- **tests/** — Shared fixture files (`.opmodel`): coffee-making, driver-rescuing, hospitalizacion-domiciliaria, hodom-v2, ev-ams, hodom-hsc-v0.
+- **scripts/** — Build scripts for fixtures: `build-hodom-v2.ts`, `build-hodom-hsc-v0.ts`, `build-ev-ams.ts`.
+- **docs/** — Specs, plans, methodology docs. Historical — may not reflect current state.
+- **sessions/** — Session handoffs. Historical context, not guaranteed current.
+- **analysis/** — Formal foundations research. Read-only reference.
 - **audits/** — Formal verification against ISO 19450.
-- **docs/superpowers/** — Design specs and implementation plans.
-- **sessions/** — Session handoffs. Always check the latest handoff file for current state.
 
 ## Language and Conventions
 
@@ -62,18 +61,45 @@ L-M1-02 → L-M3-01 (OPD tree)
 L-M1-02 → L-M1-07 (In-zoom)
 ```
 
+## Current Operational Baseline (2026-03-30)
+
+Use OPModel today as:
+- a stable OPM core + web editor + export tool
+- a fixture-driven modeling environment for real cases
+- a validated baseline for HODOM/HODOM V2/EV-AMS/HODOM HSC
+
+Do **not** treat it yet as:
+- a fully polished large-model visual editor
+- a strong ISO-complete refinement implementation in every edge case
+- a clinically realistic simulation platform
+- a vehicle for new feature lines like System Map / system mapping
+
+Immediate priority is **baseline stabilization and real-case validation**, not feature expansion.
+
 ## Development
 
-- **Runtime:** Bun v1.3.10 (`~/.bun/bin/bun`). Requiere: `export BUN_INSTALL="$HOME/.bun" && export PATH="$BUN_INSTALL/bin:$PATH"`
-- **Tests:** `bunx vitest run` (all 859 tests from root). Single file: `bunx vitest run packages/core/tests/api.test.ts`
-- **Type check:** `cd packages/core && bunx tsc --noEmit` (7 pre-existing TS2532 in test files — known, vitest passes)
-- **Monorepo:** Bun workspaces (root `package.json`)
-- **Pattern:** Immutable Model — funciones puras retornan `Result<Model, InvariantError>`, Maps para O(1) lookups
-- **TDD:** Red→Green→Refactor. Tests before implementation, always.
+- **Runtime:** Bun (`~/.bun/bin/bun`). Setup: `export BUN_INSTALL="$HOME/.bun" && export PATH="$BUN_INSTALL/bin:$PATH"`
+- **Tests (canonical):** `bun run test` — runs `bunx --bun vitest run` from root. All 1042 tests across 70 files (core, cli, web, nl). Single file: `bunx --bun vitest run packages/core/tests/api.test.ts`
+- **Build web:** `bun run --filter @opmodel/web build` — TypeScript + Vite production build.
+- **Dev web:** `bun run --filter @opmodel/web dev` — Vite dev server on port 5173. If `.vite/deps` has wrong permissions (root from Docker), fix with `sudo rm -rf packages/web/node_modules/.vite`.
+- **Type check:** `cd packages/core && bunx tsc --noEmit`
+- **Monorepo:** Bun workspaces (root `package.json`). No build step for core/cli/nl — web consumes TS source directly.
+- **Pattern:** Immutable Model — pure functions return `Result<Model, InvariantError>`, Maps for O(1) lookups.
+- **Docker:** `docker-compose.yml` runs web dev via Traefik on `opmodel.sanixai.com`. Mounts repo as volume. Note: Docker creates `.vite` cache as root.
 
 ## Session Continuity
 
-Always read the latest `sessions/YYYY-MM-DD-*-handoff.md` to understand current state, artifacts produced, and recommended next steps. The handoff documents capture all decisions and pending work.
+Sessions are useful historical context, but the **repo live state wins** over old handoffs. Verify commands, tests, fixtures, and behavior directly in the codebase before assuming a session note is still true.
+
+## Current Real Fixtures
+
+Baseline fixtures currently expected to load, validate, and export:
+- `tests/coffee-making.opmodel`
+- `tests/driver-rescuing.opmodel`
+- `tests/hospitalizacion-domiciliaria.opmodel`
+- `tests/hodom-v2.opmodel`
+- `tests/ev-ams.opmodel`
+- `tests/hodom-hsc-v0.opmodel`
 
 ## Do Not Modify
 

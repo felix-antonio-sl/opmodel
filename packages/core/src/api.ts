@@ -968,7 +968,7 @@ export function updateAppearance(
   // null values = delete optional fields (same pattern as updateThingProps)
   const merged = { ...existing, ...cleaned } as Record<string, unknown>;
   for (const [k, v] of Object.entries(merged)) { if (v === null) delete merged[k]; }
-  const updated = merged as Appearance;
+  const updated = merged as unknown as Appearance;
   if (updated.internal) {
     const opdEntity = model.opds.get(opd);
     if (!opdEntity || !opdEntity.refines) {

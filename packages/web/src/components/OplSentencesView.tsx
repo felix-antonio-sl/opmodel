@@ -121,7 +121,7 @@ export function OplSentencesView({ model, opdId, selectedThing, onSelectThing }:
         const primaryId = ids[0];
         return (
           <div key={`t-${i}`} className={sentenceClass(sentence, selectedThing)}
-            onClick={onSelectThing ? () => onSelectThing(primaryId) : undefined}
+            onClick={onSelectThing ? () => onSelectThing(primaryId ?? null) : undefined}
             style={onSelectThing ? { cursor: "pointer" } : undefined}
           >
             {renderSentence(sentence, doc)}
@@ -134,7 +134,7 @@ export function OplSentencesView({ model, opdId, selectedThing, onSelectThing }:
         const primaryId = ids[0];
         return (
           <div key={`l-${i}`} className={sentenceClass(sentence, selectedThing)}
-            onClick={onSelectThing ? () => onSelectThing(primaryId) : undefined}
+            onClick={onSelectThing ? () => onSelectThing(primaryId ?? null) : undefined}
             style={onSelectThing ? { cursor: "pointer" } : undefined}
           >
             {renderSentence(sentence, doc)}

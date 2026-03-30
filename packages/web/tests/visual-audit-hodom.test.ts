@@ -52,3 +52,4 @@ function auditFixture(name: string, path: string) {
 
 auditFixture("HODOM", "tests/hospitalizacion-domiciliaria.opmodel");
 auditFixture("HODOM V2", "tests/hodom-v2.opmodel");
+auditFixture("HODOM HSC v0", "tests/hodom-hsc-v0.opmodel");

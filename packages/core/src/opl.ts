@@ -165,7 +165,8 @@ export function expose(model: Model, opdId: string): OplDocument {
 
       if (subprocessApps.length > 0) {
         // R-OC-7: group subprocesses at same Y as parallel
-        const steps: OplInZoomSequence["steps"] = [];
+        type InZoomStepWithY = OplInZoomSequence["steps"][number] & { _y: number };
+        const steps: InZoomStepWithY[] = [];
         for (const sp of subprocessApps) {
           const last = steps[steps.length - 1];
           if (last && last._y === sp.y) {
@@ -173,7 +174,7 @@ export function expose(model: Model, opdId: string): OplDocument {
             last.thingNames.push(sp.name);
             last.parallel = true;
           } else {
-            steps.push({ thingIds: [sp.thingId], thingNames: [sp.name], parallel: false, _y: sp.y } as any);
+            steps.push({ thingIds: [sp.thingId], thingNames: [sp.name], parallel: false, _y: sp.y });
           }
         }
         // Strip internal _y helper
@@ -517,8 +518,8 @@ export function expose(model: Model, opdId: string): OplDocument {
   for (const ast of model.assertions.values()) {
     if (!ast.enabled) continue;
     // Target can be a thing or a link
-    const targetThing = model.things.get(ast.target);
-    const targetLink = model.links.get(ast.target);
+    const targetThing = ast.target ? model.things.get(ast.target) : undefined;
+    const targetLink = ast.target ? model.links.get(ast.target) : undefined;
     let targetName: string;
     if (targetThing && visibleThings.has(targetThing.id)) {
       targetName = targetThing.name;

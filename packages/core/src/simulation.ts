@@ -1089,7 +1089,7 @@ export function runSimulation(
   let executableProcesses = getExecutableProcesses(model);
 
   // Scenario filter: only execute processes connected by links on this scenario's path
-    const scenario = model.scenarios.get(scenarioId);
+  const scenario = scenarioId ? model.scenarios.get(scenarioId) : undefined;
     if (scenario && scenario.path_labels.length > 0) {
       const pathLabels = new Set(scenario.path_labels);
       const scenarioLinks = [...model.links.values()].filter(l => l.path_label && pathLabels.has(l.path_label));
