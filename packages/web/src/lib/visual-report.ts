@@ -1,5 +1,18 @@
 import type { Model } from "@opmodel/core";
-import { auditVisualOpd, computeVisualQuality, visualFindingSeverity, type VisualQualityScore } from "./visual-lint";
+import {
+  auditVisualOpd,
+  computeVisualQuality,
+  visualFindingSeverity,
+  type VisualFinding,
+  type VisualQualityScore,
+  type VisualSeverity,
+} from "./visual-lint";
+
+export interface VisualFindingReportItem {
+  severity: VisualSeverity;
+  kind: VisualFinding["kind"];
+  summary: string;
+}
 
 export interface VisualOpdReport {
   opdId: string;
@@ -9,6 +22,7 @@ export interface VisualOpdReport {
   errors: number;
   warnings: number;
   info: number;
+  findings: VisualFindingReportItem[];
 }
 
 export interface VisualModelReport {
@@ -20,6 +34,37 @@ export interface VisualModelReport {
   totalWarnings: number;
   totalInfo: number;
   opds: VisualOpdReport[];
+}
+
+function thingLabel(model: Model, thingId: string): string {
+  const thing = model.things.get(thingId);
+  return thing ? `${thing.name} (${thing.id})` : thingId;
+}
+
+function stateLabel(model: Model, stateId: string): string {
+  const state = model.states.get(stateId);
+  return state ? `${state.name} (${state.id})` : stateId;
+}
+
+function formatPercent(value: number): string {
+  return `${Math.round(value * 100)}%`;
+}
+
+function summarizeFinding(model: Model, finding: VisualFinding): string {
+  switch (finding.kind) {
+    case "overlap":
+      return `Overlap between ${thingLabel(model, finding.aThing)} and ${thingLabel(model, finding.bThing)} (area ${Math.round(finding.area)}px²).`;
+    case "orphan":
+      return `Visible orphan ${thingLabel(model, finding.thing)} has no visible links in this OPD.`;
+    case "truncated-state":
+      return `State ${stateLabel(model, finding.state)} on ${thingLabel(model, finding.thing)} exceeds estimated pill capacity (${finding.capacity} chars).`;
+    case "degenerate-bounds":
+      return `Diagram bounds look degenerate (${Math.round(finding.width)}×${Math.round(finding.height)}px, aspect ratio ${finding.aspectRatio.toFixed(2)}).`;
+    case "crowded-diagram":
+      return `Crowded diagram with ${finding.nodeCount} visible nodes and fill ratio ${formatPercent(finding.fillRatio)} inside ${Math.round(finding.width)}×${Math.round(finding.height)}px bounds.`;
+    case "tight-spacing":
+      return `Tight spacing between ${thingLabel(model, finding.aThing)} and ${thingLabel(model, finding.bThing)}: ${finding.gap}px on ${finding.axis.toUpperCase()} axis.`;
+  }
 }
 
 export function buildVisualReport(model: Model): VisualModelReport {
@@ -37,6 +82,11 @@ export function buildVisualReport(model: Model): VisualModelReport {
       errors: findings.filter((f) => visualFindingSeverity(f) === "error").length,
       warnings: findings.filter((f) => visualFindingSeverity(f) === "warning").length,
       info: findings.filter((f) => visualFindingSeverity(f) === "info").length,
+      findings: findings.map((finding) => ({
+        severity: visualFindingSeverity(finding),
+        kind: finding.kind,
+        summary: summarizeFinding(model, finding),
+      })),
     };
   }).sort((a, b) => a.score - b.score || a.name.localeCompare(b.name));
 
@@ -68,5 +118,21 @@ export function exportVisualReportMarkdown(report: VisualModelReport): string {
     "|---|---:|---:|---:|---:|---:|",
     ...report.opds.map((opd) => `| ${opd.name} | ${opd.grade} | ${opd.score} | ${opd.errors} | ${opd.warnings} | ${opd.info} |`),
     "",
+    "## Detailed Findings",
+    "",
+    ...report.opds.flatMap((opd) => [
+      `### ${opd.name}`,
+      "",
+      `- Grade: **${opd.grade}**`,
+      `- Score: **${opd.score}**`,
+      `- Errors: **${opd.errors}**`,
+      `- Warnings: **${opd.warnings}**`,
+      `- Info: **${opd.info}**`,
+      "",
+      ...(opd.findings.length > 0
+        ? opd.findings.map((finding, index) => `${index + 1}. [${finding.severity.toUpperCase()}] ${finding.kind} — ${finding.summary}`)
+        : ["No findings."]),
+      "",
+    ]),
   ].join("\n");
 }
