@@ -29,14 +29,20 @@ bun run test
 Build web app:
 
 ```bash
-bun run --filter @opmodel/web build
+bun run web:build
 ```
 
 Run web app locally:
 
 ```bash
-bun run --filter @opmodel/web dev
+bun run web:dev
 ```
+
+## Known current debt
+
+- `bun run test` is green.
+- `bun run web:build` is green.
+- There is **not yet** a clean canonical `tsc --noEmit` baseline for `packages/core` because of pre-existing TypeScript errors in test files. Do not present typecheck as green until that debt is actually closed.
 
 Rebuild canonical fixtures:
 
