@@ -44,7 +44,7 @@ describe("I-17: orphan processes", () => {
     m = (addLink(m, { id: "lnk-agent", type: "agent", source: "obj-tool", target: "proc-boil" }) as any).value;
     const errors = errorsOf(m, "I-17");
     expect(errors.length).toBeGreaterThanOrEqual(1);
-    expect(errors[0].entity).toBe("proc-boil");
+    expect(errors[0]!.entity).toBe("proc-boil");
   });
 
   it("skips I-17 for process with zero links (WIP)", () => {
@@ -82,7 +82,7 @@ describe("I-20: single state objects", () => {
     m = (addState(m, { id: "state-cold", parent: "obj-water", name: "cold", initial: true, final: false, default: true }) as any).value;
     const errors = errorsOf(m, "I-20");
     expect(errors.length).toBeGreaterThanOrEqual(1);
-    expect(errors[0].entity).toBe("obj-water");
+    expect(errors[0]!.entity).toBe("obj-water");
   });
 
   it("passes with 0 states (stateless object)", () => {

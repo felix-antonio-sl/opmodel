@@ -82,7 +82,7 @@ Immediate priority is **baseline stabilization and real-case validation**, not f
 - **Tests (canonical):** `bun run test` — runs `bunx --bun vitest run` from root. All 1042 tests across 70 files (core, cli, web, nl). Single file: `bunx --bun vitest run packages/core/tests/api.test.ts`
 - **Build web:** `bun run --filter @opmodel/web build` — TypeScript + Vite production build.
 - **Dev web:** `bun run --filter @opmodel/web dev` — Vite dev server on port 5173. If `.vite/deps` has wrong permissions (root from Docker), fix with `sudo rm -rf packages/web/node_modules/.vite`.
-- **Type check:** there is no clean canonical typecheck baseline yet. `cd packages/core && bunx tsc --noEmit` still reports pre-existing TypeScript errors in test files; do not treat it as green.
+- **Type check:** `bun run typecheck:core` (or `cd packages/core && bunx tsc --noEmit`) — currently green.
 - **Monorepo:** Bun workspaces (root `package.json`). No build step for core/cli/nl — web consumes TS source directly.
 - **Pattern:** Immutable Model — pure functions return `Result<Model, InvariantError>`, Maps for O(1) lookups.
 - **Docker:** `docker-compose.yml` runs web dev via Traefik on `opmodel.sanixai.com`. Mounts repo as volume. Note: Docker creates `.vite` cache as root.

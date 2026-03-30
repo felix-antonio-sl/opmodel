@@ -36,14 +36,14 @@ describe("HODOM simulation", () => {
     const r = loadModel(fixture);
     if (!r.ok) throw new Error("load failed");
     // Simulation should not throw
-    const trace = runSimulation(r.value, "opd-sd1", undefined, 10);
+    const trace = runSimulation(r.value, undefined, 10);
     console.log(`SD1 simulation: ${trace.steps.length} steps, completed=${trace.completed}, deadlocked=${trace.deadlocked}`);
   });
 
   it("runs simulation on SD2 without crashing", () => {
     const r = loadModel(fixture);
     if (!r.ok) throw new Error("load failed");
-    const trace = runSimulation(r.value, "opd-sd2", undefined, 10);
+    const trace = runSimulation(r.value, undefined, 10);
     console.log(`SD2 simulation: ${trace.steps.length} steps, completed=${trace.completed}, deadlocked=${trace.deadlocked}`);
   });
 });

@@ -3,11 +3,11 @@ import { describe, it, expect } from "vitest";
 import { createModel } from "../src/model";
 import { addThing, addLink, addAppearance, getSemiFoldedParts, updateAppearance } from "../src/api";
 import { resolveLinksForOpd } from "../src/simulation";
-import { isOk } from "../src/result";
+import { isOk, type Result } from "../src/result";
 import type { Thing } from "../src/types";
 
-function ok<T>(r: { ok: boolean; value?: T; error?: unknown }): T {
-  if (!isOk(r)) throw new Error(`Expected ok: ${JSON.stringify((r as any).error)}`);
+function ok<T>(r: Result<T, unknown>): T {
+  if (!isOk(r)) throw new Error(`Expected ok: ${JSON.stringify(r.error)}`);
   return r.value;
 }
 

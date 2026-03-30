@@ -4,7 +4,7 @@ import { createModel } from "../src/model";
 import {
   addThing, addState, addLink, addAppearance, addFan,
 } from "../src/api";
-import { isOk } from "../src/result";
+import { isOk, type Result } from "../src/result";
 import { expose, render } from "../src/opl";
 import type { Thing, Appearance, Fan } from "../src/types";
 
@@ -36,8 +36,8 @@ const procR: Thing = {
   essence: "informatical", affiliation: "systemic",
 };
 
-function ok<T>(r: { ok: boolean; value?: T; error?: unknown }): T {
-  if (!isOk(r)) throw new Error(`Expected ok, got error: ${JSON.stringify((r as any).error)}`);
+function ok<T>(r: Result<T, unknown>): T {
+  if (!isOk(r)) throw new Error(`Expected ok, got error: ${JSON.stringify(r.error)}`);
   return r.value;
 }
 

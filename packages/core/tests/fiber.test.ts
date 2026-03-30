@@ -189,7 +189,7 @@ describe("resolveOpdFiber", () => {
 
       const fiber = resolveOpdFiber(m, "opd-sd");
       expect(fiber.links).toHaveLength(1);
-      expect(fiber.links[0].link.id).toBe("lnk1");
+      expect(fiber.links[0]!.link.id).toBe("lnk1");
     });
 
     it("returns empty links when no both-endpoint appearances exist", () => {

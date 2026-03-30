@@ -71,15 +71,15 @@ describe("Ghost positioning — no overlap with explicit things", () => {
 
       for (let i = 0; i < implicit.length; i++) {
         for (let j = i + 1; j < implicit.length; j++) {
-          const a = implicit[i].appearance;
-          const b = implicit[j].appearance;
+          const a = implicit[i]!.appearance;
+          const b = implicit[j]!.appearance;
           const overlaps =
             a.x < b.x + b.w &&
             a.x + a.w > b.x &&
             a.y < b.y + b.h &&
             a.y + a.h > b.y;
 
-          expect(overlaps, `ghost ${implicit[i].thing.name} overlaps ghost ${implicit[j].thing.name} in ${opd.name}`).toBe(false);
+          expect(overlaps, `ghost ${implicit[i]!.thing.name} overlaps ghost ${implicit[j]!.thing.name} in ${opd.name}`).toBe(false);
         }
       }
     }

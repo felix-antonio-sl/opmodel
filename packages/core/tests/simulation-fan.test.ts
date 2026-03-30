@@ -4,7 +4,7 @@ import { createModel } from "../src/model";
 import {
   addThing, addState, addLink, addAppearance, addFan,
 } from "../src/api";
-import { isOk } from "../src/result";
+import { isOk, type Result } from "../src/result";
 import {
   createInitialState, evaluatePrecondition, simulationStep, runSimulation,
   type ModelState, type SimulationEvent,
@@ -13,8 +13,8 @@ import type { Thing } from "../src/types";
 
 // === Helpers ===
 
-function ok<T>(r: { ok: boolean; value?: T; error?: unknown }): T {
-  if (!isOk(r)) throw new Error(`Expected ok: ${JSON.stringify((r as any).error)}`);
+function ok<T>(r: Result<T, unknown>): T {
+  if (!isOk(r)) throw new Error(`Expected ok: ${JSON.stringify(r.error)}`);
   return r.value;
 }
 

@@ -225,18 +225,20 @@ describe("OnStar Driver Rescuing System", () => {
       const m = loadDriverRescuingModel();
       const trace = runSimulation(m);
       const step = trace.steps[0];
+      expect(step).toBeDefined();
 
-      expect(step.processId).toBe("proc-call-making");
-      expect(step.preconditionMet).toBe(true);
+      expect(step!.processId).toBe("proc-call-making");
+      expect(step!.preconditionMet).toBe(true);
     });
 
     it("step 2: Call Transmitting changes Call from requested to online", () => {
       const m = loadDriverRescuingModel();
       const trace = runSimulation(m);
       const step = trace.steps[1];
+      expect(step).toBeDefined();
 
-      expect(step.processId).toBe("proc-call-transmitting");
-      expect(step.stateChanges).toContainEqual({
+      expect(step!.processId).toBe("proc-call-transmitting");
+      expect(step!.stateChanges).toContainEqual({
         objectId: "obj-call",
         fromState: "state-call-requested",
         toState: "state-call-online",
@@ -247,18 +249,20 @@ describe("OnStar Driver Rescuing System", () => {
       const m = loadDriverRescuingModel();
       const trace = runSimulation(m);
       const step = trace.steps[2];
+      expect(step).toBeDefined();
 
-      expect(step.processId).toBe("proc-vehicle-location-calc");
-      expect(step.preconditionMet).toBe(true);
+      expect(step!.processId).toBe("proc-vehicle-location-calc");
+      expect(step!.preconditionMet).toBe(true);
     });
 
     it("step 4: Call Handling changes Danger Status from endangered to safe", () => {
       const m = loadDriverRescuingModel();
       const trace = runSimulation(m);
       const step = trace.steps[3];
+      expect(step).toBeDefined();
 
-      expect(step.processId).toBe("proc-call-handling");
-      expect(step.stateChanges).toContainEqual({
+      expect(step!.processId).toBe("proc-call-handling");
+      expect(step!.stateChanges).toContainEqual({
         objectId: "obj-danger-status",
         fromState: "state-danger-endangered",
         toState: "state-danger-safe",

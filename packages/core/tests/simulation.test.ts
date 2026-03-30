@@ -213,7 +213,7 @@ describe("getPreprocessSet", () => {
     const preprocess = getPreprocessSet(m, "proc-grind");
     const consumees = preprocess.filter(p => p.objectType === "consumee");
     expect(consumees).toHaveLength(1);
-    expect(consumees[0].objectId).toBe("obj-beans");
+    expect(consumees[0]!.objectId).toBe("obj-beans");
   });
 
   it("returns agents for agent links", () => {
@@ -221,7 +221,7 @@ describe("getPreprocessSet", () => {
     const preprocess = getPreprocessSet(m, "proc-grind");
     const agents = preprocess.filter(p => p.objectType === "agent");
     expect(agents).toHaveLength(1);
-    expect(agents[0].objectId).toBe("obj-grinder");
+    expect(agents[0]!.objectId).toBe("obj-grinder");
   });
 
   it("returns affectees for effect links", () => {
@@ -229,7 +229,7 @@ describe("getPreprocessSet", () => {
     const preprocess = getPreprocessSet(m, "proc-boil");
     const affectees = preprocess.filter(p => p.objectType === "affectee");
     expect(affectees).toHaveLength(1);
-    expect(affectees[0].objectId).toBe("obj-water");
+    expect(affectees[0]!.objectId).toBe("obj-water");
   });
 
   it("returns empty for unknown process", () => {
@@ -247,7 +247,7 @@ describe("getPostprocessSet", () => {
     const postprocess = getPostprocessSet(m, "proc-grind");
     const resultees = postprocess.filter(p => p.objectType === "resultee");
     expect(resultees).toHaveLength(1);
-    expect(resultees[0].objectId).toBe("obj-ground");
+    expect(resultees[0]!.objectId).toBe("obj-ground");
   });
 
   it("returns affectees for effect links", () => {
@@ -255,7 +255,7 @@ describe("getPostprocessSet", () => {
     const postprocess = getPostprocessSet(m, "proc-boil");
     const affectees = postprocess.filter(p => p.objectType === "affectee");
     expect(affectees).toHaveLength(1);
-    expect(affectees[0].objectId).toBe("obj-water");
+    expect(affectees[0]!.objectId).toBe("obj-water");
   });
 
   it("returns empty for unknown process", () => {
@@ -472,8 +472,8 @@ describe("getExecutableProcesses", () => {
     const m = buildBoilingModel();
     const procs = getExecutableProcesses(m);
     expect(procs).toHaveLength(1);
-    expect(procs[0].id).toBe("proc-boil");
-    expect(procs[0].parentProcessId).toBeUndefined();
+    expect(procs[0]!.id).toBe("proc-boil");
+    expect(procs[0]!.parentProcessId).toBeUndefined();
   });
 
   it("expands in-zoomed process into subprocesses", () => {
@@ -485,22 +485,22 @@ describe("getExecutableProcesses", () => {
     expect(procs).toHaveLength(2);
     expect(procs.map(p => p.id)).toContain("proc-sub-a");
     expect(procs.map(p => p.id)).toContain("proc-sub-b");
-    expect(procs[0].parentProcessId).toBe("proc-main");
+    expect(procs[0]!.parentProcessId).toBe("proc-main");
   });
 
   it("sorts subprocesses by Y coordinate (ISO §D.4)", () => {
     const m = buildInZoomModel();
     const procs = getExecutableProcesses(m);
     // proc-sub-b at Y=100 should come before proc-sub-a at Y=200
-    expect(procs[0].id).toBe("proc-sub-b");
-    expect(procs[1].id).toBe("proc-sub-a");
+    expect(procs[0]!.id).toBe("proc-sub-b");
+    expect(procs[1]!.id).toBe("proc-sub-a");
   });
 
   it("handles empty in-zoom (executes parent directly)", () => {
     const m = buildEmptyInZoomModel();
     const procs = getExecutableProcesses(m);
     expect(procs).toHaveLength(1);
-    expect(procs[0].id).toBe("proc-main");
+    expect(procs[0]!.id).toBe("proc-main");
   });
 });
 
@@ -576,8 +576,9 @@ describe("runSimulation — in-zoom expansion", () => {
     const m = buildBoilingModel();
     const trace = runSimulation(m);
     expect(trace.steps.length).toBe(1);
-    expect(trace.steps[0].processId).toBe("proc-boil");
-    expect(trace.steps[0].parentProcessId).toBeUndefined();
+    expect(trace.steps[0]).toBeDefined();
+    expect(trace.steps[0]!.processId).toBe("proc-boil");
+    expect(trace.steps[0]!.parentProcessId).toBeUndefined();
   });
 
   it("intermediate step states are independent (no shared mutation)", () => {
@@ -586,19 +587,21 @@ describe("runSimulation — in-zoom expansion", () => {
 
     // After Step 1 (Grinding): Coffee Beans consumed, Water still exists in "cold"
     const step1 = trace.steps[0];
-    expect(step1.processName).toContain("Grinding");
-    expect(step1.newState.objects.get("obj-coffee-beans")?.exists).toBe(false);
-    expect(step1.newState.objects.get("obj-water")?.exists).toBe(true);
-    expect(step1.newState.objects.get("obj-water")?.currentState).toBe("state-water-cold");
+    expect(step1).toBeDefined();
+    expect(step1!.processName).toContain("Grinding");
+    expect(step1!.newState.objects.get("obj-coffee-beans")?.exists).toBe(false);
+    expect(step1!.newState.objects.get("obj-water")?.exists).toBe(true);
+    expect(step1!.newState.objects.get("obj-water")?.currentState).toBe("state-water-cold");
 
     // After Step 2 (Boiling): Water changes to "hot", still exists
     const step2 = trace.steps[1];
-    expect(step2.processName).toContain("Boiling");
-    expect(step2.newState.objects.get("obj-water")?.exists).toBe(true);
-    expect(step2.newState.objects.get("obj-water")?.currentState).toBe("state-water-hot");
+    expect(step2).toBeDefined();
+    expect(step2!.processName).toContain("Boiling");
+    expect(step2!.newState.objects.get("obj-water")?.exists).toBe(true);
+    expect(step2!.newState.objects.get("obj-water")?.currentState).toBe("state-water-hot");
 
     // Step 1 state must NOT be mutated by step 2 — Water still "cold" in step 1
-    expect(step1.newState.objects.get("obj-water")?.currentState).toBe("state-water-cold");
+    expect(step1!.newState.objects.get("obj-water")?.currentState).toBe("state-water-cold");
   });
 
   it("Brewing transitions Coffee to ready state (Bug C fix)", () => {
@@ -645,8 +648,8 @@ describe("resolveLinksForOpd", () => {
     const agentLinks = resolved.filter(rl => rl.link.type === "agent");
     // 3 agent links (Barista→Grinding/Boiling/Brewing) dedup to 1
     expect(agentLinks).toHaveLength(1);
-    expect(agentLinks[0].visualSource).toBe("obj-barista");
-    expect(agentLinks[0].visualTarget).toBe("proc-coffee-making");
+    expect(agentLinks[0]!.visualSource).toBe("obj-barista");
+    expect(agentLinks[0]!.visualTarget).toBe("proc-coffee-making");
   });
 
   it("skips links with non-resolvable endpoints (internal objects)", () => {
@@ -741,8 +744,9 @@ describe("SIM-GAP-03 — effect link source_state/target_state semantics", () =>
 
     const trace = runSimulation(m);
     expect(trace.steps.length).toBe(1);
-    expect(trace.steps[0].processId).toBe("proc-heat");
-    expect(trace.steps[0].preconditionMet).toBe(true);
+    expect(trace.steps[0]).toBeDefined();
+    expect(trace.steps[0]!.processId).toBe("proc-heat");
+    expect(trace.steps[0]!.preconditionMet).toBe(true);
     expect(trace.finalState.objects.get("obj-water")?.currentState).toBe("st-hot");
   });
 });
@@ -924,8 +928,10 @@ describe("invocation links (SIM-BUG-02)", () => {
     expect(trace.steps.length).toBeGreaterThanOrEqual(3);
     const names = trace.steps.filter(s => !s.skipped).map(s => s.processName);
     expect(names).toEqual(["Step A", "Step B", "Step C"]);
-    expect(trace.steps[1].invokedBy).toBe("proc-a");
-    expect(trace.steps[2].invokedBy).toBe("proc-b");
+    expect(trace.steps[1]).toBeDefined();
+    expect(trace.steps[2]).toBeDefined();
+    expect(trace.steps[1]!.invokedBy).toBe("proc-a");
+    expect(trace.steps[2]!.invokedBy).toBe("proc-b");
   });
 
   it("invoked process with unsatisfied precondition goes to waiting", () => {
