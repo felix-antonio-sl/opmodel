@@ -129,6 +129,13 @@ function visualFindingKindLabel(kind: VisualFinding["kind"]): string {
   }
 }
 
+export function formatValidationMessage(err: InvariantError): string {
+  if (err.code === "I-GERUND") {
+    return "Process name should use accepted process naming: English -ing; Spanish -ando/-iendo or forms like -ción.";
+  }
+  return err.message;
+}
+
 export function ValidationPanel({ model, errors, visualFindings = [], dispatch, onClose }: Props) {
   const errorCount = errors.filter((e) => !e.severity || e.severity === "error").length;
   const warningCount = errors.filter((e) => e.severity === "warning").length;
@@ -190,7 +197,7 @@ export function ValidationPanel({ model, errors, visualFindings = [], dispatch, 
                     onClick={() => handleClick(err)}
                   >
                     <span className="validation-panel__code">{err.code}</span>
-                    <span className="validation-panel__msg">{err.message}</span>
+                    <span className="validation-panel__msg">{formatValidationMessage(err)}</span>
                     {err.entity && (
                       <span className="validation-panel__entity">
                         {entityLabel(model, err.entity)}
