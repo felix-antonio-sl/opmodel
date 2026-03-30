@@ -5,6 +5,8 @@
   "scripts": {
     "test": "bunx --bun vitest run",
     "test:watch": "bunx --bun vitest",
+    "web:build": "bun run --filter @opmodel/web build",
+    "web:dev": "bun run --filter @opmodel/web dev",
     "build:hodom-v2": "bun run scripts/build-hodom-v2.ts",
     "build:hodom-hsc-v0": "bun run scripts/build-hodom-hsc-v0.ts",
     "build:ev-ams": "bun run scripts/build-ev-ams.ts",
