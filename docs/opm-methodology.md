@@ -145,14 +145,14 @@ El modelador DEBE identificar el proceso principal que provee el beneficio del s
 
 El nombre del proceso DEBE usar una forma aceptada de nombramiento de proceso.
 
-- **En ingles:** gerundio (`-ing`)
-- **En espanol:** gerundio (`-ando/-iendo`) **o** formas nominalizadas de accion ampliamente usadas en modelamiento operativo, especialmente terminaciones como `-ción`
+- **En ingles:** alguna palabra del nombre puede usar gerundio (`-ing`)
+- **En espanol:** la **primera palabra** puede usar gerundio (`-ando/-iendo`) **o** una forma nominalizada de accion en `-ción`
 
-**Correcto:** `Battery Charging`, `Airplane Flying`, `Road Danger Warning`, `Evaluación de Elegibilidad`, `Coordinación Interequipo`, `Hospitalización Domiciliaria Proveyendo`
+**Correcto:** `Battery Charging`, `Airplane Flying`, `Road Danger Warning`, `Evaluación de Elegibilidad`, `Coordinación Interequipo`
 
-**Incorrecto:** `Charge Battery`, `Fly Airplane`, `Road Danger Warn`
+**Incorrecto:** `Charge Battery`, `Fly Airplane`, `Road Danger Warn`, `Plan de Coordinación`
 
-En espanol, las formas en `-ción` se consideran validas cuando nombran claramente la accion/proceso y no un objeto. El nombre DEBERIA combinar el transformee seguido de una forma procesual clara cuando se necesite claridad. Este naming es tambien el nombre de la funcion del sistema.
+En espanol, las formas en `-ción` se consideran validas solo cuando aparecen en la **primera palabra** del nombre del proceso y nombran claramente una accion/proceso. El nombre DEBERIA combinar el transformee seguido de una forma procesual clara cuando se necesite claridad. Este naming es tambien el nombre de la funcion del sistema.
 
 ### 6.2 Paso 2: Grupo Beneficiario
 

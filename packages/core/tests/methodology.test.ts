@@ -28,13 +28,25 @@ describe("Methodology validation (P0)", () => {
     expect(gerund).toHaveLength(0);
   });
 
-  it("I-GERUND: warns for non-gerund process name", () => {
+  it("I-GERUND: warns for non-processual first word", () => {
     let m = createModel("Test");
     const proc: Thing = { id: "proc-1", kind: "process", name: "Brew Coffee", essence: "physical", affiliation: "systemic" };
     let r = addThing(m, proc); m = isOk(r) ? r.value : m;
     r = addAppearance(m, { thing: "proc-1", opd: "opd-sd", x: 0, y: 0, w: 120, h: 60 }); m = isOk(r) ? r.value : m;
     const errors = validate(m);
     expect(errors.some(e => e.code === "I-GERUND")).toBe(true);
+  });
+
+  it("I-GERUND: accepts Spanish -ción only when it is the first word", () => {
+    let m = createModel("Test");
+    let r = addThing(m, { id: "proc-ok", kind: "process", name: "Evaluación de Elegibilidad", essence: "physical", affiliation: "systemic" });
+    m = isOk(r) ? r.value : m;
+    r = addThing(m, { id: "proc-bad", kind: "process", name: "Plan de Coordinación", essence: "physical", affiliation: "systemic" });
+    m = isOk(r) ? r.value : m;
+    const errors = validate(m).filter(e => e.code === "I-GERUND");
+
+    expect(errors.some(e => e.entity === "proc-ok")).toBe(false);
+    expect(errors.some(e => e.entity === "proc-bad")).toBe(true);
   });
 
   it("I-TRANSFORMEE: warns when process has no transforming link", () => {

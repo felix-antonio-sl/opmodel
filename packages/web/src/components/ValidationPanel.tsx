@@ -131,7 +131,7 @@ function visualFindingKindLabel(kind: VisualFinding["kind"]): string {
 
 export function formatValidationMessage(err: InvariantError): string {
   if (err.code === "I-GERUND") {
-    return "Process name should use accepted process naming: English -ing; Spanish -ando/-iendo or forms like -ción.";
+    return "Process name should use accepted process naming: English may use a word ending in -ing; Spanish uses the first word ending in -ando/-iendo/-ción.";
   }
   return err.message;
 }

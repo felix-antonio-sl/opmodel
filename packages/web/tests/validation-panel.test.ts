@@ -11,9 +11,9 @@ describe("ValidationPanel message formatting", () => {
       entity: "proc-1",
     });
 
-    expect(msg).toContain("English -ing");
-    expect(msg).toContain("Spanish -ando/-iendo");
-    expect(msg).toContain("-ción");
+    expect(msg).toContain("English may use a word ending in -ing");
+    expect(msg).toContain("Spanish uses the first word");
+    expect(msg).toContain("-ando/-iendo/-ción");
   });
 
   it("passes through non-I-GERUND messages unchanged", () => {

@@ -1829,13 +1829,17 @@ export function validate(model: Model): InvariantError[] {
   // === Methodology Validation (§6-§7 OPM Methodology) ===
 
   // I-GERUND: Process names should use accepted process naming forms.
-  // English: gerund (-ing). Spanish: gerund (-ando/-iendo) or nominalized action forms (-ción and related operational nominal forms).
+  // English: some word in the process name may use gerund (-ing).
+  // Spanish: the first word may use gerund (-ando/-iendo) or nominalized action form (-ción).
   for (const [id, thing] of model.things) {
     if (thing.kind !== "process") continue;
     const name = thing.name.trim();
-    const endsGerund = /(?:ing|ando|iendo|endo|ción|sión|idad|dad|ncia|miento|eso|ica)$/i.test(name);
-    if (!endsGerund) {
-      errors.push({ code: "I-GERUND", severity: "warning", message: `Process "${name}" should use accepted process naming (English: -ing; Spanish: -ando/-iendo or action forms like -ción)`, entity: id });
+    const words = name.split(/\s+/).filter(Boolean);
+    const firstWord = words[0] ?? "";
+    const englishGerundAnywhere = words.some((word) => /ing$/i.test(word));
+    const spanishProcessFirstWord = /(?:ando|iendo|ción)$/i.test(firstWord);
+    if (!(englishGerundAnywhere || spanishProcessFirstWord)) {
+      errors.push({ code: "I-GERUND", severity: "warning", message: `Process "${name}" should use accepted process naming (English: a word ending in -ing; Spanish: first word ending in -ando/-iendo/-ción)`, entity: id });
     }
   }
 
