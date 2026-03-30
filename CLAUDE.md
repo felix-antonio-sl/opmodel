@@ -22,6 +22,7 @@ OPModel is a single-user power tool for **Object Process Methodology (ISO 19450)
 ## Language and Conventions
 
 - Documentation is written in **Spanish (es-CL)** with English technical terminology.
+- Process naming convention: English may use `-ing`; Spanish may use gerund (`-ando/-iendo`) or accepted operational nominal forms such as `-ción` when they denote an action/process.
 - Backlog item IDs follow the pattern `L-M{module}-{number}` (e.g., `L-M1-02` for Things in Module 1).
 - File naming: lowercase Spanish with hyphens, `.md` extension. Session files prefixed with `YYYY-MM-DD-`.
 - Evidence taxonomy: `frame-confirmada` | `video-confirmada` | `inferida` | `nueva`.

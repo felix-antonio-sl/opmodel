@@ -143,13 +143,16 @@ El SD DEBE ser simple y claro, con minimos detalles tecnicos. Todos los stakehol
 
 El modelador DEBE identificar el proceso principal que provee el beneficio del sistema.
 
-El nombre del proceso DEBE terminar con un verbo en forma gerundio (sufijo "-ing" en ingles, "-ando/-iendo" en espanol).
+El nombre del proceso DEBE usar una forma aceptada de nombramiento de proceso.
 
-**Correcto:** `Battery Charging`, `Airplane Flying`, `Road Danger Warning`
+- **En ingles:** gerundio (`-ing`)
+- **En espanol:** gerundio (`-ando/-iendo`) **o** formas nominalizadas de accion ampliamente usadas en modelamiento operativo, especialmente terminaciones como `-ción`
+
+**Correcto:** `Battery Charging`, `Airplane Flying`, `Road Danger Warning`, `Evaluación de Elegibilidad`, `Coordinación Interequipo`, `Hospitalización Domiciliaria Proveyendo`
 
 **Incorrecto:** `Charge Battery`, `Fly Airplane`, `Road Danger Warn`
 
-El nombre DEBERIA combinar el transformee seguido del verbo gerundio cuando se necesite claridad. Este naming es tambien el nombre de la funcion del sistema.
+En espanol, las formas en `-ción` se consideran validas cuando nombran claramente la accion/proceso y no un objeto. El nombre DEBERIA combinar el transformee seguido de una forma procesual clara cuando se necesite claridad. Este naming es tambien el nombre de la funcion del sistema.
 
 ### 6.2 Paso 2: Grupo Beneficiario
 

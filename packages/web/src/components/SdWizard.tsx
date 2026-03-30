@@ -234,11 +234,11 @@ export function SdWizard({ onComplete, onCancel }: Props) {
                 <option value="social">Social</option>
                 <option value="socio-technical">Socio-technical</option>
               </select>
-              <label className="wizard-label">Main process name (gerund: -ing)</label>
+              <label className="wizard-label">Main process name (English: -ing; Spanish: gerund or -ción)</label>
               <input className="wizard-input" value={w.mainProcessName} onChange={(e) => set("mainProcessName", e.target.value)}
                 placeholder="e.g. Battery Charging, Road Danger Warning" autoFocus />
               {w.mainProcessName && !/(?:ing|ando|iendo|ción)$/i.test(w.mainProcessName) && (
-                <div className="wizard-warn">⚠ Should end in gerund (-ing/-ando/-iendo)</div>
+                <div className="wizard-warn">⚠ Use accepted process naming: English -ing; Spanish -ando/-iendo or forms like -ción</div>
               )}
             </>
           )}
