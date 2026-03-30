@@ -4,7 +4,11 @@
   "workspaces": ["packages/*"],
   "scripts": {
     "test": "bunx --bun vitest run",
-    "test:watch": "bunx --bun vitest"
+    "test:watch": "bunx --bun vitest",
+    "build:hodom-v2": "bun run scripts/build-hodom-v2.ts",
+    "build:hodom-hsc-v0": "bun run scripts/build-hodom-hsc-v0.ts",
+    "build:ev-ams": "bun run scripts/build-ev-ams.ts",
+    "build:fixtures": "bun run build:hodom-v2 && bun run build:hodom-hsc-v0 && bun run build:ev-ams"
   },
   "devDependencies": {
     "@types/bun": "^1.3.10",

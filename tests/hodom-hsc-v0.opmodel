@@ -118,8 +118,8 @@
     {"id":"lnk-visita-instr-vehiculo","source":"obj-vehiculo","target":"proc-visita","type":"instrument"}
   ],
   "meta": {
-      "created": "2026-03-30T02:51:12.342Z",
-      "modified": "2026-03-30T02:51:12.348Z",
+      "created": "2026-03-30T21:23:03.886Z",
+      "modified": "2026-03-30T21:23:03.892Z",
       "name": "HODOM HSC — Hospital de San Carlos",
       "system_type": "socio-technical"
   },

@@ -197,8 +197,8 @@
     {"id":"lnk-welding-agent","source":"obj-welding-robot","target":"proc-chassis","type":"agent"}
   ],
   "meta": {
-      "created": "2026-03-25T16:31:58.638Z",
-      "modified": "2026-03-25T16:31:58.646Z",
+      "created": "2026-03-30T21:23:03.944Z",
+      "modified": "2026-03-30T21:23:03.956Z",
       "name": "EV-AMS: Autonomous Electric Vehicle Manufacturing & Operation",
       "system_type": "socio-technical"
   },

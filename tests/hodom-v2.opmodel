@@ -79,8 +79,8 @@
     {"distributed":true,"id":"lnk-result-plan","source":"proc-hd-proveyendo","target":"obj-plan-terapeutico","type":"result"}
   ],
   "meta": {
-      "created": "2026-03-25T11:42:24.569Z",
-      "modified": "2026-03-25T11:42:24.571Z",
+      "created": "2026-03-30T21:23:03.816Z",
+      "modified": "2026-03-30T21:23:03.820Z",
       "name": "Hospitalización Domiciliaria",
       "system_type": "socio-technical"
   },
