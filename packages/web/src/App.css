@@ -221,6 +221,72 @@ body,
   letter-spacing: 0.04em;
 }
 
+.header__pill {
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+button.header__pill {
+  cursor: pointer;
+}
+
+button.header__pill:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+.header__pill-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.header__pill-dot--ok {
+  background: var(--success);
+  box-shadow: 0 0 4px rgba(22, 121, 74, 0.3);
+}
+
+.header__pill-dot--error {
+  background: var(--danger);
+  box-shadow: 0 0 4px rgba(197, 48, 48, 0.3);
+}
+
+.header__pill--ok {
+  color: var(--success);
+}
+
+.header__pill--error {
+  color: var(--danger);
+}
+
+.header__pill--visual {
+  color: var(--accent);
+}
+
+.header__pill--save-saved {
+  color: var(--success);
+}
+
+.header__pill--save-saving {
+  color: var(--text-muted);
+}
+
+.header__pill--save-error {
+  color: var(--danger);
+}
+
 /* ═══════════════════
    Toolbar
    ═══════════════════ */

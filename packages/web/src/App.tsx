@@ -397,6 +397,10 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
     return auditVisualOpd({ appearances, links, things: model.things.values(), states: model.states.values() });
   }, [model, ui.currentOpd]);
   const visualQuality = useMemo(() => computeVisualQuality(visualFindings), [visualFindings]);
+  const validationLabel = isValid
+    ? (errors.length > 0 ? `${errors.length} hints` : "Valid")
+    : `${hardErrors.length} errors`;
+  const saveLabel = saveStatus === "saved" ? "Saved" : saveStatus === "saving" ? "Saving..." : "Storage full";
 
   const [layoutAllToast, setLayoutAllToast] = useState<string | null>(null);
   const autoLayoutAll = useCallback(() => {
@@ -475,6 +479,24 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
           onShowVisualReport={() => setShowVisualReport(true)}
         />
         <div className="header__sep" />
+        <button
+          className={`header__pill header__pill--validation header__pill--${isValid ? "ok" : "error"}`}
+          onClick={() => setShowValidation(v => !v)}
+          title="Toggle validation panel"
+        >
+          <span className={`header__pill-dot header__pill-dot--${isValid ? "ok" : "error"}`} />
+          {validationLabel}
+        </button>
+        <button
+          className="header__pill header__pill--visual"
+          onClick={() => setShowVisualReport(true)}
+          title={`Visual quality: ${visualQuality.grade} (${visualQuality.score}/100) — ${visualQuality.errorCount} errors, ${visualQuality.warningCount} warnings, ${visualQuality.infoCount} info`}
+        >
+          Visual {visualQuality.grade} {visualQuality.score}
+        </button>
+        <div className={`header__pill header__pill--save header__pill--save-${saveStatus}`} title="Autosave status">
+          {saveLabel}
+        </div>
         <div className="header__badge">v{model.opmodel}</div>
         <button
           className={`header__action${ui.simulation ? " header__action--active" : ""}`}
@@ -686,7 +708,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
           title="Toggle validation panel"
         >
           <div className={`status-bar__dot status-bar__dot--${isValid ? "ok" : "error"}`} />
-          <span>{isValid ? (errors.length > 0 ? `${errors.length} hints` : "Valid") : `${hardErrors.length} errors`}</span>
+          <span>{validationLabel}</span>
         </div>
         <button
           className="status-bar__indicator status-bar__indicator--clickable"
@@ -750,7 +772,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
           </>
         )}
         <span className={`status-bar__save status-bar__save--${saveStatus}`}>
-          {saveStatus === "saved" ? "Saved" : saveStatus === "saving" ? "Saving..." : "Storage full"}
+          {saveLabel}
         </span>
         <div className="status-bar__sep" />
         <span className="status-bar__version">opmodel {model.opmodel}</span>
