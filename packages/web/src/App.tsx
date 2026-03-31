@@ -702,6 +702,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
       {showValidation && (
         <ValidationPanel
           model={model}
+          currentOpd={ui.currentOpd}
           errors={errors}
           visualFindings={visualFindings}
           dispatch={dispatch}

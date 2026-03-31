@@ -2210,6 +2210,38 @@ button.header__pill:hover {
   overflow-y: auto;
   flex: 1;
 }
+.validation-panel__filters {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.validation-panel__filter-group {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.validation-panel__filter-btn {
+  font-size: 10px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.validation-panel__filter-btn:hover {
+  color: var(--text);
+  background: var(--bg-hover);
+}
+.validation-panel__filter-btn--active {
+  color: var(--text);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
 .validation-panel__section {
   padding-bottom: 6px;
 }
