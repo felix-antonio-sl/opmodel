@@ -21,6 +21,7 @@ describe("visual-report", () => {
     for (const opd of report.opds) {
       expect(opd.findings.length).toBe(opd.errors + opd.warnings + opd.info);
     }
+    expect(report.opds.some((opd) => opd.findings.some((finding) => finding.primaryEntity !== null))).toBe(true);
   });
 
   it("exports markdown with detailed findings", () => {

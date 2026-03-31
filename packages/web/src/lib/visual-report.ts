@@ -12,6 +12,7 @@ export interface VisualFindingReportItem {
   severity: VisualSeverity;
   kind: VisualFinding["kind"];
   summary: string;
+  primaryEntity: string | null;
 }
 
 export interface VisualOpdReport {
@@ -50,6 +51,23 @@ function formatPercent(value: number): string {
   return `${Math.round(value * 100)}%`;
 }
 
+function primaryEntityForFinding(finding: VisualFinding): string | null {
+  switch (finding.kind) {
+    case "overlap":
+      return finding.aThing;
+    case "orphan":
+      return finding.thing;
+    case "truncated-state":
+      return finding.thing;
+    case "degenerate-bounds":
+      return null;
+    case "crowded-diagram":
+      return null;
+    case "tight-spacing":
+      return finding.aThing;
+  }
+}
+
 function summarizeFinding(model: Model, finding: VisualFinding): string {
   switch (finding.kind) {
     case "overlap":
@@ -86,6 +104,7 @@ export function buildVisualReport(model: Model): VisualModelReport {
         severity: visualFindingSeverity(finding),
         kind: finding.kind,
         summary: summarizeFinding(model, finding),
+        primaryEntity: primaryEntityForFinding(finding),
       })),
     };
   }).sort((a, b) => a.score - b.score || a.name.localeCompare(b.name));

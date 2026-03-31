@@ -721,7 +721,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
         />
       )}
       {showVisualReport && (
-        <VisualReportPanel model={model} onClose={() => setShowVisualReport(false)} />
+        <VisualReportPanel model={model} dispatch={dispatch} onClose={() => setShowVisualReport(false)} />
       )}
 
       {/* Status Bar */}
