@@ -261,12 +261,24 @@ export function ValidationPanel({
   return (
     <div className="validation-panel">
       <div className="validation-panel__header">
-        <span className="validation-panel__title">Validation</span>
+        <div>
+          <span className="validation-panel__title">Validation</span>
+          <div className="validation-panel__subtitle">
+            {tab === "issues"
+              ? "Actionable model and visual issues for the current working context."
+              : "Model-level visual quality report with per-OPD findings and export."}
+          </div>
+        </div>
         <button className="validation-panel__close" onClick={onClose}>×</button>
       </div>
       <div className="validation-panel__tabs">
-        <button className={`validation-panel__tab${tab === "issues" ? " validation-panel__tab--active" : ""}`} onClick={() => setTab("issues")}>Issues</button>
-        <button className={`validation-panel__tab${tab === "visual-report" ? " validation-panel__tab--active" : ""}`} onClick={() => setTab("visual-report")}>Visual Report</button>
+        <button className={`validation-panel__tab${tab === "issues" ? " validation-panel__tab--active" : ""}`} onClick={() => setTab("issues")} title="Actionable findings you can inspect and navigate from">Issues</button>
+        <button className={`validation-panel__tab${tab === "visual-report" ? " validation-panel__tab--active" : ""}`} onClick={() => setTab("visual-report")} title="Model-level visual quality by OPD, with export">Visual Report</button>
+      </div>
+      <div className="validation-panel__hint">
+        {tab === "issues"
+          ? "Use severity + scope filters to reduce noise while you work."
+          : "Use severity + scope filters to inspect report slices or export the full markdown report."}
       </div>
       <div className="validation-panel__summary">
         <span className="validation-panel__chip validation-panel__chip--error">{errorCount} errors</span>
@@ -295,8 +307,8 @@ export function ValidationPanel({
           <button className={`validation-panel__filter-btn${severityFilter === "info" ? " validation-panel__filter-btn--active" : ""}`} onClick={() => setSeverityFilter("info")}>Info</button>
         </div>
         <div className="validation-panel__filter-group">
-          <button className={`validation-panel__filter-btn${scopeFilter === "current-opd" ? " validation-panel__filter-btn--active" : ""}`} onClick={() => setScopeFilter("current-opd")}>Current OPD</button>
-          <button className={`validation-panel__filter-btn${scopeFilter === "all" ? " validation-panel__filter-btn--active" : ""}`} onClick={() => setScopeFilter("all")}>Whole model</button>
+          <button className={`validation-panel__filter-btn${scopeFilter === "current-opd" ? " validation-panel__filter-btn--active" : ""}`} onClick={() => setScopeFilter("current-opd")} title="Focus on the OPD you are currently editing">Current OPD</button>
+          <button className={`validation-panel__filter-btn${scopeFilter === "all" ? " validation-panel__filter-btn--active" : ""}`} onClick={() => setScopeFilter("all")} title="Inspect issues across the whole model">Whole model</button>
           {tab === "visual-report" && <button className="validation-panel__filter-btn" onClick={downloadMarkdown}>Export MD</button>}
         </div>
       </div>

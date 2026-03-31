@@ -2201,6 +2201,13 @@ button.header__pill:hover {
   line-height: 1;
 }
 .validation-panel__close:hover { color: var(--text); }
+.validation-panel__subtitle {
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.35;
+  max-width: 360px;
+}
 .validation-panel__tabs {
   display: flex;
   gap: 6px;
@@ -2219,6 +2226,13 @@ button.header__pill:hover {
 .validation-panel__tab--active {
   background: color-mix(in srgb, var(--accent) 10%, var(--bg-panel));
   color: var(--text);
+}
+.validation-panel__hint {
+  padding: 6px 10px;
+  font-size: 11px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-hover) 30%, transparent);
 }
 .validation-panel__summary {
   display: flex;

@@ -40,6 +40,8 @@ describe("ValidationPanel filters", () => {
     renderPanel();
 
     expect(screen.getByText("Current OPD")).toBeTruthy();
+    expect(screen.getByText(/Actionable model and visual issues/)).toBeTruthy();
+    expect(screen.getByText(/reduce noise while you work/i)).toBeTruthy();
     fireEvent.click(screen.getByText("Info"));
     expect(screen.getAllByText(/Truncated state pill|VISUAL/).length).toBeGreaterThan(0);
     fireEvent.click(screen.getByText("Whole model"));
@@ -52,6 +54,8 @@ describe("ValidationPanel filters", () => {
     if (!rendered) return;
 
     expect(screen.getByText("Visual Report")).toBeTruthy();
+    expect(screen.getByText(/Model-level visual quality report/)).toBeTruthy();
+    expect(screen.getByText(/export the full markdown report/i)).toBeTruthy();
     expect(screen.getByText(/Avg/)).toBeTruthy();
 
     const actionableFinding = screen.getAllByRole("button").find((el) =>
