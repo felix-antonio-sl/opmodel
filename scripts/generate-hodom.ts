@@ -754,15 +754,17 @@ function autoLayout(opdId: string, thingIds: string[], opts?: { internal?: boole
   const startX = opts?.startX ?? 50;
   const startY = opts?.startY ?? 50;
   const cols = opts?.cols ?? 4;
-  const colW = 200;
-  const rowH = 100;
+  const colW = 220;
+  const rowH = 110;
+  // Wider objects to fit Spanish state pills (2 states × 80px + gap + padding)
+  const objW = 180;
   return thingIds.map((id, i) => ({
     thing: id,
     opd: opdId,
     x: startX + (i % cols) * colW,
     y: startY + Math.floor(i / cols) * rowH,
-    w: 160,
-    h: id.startsWith("proc-") ? 70 : 50,
+    w: id.startsWith("proc-") ? 180 : objW,
+    h: id.startsWith("proc-") ? 70 : 55,
     ...(opts?.internal !== undefined ? { internal: opts.internal } : {}),
   }));
 }

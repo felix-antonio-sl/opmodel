@@ -20,14 +20,14 @@ export const LINK_COLORS: Record<string, string> = {
 export const VISUAL_RULES = {
   statePill: {
     height: 16,
-    maxWidth: 55,
-    compactMaxWidth: 50,
+    maxWidth: 80,
+    compactMaxWidth: 70,
     horizontalPadding: 12,
     compactHorizontalPadding: 8,
     gap: 4,
     textInset: 2,
     approxCharPx: 5,
-    minReadableChars: 4,
+    minReadableChars: 6,
   },
   spacing: {
     laneGap: 80,
