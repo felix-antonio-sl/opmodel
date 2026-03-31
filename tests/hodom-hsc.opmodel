@@ -4,8 +4,8 @@
     "name": "HODOM HSC — Sistema de Hospitalización Domiciliaria",
     "description": "Modelo OPM del Sistema de Hospitalización Domiciliaria (HODOM) conforme a ISO/PAS 19450. Hospital de San Carlos. 16 OPDs, ~235 entidades.",
     "system_type": "socio-technical",
-    "created": "2026-03-31T16:01:04.529Z",
-    "modified": "2026-03-31T16:01:04.530Z"
+    "created": "2026-03-31T16:02:38.367Z",
+    "modified": "2026-03-31T16:02:38.367Z"
   },
   "settings": {
     "autosave_interval_s": 300,
@@ -3816,7 +3816,7 @@
     {
       "thing": "obj-patient-group",
       "opd": "opd-sd",
-      "x": 270,
+      "x": 290,
       "y": 50,
       "w": 180,
       "h": 55
@@ -3824,15 +3824,15 @@
     {
       "thing": "obj-clinical-condition",
       "opd": "opd-sd",
-      "x": 490,
+      "x": 530,
       "y": 50,
-      "w": 180,
+      "w": 215,
       "h": 55
     },
     {
       "thing": "obj-hodom-system",
       "opd": "opd-sd",
-      "x": 710,
+      "x": 770,
       "y": 50,
       "w": 180,
       "h": 55
@@ -3840,7 +3840,7 @@
     {
       "thing": "obj-healthcare-team",
       "opd": "opd-sd",
-      "x": 930,
+      "x": 1010,
       "y": 50,
       "w": 180,
       "h": 55
@@ -3856,7 +3856,7 @@
     {
       "thing": "obj-communication-system",
       "opd": "opd-sd",
-      "x": 270,
+      "x": 290,
       "y": 160,
       "w": 180,
       "h": 55
@@ -3864,7 +3864,7 @@
     {
       "thing": "obj-transport-vehicle",
       "opd": "opd-sd",
-      "x": 490,
+      "x": 530,
       "y": 160,
       "w": 180,
       "h": 55
@@ -3872,7 +3872,7 @@
     {
       "thing": "obj-admin-infrastructure",
       "opd": "opd-sd",
-      "x": 710,
+      "x": 770,
       "y": 160,
       "w": 180,
       "h": 55
@@ -3888,7 +3888,7 @@
     {
       "thing": "obj-inpatient-facility",
       "opd": "opd-sd",
-      "x": 270,
+      "x": 290,
       "y": 300,
       "w": 180,
       "h": 55
@@ -3896,7 +3896,7 @@
     {
       "thing": "obj-current-regulation",
       "opd": "opd-sd",
-      "x": 490,
+      "x": 530,
       "y": 300,
       "w": 180,
       "h": 55
@@ -3904,7 +3904,7 @@
     {
       "thing": "proc-inpatient-bed-occupying",
       "opd": "opd-sd",
-      "x": 710,
+      "x": 770,
       "y": 300,
       "w": 180,
       "h": 70
@@ -3930,7 +3930,7 @@
     {
       "thing": "proc-patient-admitting",
       "opd": "opd-sd1",
-      "x": 370,
+      "x": 390,
       "y": 80,
       "w": 180,
       "h": 70,
@@ -3948,7 +3948,7 @@
     {
       "thing": "proc-therapeutic-plan-executing",
       "opd": "opd-sd1",
-      "x": 370,
+      "x": 390,
       "y": 190,
       "w": 180,
       "h": 70,
@@ -3966,7 +3966,7 @@
     {
       "thing": "proc-patient-discharging",
       "opd": "opd-sd1",
-      "x": 370,
+      "x": 390,
       "y": 300,
       "w": 180,
       "h": 70,
@@ -3977,14 +3977,14 @@
       "opd": "opd-sd1",
       "x": 150,
       "y": 400,
-      "w": 180,
+      "w": 264,
       "h": 55,
       "internal": true
     },
     {
       "thing": "obj-informed-consent",
       "opd": "opd-sd1",
-      "x": 370,
+      "x": 390,
       "y": 400,
       "w": 180,
       "h": 55,
@@ -3993,25 +3993,25 @@
     {
       "thing": "obj-therapeutic-plan",
       "opd": "opd-sd1",
-      "x": 590,
+      "x": 630,
       "y": 400,
-      "w": 180,
+      "w": 264,
       "h": 55,
       "internal": true
     },
     {
       "thing": "obj-nursing-care-plan",
       "opd": "opd-sd1",
-      "x": 810,
+      "x": 870,
       "y": 400,
-      "w": 180,
+      "w": 264,
       "h": 55,
       "internal": true
     },
     {
       "thing": "obj-social-report",
       "opd": "opd-sd1",
-      "x": 1030,
+      "x": 1110,
       "y": 400,
       "w": 180,
       "h": 55,
@@ -4029,7 +4029,7 @@
     {
       "thing": "obj-domiciliary-clinical-summary",
       "opd": "opd-sd1",
-      "x": 370,
+      "x": 390,
       "y": 510,
       "w": 180,
       "h": 55,
@@ -4038,7 +4038,7 @@
     {
       "thing": "obj-epicrisis",
       "opd": "opd-sd1",
-      "x": 590,
+      "x": 630,
       "y": 510,
       "w": 180,
       "h": 55,
@@ -4047,7 +4047,7 @@
     {
       "thing": "obj-satisfaction-survey",
       "opd": "opd-sd1",
-      "x": 810,
+      "x": 870,
       "y": 510,
       "w": 180,
       "h": 55,
@@ -4056,9 +4056,9 @@
     {
       "thing": "obj-continuity-decision",
       "opd": "opd-sd1",
-      "x": 1030,
+      "x": 1110,
       "y": 510,
-      "w": 180,
+      "w": 259,
       "h": 55,
       "internal": true
     },
@@ -4074,7 +4074,7 @@
     {
       "thing": "obj-caregiver",
       "opd": "opd-sd1",
-      "x": 370,
+      "x": 390,
       "y": 620,
       "w": 180,
       "h": 55,
@@ -4083,7 +4083,7 @@
     {
       "thing": "obj-support-network",
       "opd": "opd-sd1",
-      "x": 590,
+      "x": 630,
       "y": 620,
       "w": 180,
       "h": 55,
@@ -4101,7 +4101,7 @@
     {
       "thing": "obj-medical-equipment",
       "opd": "opd-sd1",
-      "x": 270,
+      "x": 290,
       "y": 720,
       "w": 180,
       "h": 55,
@@ -4110,7 +4110,7 @@
     {
       "thing": "obj-transport-vehicle",
       "opd": "opd-sd1",
-      "x": 490,
+      "x": 530,
       "y": 720,
       "w": 180,
       "h": 55,
@@ -4119,9 +4119,9 @@
     {
       "thing": "obj-clinical-condition",
       "opd": "opd-sd1",
-      "x": 710,
+      "x": 770,
       "y": 720,
-      "w": 180,
+      "w": 215,
       "h": 55,
       "internal": false
     },
@@ -4155,7 +4155,7 @@
     {
       "thing": "proc-home-condition-evaluating",
       "opd": "opd-sd1-1",
-      "x": 370,
+      "x": 390,
       "y": 80,
       "w": 180,
       "h": 70,
@@ -4173,7 +4173,7 @@
     {
       "thing": "proc-informed-consent-obtaining",
       "opd": "opd-sd1-1",
-      "x": 370,
+      "x": 390,
       "y": 190,
       "w": 180,
       "h": 70,
@@ -4190,7 +4190,7 @@
     {
       "thing": "obj-rights-duties-charter",
       "opd": "opd-sd1-1",
-      "x": 270,
+      "x": 290,
       "y": 520,
       "w": 180,
       "h": 55
@@ -4198,7 +4198,7 @@
     {
       "thing": "obj-attending-physician",
       "opd": "opd-sd1-1",
-      "x": 490,
+      "x": 530,
       "y": 520,
       "w": 180,
       "h": 55
@@ -4206,7 +4206,7 @@
     {
       "thing": "obj-social-worker",
       "opd": "opd-sd1-1",
-      "x": 710,
+      "x": 770,
       "y": 520,
       "w": 180,
       "h": 55
@@ -4214,7 +4214,7 @@
     {
       "thing": "obj-clinical-nurse",
       "opd": "opd-sd1-1",
-      "x": 930,
+      "x": 1010,
       "y": 520,
       "w": 180,
       "h": 55
@@ -4230,15 +4230,15 @@
     {
       "thing": "obj-clinical-condition",
       "opd": "opd-sd1-1",
-      "x": 270,
+      "x": 290,
       "y": 630,
-      "w": 180,
+      "w": 215,
       "h": 55
     },
     {
       "thing": "obj-inpatient-facility",
       "opd": "opd-sd1-1",
-      "x": 490,
+      "x": 530,
       "y": 630,
       "w": 180,
       "h": 55
@@ -4246,7 +4246,7 @@
     {
       "thing": "obj-social-report",
       "opd": "opd-sd1-1",
-      "x": 710,
+      "x": 770,
       "y": 630,
       "w": 180,
       "h": 55
@@ -4254,7 +4254,7 @@
     {
       "thing": "obj-patient-home",
       "opd": "opd-sd1-1",
-      "x": 930,
+      "x": 1010,
       "y": 630,
       "w": 180,
       "h": 55
@@ -4270,7 +4270,7 @@
     {
       "thing": "obj-caregiver",
       "opd": "opd-sd1-1",
-      "x": 270,
+      "x": 290,
       "y": 740,
       "w": 180,
       "h": 55
@@ -4278,7 +4278,7 @@
     {
       "thing": "obj-informed-consent",
       "opd": "opd-sd1-1",
-      "x": 490,
+      "x": 530,
       "y": 740,
       "w": 180,
       "h": 55
@@ -4304,7 +4304,7 @@
     {
       "thing": "proc-social-diagnosis-elaborating",
       "opd": "opd-sd1-2",
-      "x": 350,
+      "x": 370,
       "y": 80,
       "w": 180,
       "h": 70,
@@ -4322,7 +4322,7 @@
     {
       "thing": "proc-referral-facility-coordinating",
       "opd": "opd-sd1-2",
-      "x": 350,
+      "x": 370,
       "y": 190,
       "w": 180,
       "h": 70,
@@ -4339,7 +4339,7 @@
     {
       "thing": "obj-socioeconomic-status",
       "opd": "opd-sd1-2",
-      "x": 270,
+      "x": 290,
       "y": 440,
       "w": 180,
       "h": 55
@@ -4347,7 +4347,7 @@
     {
       "thing": "obj-care-indication-document",
       "opd": "opd-sd1-2",
-      "x": 490,
+      "x": 530,
       "y": 440,
       "w": 180,
       "h": 55
@@ -4355,7 +4355,7 @@
     {
       "thing": "obj-administrative-staff",
       "opd": "opd-sd1-2",
-      "x": 710,
+      "x": 770,
       "y": 440,
       "w": 180,
       "h": 55
@@ -4363,7 +4363,7 @@
     {
       "thing": "obj-social-worker",
       "opd": "opd-sd1-2",
-      "x": 930,
+      "x": 1010,
       "y": 440,
       "w": 180,
       "h": 55
@@ -4371,7 +4371,7 @@
     {
       "thing": "obj-clinical-nurse",
       "opd": "opd-sd1-2",
-      "x": 1150,
+      "x": 1250,
       "y": 440,
       "w": 180,
       "h": 55
@@ -4379,7 +4379,7 @@
     {
       "thing": "obj-coordination-professional",
       "opd": "opd-sd1-2",
-      "x": 1370,
+      "x": 1490,
       "y": 440,
       "w": 180,
       "h": 55
@@ -4395,7 +4395,7 @@
     {
       "thing": "obj-patient-home",
       "opd": "opd-sd1-2",
-      "x": 270,
+      "x": 290,
       "y": 560,
       "w": 180,
       "h": 55
@@ -4403,7 +4403,7 @@
     {
       "thing": "obj-social-report",
       "opd": "opd-sd1-2",
-      "x": 490,
+      "x": 530,
       "y": 560,
       "w": 180,
       "h": 55
@@ -4411,7 +4411,7 @@
     {
       "thing": "obj-patient-group",
       "opd": "opd-sd1-2",
-      "x": 710,
+      "x": 770,
       "y": 560,
       "w": 180,
       "h": 55
@@ -4419,7 +4419,7 @@
     {
       "thing": "obj-informed-consent",
       "opd": "opd-sd1-2",
-      "x": 930,
+      "x": 1010,
       "y": 560,
       "w": 180,
       "h": 55
@@ -4427,7 +4427,7 @@
     {
       "thing": "obj-inpatient-facility",
       "opd": "opd-sd1-2",
-      "x": 1150,
+      "x": 1250,
       "y": 560,
       "w": 180,
       "h": 55
@@ -4453,7 +4453,7 @@
     {
       "thing": "proc-nursing-care-plan-elaborating",
       "opd": "opd-sd1-3",
-      "x": 350,
+      "x": 370,
       "y": 80,
       "w": 180,
       "h": 70,
@@ -4471,7 +4471,7 @@
     {
       "thing": "proc-transport-route-programming",
       "opd": "opd-sd1-3",
-      "x": 350,
+      "x": 370,
       "y": 190,
       "w": 180,
       "h": 70,
@@ -4482,21 +4482,21 @@
       "opd": "opd-sd1-3",
       "x": 50,
       "y": 440,
-      "w": 180,
+      "w": 264,
       "h": 55
     },
     {
       "thing": "obj-nursing-care-plan",
       "opd": "opd-sd1-3",
-      "x": 270,
+      "x": 290,
       "y": 440,
-      "w": 180,
+      "w": 264,
       "h": 55
     },
     {
       "thing": "obj-visit-schedule",
       "opd": "opd-sd1-3",
-      "x": 490,
+      "x": 530,
       "y": 440,
       "w": 180,
       "h": 55
@@ -4504,7 +4504,7 @@
     {
       "thing": "obj-transport-route",
       "opd": "opd-sd1-3",
-      "x": 710,
+      "x": 770,
       "y": 440,
       "w": 180,
       "h": 55
@@ -4512,7 +4512,7 @@
     {
       "thing": "obj-attending-physician",
       "opd": "opd-sd1-3",
-      "x": 930,
+      "x": 1010,
       "y": 440,
       "w": 180,
       "h": 55
@@ -4528,7 +4528,7 @@
     {
       "thing": "obj-coordination-professional",
       "opd": "opd-sd1-3",
-      "x": 270,
+      "x": 290,
       "y": 560,
       "w": 180,
       "h": 55
@@ -4536,7 +4536,7 @@
     {
       "thing": "obj-administrative-staff",
       "opd": "opd-sd1-3",
-      "x": 490,
+      "x": 530,
       "y": 560,
       "w": 180,
       "h": 55
@@ -4544,15 +4544,15 @@
     {
       "thing": "obj-clinical-condition",
       "opd": "opd-sd1-3",
-      "x": 710,
+      "x": 770,
       "y": 560,
-      "w": 180,
+      "w": 215,
       "h": 55
     },
     {
       "thing": "obj-patient-home",
       "opd": "opd-sd1-3",
-      "x": 930,
+      "x": 1010,
       "y": 560,
       "w": 180,
       "h": 55
@@ -4578,7 +4578,7 @@
     {
       "thing": "proc-nursing-care-executing",
       "opd": "opd-sd1-4",
-      "x": 350,
+      "x": 370,
       "y": 80,
       "w": 180,
       "h": 70,
@@ -4587,7 +4587,7 @@
     {
       "thing": "proc-kinesiological-therapy-executing",
       "opd": "opd-sd1-4",
-      "x": 570,
+      "x": 610,
       "y": 80,
       "w": 180,
       "h": 70,
@@ -4605,7 +4605,7 @@
     {
       "thing": "proc-remote-care-regulating",
       "opd": "opd-sd1-4",
-      "x": 350,
+      "x": 370,
       "y": 190,
       "w": 180,
       "h": 70,
@@ -4614,7 +4614,7 @@
     {
       "thing": "proc-patient-caregiver-educating",
       "opd": "opd-sd1-4",
-      "x": 570,
+      "x": 610,
       "y": 190,
       "w": 180,
       "h": 70,
@@ -4631,7 +4631,7 @@
     {
       "thing": "obj-respiratory-therapy",
       "opd": "opd-sd1-4",
-      "x": 270,
+      "x": 290,
       "y": 520,
       "w": 180,
       "h": 55
@@ -4639,7 +4639,7 @@
     {
       "thing": "obj-prescription",
       "opd": "opd-sd1-4",
-      "x": 490,
+      "x": 530,
       "y": 520,
       "w": 180,
       "h": 55
@@ -4647,7 +4647,7 @@
     {
       "thing": "obj-telehealth-record",
       "opd": "opd-sd1-4",
-      "x": 710,
+      "x": 770,
       "y": 520,
       "w": 180,
       "h": 55
@@ -4655,7 +4655,7 @@
     {
       "thing": "obj-self-care-knowledge",
       "opd": "opd-sd1-4",
-      "x": 930,
+      "x": 1010,
       "y": 520,
       "w": 180,
       "h": 55
@@ -4663,7 +4663,7 @@
     {
       "thing": "obj-patient-group",
       "opd": "opd-sd1-4",
-      "x": 1150,
+      "x": 1250,
       "y": 520,
       "w": 180,
       "h": 55
@@ -4671,9 +4671,9 @@
     {
       "thing": "obj-therapeutic-plan",
       "opd": "opd-sd1-4",
-      "x": 1370,
+      "x": 1490,
       "y": 520,
-      "w": 180,
+      "w": 264,
       "h": 55
     },
     {
@@ -4681,13 +4681,13 @@
       "opd": "opd-sd1-4",
       "x": 50,
       "y": 630,
-      "w": 180,
+      "w": 264,
       "h": 55
     },
     {
       "thing": "obj-medical-equipment",
       "opd": "opd-sd1-4",
-      "x": 270,
+      "x": 290,
       "y": 630,
       "w": 180,
       "h": 55
@@ -4695,7 +4695,7 @@
     {
       "thing": "obj-transport-vehicle",
       "opd": "opd-sd1-4",
-      "x": 490,
+      "x": 530,
       "y": 630,
       "w": 180,
       "h": 55
@@ -4703,7 +4703,7 @@
     {
       "thing": "obj-clinical-supply",
       "opd": "opd-sd1-4",
-      "x": 710,
+      "x": 770,
       "y": 630,
       "w": 180,
       "h": 55
@@ -4711,7 +4711,7 @@
     {
       "thing": "obj-medication",
       "opd": "opd-sd1-4",
-      "x": 930,
+      "x": 1010,
       "y": 630,
       "w": 180,
       "h": 55
@@ -4719,7 +4719,7 @@
     {
       "thing": "obj-communication-system",
       "opd": "opd-sd1-4",
-      "x": 1150,
+      "x": 1250,
       "y": 630,
       "w": 180,
       "h": 55
@@ -4727,7 +4727,7 @@
     {
       "thing": "obj-domiciliary-clinical-summary",
       "opd": "opd-sd1-4",
-      "x": 1370,
+      "x": 1490,
       "y": 630,
       "w": 180,
       "h": 55
@@ -4743,7 +4743,7 @@
     {
       "thing": "obj-attending-physician",
       "opd": "opd-sd1-4",
-      "x": 270,
+      "x": 290,
       "y": 740,
       "w": 180,
       "h": 55
@@ -4751,7 +4751,7 @@
     {
       "thing": "obj-clinical-nurse",
       "opd": "opd-sd1-4",
-      "x": 490,
+      "x": 530,
       "y": 740,
       "w": 180,
       "h": 55
@@ -4759,7 +4759,7 @@
     {
       "thing": "obj-kinesiologist",
       "opd": "opd-sd1-4",
-      "x": 710,
+      "x": 770,
       "y": 740,
       "w": 180,
       "h": 55
@@ -4767,7 +4767,7 @@
     {
       "thing": "obj-nursing-technician",
       "opd": "opd-sd1-4",
-      "x": 930,
+      "x": 1010,
       "y": 740,
       "w": 180,
       "h": 55
@@ -4775,7 +4775,7 @@
     {
       "thing": "obj-regulating-physician",
       "opd": "opd-sd1-4",
-      "x": 1150,
+      "x": 1250,
       "y": 740,
       "w": 180,
       "h": 55
@@ -4801,7 +4801,7 @@
     {
       "thing": "proc-clinical-record-updating",
       "opd": "opd-sd1-5",
-      "x": 370,
+      "x": 390,
       "y": 80,
       "w": 180,
       "h": 70,
@@ -4819,7 +4819,7 @@
     {
       "thing": "proc-continuity-deciding",
       "opd": "opd-sd1-5",
-      "x": 370,
+      "x": 390,
       "y": 190,
       "w": 180,
       "h": 70,
@@ -4836,7 +4836,7 @@
     {
       "thing": "obj-blood-pressure",
       "opd": "opd-sd1-5",
-      "x": 270,
+      "x": 290,
       "y": 420,
       "w": 180,
       "h": 55
@@ -4844,7 +4844,7 @@
     {
       "thing": "obj-heart-rate",
       "opd": "opd-sd1-5",
-      "x": 490,
+      "x": 530,
       "y": 420,
       "w": 180,
       "h": 55
@@ -4852,7 +4852,7 @@
     {
       "thing": "obj-respiratory-rate",
       "opd": "opd-sd1-5",
-      "x": 710,
+      "x": 770,
       "y": 420,
       "w": 180,
       "h": 55
@@ -4860,7 +4860,7 @@
     {
       "thing": "obj-oxygen-saturation",
       "opd": "opd-sd1-5",
-      "x": 930,
+      "x": 1010,
       "y": 420,
       "w": 180,
       "h": 55
@@ -4870,21 +4870,21 @@
       "opd": "opd-sd1-5",
       "x": 50,
       "y": 530,
-      "w": 180,
+      "w": 267,
       "h": 55
     },
     {
       "thing": "obj-continuity-decision",
       "opd": "opd-sd1-5",
-      "x": 270,
+      "x": 290,
       "y": 530,
-      "w": 180,
+      "w": 259,
       "h": 55
     },
     {
       "thing": "obj-patient-group",
       "opd": "opd-sd1-5",
-      "x": 490,
+      "x": 530,
       "y": 530,
       "w": 180,
       "h": 55
@@ -4892,7 +4892,7 @@
     {
       "thing": "obj-medical-equipment",
       "opd": "opd-sd1-5",
-      "x": 710,
+      "x": 770,
       "y": 530,
       "w": 180,
       "h": 55
@@ -4900,7 +4900,7 @@
     {
       "thing": "obj-clinical-nurse",
       "opd": "opd-sd1-5",
-      "x": 930,
+      "x": 1010,
       "y": 530,
       "w": 180,
       "h": 55
@@ -4916,7 +4916,7 @@
     {
       "thing": "obj-clinical-record",
       "opd": "opd-sd1-5",
-      "x": 270,
+      "x": 290,
       "y": 640,
       "w": 180,
       "h": 55
@@ -4924,7 +4924,7 @@
     {
       "thing": "obj-communication-system",
       "opd": "opd-sd1-5",
-      "x": 490,
+      "x": 530,
       "y": 640,
       "w": 180,
       "h": 55
@@ -4950,7 +4950,7 @@
     {
       "thing": "proc-hospital-readmission-discharge",
       "opd": "opd-sd1-6",
-      "x": 350,
+      "x": 370,
       "y": 80,
       "w": 180,
       "h": 70,
@@ -4959,7 +4959,7 @@
     {
       "thing": "proc-death-discharge",
       "opd": "opd-sd1-6",
-      "x": 570,
+      "x": 610,
       "y": 80,
       "w": 180,
       "h": 70,
@@ -4968,7 +4968,7 @@
     {
       "thing": "proc-voluntary-withdrawal-discharge",
       "opd": "opd-sd1-6",
-      "x": 790,
+      "x": 850,
       "y": 80,
       "w": 180,
       "h": 70,
@@ -4977,7 +4977,7 @@
     {
       "thing": "proc-disciplinary-discharge",
       "opd": "opd-sd1-6",
-      "x": 1010,
+      "x": 1090,
       "y": 80,
       "w": 180,
       "h": 70,
@@ -4988,13 +4988,13 @@
       "opd": "opd-sd1-6",
       "x": 50,
       "y": 490,
-      "w": 180,
+      "w": 215,
       "h": 55
     },
     {
       "thing": "obj-hospitalization-status",
       "opd": "opd-sd1-6",
-      "x": 270,
+      "x": 290,
       "y": 490,
       "w": 180,
       "h": 55
@@ -5002,7 +5002,7 @@
     {
       "thing": "obj-epicrisis",
       "opd": "opd-sd1-6",
-      "x": 490,
+      "x": 530,
       "y": 490,
       "w": 180,
       "h": 55
@@ -5010,7 +5010,7 @@
     {
       "thing": "obj-clinical-instability",
       "opd": "opd-sd1-6",
-      "x": 710,
+      "x": 770,
       "y": 490,
       "w": 180,
       "h": 55
@@ -5018,7 +5018,7 @@
     {
       "thing": "obj-death-protocol",
       "opd": "opd-sd1-6",
-      "x": 930,
+      "x": 1010,
       "y": 490,
       "w": 180,
       "h": 55
@@ -5026,7 +5026,7 @@
     {
       "thing": "obj-withdrawal-statement",
       "opd": "opd-sd1-6",
-      "x": 1150,
+      "x": 1250,
       "y": 490,
       "w": 180,
       "h": 55
@@ -5042,7 +5042,7 @@
     {
       "thing": "obj-attending-physician",
       "opd": "opd-sd1-6",
-      "x": 270,
+      "x": 290,
       "y": 610,
       "w": 180,
       "h": 55
@@ -5050,7 +5050,7 @@
     {
       "thing": "obj-technical-director",
       "opd": "opd-sd1-6",
-      "x": 490,
+      "x": 530,
       "y": 610,
       "w": 180,
       "h": 55
@@ -5058,7 +5058,7 @@
     {
       "thing": "obj-inpatient-facility",
       "opd": "opd-sd1-6",
-      "x": 710,
+      "x": 770,
       "y": 610,
       "w": 180,
       "h": 55
@@ -5066,7 +5066,7 @@
     {
       "thing": "obj-transport-vehicle",
       "opd": "opd-sd1-6",
-      "x": 930,
+      "x": 1010,
       "y": 610,
       "w": 180,
       "h": 55
@@ -5074,7 +5074,7 @@
     {
       "thing": "obj-informed-consent",
       "opd": "opd-sd1-6",
-      "x": 1150,
+      "x": 1250,
       "y": 610,
       "w": 180,
       "h": 55
@@ -5100,7 +5100,7 @@
     {
       "thing": "obj-coordination-professional",
       "opd": "opd-sd2",
-      "x": 350,
+      "x": 370,
       "y": 80,
       "w": 180,
       "h": 55,
@@ -5109,7 +5109,7 @@
     {
       "thing": "obj-attending-physician",
       "opd": "opd-sd2",
-      "x": 570,
+      "x": 610,
       "y": 80,
       "w": 180,
       "h": 55,
@@ -5118,7 +5118,7 @@
     {
       "thing": "obj-regulating-physician",
       "opd": "opd-sd2",
-      "x": 790,
+      "x": 850,
       "y": 80,
       "w": 180,
       "h": 55,
@@ -5127,7 +5127,7 @@
     {
       "thing": "obj-clinical-nurse",
       "opd": "opd-sd2",
-      "x": 1010,
+      "x": 1090,
       "y": 80,
       "w": 180,
       "h": 55,
@@ -5145,7 +5145,7 @@
     {
       "thing": "obj-nursing-technician",
       "opd": "opd-sd2",
-      "x": 350,
+      "x": 370,
       "y": 190,
       "w": 180,
       "h": 55,
@@ -5154,7 +5154,7 @@
     {
       "thing": "obj-social-worker",
       "opd": "opd-sd2",
-      "x": 570,
+      "x": 610,
       "y": 190,
       "w": 180,
       "h": 55,
@@ -5163,7 +5163,7 @@
     {
       "thing": "obj-administrative-staff",
       "opd": "opd-sd2",
-      "x": 790,
+      "x": 850,
       "y": 190,
       "w": 180,
       "h": 55,
@@ -5180,7 +5180,7 @@
     {
       "thing": "obj-postgraduate-management-training",
       "opd": "opd-sd2",
-      "x": 270,
+      "x": 290,
       "y": 540,
       "w": 180,
       "h": 55
@@ -5188,7 +5188,7 @@
     {
       "thing": "obj-iaas-prevention-course",
       "opd": "opd-sd2",
-      "x": 490,
+      "x": 530,
       "y": 540,
       "w": 180,
       "h": 55
@@ -5196,7 +5196,7 @@
     {
       "thing": "obj-weekly-dedication",
       "opd": "opd-sd2",
-      "x": 710,
+      "x": 770,
       "y": 540,
       "w": 180,
       "h": 55
@@ -5212,7 +5212,7 @@
     {
       "thing": "obj-iaas-course",
       "opd": "opd-sd2",
-      "x": 270,
+      "x": 290,
       "y": 660,
       "w": 180,
       "h": 55
@@ -5220,7 +5220,7 @@
     {
       "thing": "obj-bls-certification",
       "opd": "opd-sd2",
-      "x": 490,
+      "x": 530,
       "y": 660,
       "w": 180,
       "h": 55
@@ -5228,7 +5228,7 @@
     {
       "thing": "obj-regulation-experience",
       "opd": "opd-sd2",
-      "x": 710,
+      "x": 770,
       "y": 660,
       "w": 180,
       "h": 55
@@ -5254,7 +5254,7 @@
     {
       "thing": "obj-it-system",
       "opd": "opd-sd3",
-      "x": 370,
+      "x": 390,
       "y": 80,
       "w": 180,
       "h": 55,
@@ -5263,7 +5263,7 @@
     {
       "thing": "obj-electrical-backup",
       "opd": "opd-sd3",
-      "x": 590,
+      "x": 630,
       "y": 80,
       "w": 180,
       "h": 55,
@@ -5272,7 +5272,7 @@
     {
       "thing": "obj-clinical-archive-area",
       "opd": "opd-sd3",
-      "x": 810,
+      "x": 870,
       "y": 80,
       "w": 180,
       "h": 55,
@@ -5290,7 +5290,7 @@
     {
       "thing": "obj-supply-storage",
       "opd": "opd-sd3",
-      "x": 370,
+      "x": 390,
       "y": 190,
       "w": 180,
       "h": 55,
@@ -5299,7 +5299,7 @@
     {
       "thing": "obj-waste-disposal-area",
       "opd": "opd-sd3",
-      "x": 590,
+      "x": 630,
       "y": 190,
       "w": 180,
       "h": 55,
@@ -5308,7 +5308,7 @@
     {
       "thing": "obj-cleaning-supply-room",
       "opd": "opd-sd3",
-      "x": 810,
+      "x": 870,
       "y": 190,
       "w": 180,
       "h": 55,
@@ -5326,7 +5326,7 @@
     {
       "thing": "obj-vehicle-parking",
       "opd": "opd-sd3",
-      "x": 370,
+      "x": 390,
       "y": 300,
       "w": 180,
       "h": 55,
@@ -5335,7 +5335,7 @@
     {
       "thing": "obj-evacuation-signage",
       "opd": "opd-sd3",
-      "x": 590,
+      "x": 630,
       "y": 300,
       "w": 180,
       "h": 55,
@@ -5352,7 +5352,7 @@
     {
       "thing": "obj-internet-connectivity",
       "opd": "opd-sd3",
-      "x": 270,
+      "x": 290,
       "y": 520,
       "w": 180,
       "h": 55
@@ -5360,7 +5360,7 @@
     {
       "thing": "obj-sec-authorization",
       "opd": "opd-sd3",
-      "x": 490,
+      "x": 530,
       "y": 520,
       "w": 180,
       "h": 55
@@ -5368,7 +5368,7 @@
     {
       "thing": "obj-security-level",
       "opd": "opd-sd3",
-      "x": 710,
+      "x": 770,
       "y": 520,
       "w": 180,
       "h": 55
@@ -5384,7 +5384,7 @@
     {
       "thing": "obj-temperature-control",
       "opd": "opd-sd3",
-      "x": 270,
+      "x": 290,
       "y": 630,
       "w": 180,
       "h": 55
@@ -5392,7 +5392,7 @@
     {
       "thing": "obj-reas-compliance",
       "opd": "opd-sd3",
-      "x": 490,
+      "x": 530,
       "y": 630,
       "w": 180,
       "h": 55
@@ -5400,7 +5400,7 @@
     {
       "thing": "obj-dining-access",
       "opd": "opd-sd3",
-      "x": 710,
+      "x": 770,
       "y": 630,
       "w": 180,
       "h": 55
@@ -5416,7 +5416,7 @@
     {
       "thing": "obj-lockers",
       "opd": "opd-sd3",
-      "x": 270,
+      "x": 290,
       "y": 740,
       "w": 180,
       "h": 55
@@ -5424,7 +5424,7 @@
     {
       "thing": "obj-break-room",
       "opd": "opd-sd3",
-      "x": 490,
+      "x": 530,
       "y": 740,
       "w": 180,
       "h": 55
@@ -5450,7 +5450,7 @@
     {
       "thing": "obj-pulse-oximeter",
       "opd": "opd-sd4",
-      "x": 370,
+      "x": 390,
       "y": 80,
       "w": 180,
       "h": 55,
@@ -5459,7 +5459,7 @@
     {
       "thing": "obj-cardiac-monitor",
       "opd": "opd-sd4",
-      "x": 590,
+      "x": 630,
       "y": 80,
       "w": 180,
       "h": 55,
@@ -5477,7 +5477,7 @@
     {
       "thing": "obj-defibrillator",
       "opd": "opd-sd4",
-      "x": 370,
+      "x": 390,
       "y": 190,
       "w": 180,
       "h": 55,
@@ -5486,7 +5486,7 @@
     {
       "thing": "obj-specialty-instruments",
       "opd": "opd-sd4",
-      "x": 590,
+      "x": 630,
       "y": 190,
       "w": 180,
       "h": 55,
@@ -5503,7 +5503,7 @@
     {
       "thing": "obj-sanitary-authorization",
       "opd": "opd-sd4",
-      "x": 270,
+      "x": 290,
       "y": 320,
       "w": 180,
       "h": 55
@@ -5538,7 +5538,7 @@
     {
       "thing": "obj-clinical-protocol-set",
       "opd": "opd-sd5",
-      "x": 350,
+      "x": 370,
       "y": 160,
       "w": 180,
       "h": 55,
@@ -5547,7 +5547,7 @@
     {
       "thing": "obj-procedures-manual",
       "opd": "opd-sd5",
-      "x": 570,
+      "x": 610,
       "y": 160,
       "w": 180,
       "h": 55,
@@ -5556,7 +5556,7 @@
     {
       "thing": "obj-waste-mgmt-protocol",
       "opd": "opd-sd5",
-      "x": 790,
+      "x": 850,
       "y": 160,
       "w": 180,
       "h": 55,
@@ -5565,7 +5565,7 @@
     {
       "thing": "obj-annual-training-plan",
       "opd": "opd-sd5",
-      "x": 1010,
+      "x": 1090,
       "y": 160,
       "w": 180,
       "h": 55,
@@ -5582,7 +5582,7 @@
     {
       "thing": "obj-role-definition-set",
       "opd": "opd-sd5",
-      "x": 270,
+      "x": 290,
       "y": 820,
       "w": 180,
       "h": 55
@@ -5590,7 +5590,7 @@
     {
       "thing": "obj-schedule-definition",
       "opd": "opd-sd5",
-      "x": 490,
+      "x": 530,
       "y": 820,
       "w": 180,
       "h": 55
@@ -5598,7 +5598,7 @@
     {
       "thing": "obj-hygiene-regulation",
       "opd": "opd-sd5",
-      "x": 710,
+      "x": 770,
       "y": 820,
       "w": 180,
       "h": 55
@@ -5606,7 +5606,7 @@
     {
       "thing": "obj-admission-eval-protocol",
       "opd": "opd-sd5",
-      "x": 930,
+      "x": 1010,
       "y": 820,
       "w": 180,
       "h": 55
@@ -5614,7 +5614,7 @@
     {
       "thing": "obj-visit-route-protocol",
       "opd": "opd-sd5",
-      "x": 1150,
+      "x": 1250,
       "y": 820,
       "w": 180,
       "h": 55
@@ -5622,7 +5622,7 @@
     {
       "thing": "obj-categorization-discharge-protocol",
       "opd": "opd-sd5",
-      "x": 1370,
+      "x": 1490,
       "y": 820,
       "w": 180,
       "h": 55
@@ -5630,7 +5630,7 @@
     {
       "thing": "obj-prescription-referral-protocol",
       "opd": "opd-sd5",
-      "x": 1590,
+      "x": 1730,
       "y": 820,
       "w": 180,
       "h": 55
@@ -5646,7 +5646,7 @@
     {
       "thing": "obj-staff-aggression-protocol",
       "opd": "opd-sd5",
-      "x": 270,
+      "x": 290,
       "y": 930,
       "w": 180,
       "h": 55
@@ -5654,7 +5654,7 @@
     {
       "thing": "obj-peripheral-venous-proc",
       "opd": "opd-sd5",
-      "x": 490,
+      "x": 530,
       "y": 930,
       "w": 180,
       "h": 55
@@ -5662,7 +5662,7 @@
     {
       "thing": "obj-central-venous-proc",
       "opd": "opd-sd5",
-      "x": 710,
+      "x": 770,
       "y": 930,
       "w": 180,
       "h": 55
@@ -5670,7 +5670,7 @@
     {
       "thing": "obj-urinary-catheter-proc",
       "opd": "opd-sd5",
-      "x": 930,
+      "x": 1010,
       "y": 930,
       "w": 180,
       "h": 55
@@ -5678,7 +5678,7 @@
     {
       "thing": "obj-tracheostomy-proc",
       "opd": "opd-sd5",
-      "x": 1150,
+      "x": 1250,
       "y": 930,
       "w": 180,
       "h": 55
@@ -5686,7 +5686,7 @@
     {
       "thing": "obj-sample-collection-proc",
       "opd": "opd-sd5",
-      "x": 1370,
+      "x": 1490,
       "y": 930,
       "w": 180,
       "h": 55
@@ -5694,7 +5694,7 @@
     {
       "thing": "obj-isolation-precaution-proc",
       "opd": "opd-sd5",
-      "x": 1590,
+      "x": 1730,
       "y": 930,
       "w": 180,
       "h": 55
@@ -5710,7 +5710,7 @@
     {
       "thing": "obj-iaas-training",
       "opd": "opd-sd5",
-      "x": 270,
+      "x": 290,
       "y": 1040,
       "w": 180,
       "h": 55
@@ -5718,7 +5718,7 @@
     {
       "thing": "obj-bls-training",
       "opd": "opd-sd5",
-      "x": 490,
+      "x": 530,
       "y": 1040,
       "w": 180,
       "h": 55
@@ -5726,7 +5726,7 @@
     {
       "thing": "obj-staff-induction-program",
       "opd": "opd-sd5",
-      "x": 710,
+      "x": 770,
       "y": 1040,
       "w": 180,
       "h": 55
@@ -5734,7 +5734,7 @@
     {
       "thing": "obj-humanized-care-training",
       "opd": "opd-sd5",
-      "x": 930,
+      "x": 1010,
       "y": 1040,
       "w": 180,
       "h": 55
@@ -5742,7 +5742,7 @@
     {
       "thing": "obj-minimum-duration",
       "opd": "opd-sd5",
-      "x": 1150,
+      "x": 1250,
       "y": 1040,
       "w": 180,
       "h": 55
@@ -5768,7 +5768,7 @@
     {
       "thing": "proc-quality-safety-managing",
       "opd": "opd-sd6",
-      "x": 320,
+      "x": 340,
       "y": 80,
       "w": 180,
       "h": 70,
@@ -5777,7 +5777,7 @@
     {
       "thing": "proc-staff-training-managing",
       "opd": "opd-sd6",
-      "x": 540,
+      "x": 580,
       "y": 80,
       "w": 180,
       "h": 70,
@@ -5795,7 +5795,7 @@
     {
       "thing": "proc-waste-managing",
       "opd": "opd-sd6",
-      "x": 320,
+      "x": 340,
       "y": 190,
       "w": 180,
       "h": 70,
@@ -5804,7 +5804,7 @@
     {
       "thing": "proc-equipment-maintenance-managing",
       "opd": "opd-sd6",
-      "x": 540,
+      "x": 580,
       "y": 190,
       "w": 180,
       "h": 70,
@@ -5815,13 +5815,13 @@
       "opd": "opd-sd6",
       "x": 50,
       "y": 520,
-      "w": 180,
+      "w": 264,
       "h": 55
     },
     {
       "thing": "obj-authorization-validity",
       "opd": "opd-sd6",
-      "x": 270,
+      "x": 290,
       "y": 520,
       "w": 180,
       "h": 55
@@ -5829,7 +5829,7 @@
     {
       "thing": "obj-seremi",
       "opd": "opd-sd6",
-      "x": 490,
+      "x": 530,
       "y": 520,
       "w": 180,
       "h": 55
@@ -5837,7 +5837,7 @@
     {
       "thing": "obj-current-regulation",
       "opd": "opd-sd6",
-      "x": 710,
+      "x": 770,
       "y": 520,
       "w": 180,
       "h": 55
@@ -5845,7 +5845,7 @@
     {
       "thing": "obj-technical-director",
       "opd": "opd-sd6",
-      "x": 930,
+      "x": 1010,
       "y": 520,
       "w": 180,
       "h": 55
@@ -5853,7 +5853,7 @@
     {
       "thing": "obj-coordination-professional",
       "opd": "opd-sd6",
-      "x": 1150,
+      "x": 1250,
       "y": 520,
       "w": 180,
       "h": 55
@@ -5869,7 +5869,7 @@
     {
       "thing": "obj-adverse-reaction-audit",
       "opd": "opd-sd6",
-      "x": 270,
+      "x": 290,
       "y": 620,
       "w": 180,
       "h": 55
@@ -5877,7 +5877,7 @@
     {
       "thing": "obj-mortality-audit",
       "opd": "opd-sd6",
-      "x": 490,
+      "x": 530,
       "y": 620,
       "w": 180,
       "h": 55
@@ -5885,7 +5885,7 @@
     {
       "thing": "obj-training-compliance",
       "opd": "opd-sd6",
-      "x": 710,
+      "x": 770,
       "y": 620,
       "w": 180,
       "h": 55
@@ -5893,7 +5893,7 @@
     {
       "thing": "obj-annual-training-plan",
       "opd": "opd-sd6",
-      "x": 930,
+      "x": 1010,
       "y": 620,
       "w": 180,
       "h": 55
@@ -5901,7 +5901,7 @@
     {
       "thing": "obj-documentation-system",
       "opd": "opd-sd6",
-      "x": 1150,
+      "x": 1250,
       "y": 620,
       "w": 180,
       "h": 55
@@ -5917,7 +5917,7 @@
     {
       "thing": "obj-clinical-supply",
       "opd": "opd-sd6",
-      "x": 270,
+      "x": 290,
       "y": 720,
       "w": 180,
       "h": 55
@@ -5925,7 +5925,7 @@
     {
       "thing": "obj-medication",
       "opd": "opd-sd6",
-      "x": 490,
+      "x": 530,
       "y": 720,
       "w": 180,
       "h": 55
@@ -5933,7 +5933,7 @@
     {
       "thing": "obj-pharmacy",
       "opd": "opd-sd6",
-      "x": 710,
+      "x": 770,
       "y": 720,
       "w": 180,
       "h": 55
@@ -5941,7 +5941,7 @@
     {
       "thing": "obj-biomedical-waste",
       "opd": "opd-sd6",
-      "x": 930,
+      "x": 1010,
       "y": 720,
       "w": 180,
       "h": 55
@@ -5949,7 +5949,7 @@
     {
       "thing": "obj-waste-disposal-area",
       "opd": "opd-sd6",
-      "x": 1150,
+      "x": 1250,
       "y": 720,
       "w": 180,
       "h": 55
@@ -5965,7 +5965,7 @@
     {
       "thing": "obj-sharps-disposal-protocol",
       "opd": "opd-sd6",
-      "x": 270,
+      "x": 290,
       "y": 820,
       "w": 180,
       "h": 55
@@ -5973,7 +5973,7 @@
     {
       "thing": "obj-medical-equipment",
       "opd": "opd-sd6",
-      "x": 490,
+      "x": 530,
       "y": 820,
       "w": 180,
       "h": 55
@@ -5981,7 +5981,7 @@
     {
       "thing": "obj-maintenance-status",
       "opd": "opd-sd6",
-      "x": 710,
+      "x": 770,
       "y": 820,
       "w": 180,
       "h": 55
@@ -5989,7 +5989,7 @@
     {
       "thing": "obj-preventive-maintenance-program",
       "opd": "opd-sd6",
-      "x": 930,
+      "x": 1010,
       "y": 820,
       "w": 180,
       "h": 55
@@ -6015,7 +6015,7 @@
     {
       "thing": "obj-basic-services",
       "opd": "opd-sd7",
-      "x": 350,
+      "x": 370,
       "y": 80,
       "w": 180,
       "h": 55,
@@ -6024,7 +6024,7 @@
     {
       "thing": "obj-telephony-access",
       "opd": "opd-sd7",
-      "x": 570,
+      "x": 610,
       "y": 80,
       "w": 180,
       "h": 55,
@@ -6035,14 +6035,14 @@
       "opd": "opd-sd7",
       "x": 200,
       "y": 220,
-      "w": 180,
+      "w": 204,
       "h": 55,
       "internal": true
     },
     {
       "thing": "obj-coverage-radius-compliance",
       "opd": "opd-sd7",
-      "x": 420,
+      "x": 440,
       "y": 220,
       "w": 180,
       "h": 55,
@@ -6069,7 +6069,7 @@
     {
       "thing": "obj-unestablished-diagnosis-exclusion",
       "opd": "opd-sd8",
-      "x": 340,
+      "x": 360,
       "y": 80,
       "w": 180,
       "h": 55,
@@ -6078,7 +6078,7 @@
     {
       "thing": "obj-decompensated-mental-health-exclusion",
       "opd": "opd-sd8",
-      "x": 560,
+      "x": 600,
       "y": 80,
       "w": 180,
       "h": 55,
@@ -6096,7 +6096,7 @@
     {
       "thing": "obj-prior-disciplinary-exclusion",
       "opd": "opd-sd8",
-      "x": 420,
+      "x": 440,
       "y": 220,
       "w": 180,
       "h": 55,
@@ -6113,7 +6113,7 @@
     {
       "thing": "obj-patient-group",
       "opd": "opd-sd9",
-      "x": 270,
+      "x": 290,
       "y": 50,
       "w": 180,
       "h": 55
@@ -6121,7 +6121,7 @@
     {
       "thing": "obj-patient-home",
       "opd": "opd-sd9",
-      "x": 490,
+      "x": 530,
       "y": 50,
       "w": 180,
       "h": 55
@@ -6129,7 +6129,7 @@
     {
       "thing": "obj-hodom-system",
       "opd": "opd-sd9",
-      "x": 710,
+      "x": 770,
       "y": 50,
       "w": 180,
       "h": 55
@@ -6145,7 +6145,7 @@
     {
       "thing": "obj-technical-director",
       "opd": "opd-sd9",
-      "x": 270,
+      "x": 290,
       "y": 160,
       "w": 180,
       "h": 55
@@ -6153,7 +6153,7 @@
     {
       "thing": "obj-continuity-of-care",
       "opd": "opd-sd9",
-      "x": 490,
+      "x": 530,
       "y": 160,
       "w": 180,
       "h": 55
@@ -6161,7 +6161,7 @@
     {
       "thing": "obj-attending-physician",
       "opd": "opd-sd9",
-      "x": 710,
+      "x": 770,
       "y": 160,
       "w": 180,
       "h": 55
@@ -6177,7 +6177,7 @@
     {
       "thing": "obj-caregiver",
       "opd": "opd-sd9",
-      "x": 270,
+      "x": 290,
       "y": 270,
       "w": 180,
       "h": 55

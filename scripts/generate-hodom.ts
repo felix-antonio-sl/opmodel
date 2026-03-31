@@ -750,20 +750,32 @@ const modifiers = [
 // Map things to their OPDs with auto-layout
 type AppearanceEntry = { thing: string; opd: string; x: number; y: number; w: number; h: number; internal?: boolean };
 
+// Compute minimum width for a thing based on its state names
+function widthForThing(id: string): number {
+  const thingStates = states.filter(s => s.parent === id);
+  if (thingStates.length === 0) return 180;
+  const maxCharPx = 5.5; // slightly generous for Spanish chars
+  const textInset = 2;
+  const pillGap = 4;
+  const padding = 12;
+  const longest = thingStates.reduce((max, s) => Math.max(max, s.name.length), 0);
+  const perPill = Math.max(80, longest * maxCharPx + textInset * 2);
+  const needed = Math.min(thingStates.length, 3) * (perPill + pillGap) + padding;
+  return Math.max(180, Math.ceil(needed));
+}
+
 function autoLayout(opdId: string, thingIds: string[], opts?: { internal?: boolean; startX?: number; startY?: number; cols?: number }): AppearanceEntry[] {
   const startX = opts?.startX ?? 50;
   const startY = opts?.startY ?? 50;
   const cols = opts?.cols ?? 4;
-  const colW = 220;
+  const colW = 240;
   const rowH = 110;
-  // Wider objects to fit Spanish state pills (2 states × 80px + gap + padding)
-  const objW = 180;
   return thingIds.map((id, i) => ({
     thing: id,
     opd: opdId,
     x: startX + (i % cols) * colW,
     y: startY + Math.floor(i / cols) * rowH,
-    w: id.startsWith("proc-") ? 180 : objW,
+    w: widthForThing(id),
     h: id.startsWith("proc-") ? 70 : 55,
     ...(opts?.internal !== undefined ? { internal: opts.internal } : {}),
   }));
