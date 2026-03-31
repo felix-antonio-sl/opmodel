@@ -2119,6 +2119,20 @@ button.header__pill:hover {
   50% { opacity: 0.5; }
 }
 
+.thing-group--attention .thing-shape {
+  animation: pulse-attention 0.7s ease-in-out 2;
+}
+
+@keyframes pulse-attention {
+  0%, 100% {
+    filter: drop-shadow(0 0 0 rgba(66, 153, 225, 0));
+    stroke-width: inherit;
+  }
+  50% {
+    filter: drop-shadow(0 0 8px rgba(66, 153, 225, 0.65));
+  }
+}
+
 /* ─── File Menu ─── */
 .file-menu__item {
   display: block;

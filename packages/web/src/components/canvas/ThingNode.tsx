@@ -9,6 +9,7 @@ export function ThingNode({
   appearance,
   states,
   isSelected,
+  isAttention,
   isDragging,
   isLinkSource,
   isExternal,
@@ -33,6 +34,7 @@ export function ThingNode({
   appearance: Appearance;
   states: State[];
   isSelected: boolean;
+  isAttention?: boolean;
   isDragging: boolean;
   isLinkSource: boolean;
   isExternal: boolean;
@@ -88,7 +90,7 @@ export function ThingNode({
         ? "url(#glow-selected)"
         : undefined;
 
-  const className = `thing-group${isSelected ? " thing-group--selected" : ""}${isDragging ? " thing-group--dragging" : ""}${isLinkSource ? " thing-group--link-source" : ""}`;
+  const className = `thing-group${isSelected ? " thing-group--selected" : ""}${isAttention ? " thing-group--attention" : ""}${isDragging ? " thing-group--dragging" : ""}${isLinkSource ? " thing-group--link-source" : ""}`;
 
   const tooltip = `${thing.name} (${thing.kind}, ${thing.essence}${thing.affiliation === "environmental" ? ", environmental" : ""})${thing.duration ? ` — ${thing.duration.nominal}${thing.duration.unit}` : ""}`;
 

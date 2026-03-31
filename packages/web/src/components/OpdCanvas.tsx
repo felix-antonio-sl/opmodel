@@ -52,6 +52,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; thingId: string } | null>(null);
   const [hideLinkLabels, setHideLinkLabels] = useState(false);
   const [showGhosts, setShowGhosts] = useState(false);
+  const [attentionThingId, setAttentionThingId] = useState<string | null>(null);
 
   const toggleLinkCategory = (category: string) => {
     setHiddenLinkTypes(prev => {
@@ -99,6 +100,16 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
 
   // Clear multi-select when OPD changes
   useEffect(() => { setMultiSelect(new Set()); }, [opdId]);
+
+  useEffect(() => {
+    if (!selectedThing) {
+      setAttentionThingId(null);
+      return;
+    }
+    setAttentionThingId(selectedThing);
+    const timer = window.setTimeout(() => setAttentionThingId((current) => current === selectedThing ? null : current), 1400);
+    return () => window.clearTimeout(timer);
+  }, [selectedThing, opdId]);
 
   // Batch delete for multi-select
   useEffect(() => {
@@ -1224,6 +1235,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
                   appearance={app}
                   states={(isAppContainer && thing.kind === "process") ? [] : states}
                   isSelected={selectedThing === thingId || multiSelect.has(thingId)}
+                  isAttention={attentionThingId === thingId}
                   isDragging={isDragging}
                   isLinkSource={isLinkSource}
                   isExternal={isAppExternal && !opd?.refines}
