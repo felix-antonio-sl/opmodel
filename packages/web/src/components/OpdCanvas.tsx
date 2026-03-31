@@ -560,6 +560,40 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
     setPan({ x: newPanX, y: newPanY });
   }, [appearances]);
 
+  const bringThingIntoView = useCallback((thingId: string) => {
+    const app = appearances.get(thingId);
+    const svgRect = svgRef.current?.getBoundingClientRect();
+    if (!app || !svgRect) return;
+
+    const marginX = Math.min(140, svgRect.width * 0.18);
+    const marginY = Math.min(110, svgRect.height * 0.18);
+    const left = pan.x + app.x * zoom;
+    const top = pan.y + app.y * zoom;
+    const right = left + app.w * zoom;
+    const bottom = top + app.h * zoom;
+
+    const comfortablyVisible =
+      left >= marginX &&
+      top >= marginY &&
+      right <= svgRect.width - marginX &&
+      bottom <= svgRect.height - marginY;
+
+    if (comfortablyVisible) return;
+
+    const centerX = app.x + app.w / 2;
+    const centerY = app.y + app.h / 2;
+    setPan({
+      x: svgRect.width / 2 - centerX * zoom,
+      y: svgRect.height / 2 - centerY * zoom,
+    });
+  }, [appearances, pan.x, pan.y, zoom]);
+
+  useEffect(() => {
+    if (!selectedThing || dragTarget || resizeTarget) return;
+    const timer = window.setTimeout(() => bringThingIntoView(selectedThing), 40);
+    return () => window.clearTimeout(timer);
+  }, [selectedThing, opdId, dragTarget, resizeTarget, bringThingIntoView]);
+
   const [layoutToast, setLayoutToast] = useState<string | null>(null);
 
   const autoLayoutCurrentOpd = useCallback(() => {
