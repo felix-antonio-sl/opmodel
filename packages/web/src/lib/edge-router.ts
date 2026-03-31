@@ -94,9 +94,14 @@ function straightPath(p1: Point, p2: Point): EdgePath {
   };
 }
 
-/** Key for parallel link detection */
+/** Key for parallel link detection (same source↔target pair) */
 function pairKey(a: string, b: string): string {
   return a < b ? `${a}::${b}` : `${b}::${a}`;
+}
+
+/** Key for convergent link detection (multiple sources → same target) */
+function targetKey(targetId: string): string {
+  return `tgt::${targetId}`;
 }
 
 export interface RouteInput {
@@ -113,8 +118,8 @@ export interface RouteResult {
 }
 
 /**
- * Route a batch of links, applying curves where crossings occur
- * and offsetting parallel links.
+ * Route a batch of links, applying curves where crossings occur,
+ * offsetting parallel links, and nudging labels to avoid collisions.
  */
 export function routeEdges(links: RouteInput[]): Map<string, EdgePath> {
   const result = new Map<string, EdgePath>();
@@ -130,20 +135,29 @@ export function routeEdges(links: RouteInput[]): Map<string, EdgePath> {
     parallelGroups.get(key)!.push(link);
   }
 
+  // Detect convergent links (different sources → same target)
+  const convergentGroups = new Map<string, RouteInput[]>();
+  for (const link of links) {
+    const key = targetKey(link.targetId);
+    if (!convergentGroups.has(key)) convergentGroups.set(key, []);
+    convergentGroups.get(key)!.push(link);
+  }
+
   // For each link, decide path
   for (const link of links) {
     const key = pairKey(link.sourceId, link.targetId);
     const group = parallelGroups.get(key)!;
+    const convKey = targetKey(link.targetId);
+    const convGroup = convergentGroups.get(convKey)!;
 
     if (group.length > 1) {
-      // Parallel links: offset each one
+      // Parallel links (same pair): offset each one
       const idx = group.indexOf(link);
       const total = group.length;
-      const spread = 20; // pixels between parallel links
+      const spread = Math.min(30, Math.max(15, 60 / total)); // adaptive spread
       const offset = (idx - (total - 1) / 2) * spread;
 
       if (Math.abs(offset) < 1) {
-        // Center link stays straight but might need curve for crossings
         const crossings = countCrossings({ id: link.id, p1: link.p1, p2: link.p2 }, endpoints);
         if (crossings > 0) {
           result.set(link.id, curvedPath(link.p1, link.p2, 25 + crossings * 10));
@@ -153,12 +167,23 @@ export function routeEdges(links: RouteInput[]): Map<string, EdgePath> {
       } else {
         result.set(link.id, curvedPath(link.p1, link.p2, offset));
       }
+    } else if (convGroup.length >= 3) {
+      // Convergent links: 3+ links from different sources to same target
+      // Offset them so they don't all arrive at exactly the same point
+      const idx = convGroup.indexOf(link);
+      const total = convGroup.length;
+      const spread = Math.min(25, Math.max(12, 50 / total));
+      const offset = (idx - (total - 1) / 2) * spread;
+
+      if (Math.abs(offset) < 2) {
+        result.set(link.id, straightPath(link.p1, link.p2));
+      } else {
+        result.set(link.id, curvedPath(link.p1, link.p2, offset * 0.6));
+      }
     } else {
       // Single link: check for crossings
       const crossings = countCrossings({ id: link.id, p1: link.p1, p2: link.p2 }, endpoints);
       if (crossings >= 2) {
-        // Significant crossings — curve away
-        // Direction of curve alternates based on link ID hash to avoid all curving the same way
         const hash = link.id.split("").reduce((h, c) => h * 31 + c.charCodeAt(0), 0);
         const sign = hash % 2 === 0 ? 1 : -1;
         result.set(link.id, curvedPath(link.p1, link.p2, sign * (20 + crossings * 8)));
@@ -168,5 +193,58 @@ export function routeEdges(links: RouteInput[]): Map<string, EdgePath> {
     }
   }
 
+  // Label nudging: detect label collisions and offset them
+  nudgeLabels(result);
+
   return result;
+}
+
+/**
+ * Nudge label positions when multiple labels would overlap.
+ * Labels within `threshold` pixels are spread apart vertically.
+ */
+function nudgeLabels(paths: Map<string, EdgePath>): void {
+  const threshold = 20; // px — labels closer than this get nudged
+  const entries = Array.from(paths.entries());
+  
+  // Group labels by proximity
+  const nudged = new Set<number>();
+  for (let i = 0; i < entries.length; i++) {
+    if (nudged.has(i)) continue;
+    const entryA = entries[i]!;
+    const pathA = entryA[1];
+    const cluster: number[] = [i];
+    
+    for (let j = i + 1; j < entries.length; j++) {
+      if (nudged.has(j)) continue;
+      const entryB = entries[j]!;
+      const pathB = entryB[1];
+      const dx = pathA.labelPoint.x - pathB.labelPoint.x;
+      const dy = pathA.labelPoint.y - pathB.labelPoint.y;
+      if (Math.abs(dx) < 50 && Math.abs(dy) < threshold) {
+        cluster.push(j);
+      }
+    }
+    
+    if (cluster.length > 1) {
+      // Spread labels vertically
+      const nudgeStep = 14; // px between labels
+      const totalNudge = (cluster.length - 1) * nudgeStep;
+      for (let k = 0; k < cluster.length; k++) {
+        const ci = cluster[k]!;
+        const entry = entries[ci]!;
+        const id = entry[0];
+        const path = entry[1];
+        const nudge = k * nudgeStep - totalNudge / 2;
+        paths.set(id, {
+          ...path,
+          labelPoint: {
+            x: path.labelPoint.x,
+            y: path.labelPoint.y + nudge,
+          },
+        });
+        nudged.add(ci);
+      }
+    }
+  }
 }
