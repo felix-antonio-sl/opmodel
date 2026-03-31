@@ -4,13 +4,14 @@ import { resolve } from "path";
 import { EXAMPLES } from "../src/App";
 
 describe("example fixtures", () => {
-  it("includes HODOM HSC v0 in the example registry", () => {
-    expect(EXAMPLES.some((ex) => ex.file === "hodom-hsc-v0.opmodel")).toBe(true);
+  it("includes HODOM HSC in the example registry", () => {
+    expect(EXAMPLES.some((ex) => ex.file === "hodom-hsc.opmodel")).toBe(true);
   });
 
   it("keeps the quick-open example list stable enough for daily use", () => {
-    expect(EXAMPLES).toHaveLength(6);
+    expect(EXAMPLES).toHaveLength(7);
     expect(EXAMPLES.map((ex) => ex.file)).toEqual([
+      "hodom-hsc.opmodel",
       "coffee-making.opmodel",
       "driver-rescuing.opmodel",
       "hospitalizacion-domiciliaria.opmodel",

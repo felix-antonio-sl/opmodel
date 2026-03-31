@@ -1,0 +1,6295 @@
+{
+  "opmodel": "1.1.0",
+  "meta": {
+    "name": "HODOM HSC — Sistema de Hospitalización Domiciliaria",
+    "description": "Modelo OPM del Sistema de Hospitalización Domiciliaria (HODOM) conforme a ISO/PAS 19450. Hospital de San Carlos. 16 OPDs, ~235 entidades.",
+    "system_type": "socio-technical",
+    "created": "2026-03-31T14:09:24.154Z",
+    "modified": "2026-03-31T14:09:24.154Z"
+  },
+  "settings": {
+    "autosave_interval_s": 300,
+    "methodology_coaching": true,
+    "opl_language": "en",
+    "primary_essence": "physical"
+  },
+  "things": [
+    {
+      "id": "proc-domiciliary-hospitalizing",
+      "kind": "process",
+      "name": "Domiciliary Hospitalizing",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-patient-group",
+      "kind": "object",
+      "name": "Patient Group",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-clinical-condition",
+      "kind": "object",
+      "name": "Clinical Condition",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-hodom-system",
+      "kind": "object",
+      "name": "Domiciliary Hospitalization System",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-healthcare-team",
+      "kind": "object",
+      "name": "Healthcare Team",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-medical-equipment",
+      "kind": "object",
+      "name": "Medical Equipment",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-communication-system",
+      "kind": "object",
+      "name": "Communication System",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-transport-vehicle",
+      "kind": "object",
+      "name": "Transport Vehicle",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-admin-infrastructure",
+      "kind": "object",
+      "name": "Administrative Infrastructure",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-clinical-supply",
+      "kind": "object",
+      "name": "Clinical Supply",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-medication",
+      "kind": "object",
+      "name": "Medication",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-clinical-record",
+      "kind": "object",
+      "name": "Clinical Record",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-patient-home",
+      "kind": "object",
+      "name": "Patient Home",
+      "essence": "physical",
+      "affiliation": "environmental"
+    },
+    {
+      "id": "obj-inpatient-facility",
+      "kind": "object",
+      "name": "Inpatient Facility",
+      "essence": "physical",
+      "affiliation": "environmental"
+    },
+    {
+      "id": "obj-current-regulation",
+      "kind": "object",
+      "name": "Current Regulation",
+      "essence": "informatical",
+      "affiliation": "environmental"
+    },
+    {
+      "id": "proc-inpatient-bed-occupying",
+      "kind": "process",
+      "name": "Inpatient Bed Occupying",
+      "essence": "physical",
+      "affiliation": "environmental"
+    },
+    {
+      "id": "proc-eligibility-evaluating",
+      "kind": "process",
+      "name": "Eligibility Evaluating",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "proc-patient-admitting",
+      "kind": "process",
+      "name": "Patient Admitting",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "proc-care-planning",
+      "kind": "process",
+      "name": "Care Planning",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "proc-therapeutic-plan-executing",
+      "kind": "process",
+      "name": "Therapeutic Plan Executing",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "proc-clinical-evolution-monitoring",
+      "kind": "process",
+      "name": "Clinical Evolution Monitoring",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "proc-patient-discharging",
+      "kind": "process",
+      "name": "Patient Discharging",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-eligibility-status",
+      "kind": "object",
+      "name": "Eligibility Status",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-informed-consent",
+      "kind": "object",
+      "name": "Informed Consent",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-therapeutic-plan",
+      "kind": "object",
+      "name": "Therapeutic Plan",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-nursing-care-plan",
+      "kind": "object",
+      "name": "Nursing Care Plan",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-social-report",
+      "kind": "object",
+      "name": "Social Report",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-admission-form",
+      "kind": "object",
+      "name": "Admission Form",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-domiciliary-clinical-summary",
+      "kind": "object",
+      "name": "Domiciliary Clinical Summary",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-epicrisis",
+      "kind": "object",
+      "name": "Epicrisis",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-satisfaction-survey",
+      "kind": "object",
+      "name": "Satisfaction Survey",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-continuity-decision",
+      "kind": "object",
+      "name": "Continuity Decision",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-hospitalization-status",
+      "kind": "object",
+      "name": "Hospitalization Status",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-caregiver",
+      "kind": "object",
+      "name": "Caregiver",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-support-network",
+      "kind": "object",
+      "name": "Support Network",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "proc-clinical-condition-evaluating",
+      "kind": "process",
+      "name": "Clinical Condition Evaluating",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "proc-home-condition-evaluating",
+      "kind": "process",
+      "name": "Home Condition Evaluating",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "proc-support-network-verifying",
+      "kind": "process",
+      "name": "Support Network Verifying",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "proc-informed-consent-obtaining",
+      "kind": "process",
+      "name": "Informed Consent Obtaining",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-home-condition",
+      "kind": "object",
+      "name": "Home Condition",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-rights-duties-charter",
+      "kind": "object",
+      "name": "Rights and Duties Charter",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-attending-physician",
+      "kind": "object",
+      "name": "Attending Physician",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-social-worker",
+      "kind": "object",
+      "name": "Social Worker",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-clinical-nurse",
+      "kind": "object",
+      "name": "Clinical Nurse",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "proc-admission-registering",
+      "kind": "process",
+      "name": "Admission Registering",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "proc-social-diagnosis-elaborating",
+      "kind": "process",
+      "name": "Social Diagnosis Elaborating",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "proc-patient-documentation-delivering",
+      "kind": "process",
+      "name": "Patient Documentation Delivering",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "proc-referral-facility-coordinating",
+      "kind": "process",
+      "name": "Referral Facility Coordinating",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-socioeconomic-status",
+      "kind": "object",
+      "name": "Socioeconomic Status",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-care-indication-document",
+      "kind": "object",
+      "name": "Care Indication Document",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-administrative-staff",
+      "kind": "object",
+      "name": "Administrative Staff",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-coordination-professional",
+      "kind": "object",
+      "name": "Coordination Professional",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "proc-therapeutic-plan-elaborating",
+      "kind": "process",
+      "name": "Therapeutic Plan Elaborating",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "proc-nursing-care-plan-elaborating",
+      "kind": "process",
+      "name": "Nursing Care Plan Elaborating",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "proc-home-visit-scheduling",
+      "kind": "process",
+      "name": "Home Visit Scheduling",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "proc-transport-route-programming",
+      "kind": "process",
+      "name": "Transport Route Programming",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-visit-schedule",
+      "kind": "object",
+      "name": "Visit Schedule",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-transport-route",
+      "kind": "object",
+      "name": "Transport Route",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "proc-medical-visit-performing",
+      "kind": "process",
+      "name": "Medical Visit Performing",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "proc-nursing-care-executing",
+      "kind": "process",
+      "name": "Nursing Care Executing",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "proc-kinesiological-therapy-executing",
+      "kind": "process",
+      "name": "Kinesiological Therapy Executing",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "proc-medication-administering",
+      "kind": "process",
+      "name": "Medication Administering",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "proc-remote-care-regulating",
+      "kind": "process",
+      "name": "Remote Care Regulating",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "proc-patient-caregiver-educating",
+      "kind": "process",
+      "name": "Patient and Caregiver Educating",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-motor-therapy",
+      "kind": "object",
+      "name": "Motor Therapy",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-respiratory-therapy",
+      "kind": "object",
+      "name": "Respiratory Therapy",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-prescription",
+      "kind": "object",
+      "name": "Prescription",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-telehealth-record",
+      "kind": "object",
+      "name": "Telehealth Record",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-self-care-knowledge",
+      "kind": "object",
+      "name": "Self-Care Knowledge",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-kinesiologist",
+      "kind": "object",
+      "name": "Kinesiologist",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-nursing-technician",
+      "kind": "object",
+      "name": "Nursing Technician",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-regulating-physician",
+      "kind": "object",
+      "name": "Regulating Physician",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "proc-vital-signs-evaluating",
+      "kind": "process",
+      "name": "Vital Signs Evaluating",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "proc-clinical-record-updating",
+      "kind": "process",
+      "name": "Clinical Record Updating",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "proc-patient-categorizing",
+      "kind": "process",
+      "name": "Patient Categorizing",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "proc-continuity-deciding",
+      "kind": "process",
+      "name": "Continuity Deciding",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-vital-signs-data",
+      "kind": "object",
+      "name": "Vital Signs Data",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-blood-pressure",
+      "kind": "object",
+      "name": "Blood Pressure",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-heart-rate",
+      "kind": "object",
+      "name": "Heart Rate",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-respiratory-rate",
+      "kind": "object",
+      "name": "Respiratory Rate",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-oxygen-saturation",
+      "kind": "object",
+      "name": "Oxygen Saturation",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-patient-category",
+      "kind": "object",
+      "name": "Patient Category",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "proc-medical-discharge",
+      "kind": "process",
+      "name": "Medical Discharge",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "proc-hospital-readmission-discharge",
+      "kind": "process",
+      "name": "Hospital Readmission Discharge",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "proc-death-discharge",
+      "kind": "process",
+      "name": "Death Discharge",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "proc-voluntary-withdrawal-discharge",
+      "kind": "process",
+      "name": "Voluntary Withdrawal Discharge",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "proc-disciplinary-discharge",
+      "kind": "process",
+      "name": "Disciplinary Discharge",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-clinical-instability",
+      "kind": "object",
+      "name": "Clinical Instability",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-death-protocol",
+      "kind": "object",
+      "name": "Death Protocol",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-withdrawal-statement",
+      "kind": "object",
+      "name": "Withdrawal Statement",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-treatment-adherence",
+      "kind": "object",
+      "name": "Treatment Adherence",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-technical-director",
+      "kind": "object",
+      "name": "Technical Director",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-clinical-experience",
+      "kind": "object",
+      "name": "Clinical Experience",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-postgraduate-management-training",
+      "kind": "object",
+      "name": "Postgraduate Management Training",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-iaas-prevention-course",
+      "kind": "object",
+      "name": "IAAS Prevention Course",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-weekly-dedication",
+      "kind": "object",
+      "name": "Weekly Dedication",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-management-training",
+      "kind": "object",
+      "name": "Management Training",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-iaas-course",
+      "kind": "object",
+      "name": "IAAS Course",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-bls-certification",
+      "kind": "object",
+      "name": "BLS Certification",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-regulation-experience",
+      "kind": "object",
+      "name": "Regulation Experience",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-telephone-system",
+      "kind": "object",
+      "name": "Telephone System",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-it-system",
+      "kind": "object",
+      "name": "IT System",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-electrical-backup",
+      "kind": "object",
+      "name": "Electrical Backup System",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-clinical-archive-area",
+      "kind": "object",
+      "name": "Clinical Archive Area",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-pharmacy",
+      "kind": "object",
+      "name": "Pharmacy or Authorized Dispensary",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-supply-storage",
+      "kind": "object",
+      "name": "Supply Storage",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-waste-disposal-area",
+      "kind": "object",
+      "name": "Waste Disposal Area",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-cleaning-supply-room",
+      "kind": "object",
+      "name": "Cleaning Supply Room",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-staff-welfare-area",
+      "kind": "object",
+      "name": "Staff Welfare Area",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-vehicle-parking",
+      "kind": "object",
+      "name": "Vehicle Parking",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-evacuation-signage",
+      "kind": "object",
+      "name": "Evacuation Signage System",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-availability",
+      "kind": "object",
+      "name": "Availability",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-internet-connectivity",
+      "kind": "object",
+      "name": "Internet Connectivity",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-sec-authorization",
+      "kind": "object",
+      "name": "SEC Authorization",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-security-level",
+      "kind": "object",
+      "name": "Security Level",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-cold-chain-compliance",
+      "kind": "object",
+      "name": "Cold Chain Compliance",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-temperature-control",
+      "kind": "object",
+      "name": "Temperature Control",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-reas-compliance",
+      "kind": "object",
+      "name": "REAS Compliance",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-dining-access",
+      "kind": "object",
+      "name": "Dining Access",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-hygiene-facilities",
+      "kind": "object",
+      "name": "Hygiene Facilities",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-lockers",
+      "kind": "object",
+      "name": "Lockers",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-break-room",
+      "kind": "object",
+      "name": "Break Room",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-bp-monitor",
+      "kind": "object",
+      "name": "Blood Pressure Monitor",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-pulse-oximeter",
+      "kind": "object",
+      "name": "Pulse Oximeter",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-cardiac-monitor",
+      "kind": "object",
+      "name": "Cardiac Monitor",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-thermometer",
+      "kind": "object",
+      "name": "Thermometer",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-defibrillator",
+      "kind": "object",
+      "name": "Defibrillator",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-specialty-instruments",
+      "kind": "object",
+      "name": "Specialty Instrument Set",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-maintenance-status",
+      "kind": "object",
+      "name": "Maintenance Status",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-sanitary-authorization",
+      "kind": "object",
+      "name": "Sanitary Authorization",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-documentation-system",
+      "kind": "object",
+      "name": "Documentation System",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-internal-org-manual",
+      "kind": "object",
+      "name": "Internal Organization Manual",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-clinical-protocol-set",
+      "kind": "object",
+      "name": "Clinical Protocol Set",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-procedures-manual",
+      "kind": "object",
+      "name": "Procedures Manual",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-waste-mgmt-protocol",
+      "kind": "object",
+      "name": "Waste Management Protocol",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-annual-training-plan",
+      "kind": "object",
+      "name": "Annual Training Plan",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-organizational-chart",
+      "kind": "object",
+      "name": "Organizational Chart",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-role-definition-set",
+      "kind": "object",
+      "name": "Role Definition Set",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-schedule-definition",
+      "kind": "object",
+      "name": "Schedule Definition",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-hygiene-regulation",
+      "kind": "object",
+      "name": "Hygiene Regulation",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-admission-eval-protocol",
+      "kind": "object",
+      "name": "Admission Evaluation Protocol",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-visit-route-protocol",
+      "kind": "object",
+      "name": "Visit and Route Scheduling Protocol",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-categorization-discharge-protocol",
+      "kind": "object",
+      "name": "Categorization and Discharge Protocol",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-prescription-referral-protocol",
+      "kind": "object",
+      "name": "Prescription and Referral Management Protocol",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-emergency-response-protocol",
+      "kind": "object",
+      "name": "Emergency Response Protocol",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-staff-aggression-protocol",
+      "kind": "object",
+      "name": "Staff Aggression Protocol",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-peripheral-venous-proc",
+      "kind": "object",
+      "name": "Peripheral Venous Line Procedure",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-central-venous-proc",
+      "kind": "object",
+      "name": "Central Venous Line Procedure",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-urinary-catheter-proc",
+      "kind": "object",
+      "name": "Urinary Catheter Procedure",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-tracheostomy-proc",
+      "kind": "object",
+      "name": "Tracheostomy Procedure",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-sample-collection-proc",
+      "kind": "object",
+      "name": "Sample Collection Procedure",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-isolation-precaution-proc",
+      "kind": "object",
+      "name": "Isolation Precaution Procedure",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-reas-decree-compliance",
+      "kind": "object",
+      "name": "REAS Decree Compliance",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-iaas-training",
+      "kind": "object",
+      "name": "IAAS Training",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-bls-training",
+      "kind": "object",
+      "name": "BLS Training",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-staff-induction-program",
+      "kind": "object",
+      "name": "Staff Induction Program",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-humanized-care-training",
+      "kind": "object",
+      "name": "Humanized Care Training",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-minimum-duration",
+      "kind": "object",
+      "name": "Minimum Duration",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "proc-sanitary-auth-managing",
+      "kind": "process",
+      "name": "Sanitary Authorization Managing",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "proc-quality-safety-managing",
+      "kind": "process",
+      "name": "Quality and Safety Managing",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "proc-staff-training-managing",
+      "kind": "process",
+      "name": "Staff Training Managing",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "proc-supply-chain-managing",
+      "kind": "process",
+      "name": "Supply Chain Managing",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "proc-waste-managing",
+      "kind": "process",
+      "name": "Waste Managing",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "proc-equipment-maintenance-managing",
+      "kind": "process",
+      "name": "Equipment Maintenance Managing",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-sanitary-auth-status",
+      "kind": "object",
+      "name": "Sanitary Authorization Status",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-authorization-validity",
+      "kind": "object",
+      "name": "Authorization Validity",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-seremi",
+      "kind": "object",
+      "name": "SEREMI",
+      "essence": "physical",
+      "affiliation": "environmental"
+    },
+    {
+      "id": "obj-quality-level",
+      "kind": "object",
+      "name": "Quality Level",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-adverse-reaction-audit",
+      "kind": "object",
+      "name": "Adverse Reaction Audit",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-mortality-audit",
+      "kind": "object",
+      "name": "Mortality Audit",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-training-compliance",
+      "kind": "object",
+      "name": "Training Compliance",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-biomedical-waste",
+      "kind": "object",
+      "name": "Biomedical Waste",
+      "essence": "physical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-sharps-disposal-protocol",
+      "kind": "object",
+      "name": "Sharps Disposal Protocol",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-preventive-maintenance-program",
+      "kind": "object",
+      "name": "Preventive Maintenance Program",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-basic-services",
+      "kind": "object",
+      "name": "Basic Services",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-telephony-access",
+      "kind": "object",
+      "name": "Telephony Access",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-road-access",
+      "kind": "object",
+      "name": "Road Access",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-coverage-radius-compliance",
+      "kind": "object",
+      "name": "Coverage Radius Compliance",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-exclusion-condition",
+      "kind": "object",
+      "name": "Exclusion Condition",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-clinical-instability-exclusion",
+      "kind": "object",
+      "name": "Clinical Instability Exclusion",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-unestablished-diagnosis-exclusion",
+      "kind": "object",
+      "name": "Unestablished Diagnosis Exclusion",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-decompensated-mental-health-exclusion",
+      "kind": "object",
+      "name": "Decompensated Mental Health Exclusion",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-unlisted-service-exclusion",
+      "kind": "object",
+      "name": "Unlisted Service Exclusion",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-prior-disciplinary-exclusion",
+      "kind": "object",
+      "name": "Prior Disciplinary Discharge Exclusion",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    },
+    {
+      "id": "obj-continuity-of-care",
+      "kind": "object",
+      "name": "Continuity of Care",
+      "essence": "informatical",
+      "affiliation": "systemic"
+    }
+  ],
+  "states": [
+    {
+      "id": "state-acute-reacutized",
+      "parent": "obj-clinical-condition",
+      "name": "acute/reacutized",
+      "initial": true,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-recovered",
+      "parent": "obj-clinical-condition",
+      "name": "recovered",
+      "initial": false,
+      "final": true,
+      "default": false
+    },
+    {
+      "id": "state-elig-pending",
+      "parent": "obj-eligibility-status",
+      "name": "pending",
+      "initial": true,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-elig-eligible",
+      "parent": "obj-eligibility-status",
+      "name": "eligible",
+      "initial": false,
+      "final": true,
+      "default": false
+    },
+    {
+      "id": "state-elig-ineligible",
+      "parent": "obj-eligibility-status",
+      "name": "ineligible",
+      "initial": false,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-consent-unsigned",
+      "parent": "obj-informed-consent",
+      "name": "unsigned",
+      "initial": true,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-consent-signed",
+      "parent": "obj-informed-consent",
+      "name": "signed",
+      "initial": false,
+      "final": true,
+      "default": false
+    },
+    {
+      "id": "state-tp-draft",
+      "parent": "obj-therapeutic-plan",
+      "name": "draft",
+      "initial": true,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-tp-active",
+      "parent": "obj-therapeutic-plan",
+      "name": "active",
+      "initial": false,
+      "final": false,
+      "default": true
+    },
+    {
+      "id": "state-tp-completed",
+      "parent": "obj-therapeutic-plan",
+      "name": "completed",
+      "initial": false,
+      "final": true,
+      "default": false
+    },
+    {
+      "id": "state-ncp-draft",
+      "parent": "obj-nursing-care-plan",
+      "name": "draft",
+      "initial": true,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-ncp-active",
+      "parent": "obj-nursing-care-plan",
+      "name": "active",
+      "initial": false,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-ncp-completed",
+      "parent": "obj-nursing-care-plan",
+      "name": "completed",
+      "initial": false,
+      "final": true,
+      "default": false
+    },
+    {
+      "id": "state-cd-continue",
+      "parent": "obj-continuity-decision",
+      "name": "continue-treatment",
+      "initial": false,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-cd-discharge",
+      "parent": "obj-continuity-decision",
+      "name": "proceed-discharge",
+      "initial": false,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-hs-active",
+      "parent": "obj-hospitalization-status",
+      "name": "active",
+      "initial": true,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-hs-discharged",
+      "parent": "obj-hospitalization-status",
+      "name": "discharged",
+      "initial": false,
+      "final": true,
+      "default": false
+    },
+    {
+      "id": "state-caregiver-available",
+      "parent": "obj-caregiver",
+      "name": "available",
+      "initial": false,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-caregiver-unavailable",
+      "parent": "obj-caregiver",
+      "name": "unavailable",
+      "initial": false,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-sn-verified",
+      "parent": "obj-support-network",
+      "name": "verified",
+      "initial": false,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-sn-insufficient",
+      "parent": "obj-support-network",
+      "name": "insufficient",
+      "initial": false,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-hc-adequate",
+      "parent": "obj-home-condition",
+      "name": "adequate",
+      "initial": false,
+      "final": true,
+      "default": false
+    },
+    {
+      "id": "state-hc-inadequate",
+      "parent": "obj-home-condition",
+      "name": "inadequate",
+      "initial": false,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-sck-insufficient",
+      "parent": "obj-self-care-knowledge",
+      "name": "insufficient",
+      "initial": true,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-sck-sufficient",
+      "parent": "obj-self-care-knowledge",
+      "name": "sufficient",
+      "initial": false,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-ci-absent",
+      "parent": "obj-clinical-instability",
+      "name": "absent",
+      "initial": false,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-ci-present",
+      "parent": "obj-clinical-instability",
+      "name": "present",
+      "initial": false,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-ta-adherent",
+      "parent": "obj-treatment-adherence",
+      "name": "adherent",
+      "initial": false,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-ta-non-adherent",
+      "parent": "obj-treatment-adherence",
+      "name": "non-adherent",
+      "initial": false,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-avail-24-7",
+      "parent": "obj-availability",
+      "name": "24/7",
+      "initial": true,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-avail-partial",
+      "parent": "obj-availability",
+      "name": "partial",
+      "initial": false,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-sec-secured",
+      "parent": "obj-security-level",
+      "name": "secured",
+      "initial": false,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-sec-unsecured",
+      "parent": "obj-security-level",
+      "name": "unsecured",
+      "initial": false,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-cc-compliant",
+      "parent": "obj-cold-chain-compliance",
+      "name": "compliant",
+      "initial": true,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-cc-non-compliant",
+      "parent": "obj-cold-chain-compliance",
+      "name": "non-compliant",
+      "initial": false,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-reas-compliant",
+      "parent": "obj-reas-compliance",
+      "name": "compliant",
+      "initial": false,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-reas-non-compliant",
+      "parent": "obj-reas-compliance",
+      "name": "non-compliant",
+      "initial": false,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-maint-current",
+      "parent": "obj-maintenance-status",
+      "name": "current",
+      "initial": true,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-maint-overdue",
+      "parent": "obj-maintenance-status",
+      "name": "overdue",
+      "initial": false,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-sa-authorized",
+      "parent": "obj-sanitary-authorization",
+      "name": "authorized",
+      "initial": true,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-sa-unauthorized",
+      "parent": "obj-sanitary-authorization",
+      "name": "unauthorized",
+      "initial": false,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-sas-pending",
+      "parent": "obj-sanitary-auth-status",
+      "name": "pending",
+      "initial": true,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-sas-authorized",
+      "parent": "obj-sanitary-auth-status",
+      "name": "authorized",
+      "initial": false,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-sas-expired",
+      "parent": "obj-sanitary-auth-status",
+      "name": "expired",
+      "initial": false,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-tc-compliant",
+      "parent": "obj-training-compliance",
+      "name": "compliant",
+      "initial": false,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-tc-non-compliant",
+      "parent": "obj-training-compliance",
+      "name": "non-compliant",
+      "initial": false,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-bs-available",
+      "parent": "obj-basic-services",
+      "name": "available",
+      "initial": true,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-bs-unavailable",
+      "parent": "obj-basic-services",
+      "name": "unavailable",
+      "initial": false,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-tel-available",
+      "parent": "obj-telephony-access",
+      "name": "available",
+      "initial": false,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-tel-unavailable",
+      "parent": "obj-telephony-access",
+      "name": "unavailable",
+      "initial": false,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-ra-within",
+      "parent": "obj-road-access",
+      "name": "within-coverage-radius",
+      "initial": true,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-ra-outside",
+      "parent": "obj-road-access",
+      "name": "outside-coverage-radius",
+      "initial": false,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-cr-compliant",
+      "parent": "obj-coverage-radius-compliance",
+      "name": "compliant",
+      "initial": false,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-cr-non-compliant",
+      "parent": "obj-coverage-radius-compliance",
+      "name": "non-compliant",
+      "initial": false,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-exc-absent",
+      "parent": "obj-exclusion-condition",
+      "name": "absent",
+      "initial": true,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-exc-present",
+      "parent": "obj-exclusion-condition",
+      "name": "present",
+      "initial": false,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-pc-stable",
+      "parent": "obj-patient-category",
+      "name": "stable",
+      "initial": false,
+      "final": false,
+      "default": true
+    },
+    {
+      "id": "state-pc-improving",
+      "parent": "obj-patient-category",
+      "name": "improving",
+      "initial": false,
+      "final": false,
+      "default": false
+    },
+    {
+      "id": "state-pc-deteriorating",
+      "parent": "obj-patient-category",
+      "name": "deteriorating",
+      "initial": false,
+      "final": false,
+      "default": false
+    }
+  ],
+  "opds": [
+    {
+      "id": "opd-sd",
+      "name": "SD",
+      "opd_type": "hierarchical",
+      "parent_opd": null
+    },
+    {
+      "id": "opd-sd1",
+      "name": "SD1",
+      "opd_type": "hierarchical",
+      "parent_opd": "opd-sd",
+      "refines": "proc-domiciliary-hospitalizing",
+      "refinement_type": "in-zoom"
+    },
+    {
+      "id": "opd-sd1-1",
+      "name": "SD1.1",
+      "opd_type": "hierarchical",
+      "parent_opd": "opd-sd1",
+      "refines": "proc-eligibility-evaluating",
+      "refinement_type": "in-zoom"
+    },
+    {
+      "id": "opd-sd1-2",
+      "name": "SD1.2",
+      "opd_type": "hierarchical",
+      "parent_opd": "opd-sd1",
+      "refines": "proc-patient-admitting",
+      "refinement_type": "in-zoom"
+    },
+    {
+      "id": "opd-sd1-3",
+      "name": "SD1.3",
+      "opd_type": "hierarchical",
+      "parent_opd": "opd-sd1",
+      "refines": "proc-care-planning",
+      "refinement_type": "in-zoom"
+    },
+    {
+      "id": "opd-sd1-4",
+      "name": "SD1.4",
+      "opd_type": "hierarchical",
+      "parent_opd": "opd-sd1",
+      "refines": "proc-therapeutic-plan-executing",
+      "refinement_type": "in-zoom"
+    },
+    {
+      "id": "opd-sd1-5",
+      "name": "SD1.5",
+      "opd_type": "hierarchical",
+      "parent_opd": "opd-sd1",
+      "refines": "proc-clinical-evolution-monitoring",
+      "refinement_type": "in-zoom"
+    },
+    {
+      "id": "opd-sd1-6",
+      "name": "SD1.6",
+      "opd_type": "hierarchical",
+      "parent_opd": "opd-sd1",
+      "refines": "proc-patient-discharging",
+      "refinement_type": "unfold"
+    },
+    {
+      "id": "opd-sd2",
+      "name": "SD2",
+      "opd_type": "hierarchical",
+      "parent_opd": "opd-sd",
+      "refines": "obj-healthcare-team",
+      "refinement_type": "unfold"
+    },
+    {
+      "id": "opd-sd3",
+      "name": "SD3",
+      "opd_type": "hierarchical",
+      "parent_opd": "opd-sd",
+      "refines": "obj-admin-infrastructure",
+      "refinement_type": "unfold"
+    },
+    {
+      "id": "opd-sd4",
+      "name": "SD4",
+      "opd_type": "hierarchical",
+      "parent_opd": "opd-sd",
+      "refines": "obj-medical-equipment",
+      "refinement_type": "unfold"
+    },
+    {
+      "id": "opd-sd5",
+      "name": "SD5",
+      "opd_type": "hierarchical",
+      "parent_opd": "opd-sd",
+      "refines": "obj-hodom-system",
+      "refinement_type": "unfold"
+    },
+    {
+      "id": "opd-sd6",
+      "name": "SD6",
+      "opd_type": "hierarchical",
+      "parent_opd": "opd-sd",
+      "refines": "obj-hodom-system",
+      "refinement_type": "unfold"
+    },
+    {
+      "id": "opd-sd7",
+      "name": "SD7",
+      "opd_type": "hierarchical",
+      "parent_opd": "opd-sd",
+      "refines": "obj-patient-home",
+      "refinement_type": "unfold"
+    },
+    {
+      "id": "opd-sd8",
+      "name": "SD8",
+      "opd_type": "hierarchical",
+      "parent_opd": "opd-sd1-1",
+      "refines": "obj-exclusion-condition",
+      "refinement_type": "unfold"
+    },
+    {
+      "id": "opd-sd9",
+      "name": "SD9",
+      "opd_type": "hierarchical",
+      "parent_opd": "opd-sd"
+    }
+  ],
+  "links": [
+    {
+      "id": "lnk-1",
+      "type": "exhibition",
+      "source": "obj-hodom-system",
+      "target": "proc-domiciliary-hospitalizing"
+    },
+    {
+      "id": "lnk-2",
+      "type": "exhibition",
+      "source": "obj-patient-group",
+      "target": "obj-clinical-condition"
+    },
+    {
+      "id": "lnk-3",
+      "type": "effect",
+      "source": "proc-domiciliary-hospitalizing",
+      "target": "obj-clinical-condition",
+      "source_state": "state-acute-reacutized",
+      "target_state": "state-recovered"
+    },
+    {
+      "id": "lnk-4",
+      "type": "agent",
+      "source": "obj-healthcare-team",
+      "target": "proc-domiciliary-hospitalizing"
+    },
+    {
+      "id": "lnk-5",
+      "type": "instrument",
+      "source": "proc-domiciliary-hospitalizing",
+      "target": "obj-medical-equipment"
+    },
+    {
+      "id": "lnk-6",
+      "type": "instrument",
+      "source": "proc-domiciliary-hospitalizing",
+      "target": "obj-communication-system"
+    },
+    {
+      "id": "lnk-7",
+      "type": "instrument",
+      "source": "proc-domiciliary-hospitalizing",
+      "target": "obj-transport-vehicle"
+    },
+    {
+      "id": "lnk-8",
+      "type": "instrument",
+      "source": "proc-domiciliary-hospitalizing",
+      "target": "obj-admin-infrastructure"
+    },
+    {
+      "id": "lnk-9",
+      "type": "consumption",
+      "source": "obj-clinical-supply",
+      "target": "proc-domiciliary-hospitalizing"
+    },
+    {
+      "id": "lnk-10",
+      "type": "consumption",
+      "source": "obj-medication",
+      "target": "proc-domiciliary-hospitalizing"
+    },
+    {
+      "id": "lnk-11",
+      "type": "result",
+      "source": "proc-domiciliary-hospitalizing",
+      "target": "obj-clinical-record"
+    },
+    {
+      "id": "lnk-12",
+      "type": "tagged",
+      "source": "obj-patient-home",
+      "target": "proc-domiciliary-hospitalizing",
+      "tag": "hosts"
+    },
+    {
+      "id": "lnk-13",
+      "type": "tagged",
+      "source": "obj-current-regulation",
+      "target": "obj-hodom-system",
+      "tag": "governs"
+    },
+    {
+      "id": "lnk-14",
+      "type": "tagged",
+      "source": "obj-inpatient-facility",
+      "target": "proc-domiciliary-hospitalizing",
+      "tag": "refers"
+    },
+    {
+      "id": "lnk-15",
+      "type": "effect",
+      "source": "proc-inpatient-bed-occupying",
+      "target": "obj-clinical-condition",
+      "target_state": "state-acute-reacutized"
+    },
+    {
+      "id": "lnk-16",
+      "type": "effect",
+      "source": "proc-eligibility-evaluating",
+      "target": "obj-eligibility-status",
+      "source_state": "state-elig-pending",
+      "target_state": "state-elig-eligible"
+    },
+    {
+      "id": "lnk-17",
+      "type": "instrument",
+      "source": "proc-eligibility-evaluating",
+      "target": "obj-inpatient-facility"
+    },
+    {
+      "id": "lnk-18",
+      "type": "instrument",
+      "source": "proc-eligibility-evaluating",
+      "target": "obj-caregiver",
+      "source_state": "state-caregiver-available"
+    },
+    {
+      "id": "lnk-19",
+      "type": "effect",
+      "source": "proc-eligibility-evaluating",
+      "target": "obj-support-network",
+      "source_state": "state-sn-insufficient",
+      "target_state": "state-sn-verified"
+    },
+    {
+      "id": "lnk-20",
+      "type": "effect",
+      "source": "proc-patient-admitting",
+      "target": "obj-informed-consent",
+      "source_state": "state-consent-unsigned",
+      "target_state": "state-consent-signed"
+    },
+    {
+      "id": "lnk-21",
+      "type": "result",
+      "source": "proc-patient-admitting",
+      "target": "obj-admission-form"
+    },
+    {
+      "id": "lnk-22",
+      "type": "result",
+      "source": "proc-patient-admitting",
+      "target": "obj-social-report"
+    },
+    {
+      "id": "lnk-23",
+      "type": "consumption",
+      "source": "obj-clinical-supply",
+      "target": "proc-patient-admitting"
+    },
+    {
+      "id": "lnk-24",
+      "type": "result",
+      "source": "proc-care-planning",
+      "target": "obj-therapeutic-plan",
+      "target_state": "state-tp-draft"
+    },
+    {
+      "id": "lnk-25",
+      "type": "result",
+      "source": "proc-care-planning",
+      "target": "obj-nursing-care-plan"
+    },
+    {
+      "id": "lnk-26",
+      "type": "instrument",
+      "source": "proc-therapeutic-plan-executing",
+      "target": "obj-therapeutic-plan",
+      "source_state": "state-tp-active"
+    },
+    {
+      "id": "lnk-27",
+      "type": "instrument",
+      "source": "proc-therapeutic-plan-executing",
+      "target": "obj-nursing-care-plan",
+      "source_state": "state-ncp-active"
+    },
+    {
+      "id": "lnk-28",
+      "type": "consumption",
+      "source": "obj-clinical-supply",
+      "target": "proc-therapeutic-plan-executing"
+    },
+    {
+      "id": "lnk-29",
+      "type": "consumption",
+      "source": "obj-medication",
+      "target": "proc-therapeutic-plan-executing"
+    },
+    {
+      "id": "lnk-30",
+      "type": "instrument",
+      "source": "proc-therapeutic-plan-executing",
+      "target": "obj-medical-equipment"
+    },
+    {
+      "id": "lnk-31",
+      "type": "instrument",
+      "source": "proc-therapeutic-plan-executing",
+      "target": "obj-transport-vehicle"
+    },
+    {
+      "id": "lnk-32",
+      "type": "effect",
+      "source": "proc-clinical-evolution-monitoring",
+      "target": "obj-clinical-condition",
+      "source_state": "state-acute-reacutized",
+      "target_state": "state-recovered"
+    },
+    {
+      "id": "lnk-33",
+      "type": "result",
+      "source": "proc-clinical-evolution-monitoring",
+      "target": "obj-domiciliary-clinical-summary"
+    },
+    {
+      "id": "lnk-34",
+      "type": "result",
+      "source": "proc-clinical-evolution-monitoring",
+      "target": "obj-continuity-decision"
+    },
+    {
+      "id": "lnk-35",
+      "type": "effect",
+      "source": "proc-patient-discharging",
+      "target": "obj-hospitalization-status",
+      "source_state": "state-hs-active",
+      "target_state": "state-hs-discharged"
+    },
+    {
+      "id": "lnk-36",
+      "type": "effect",
+      "source": "proc-patient-discharging",
+      "target": "obj-therapeutic-plan",
+      "source_state": "state-tp-active",
+      "target_state": "state-tp-completed"
+    },
+    {
+      "id": "lnk-37",
+      "type": "effect",
+      "source": "proc-patient-discharging",
+      "target": "obj-nursing-care-plan",
+      "source_state": "state-ncp-active",
+      "target_state": "state-ncp-completed"
+    },
+    {
+      "id": "lnk-38",
+      "type": "result",
+      "source": "proc-patient-discharging",
+      "target": "obj-epicrisis"
+    },
+    {
+      "id": "lnk-39",
+      "type": "result",
+      "source": "proc-patient-discharging",
+      "target": "obj-satisfaction-survey"
+    },
+    {
+      "id": "lnk-40",
+      "type": "result",
+      "source": "proc-patient-discharging",
+      "target": "obj-clinical-record"
+    },
+    {
+      "id": "lnk-41",
+      "type": "agent",
+      "source": "obj-healthcare-team",
+      "target": "proc-eligibility-evaluating"
+    },
+    {
+      "id": "lnk-42",
+      "type": "agent",
+      "source": "obj-healthcare-team",
+      "target": "proc-patient-admitting"
+    },
+    {
+      "id": "lnk-43",
+      "type": "agent",
+      "source": "obj-healthcare-team",
+      "target": "proc-care-planning"
+    },
+    {
+      "id": "lnk-44",
+      "type": "agent",
+      "source": "obj-healthcare-team",
+      "target": "proc-therapeutic-plan-executing"
+    },
+    {
+      "id": "lnk-45",
+      "type": "agent",
+      "source": "obj-healthcare-team",
+      "target": "proc-clinical-evolution-monitoring"
+    },
+    {
+      "id": "lnk-46",
+      "type": "agent",
+      "source": "obj-healthcare-team",
+      "target": "proc-patient-discharging"
+    },
+    {
+      "id": "lnk-47",
+      "type": "effect",
+      "source": "proc-clinical-condition-evaluating",
+      "target": "obj-patient-group"
+    },
+    {
+      "id": "lnk-48",
+      "type": "effect",
+      "source": "proc-clinical-condition-evaluating",
+      "target": "obj-clinical-condition",
+      "source_state": "state-acute-reacutized"
+    },
+    {
+      "id": "lnk-49",
+      "type": "instrument",
+      "source": "proc-clinical-condition-evaluating",
+      "target": "obj-inpatient-facility"
+    },
+    {
+      "id": "lnk-50",
+      "type": "agent",
+      "source": "obj-attending-physician",
+      "target": "proc-clinical-condition-evaluating"
+    },
+    {
+      "id": "lnk-51",
+      "type": "result",
+      "source": "proc-home-condition-evaluating",
+      "target": "obj-social-report"
+    },
+    {
+      "id": "lnk-52",
+      "type": "effect",
+      "source": "proc-home-condition-evaluating",
+      "target": "obj-patient-home"
+    },
+    {
+      "id": "lnk-53",
+      "type": "agent",
+      "source": "obj-social-worker",
+      "target": "proc-home-condition-evaluating"
+    },
+    {
+      "id": "lnk-54",
+      "type": "exhibition",
+      "source": "obj-patient-home",
+      "target": "obj-home-condition"
+    },
+    {
+      "id": "lnk-55",
+      "type": "effect",
+      "source": "proc-home-condition-evaluating",
+      "target": "obj-home-condition",
+      "source_state": "state-hc-inadequate",
+      "target_state": "state-hc-adequate"
+    },
+    {
+      "id": "lnk-56",
+      "type": "effect",
+      "source": "proc-support-network-verifying",
+      "target": "obj-support-network",
+      "source_state": "state-sn-insufficient",
+      "target_state": "state-sn-verified"
+    },
+    {
+      "id": "lnk-57",
+      "type": "instrument",
+      "source": "proc-support-network-verifying",
+      "target": "obj-caregiver",
+      "source_state": "state-caregiver-available"
+    },
+    {
+      "id": "lnk-58",
+      "type": "agent",
+      "source": "obj-social-worker",
+      "target": "proc-support-network-verifying"
+    },
+    {
+      "id": "lnk-59",
+      "type": "effect",
+      "source": "proc-informed-consent-obtaining",
+      "target": "obj-informed-consent",
+      "source_state": "state-consent-unsigned",
+      "target_state": "state-consent-signed"
+    },
+    {
+      "id": "lnk-60",
+      "type": "instrument",
+      "source": "proc-informed-consent-obtaining",
+      "target": "obj-patient-group"
+    },
+    {
+      "id": "lnk-61",
+      "type": "agent",
+      "source": "obj-clinical-nurse",
+      "target": "proc-informed-consent-obtaining"
+    },
+    {
+      "id": "lnk-62",
+      "type": "result",
+      "source": "proc-informed-consent-obtaining",
+      "target": "obj-rights-duties-charter"
+    },
+    {
+      "id": "lnk-63",
+      "type": "result",
+      "source": "proc-admission-registering",
+      "target": "obj-admission-form"
+    },
+    {
+      "id": "lnk-64",
+      "type": "instrument",
+      "source": "proc-admission-registering",
+      "target": "obj-communication-system"
+    },
+    {
+      "id": "lnk-65",
+      "type": "agent",
+      "source": "obj-administrative-staff",
+      "target": "proc-admission-registering"
+    },
+    {
+      "id": "lnk-66",
+      "type": "result",
+      "source": "proc-social-diagnosis-elaborating",
+      "target": "obj-social-report"
+    },
+    {
+      "id": "lnk-67",
+      "type": "effect",
+      "source": "proc-social-diagnosis-elaborating",
+      "target": "obj-patient-home"
+    },
+    {
+      "id": "lnk-68",
+      "type": "agent",
+      "source": "obj-social-worker",
+      "target": "proc-social-diagnosis-elaborating"
+    },
+    {
+      "id": "lnk-69",
+      "type": "result",
+      "source": "proc-social-diagnosis-elaborating",
+      "target": "obj-socioeconomic-status"
+    },
+    {
+      "id": "lnk-70",
+      "type": "effect",
+      "source": "proc-patient-documentation-delivering",
+      "target": "obj-patient-group"
+    },
+    {
+      "id": "lnk-71",
+      "type": "instrument",
+      "source": "proc-patient-documentation-delivering",
+      "target": "obj-informed-consent",
+      "source_state": "state-consent-signed"
+    },
+    {
+      "id": "lnk-72",
+      "type": "result",
+      "source": "proc-patient-documentation-delivering",
+      "target": "obj-care-indication-document"
+    },
+    {
+      "id": "lnk-73",
+      "type": "agent",
+      "source": "obj-clinical-nurse",
+      "target": "proc-patient-documentation-delivering"
+    },
+    {
+      "id": "lnk-74",
+      "type": "instrument",
+      "source": "proc-referral-facility-coordinating",
+      "target": "obj-inpatient-facility"
+    },
+    {
+      "id": "lnk-75",
+      "type": "instrument",
+      "source": "proc-referral-facility-coordinating",
+      "target": "obj-communication-system"
+    },
+    {
+      "id": "lnk-76",
+      "type": "agent",
+      "source": "obj-coordination-professional",
+      "target": "proc-referral-facility-coordinating"
+    },
+    {
+      "id": "lnk-77",
+      "type": "result",
+      "source": "proc-therapeutic-plan-elaborating",
+      "target": "obj-therapeutic-plan",
+      "target_state": "state-tp-draft"
+    },
+    {
+      "id": "lnk-78",
+      "type": "instrument",
+      "source": "proc-therapeutic-plan-elaborating",
+      "target": "obj-clinical-condition"
+    },
+    {
+      "id": "lnk-79",
+      "type": "agent",
+      "source": "obj-attending-physician",
+      "target": "proc-therapeutic-plan-elaborating"
+    },
+    {
+      "id": "lnk-80",
+      "type": "result",
+      "source": "proc-nursing-care-plan-elaborating",
+      "target": "obj-nursing-care-plan",
+      "target_state": "state-ncp-draft"
+    },
+    {
+      "id": "lnk-81",
+      "type": "instrument",
+      "source": "proc-nursing-care-plan-elaborating",
+      "target": "obj-therapeutic-plan",
+      "source_state": "state-tp-draft"
+    },
+    {
+      "id": "lnk-82",
+      "type": "agent",
+      "source": "obj-clinical-nurse",
+      "target": "proc-nursing-care-plan-elaborating"
+    },
+    {
+      "id": "lnk-83",
+      "type": "result",
+      "source": "proc-home-visit-scheduling",
+      "target": "obj-visit-schedule"
+    },
+    {
+      "id": "lnk-84",
+      "type": "instrument",
+      "source": "proc-home-visit-scheduling",
+      "target": "obj-therapeutic-plan",
+      "source_state": "state-tp-draft"
+    },
+    {
+      "id": "lnk-85",
+      "type": "agent",
+      "source": "obj-coordination-professional",
+      "target": "proc-home-visit-scheduling"
+    },
+    {
+      "id": "lnk-86",
+      "type": "result",
+      "source": "proc-transport-route-programming",
+      "target": "obj-transport-route"
+    },
+    {
+      "id": "lnk-87",
+      "type": "instrument",
+      "source": "proc-transport-route-programming",
+      "target": "obj-visit-schedule"
+    },
+    {
+      "id": "lnk-88",
+      "type": "instrument",
+      "source": "proc-transport-route-programming",
+      "target": "obj-patient-home"
+    },
+    {
+      "id": "lnk-89",
+      "type": "agent",
+      "source": "obj-administrative-staff",
+      "target": "proc-transport-route-programming"
+    },
+    {
+      "id": "lnk-90",
+      "type": "effect",
+      "source": "proc-medical-visit-performing",
+      "target": "obj-patient-group"
+    },
+    {
+      "id": "lnk-91",
+      "type": "instrument",
+      "source": "proc-medical-visit-performing",
+      "target": "obj-therapeutic-plan",
+      "source_state": "state-tp-active"
+    },
+    {
+      "id": "lnk-92",
+      "type": "instrument",
+      "source": "proc-medical-visit-performing",
+      "target": "obj-medical-equipment"
+    },
+    {
+      "id": "lnk-93",
+      "type": "instrument",
+      "source": "proc-medical-visit-performing",
+      "target": "obj-transport-vehicle"
+    },
+    {
+      "id": "lnk-94",
+      "type": "result",
+      "source": "proc-medical-visit-performing",
+      "target": "obj-domiciliary-clinical-summary"
+    },
+    {
+      "id": "lnk-95",
+      "type": "agent",
+      "source": "obj-attending-physician",
+      "target": "proc-medical-visit-performing"
+    },
+    {
+      "id": "lnk-96",
+      "type": "effect",
+      "source": "proc-nursing-care-executing",
+      "target": "obj-patient-group"
+    },
+    {
+      "id": "lnk-97",
+      "type": "instrument",
+      "source": "proc-nursing-care-executing",
+      "target": "obj-nursing-care-plan",
+      "source_state": "state-ncp-active"
+    },
+    {
+      "id": "lnk-98",
+      "type": "instrument",
+      "source": "proc-nursing-care-executing",
+      "target": "obj-medical-equipment"
+    },
+    {
+      "id": "lnk-99",
+      "type": "consumption",
+      "source": "obj-clinical-supply",
+      "target": "proc-nursing-care-executing"
+    },
+    {
+      "id": "lnk-100",
+      "type": "agent",
+      "source": "obj-clinical-nurse",
+      "target": "proc-nursing-care-executing"
+    },
+    {
+      "id": "lnk-101",
+      "type": "agent",
+      "source": "obj-nursing-technician",
+      "target": "proc-nursing-care-executing"
+    },
+    {
+      "id": "lnk-102",
+      "type": "effect",
+      "source": "proc-kinesiological-therapy-executing",
+      "target": "obj-patient-group"
+    },
+    {
+      "id": "lnk-103",
+      "type": "instrument",
+      "source": "proc-kinesiological-therapy-executing",
+      "target": "obj-therapeutic-plan",
+      "source_state": "state-tp-active"
+    },
+    {
+      "id": "lnk-104",
+      "type": "instrument",
+      "source": "proc-kinesiological-therapy-executing",
+      "target": "obj-medical-equipment"
+    },
+    {
+      "id": "lnk-105",
+      "type": "agent",
+      "source": "obj-kinesiologist",
+      "target": "proc-kinesiological-therapy-executing"
+    },
+    {
+      "id": "lnk-106",
+      "type": "result",
+      "source": "proc-kinesiological-therapy-executing",
+      "target": "obj-motor-therapy"
+    },
+    {
+      "id": "lnk-107",
+      "type": "result",
+      "source": "proc-kinesiological-therapy-executing",
+      "target": "obj-respiratory-therapy"
+    },
+    {
+      "id": "lnk-108",
+      "type": "consumption",
+      "source": "obj-medication",
+      "target": "proc-medication-administering"
+    },
+    {
+      "id": "lnk-109",
+      "type": "effect",
+      "source": "proc-medication-administering",
+      "target": "obj-patient-group"
+    },
+    {
+      "id": "lnk-110",
+      "type": "instrument",
+      "source": "proc-medication-administering",
+      "target": "obj-therapeutic-plan",
+      "source_state": "state-tp-active"
+    },
+    {
+      "id": "lnk-111",
+      "type": "agent",
+      "source": "obj-clinical-nurse",
+      "target": "proc-medication-administering"
+    },
+    {
+      "id": "lnk-112",
+      "type": "agent",
+      "source": "obj-nursing-technician",
+      "target": "proc-medication-administering"
+    },
+    {
+      "id": "lnk-113",
+      "type": "instrument",
+      "source": "proc-medication-administering",
+      "target": "obj-prescription"
+    },
+    {
+      "id": "lnk-114",
+      "type": "effect",
+      "source": "proc-remote-care-regulating",
+      "target": "obj-patient-group"
+    },
+    {
+      "id": "lnk-115",
+      "type": "instrument",
+      "source": "proc-remote-care-regulating",
+      "target": "obj-communication-system"
+    },
+    {
+      "id": "lnk-116",
+      "type": "agent",
+      "source": "obj-regulating-physician",
+      "target": "proc-remote-care-regulating"
+    },
+    {
+      "id": "lnk-117",
+      "type": "result",
+      "source": "proc-remote-care-regulating",
+      "target": "obj-telehealth-record"
+    },
+    {
+      "id": "lnk-118",
+      "type": "effect",
+      "source": "proc-patient-caregiver-educating",
+      "target": "obj-patient-group"
+    },
+    {
+      "id": "lnk-119",
+      "type": "effect",
+      "source": "proc-patient-caregiver-educating",
+      "target": "obj-caregiver"
+    },
+    {
+      "id": "lnk-120",
+      "type": "instrument",
+      "source": "proc-patient-caregiver-educating",
+      "target": "obj-therapeutic-plan",
+      "source_state": "state-tp-active"
+    },
+    {
+      "id": "lnk-121",
+      "type": "agent",
+      "source": "obj-clinical-nurse",
+      "target": "proc-patient-caregiver-educating"
+    },
+    {
+      "id": "lnk-122",
+      "type": "exhibition",
+      "source": "obj-patient-group",
+      "target": "obj-self-care-knowledge"
+    },
+    {
+      "id": "lnk-123",
+      "type": "effect",
+      "source": "proc-patient-caregiver-educating",
+      "target": "obj-self-care-knowledge",
+      "source_state": "state-sck-insufficient",
+      "target_state": "state-sck-sufficient"
+    },
+    {
+      "id": "lnk-124",
+      "type": "effect",
+      "source": "proc-vital-signs-evaluating",
+      "target": "obj-patient-group"
+    },
+    {
+      "id": "lnk-125",
+      "type": "instrument",
+      "source": "proc-vital-signs-evaluating",
+      "target": "obj-medical-equipment"
+    },
+    {
+      "id": "lnk-126",
+      "type": "agent",
+      "source": "obj-clinical-nurse",
+      "target": "proc-vital-signs-evaluating"
+    },
+    {
+      "id": "lnk-127",
+      "type": "result",
+      "source": "proc-vital-signs-evaluating",
+      "target": "obj-vital-signs-data"
+    },
+    {
+      "id": "lnk-128",
+      "type": "aggregation",
+      "source": "obj-vital-signs-data",
+      "target": "obj-blood-pressure"
+    },
+    {
+      "id": "lnk-129",
+      "type": "aggregation",
+      "source": "obj-vital-signs-data",
+      "target": "obj-heart-rate"
+    },
+    {
+      "id": "lnk-130",
+      "type": "aggregation",
+      "source": "obj-vital-signs-data",
+      "target": "obj-respiratory-rate"
+    },
+    {
+      "id": "lnk-131",
+      "type": "aggregation",
+      "source": "obj-vital-signs-data",
+      "target": "obj-oxygen-saturation"
+    },
+    {
+      "id": "lnk-132",
+      "type": "consumption",
+      "source": "obj-vital-signs-data",
+      "target": "proc-clinical-record-updating"
+    },
+    {
+      "id": "lnk-133",
+      "type": "effect",
+      "source": "proc-clinical-record-updating",
+      "target": "obj-clinical-record"
+    },
+    {
+      "id": "lnk-134",
+      "type": "instrument",
+      "source": "proc-clinical-record-updating",
+      "target": "obj-communication-system"
+    },
+    {
+      "id": "lnk-135",
+      "type": "agent",
+      "source": "obj-clinical-nurse",
+      "target": "proc-clinical-record-updating"
+    },
+    {
+      "id": "lnk-136",
+      "type": "result",
+      "source": "proc-patient-categorizing",
+      "target": "obj-patient-category"
+    },
+    {
+      "id": "lnk-137",
+      "type": "instrument",
+      "source": "proc-patient-categorizing",
+      "target": "obj-vital-signs-data"
+    },
+    {
+      "id": "lnk-138",
+      "type": "agent",
+      "source": "obj-attending-physician",
+      "target": "proc-patient-categorizing"
+    },
+    {
+      "id": "lnk-139",
+      "type": "result",
+      "source": "proc-continuity-deciding",
+      "target": "obj-continuity-decision"
+    },
+    {
+      "id": "lnk-140",
+      "type": "instrument",
+      "source": "proc-continuity-deciding",
+      "target": "obj-patient-category"
+    },
+    {
+      "id": "lnk-141",
+      "type": "agent",
+      "source": "obj-attending-physician",
+      "target": "proc-continuity-deciding"
+    },
+    {
+      "id": "lnk-142",
+      "type": "generalization",
+      "source": "proc-patient-discharging",
+      "target": "proc-medical-discharge"
+    },
+    {
+      "id": "lnk-143",
+      "type": "generalization",
+      "source": "proc-patient-discharging",
+      "target": "proc-hospital-readmission-discharge"
+    },
+    {
+      "id": "lnk-144",
+      "type": "generalization",
+      "source": "proc-patient-discharging",
+      "target": "proc-death-discharge"
+    },
+    {
+      "id": "lnk-145",
+      "type": "generalization",
+      "source": "proc-patient-discharging",
+      "target": "proc-voluntary-withdrawal-discharge"
+    },
+    {
+      "id": "lnk-146",
+      "type": "generalization",
+      "source": "proc-patient-discharging",
+      "target": "proc-disciplinary-discharge"
+    },
+    {
+      "id": "lnk-147",
+      "type": "effect",
+      "source": "proc-medical-discharge",
+      "target": "obj-clinical-condition",
+      "target_state": "state-recovered"
+    },
+    {
+      "id": "lnk-148",
+      "type": "effect",
+      "source": "proc-medical-discharge",
+      "target": "obj-hospitalization-status",
+      "source_state": "state-hs-active",
+      "target_state": "state-hs-discharged"
+    },
+    {
+      "id": "lnk-149",
+      "type": "result",
+      "source": "proc-medical-discharge",
+      "target": "obj-epicrisis"
+    },
+    {
+      "id": "lnk-150",
+      "type": "agent",
+      "source": "obj-attending-physician",
+      "target": "proc-medical-discharge"
+    },
+    {
+      "id": "lnk-151",
+      "type": "effect",
+      "source": "proc-hospital-readmission-discharge",
+      "target": "obj-hospitalization-status",
+      "source_state": "state-hs-active",
+      "target_state": "state-hs-discharged"
+    },
+    {
+      "id": "lnk-152",
+      "type": "instrument",
+      "source": "proc-hospital-readmission-discharge",
+      "target": "obj-inpatient-facility"
+    },
+    {
+      "id": "lnk-153",
+      "type": "instrument",
+      "source": "proc-hospital-readmission-discharge",
+      "target": "obj-transport-vehicle"
+    },
+    {
+      "id": "lnk-154",
+      "type": "result",
+      "source": "proc-hospital-readmission-discharge",
+      "target": "obj-epicrisis"
+    },
+    {
+      "id": "lnk-155",
+      "type": "agent",
+      "source": "obj-attending-physician",
+      "target": "proc-hospital-readmission-discharge"
+    },
+    {
+      "id": "lnk-156",
+      "type": "effect",
+      "source": "proc-death-discharge",
+      "target": "obj-hospitalization-status",
+      "source_state": "state-hs-active",
+      "target_state": "state-hs-discharged"
+    },
+    {
+      "id": "lnk-157",
+      "type": "result",
+      "source": "proc-death-discharge",
+      "target": "obj-epicrisis"
+    },
+    {
+      "id": "lnk-158",
+      "type": "agent",
+      "source": "obj-attending-physician",
+      "target": "proc-death-discharge"
+    },
+    {
+      "id": "lnk-159",
+      "type": "result",
+      "source": "proc-death-discharge",
+      "target": "obj-death-protocol"
+    },
+    {
+      "id": "lnk-160",
+      "type": "effect",
+      "source": "proc-voluntary-withdrawal-discharge",
+      "target": "obj-hospitalization-status",
+      "source_state": "state-hs-active",
+      "target_state": "state-hs-discharged"
+    },
+    {
+      "id": "lnk-161",
+      "type": "instrument",
+      "source": "proc-voluntary-withdrawal-discharge",
+      "target": "obj-informed-consent"
+    },
+    {
+      "id": "lnk-162",
+      "type": "result",
+      "source": "proc-voluntary-withdrawal-discharge",
+      "target": "obj-epicrisis"
+    },
+    {
+      "id": "lnk-163",
+      "type": "result",
+      "source": "proc-voluntary-withdrawal-discharge",
+      "target": "obj-withdrawal-statement"
+    },
+    {
+      "id": "lnk-164",
+      "type": "effect",
+      "source": "proc-disciplinary-discharge",
+      "target": "obj-hospitalization-status",
+      "source_state": "state-hs-active",
+      "target_state": "state-hs-discharged"
+    },
+    {
+      "id": "lnk-165",
+      "type": "agent",
+      "source": "obj-technical-director",
+      "target": "proc-disciplinary-discharge"
+    },
+    {
+      "id": "lnk-166",
+      "type": "result",
+      "source": "proc-disciplinary-discharge",
+      "target": "obj-epicrisis"
+    },
+    {
+      "id": "lnk-167",
+      "type": "aggregation",
+      "source": "obj-healthcare-team",
+      "target": "obj-technical-director"
+    },
+    {
+      "id": "lnk-168",
+      "type": "aggregation",
+      "source": "obj-healthcare-team",
+      "target": "obj-coordination-professional"
+    },
+    {
+      "id": "lnk-169",
+      "type": "aggregation",
+      "source": "obj-healthcare-team",
+      "target": "obj-attending-physician"
+    },
+    {
+      "id": "lnk-170",
+      "type": "aggregation",
+      "source": "obj-healthcare-team",
+      "target": "obj-regulating-physician"
+    },
+    {
+      "id": "lnk-171",
+      "type": "aggregation",
+      "source": "obj-healthcare-team",
+      "target": "obj-clinical-nurse"
+    },
+    {
+      "id": "lnk-172",
+      "type": "aggregation",
+      "source": "obj-healthcare-team",
+      "target": "obj-kinesiologist"
+    },
+    {
+      "id": "lnk-173",
+      "type": "aggregation",
+      "source": "obj-healthcare-team",
+      "target": "obj-nursing-technician"
+    },
+    {
+      "id": "lnk-174",
+      "type": "aggregation",
+      "source": "obj-healthcare-team",
+      "target": "obj-social-worker"
+    },
+    {
+      "id": "lnk-175",
+      "type": "aggregation",
+      "source": "obj-healthcare-team",
+      "target": "obj-administrative-staff"
+    },
+    {
+      "id": "lnk-176",
+      "type": "exhibition",
+      "source": "obj-technical-director",
+      "target": "obj-clinical-experience"
+    },
+    {
+      "id": "lnk-177",
+      "type": "exhibition",
+      "source": "obj-technical-director",
+      "target": "obj-postgraduate-management-training"
+    },
+    {
+      "id": "lnk-178",
+      "type": "exhibition",
+      "source": "obj-technical-director",
+      "target": "obj-iaas-prevention-course"
+    },
+    {
+      "id": "lnk-179",
+      "type": "exhibition",
+      "source": "obj-technical-director",
+      "target": "obj-weekly-dedication"
+    },
+    {
+      "id": "lnk-180",
+      "type": "exhibition",
+      "source": "obj-coordination-professional",
+      "target": "obj-clinical-experience"
+    },
+    {
+      "id": "lnk-181",
+      "type": "exhibition",
+      "source": "obj-coordination-professional",
+      "target": "obj-management-training"
+    },
+    {
+      "id": "lnk-182",
+      "type": "exhibition",
+      "source": "obj-coordination-professional",
+      "target": "obj-iaas-course"
+    },
+    {
+      "id": "lnk-183",
+      "type": "exhibition",
+      "source": "obj-attending-physician",
+      "target": "obj-clinical-experience"
+    },
+    {
+      "id": "lnk-184",
+      "type": "exhibition",
+      "source": "obj-attending-physician",
+      "target": "obj-iaas-course"
+    },
+    {
+      "id": "lnk-185",
+      "type": "exhibition",
+      "source": "obj-attending-physician",
+      "target": "obj-bls-certification"
+    },
+    {
+      "id": "lnk-186",
+      "type": "exhibition",
+      "source": "obj-regulating-physician",
+      "target": "obj-regulation-experience"
+    },
+    {
+      "id": "lnk-187",
+      "type": "exhibition",
+      "source": "obj-regulating-physician",
+      "target": "obj-bls-certification"
+    },
+    {
+      "id": "lnk-188",
+      "type": "exhibition",
+      "source": "obj-clinical-nurse",
+      "target": "obj-clinical-experience"
+    },
+    {
+      "id": "lnk-189",
+      "type": "exhibition",
+      "source": "obj-clinical-nurse",
+      "target": "obj-bls-certification"
+    },
+    {
+      "id": "lnk-190",
+      "type": "exhibition",
+      "source": "obj-kinesiologist",
+      "target": "obj-clinical-experience"
+    },
+    {
+      "id": "lnk-191",
+      "type": "exhibition",
+      "source": "obj-kinesiologist",
+      "target": "obj-bls-certification"
+    },
+    {
+      "id": "lnk-192",
+      "type": "exhibition",
+      "source": "obj-nursing-technician",
+      "target": "obj-clinical-experience"
+    },
+    {
+      "id": "lnk-193",
+      "type": "exhibition",
+      "source": "obj-nursing-technician",
+      "target": "obj-bls-certification"
+    },
+    {
+      "id": "lnk-194",
+      "type": "aggregation",
+      "source": "obj-admin-infrastructure",
+      "target": "obj-telephone-system"
+    },
+    {
+      "id": "lnk-195",
+      "type": "aggregation",
+      "source": "obj-admin-infrastructure",
+      "target": "obj-it-system"
+    },
+    {
+      "id": "lnk-196",
+      "type": "aggregation",
+      "source": "obj-admin-infrastructure",
+      "target": "obj-electrical-backup"
+    },
+    {
+      "id": "lnk-197",
+      "type": "aggregation",
+      "source": "obj-admin-infrastructure",
+      "target": "obj-clinical-archive-area"
+    },
+    {
+      "id": "lnk-198",
+      "type": "aggregation",
+      "source": "obj-admin-infrastructure",
+      "target": "obj-pharmacy"
+    },
+    {
+      "id": "lnk-199",
+      "type": "aggregation",
+      "source": "obj-admin-infrastructure",
+      "target": "obj-supply-storage"
+    },
+    {
+      "id": "lnk-200",
+      "type": "aggregation",
+      "source": "obj-admin-infrastructure",
+      "target": "obj-waste-disposal-area"
+    },
+    {
+      "id": "lnk-201",
+      "type": "aggregation",
+      "source": "obj-admin-infrastructure",
+      "target": "obj-cleaning-supply-room"
+    },
+    {
+      "id": "lnk-202",
+      "type": "aggregation",
+      "source": "obj-admin-infrastructure",
+      "target": "obj-staff-welfare-area"
+    },
+    {
+      "id": "lnk-203",
+      "type": "aggregation",
+      "source": "obj-admin-infrastructure",
+      "target": "obj-vehicle-parking"
+    },
+    {
+      "id": "lnk-204",
+      "type": "aggregation",
+      "source": "obj-admin-infrastructure",
+      "target": "obj-evacuation-signage"
+    },
+    {
+      "id": "lnk-205",
+      "type": "exhibition",
+      "source": "obj-telephone-system",
+      "target": "obj-availability"
+    },
+    {
+      "id": "lnk-206",
+      "type": "exhibition",
+      "source": "obj-it-system",
+      "target": "obj-internet-connectivity"
+    },
+    {
+      "id": "lnk-207",
+      "type": "exhibition",
+      "source": "obj-electrical-backup",
+      "target": "obj-sec-authorization"
+    },
+    {
+      "id": "lnk-208",
+      "type": "exhibition",
+      "source": "obj-clinical-archive-area",
+      "target": "obj-security-level"
+    },
+    {
+      "id": "lnk-209",
+      "type": "exhibition",
+      "source": "obj-pharmacy",
+      "target": "obj-cold-chain-compliance"
+    },
+    {
+      "id": "lnk-210",
+      "type": "exhibition",
+      "source": "obj-supply-storage",
+      "target": "obj-temperature-control"
+    },
+    {
+      "id": "lnk-211",
+      "type": "exhibition",
+      "source": "obj-waste-disposal-area",
+      "target": "obj-reas-compliance"
+    },
+    {
+      "id": "lnk-212",
+      "type": "aggregation",
+      "source": "obj-staff-welfare-area",
+      "target": "obj-dining-access"
+    },
+    {
+      "id": "lnk-213",
+      "type": "aggregation",
+      "source": "obj-staff-welfare-area",
+      "target": "obj-hygiene-facilities"
+    },
+    {
+      "id": "lnk-214",
+      "type": "aggregation",
+      "source": "obj-staff-welfare-area",
+      "target": "obj-lockers"
+    },
+    {
+      "id": "lnk-215",
+      "type": "aggregation",
+      "source": "obj-staff-welfare-area",
+      "target": "obj-break-room"
+    },
+    {
+      "id": "lnk-216",
+      "type": "aggregation",
+      "source": "obj-medical-equipment",
+      "target": "obj-bp-monitor"
+    },
+    {
+      "id": "lnk-217",
+      "type": "aggregation",
+      "source": "obj-medical-equipment",
+      "target": "obj-pulse-oximeter"
+    },
+    {
+      "id": "lnk-218",
+      "type": "aggregation",
+      "source": "obj-medical-equipment",
+      "target": "obj-cardiac-monitor"
+    },
+    {
+      "id": "lnk-219",
+      "type": "aggregation",
+      "source": "obj-medical-equipment",
+      "target": "obj-thermometer"
+    },
+    {
+      "id": "lnk-220",
+      "type": "aggregation",
+      "source": "obj-medical-equipment",
+      "target": "obj-defibrillator"
+    },
+    {
+      "id": "lnk-221",
+      "type": "aggregation",
+      "source": "obj-medical-equipment",
+      "target": "obj-specialty-instruments"
+    },
+    {
+      "id": "lnk-222",
+      "type": "exhibition",
+      "source": "obj-medical-equipment",
+      "target": "obj-maintenance-status"
+    },
+    {
+      "id": "lnk-223",
+      "type": "exhibition",
+      "source": "obj-medical-equipment",
+      "target": "obj-sanitary-authorization"
+    },
+    {
+      "id": "lnk-224",
+      "type": "exhibition",
+      "source": "obj-hodom-system",
+      "target": "obj-documentation-system"
+    },
+    {
+      "id": "lnk-225",
+      "type": "aggregation",
+      "source": "obj-documentation-system",
+      "target": "obj-internal-org-manual"
+    },
+    {
+      "id": "lnk-226",
+      "type": "aggregation",
+      "source": "obj-documentation-system",
+      "target": "obj-clinical-protocol-set"
+    },
+    {
+      "id": "lnk-227",
+      "type": "aggregation",
+      "source": "obj-documentation-system",
+      "target": "obj-procedures-manual"
+    },
+    {
+      "id": "lnk-228",
+      "type": "aggregation",
+      "source": "obj-documentation-system",
+      "target": "obj-waste-mgmt-protocol"
+    },
+    {
+      "id": "lnk-229",
+      "type": "aggregation",
+      "source": "obj-documentation-system",
+      "target": "obj-annual-training-plan"
+    },
+    {
+      "id": "lnk-230",
+      "type": "aggregation",
+      "source": "obj-internal-org-manual",
+      "target": "obj-organizational-chart"
+    },
+    {
+      "id": "lnk-231",
+      "type": "aggregation",
+      "source": "obj-internal-org-manual",
+      "target": "obj-role-definition-set"
+    },
+    {
+      "id": "lnk-232",
+      "type": "aggregation",
+      "source": "obj-internal-org-manual",
+      "target": "obj-schedule-definition"
+    },
+    {
+      "id": "lnk-233",
+      "type": "aggregation",
+      "source": "obj-internal-org-manual",
+      "target": "obj-hygiene-regulation"
+    },
+    {
+      "id": "lnk-234",
+      "type": "aggregation",
+      "source": "obj-clinical-protocol-set",
+      "target": "obj-admission-eval-protocol"
+    },
+    {
+      "id": "lnk-235",
+      "type": "aggregation",
+      "source": "obj-clinical-protocol-set",
+      "target": "obj-visit-route-protocol"
+    },
+    {
+      "id": "lnk-236",
+      "type": "aggregation",
+      "source": "obj-clinical-protocol-set",
+      "target": "obj-categorization-discharge-protocol"
+    },
+    {
+      "id": "lnk-237",
+      "type": "aggregation",
+      "source": "obj-clinical-protocol-set",
+      "target": "obj-prescription-referral-protocol"
+    },
+    {
+      "id": "lnk-238",
+      "type": "aggregation",
+      "source": "obj-clinical-protocol-set",
+      "target": "obj-emergency-response-protocol"
+    },
+    {
+      "id": "lnk-239",
+      "type": "aggregation",
+      "source": "obj-clinical-protocol-set",
+      "target": "obj-staff-aggression-protocol"
+    },
+    {
+      "id": "lnk-240",
+      "type": "aggregation",
+      "source": "obj-procedures-manual",
+      "target": "obj-peripheral-venous-proc"
+    },
+    {
+      "id": "lnk-241",
+      "type": "aggregation",
+      "source": "obj-procedures-manual",
+      "target": "obj-central-venous-proc"
+    },
+    {
+      "id": "lnk-242",
+      "type": "aggregation",
+      "source": "obj-procedures-manual",
+      "target": "obj-urinary-catheter-proc"
+    },
+    {
+      "id": "lnk-243",
+      "type": "aggregation",
+      "source": "obj-procedures-manual",
+      "target": "obj-tracheostomy-proc"
+    },
+    {
+      "id": "lnk-244",
+      "type": "aggregation",
+      "source": "obj-procedures-manual",
+      "target": "obj-sample-collection-proc"
+    },
+    {
+      "id": "lnk-245",
+      "type": "aggregation",
+      "source": "obj-procedures-manual",
+      "target": "obj-isolation-precaution-proc"
+    },
+    {
+      "id": "lnk-246",
+      "type": "exhibition",
+      "source": "obj-waste-mgmt-protocol",
+      "target": "obj-reas-decree-compliance"
+    },
+    {
+      "id": "lnk-247",
+      "type": "aggregation",
+      "source": "obj-annual-training-plan",
+      "target": "obj-iaas-training"
+    },
+    {
+      "id": "lnk-248",
+      "type": "aggregation",
+      "source": "obj-annual-training-plan",
+      "target": "obj-bls-training"
+    },
+    {
+      "id": "lnk-249",
+      "type": "aggregation",
+      "source": "obj-annual-training-plan",
+      "target": "obj-staff-induction-program"
+    },
+    {
+      "id": "lnk-250",
+      "type": "aggregation",
+      "source": "obj-annual-training-plan",
+      "target": "obj-humanized-care-training"
+    },
+    {
+      "id": "lnk-251",
+      "type": "exhibition",
+      "source": "obj-staff-induction-program",
+      "target": "obj-minimum-duration"
+    },
+    {
+      "id": "lnk-252",
+      "type": "exhibition",
+      "source": "obj-hodom-system",
+      "target": "proc-sanitary-auth-managing"
+    },
+    {
+      "id": "lnk-253",
+      "type": "exhibition",
+      "source": "obj-hodom-system",
+      "target": "proc-quality-safety-managing"
+    },
+    {
+      "id": "lnk-254",
+      "type": "exhibition",
+      "source": "obj-hodom-system",
+      "target": "proc-staff-training-managing"
+    },
+    {
+      "id": "lnk-255",
+      "type": "exhibition",
+      "source": "obj-hodom-system",
+      "target": "proc-supply-chain-managing"
+    },
+    {
+      "id": "lnk-256",
+      "type": "exhibition",
+      "source": "obj-hodom-system",
+      "target": "proc-waste-managing"
+    },
+    {
+      "id": "lnk-257",
+      "type": "exhibition",
+      "source": "obj-hodom-system",
+      "target": "proc-equipment-maintenance-managing"
+    },
+    {
+      "id": "lnk-258",
+      "type": "effect",
+      "source": "proc-sanitary-auth-managing",
+      "target": "obj-hodom-system"
+    },
+    {
+      "id": "lnk-259",
+      "type": "instrument",
+      "source": "proc-sanitary-auth-managing",
+      "target": "obj-current-regulation"
+    },
+    {
+      "id": "lnk-260",
+      "type": "agent",
+      "source": "obj-technical-director",
+      "target": "proc-sanitary-auth-managing"
+    },
+    {
+      "id": "lnk-261",
+      "type": "exhibition",
+      "source": "obj-hodom-system",
+      "target": "obj-sanitary-auth-status"
+    },
+    {
+      "id": "lnk-262",
+      "type": "effect",
+      "source": "proc-sanitary-auth-managing",
+      "target": "obj-sanitary-auth-status",
+      "source_state": "state-sas-pending",
+      "target_state": "state-sas-authorized"
+    },
+    {
+      "id": "lnk-263",
+      "type": "exhibition",
+      "source": "obj-sanitary-auth-status",
+      "target": "obj-authorization-validity"
+    },
+    {
+      "id": "lnk-264",
+      "type": "tagged",
+      "source": "obj-seremi",
+      "target": "obj-hodom-system",
+      "tag": "supervises"
+    },
+    {
+      "id": "lnk-265",
+      "type": "instrument",
+      "source": "proc-sanitary-auth-managing",
+      "target": "obj-seremi"
+    },
+    {
+      "id": "lnk-266",
+      "type": "effect",
+      "source": "proc-quality-safety-managing",
+      "target": "obj-hodom-system"
+    },
+    {
+      "id": "lnk-267",
+      "type": "instrument",
+      "source": "proc-quality-safety-managing",
+      "target": "obj-documentation-system"
+    },
+    {
+      "id": "lnk-268",
+      "type": "agent",
+      "source": "obj-coordination-professional",
+      "target": "proc-quality-safety-managing"
+    },
+    {
+      "id": "lnk-269",
+      "type": "exhibition",
+      "source": "obj-hodom-system",
+      "target": "obj-quality-level"
+    },
+    {
+      "id": "lnk-270",
+      "type": "effect",
+      "source": "proc-quality-safety-managing",
+      "target": "obj-quality-level"
+    },
+    {
+      "id": "lnk-271",
+      "type": "result",
+      "source": "proc-quality-safety-managing",
+      "target": "obj-adverse-reaction-audit"
+    },
+    {
+      "id": "lnk-272",
+      "type": "result",
+      "source": "proc-quality-safety-managing",
+      "target": "obj-mortality-audit"
+    },
+    {
+      "id": "lnk-273",
+      "type": "effect",
+      "source": "proc-staff-training-managing",
+      "target": "obj-healthcare-team"
+    },
+    {
+      "id": "lnk-274",
+      "type": "instrument",
+      "source": "proc-staff-training-managing",
+      "target": "obj-annual-training-plan"
+    },
+    {
+      "id": "lnk-275",
+      "type": "agent",
+      "source": "obj-coordination-professional",
+      "target": "proc-staff-training-managing"
+    },
+    {
+      "id": "lnk-276",
+      "type": "exhibition",
+      "source": "obj-healthcare-team",
+      "target": "obj-training-compliance"
+    },
+    {
+      "id": "lnk-277",
+      "type": "effect",
+      "source": "proc-staff-training-managing",
+      "target": "obj-training-compliance",
+      "source_state": "state-tc-non-compliant",
+      "target_state": "state-tc-compliant"
+    },
+    {
+      "id": "lnk-278",
+      "type": "effect",
+      "source": "proc-supply-chain-managing",
+      "target": "obj-clinical-supply"
+    },
+    {
+      "id": "lnk-279",
+      "type": "effect",
+      "source": "proc-supply-chain-managing",
+      "target": "obj-medication"
+    },
+    {
+      "id": "lnk-280",
+      "type": "instrument",
+      "source": "proc-supply-chain-managing",
+      "target": "obj-pharmacy"
+    },
+    {
+      "id": "lnk-281",
+      "type": "agent",
+      "source": "obj-coordination-professional",
+      "target": "proc-supply-chain-managing"
+    },
+    {
+      "id": "lnk-282",
+      "type": "consumption",
+      "source": "obj-biomedical-waste",
+      "target": "proc-waste-managing"
+    },
+    {
+      "id": "lnk-283",
+      "type": "instrument",
+      "source": "proc-waste-managing",
+      "target": "obj-waste-disposal-area"
+    },
+    {
+      "id": "lnk-284",
+      "type": "instrument",
+      "source": "proc-waste-managing",
+      "target": "obj-waste-mgmt-protocol"
+    },
+    {
+      "id": "lnk-285",
+      "type": "instrument",
+      "source": "proc-waste-managing",
+      "target": "obj-sharps-disposal-protocol"
+    },
+    {
+      "id": "lnk-286",
+      "type": "effect",
+      "source": "proc-equipment-maintenance-managing",
+      "target": "obj-medical-equipment"
+    },
+    {
+      "id": "lnk-287",
+      "type": "effect",
+      "source": "proc-equipment-maintenance-managing",
+      "target": "obj-maintenance-status",
+      "source_state": "state-maint-overdue",
+      "target_state": "state-maint-current"
+    },
+    {
+      "id": "lnk-288",
+      "type": "agent",
+      "source": "obj-technical-director",
+      "target": "proc-equipment-maintenance-managing"
+    },
+    {
+      "id": "lnk-289",
+      "type": "instrument",
+      "source": "proc-equipment-maintenance-managing",
+      "target": "obj-preventive-maintenance-program"
+    },
+    {
+      "id": "lnk-290",
+      "type": "exhibition",
+      "source": "obj-patient-home",
+      "target": "obj-home-condition"
+    },
+    {
+      "id": "lnk-291",
+      "type": "exhibition",
+      "source": "obj-patient-home",
+      "target": "obj-basic-services"
+    },
+    {
+      "id": "lnk-292",
+      "type": "exhibition",
+      "source": "obj-patient-home",
+      "target": "obj-telephony-access"
+    },
+    {
+      "id": "lnk-293",
+      "type": "exhibition",
+      "source": "obj-patient-home",
+      "target": "obj-road-access"
+    },
+    {
+      "id": "lnk-294",
+      "type": "exhibition",
+      "source": "obj-patient-home",
+      "target": "obj-coverage-radius-compliance"
+    },
+    {
+      "id": "lnk-295",
+      "type": "generalization",
+      "source": "obj-exclusion-condition",
+      "target": "obj-clinical-instability-exclusion"
+    },
+    {
+      "id": "lnk-296",
+      "type": "generalization",
+      "source": "obj-exclusion-condition",
+      "target": "obj-unestablished-diagnosis-exclusion"
+    },
+    {
+      "id": "lnk-297",
+      "type": "generalization",
+      "source": "obj-exclusion-condition",
+      "target": "obj-decompensated-mental-health-exclusion"
+    },
+    {
+      "id": "lnk-298",
+      "type": "generalization",
+      "source": "obj-exclusion-condition",
+      "target": "obj-unlisted-service-exclusion"
+    },
+    {
+      "id": "lnk-299",
+      "type": "generalization",
+      "source": "obj-exclusion-condition",
+      "target": "obj-prior-disciplinary-exclusion"
+    },
+    {
+      "id": "lnk-300",
+      "type": "tagged",
+      "source": "obj-inpatient-facility",
+      "target": "obj-patient-group",
+      "tag": "refers"
+    },
+    {
+      "id": "lnk-301",
+      "type": "tagged",
+      "source": "obj-patient-home",
+      "target": "obj-patient-group",
+      "tag": "hosts"
+    },
+    {
+      "id": "lnk-302",
+      "type": "tagged",
+      "source": "obj-current-regulation",
+      "target": "obj-hodom-system",
+      "tag": "governs"
+    },
+    {
+      "id": "lnk-303",
+      "type": "tagged",
+      "source": "obj-technical-director",
+      "target": "obj-hodom-system",
+      "tag": "represents"
+    },
+    {
+      "id": "lnk-304",
+      "type": "tagged",
+      "source": "obj-hodom-system",
+      "target": "obj-continuity-of-care",
+      "tag": "guarantees"
+    },
+    {
+      "id": "lnk-305",
+      "type": "tagged",
+      "source": "obj-attending-physician",
+      "target": "obj-inpatient-facility",
+      "tag": "coordinates"
+    },
+    {
+      "id": "lnk-306",
+      "type": "tagged",
+      "source": "obj-regulating-physician",
+      "target": "obj-attending-physician",
+      "tag": "supports"
+    },
+    {
+      "id": "lnk-307",
+      "type": "tagged",
+      "source": "obj-caregiver",
+      "target": "obj-patient-group",
+      "tag": "cares-for"
+    }
+  ],
+  "modifiers": [
+    {
+      "id": "mod-1",
+      "over": "lnk-20",
+      "type": "condition",
+      "negated": false
+    },
+    {
+      "id": "mod-2",
+      "over": "lnk-35",
+      "type": "condition",
+      "negated": false
+    },
+    {
+      "id": "mod-3",
+      "over": "lnk-151",
+      "type": "condition",
+      "negated": false
+    },
+    {
+      "id": "mod-4",
+      "over": "lnk-164",
+      "type": "condition",
+      "negated": false
+    },
+    {
+      "id": "mod-5",
+      "over": "lnk-16",
+      "type": "condition",
+      "negated": false
+    }
+  ],
+  "appearances": [
+    {
+      "thing": "proc-domiciliary-hospitalizing",
+      "opd": "opd-sd",
+      "x": 50,
+      "y": 50,
+      "w": 160,
+      "h": 70
+    },
+    {
+      "thing": "obj-patient-group",
+      "opd": "opd-sd",
+      "x": 250,
+      "y": 50,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-clinical-condition",
+      "opd": "opd-sd",
+      "x": 450,
+      "y": 50,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-hodom-system",
+      "opd": "opd-sd",
+      "x": 650,
+      "y": 50,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-healthcare-team",
+      "opd": "opd-sd",
+      "x": 50,
+      "y": 150,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-medical-equipment",
+      "opd": "opd-sd",
+      "x": 250,
+      "y": 150,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-communication-system",
+      "opd": "opd-sd",
+      "x": 450,
+      "y": 150,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-transport-vehicle",
+      "opd": "opd-sd",
+      "x": 650,
+      "y": 150,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-admin-infrastructure",
+      "opd": "opd-sd",
+      "x": 50,
+      "y": 250,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-clinical-supply",
+      "opd": "opd-sd",
+      "x": 250,
+      "y": 250,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-medication",
+      "opd": "opd-sd",
+      "x": 450,
+      "y": 250,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-clinical-record",
+      "opd": "opd-sd",
+      "x": 650,
+      "y": 250,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-patient-home",
+      "opd": "opd-sd",
+      "x": 50,
+      "y": 350,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-inpatient-facility",
+      "opd": "opd-sd",
+      "x": 250,
+      "y": 350,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-current-regulation",
+      "opd": "opd-sd",
+      "x": 450,
+      "y": 350,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "proc-inpatient-bed-occupying",
+      "opd": "opd-sd",
+      "x": 650,
+      "y": 350,
+      "w": 160,
+      "h": 70
+    },
+    {
+      "thing": "proc-domiciliary-hospitalizing",
+      "opd": "opd-sd1",
+      "x": 100,
+      "y": 0,
+      "w": 800,
+      "h": 700,
+      "internal": true
+    },
+    {
+      "thing": "proc-eligibility-evaluating",
+      "opd": "opd-sd1",
+      "x": 150,
+      "y": 80,
+      "w": 160,
+      "h": 70,
+      "internal": true
+    },
+    {
+      "thing": "proc-patient-admitting",
+      "opd": "opd-sd1",
+      "x": 350,
+      "y": 80,
+      "w": 160,
+      "h": 70,
+      "internal": true
+    },
+    {
+      "thing": "proc-care-planning",
+      "opd": "opd-sd1",
+      "x": 150,
+      "y": 180,
+      "w": 160,
+      "h": 70,
+      "internal": true
+    },
+    {
+      "thing": "proc-therapeutic-plan-executing",
+      "opd": "opd-sd1",
+      "x": 350,
+      "y": 180,
+      "w": 160,
+      "h": 70,
+      "internal": true
+    },
+    {
+      "thing": "proc-clinical-evolution-monitoring",
+      "opd": "opd-sd1",
+      "x": 150,
+      "y": 280,
+      "w": 160,
+      "h": 70,
+      "internal": true
+    },
+    {
+      "thing": "proc-patient-discharging",
+      "opd": "opd-sd1",
+      "x": 350,
+      "y": 280,
+      "w": 160,
+      "h": 70,
+      "internal": true
+    },
+    {
+      "thing": "obj-eligibility-status",
+      "opd": "opd-sd1",
+      "x": 150,
+      "y": 400,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-informed-consent",
+      "opd": "opd-sd1",
+      "x": 350,
+      "y": 400,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-therapeutic-plan",
+      "opd": "opd-sd1",
+      "x": 550,
+      "y": 400,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-nursing-care-plan",
+      "opd": "opd-sd1",
+      "x": 750,
+      "y": 400,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-social-report",
+      "opd": "opd-sd1",
+      "x": 950,
+      "y": 400,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-admission-form",
+      "opd": "opd-sd1",
+      "x": 150,
+      "y": 500,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-domiciliary-clinical-summary",
+      "opd": "opd-sd1",
+      "x": 350,
+      "y": 500,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-epicrisis",
+      "opd": "opd-sd1",
+      "x": 550,
+      "y": 500,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-satisfaction-survey",
+      "opd": "opd-sd1",
+      "x": 750,
+      "y": 500,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-continuity-decision",
+      "opd": "opd-sd1",
+      "x": 950,
+      "y": 500,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-hospitalization-status",
+      "opd": "opd-sd1",
+      "x": 150,
+      "y": 600,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-caregiver",
+      "opd": "opd-sd1",
+      "x": 350,
+      "y": 600,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-support-network",
+      "opd": "opd-sd1",
+      "x": 550,
+      "y": 600,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-healthcare-team",
+      "opd": "opd-sd1",
+      "x": 50,
+      "y": 720,
+      "w": 160,
+      "h": 50,
+      "internal": false
+    },
+    {
+      "thing": "obj-clinical-supply",
+      "opd": "opd-sd1",
+      "x": 250,
+      "y": 720,
+      "w": 160,
+      "h": 50,
+      "internal": false
+    },
+    {
+      "thing": "obj-medication",
+      "opd": "opd-sd1",
+      "x": 450,
+      "y": 720,
+      "w": 160,
+      "h": 50,
+      "internal": false
+    },
+    {
+      "thing": "obj-medical-equipment",
+      "opd": "opd-sd1",
+      "x": 650,
+      "y": 720,
+      "w": 160,
+      "h": 50,
+      "internal": false
+    },
+    {
+      "thing": "obj-transport-vehicle",
+      "opd": "opd-sd1",
+      "x": 50,
+      "y": 820,
+      "w": 160,
+      "h": 50,
+      "internal": false
+    },
+    {
+      "thing": "obj-clinical-condition",
+      "opd": "opd-sd1",
+      "x": 250,
+      "y": 820,
+      "w": 160,
+      "h": 50,
+      "internal": false
+    },
+    {
+      "thing": "obj-clinical-record",
+      "opd": "opd-sd1",
+      "x": 450,
+      "y": 820,
+      "w": 160,
+      "h": 50,
+      "internal": false
+    },
+    {
+      "thing": "obj-inpatient-facility",
+      "opd": "opd-sd1",
+      "x": 650,
+      "y": 820,
+      "w": 160,
+      "h": 50,
+      "internal": false
+    },
+    {
+      "thing": "proc-eligibility-evaluating",
+      "opd": "opd-sd1-1",
+      "x": 100,
+      "y": 0,
+      "w": 700,
+      "h": 500,
+      "internal": true
+    },
+    {
+      "thing": "proc-clinical-condition-evaluating",
+      "opd": "opd-sd1-1",
+      "x": 150,
+      "y": 80,
+      "w": 160,
+      "h": 70,
+      "internal": true
+    },
+    {
+      "thing": "proc-home-condition-evaluating",
+      "opd": "opd-sd1-1",
+      "x": 350,
+      "y": 80,
+      "w": 160,
+      "h": 70,
+      "internal": true
+    },
+    {
+      "thing": "proc-support-network-verifying",
+      "opd": "opd-sd1-1",
+      "x": 150,
+      "y": 180,
+      "w": 160,
+      "h": 70,
+      "internal": true
+    },
+    {
+      "thing": "proc-informed-consent-obtaining",
+      "opd": "opd-sd1-1",
+      "x": 350,
+      "y": 180,
+      "w": 160,
+      "h": 70,
+      "internal": true
+    },
+    {
+      "thing": "obj-home-condition",
+      "opd": "opd-sd1-1",
+      "x": 50,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-rights-duties-charter",
+      "opd": "opd-sd1-1",
+      "x": 250,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-attending-physician",
+      "opd": "opd-sd1-1",
+      "x": 450,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-social-worker",
+      "opd": "opd-sd1-1",
+      "x": 650,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-clinical-nurse",
+      "opd": "opd-sd1-1",
+      "x": 850,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-patient-group",
+      "opd": "opd-sd1-1",
+      "x": 50,
+      "y": 620,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-clinical-condition",
+      "opd": "opd-sd1-1",
+      "x": 250,
+      "y": 620,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-inpatient-facility",
+      "opd": "opd-sd1-1",
+      "x": 450,
+      "y": 620,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-social-report",
+      "opd": "opd-sd1-1",
+      "x": 650,
+      "y": 620,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-patient-home",
+      "opd": "opd-sd1-1",
+      "x": 850,
+      "y": 620,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-support-network",
+      "opd": "opd-sd1-1",
+      "x": 50,
+      "y": 720,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-caregiver",
+      "opd": "opd-sd1-1",
+      "x": 250,
+      "y": 720,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-informed-consent",
+      "opd": "opd-sd1-1",
+      "x": 450,
+      "y": 720,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "proc-patient-admitting",
+      "opd": "opd-sd1-2",
+      "x": 100,
+      "y": 0,
+      "w": 700,
+      "h": 400,
+      "internal": true
+    },
+    {
+      "thing": "proc-admission-registering",
+      "opd": "opd-sd1-2",
+      "x": 150,
+      "y": 80,
+      "w": 160,
+      "h": 70,
+      "internal": true
+    },
+    {
+      "thing": "proc-social-diagnosis-elaborating",
+      "opd": "opd-sd1-2",
+      "x": 350,
+      "y": 80,
+      "w": 160,
+      "h": 70,
+      "internal": true
+    },
+    {
+      "thing": "proc-patient-documentation-delivering",
+      "opd": "opd-sd1-2",
+      "x": 150,
+      "y": 180,
+      "w": 160,
+      "h": 70,
+      "internal": true
+    },
+    {
+      "thing": "proc-referral-facility-coordinating",
+      "opd": "opd-sd1-2",
+      "x": 350,
+      "y": 180,
+      "w": 160,
+      "h": 70,
+      "internal": true
+    },
+    {
+      "thing": "obj-admission-form",
+      "opd": "opd-sd1-2",
+      "x": 50,
+      "y": 420,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-socioeconomic-status",
+      "opd": "opd-sd1-2",
+      "x": 250,
+      "y": 420,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-care-indication-document",
+      "opd": "opd-sd1-2",
+      "x": 450,
+      "y": 420,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-administrative-staff",
+      "opd": "opd-sd1-2",
+      "x": 650,
+      "y": 420,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-social-worker",
+      "opd": "opd-sd1-2",
+      "x": 850,
+      "y": 420,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-clinical-nurse",
+      "opd": "opd-sd1-2",
+      "x": 50,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-coordination-professional",
+      "opd": "opd-sd1-2",
+      "x": 250,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-communication-system",
+      "opd": "opd-sd1-2",
+      "x": 450,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-patient-home",
+      "opd": "opd-sd1-2",
+      "x": 650,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-social-report",
+      "opd": "opd-sd1-2",
+      "x": 850,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-patient-group",
+      "opd": "opd-sd1-2",
+      "x": 50,
+      "y": 620,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-informed-consent",
+      "opd": "opd-sd1-2",
+      "x": 250,
+      "y": 620,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-inpatient-facility",
+      "opd": "opd-sd1-2",
+      "x": 450,
+      "y": 620,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "proc-care-planning",
+      "opd": "opd-sd1-3",
+      "x": 100,
+      "y": 0,
+      "w": 700,
+      "h": 400,
+      "internal": true
+    },
+    {
+      "thing": "proc-therapeutic-plan-elaborating",
+      "opd": "opd-sd1-3",
+      "x": 150,
+      "y": 80,
+      "w": 160,
+      "h": 70,
+      "internal": true
+    },
+    {
+      "thing": "proc-nursing-care-plan-elaborating",
+      "opd": "opd-sd1-3",
+      "x": 350,
+      "y": 80,
+      "w": 160,
+      "h": 70,
+      "internal": true
+    },
+    {
+      "thing": "proc-home-visit-scheduling",
+      "opd": "opd-sd1-3",
+      "x": 150,
+      "y": 180,
+      "w": 160,
+      "h": 70,
+      "internal": true
+    },
+    {
+      "thing": "proc-transport-route-programming",
+      "opd": "opd-sd1-3",
+      "x": 350,
+      "y": 180,
+      "w": 160,
+      "h": 70,
+      "internal": true
+    },
+    {
+      "thing": "obj-therapeutic-plan",
+      "opd": "opd-sd1-3",
+      "x": 50,
+      "y": 420,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-nursing-care-plan",
+      "opd": "opd-sd1-3",
+      "x": 250,
+      "y": 420,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-visit-schedule",
+      "opd": "opd-sd1-3",
+      "x": 450,
+      "y": 420,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-transport-route",
+      "opd": "opd-sd1-3",
+      "x": 650,
+      "y": 420,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-attending-physician",
+      "opd": "opd-sd1-3",
+      "x": 850,
+      "y": 420,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-clinical-nurse",
+      "opd": "opd-sd1-3",
+      "x": 50,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-coordination-professional",
+      "opd": "opd-sd1-3",
+      "x": 250,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-administrative-staff",
+      "opd": "opd-sd1-3",
+      "x": 450,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-clinical-condition",
+      "opd": "opd-sd1-3",
+      "x": 650,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-patient-home",
+      "opd": "opd-sd1-3",
+      "x": 850,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "proc-therapeutic-plan-executing",
+      "opd": "opd-sd1-4",
+      "x": 100,
+      "y": 0,
+      "w": 900,
+      "h": 500,
+      "internal": true
+    },
+    {
+      "thing": "proc-medical-visit-performing",
+      "opd": "opd-sd1-4",
+      "x": 150,
+      "y": 80,
+      "w": 160,
+      "h": 70,
+      "internal": true
+    },
+    {
+      "thing": "proc-nursing-care-executing",
+      "opd": "opd-sd1-4",
+      "x": 350,
+      "y": 80,
+      "w": 160,
+      "h": 70,
+      "internal": true
+    },
+    {
+      "thing": "proc-kinesiological-therapy-executing",
+      "opd": "opd-sd1-4",
+      "x": 550,
+      "y": 80,
+      "w": 160,
+      "h": 70,
+      "internal": true
+    },
+    {
+      "thing": "proc-medication-administering",
+      "opd": "opd-sd1-4",
+      "x": 150,
+      "y": 180,
+      "w": 160,
+      "h": 70,
+      "internal": true
+    },
+    {
+      "thing": "proc-remote-care-regulating",
+      "opd": "opd-sd1-4",
+      "x": 350,
+      "y": 180,
+      "w": 160,
+      "h": 70,
+      "internal": true
+    },
+    {
+      "thing": "proc-patient-caregiver-educating",
+      "opd": "opd-sd1-4",
+      "x": 550,
+      "y": 180,
+      "w": 160,
+      "h": 70,
+      "internal": true
+    },
+    {
+      "thing": "obj-motor-therapy",
+      "opd": "opd-sd1-4",
+      "x": 50,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-respiratory-therapy",
+      "opd": "opd-sd1-4",
+      "x": 250,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-prescription",
+      "opd": "opd-sd1-4",
+      "x": 450,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-telehealth-record",
+      "opd": "opd-sd1-4",
+      "x": 650,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-self-care-knowledge",
+      "opd": "opd-sd1-4",
+      "x": 850,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-patient-group",
+      "opd": "opd-sd1-4",
+      "x": 50,
+      "y": 620,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-therapeutic-plan",
+      "opd": "opd-sd1-4",
+      "x": 250,
+      "y": 620,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-nursing-care-plan",
+      "opd": "opd-sd1-4",
+      "x": 450,
+      "y": 620,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-medical-equipment",
+      "opd": "opd-sd1-4",
+      "x": 650,
+      "y": 620,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-transport-vehicle",
+      "opd": "opd-sd1-4",
+      "x": 850,
+      "y": 620,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-clinical-supply",
+      "opd": "opd-sd1-4",
+      "x": 50,
+      "y": 720,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-medication",
+      "opd": "opd-sd1-4",
+      "x": 250,
+      "y": 720,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-communication-system",
+      "opd": "opd-sd1-4",
+      "x": 450,
+      "y": 720,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-domiciliary-clinical-summary",
+      "opd": "opd-sd1-4",
+      "x": 650,
+      "y": 720,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-caregiver",
+      "opd": "opd-sd1-4",
+      "x": 850,
+      "y": 720,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-attending-physician",
+      "opd": "opd-sd1-4",
+      "x": 50,
+      "y": 820,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-clinical-nurse",
+      "opd": "opd-sd1-4",
+      "x": 250,
+      "y": 820,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-kinesiologist",
+      "opd": "opd-sd1-4",
+      "x": 450,
+      "y": 820,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-nursing-technician",
+      "opd": "opd-sd1-4",
+      "x": 650,
+      "y": 820,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-regulating-physician",
+      "opd": "opd-sd1-4",
+      "x": 850,
+      "y": 820,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "proc-clinical-evolution-monitoring",
+      "opd": "opd-sd1-5",
+      "x": 100,
+      "y": 0,
+      "w": 700,
+      "h": 400,
+      "internal": true
+    },
+    {
+      "thing": "proc-vital-signs-evaluating",
+      "opd": "opd-sd1-5",
+      "x": 150,
+      "y": 80,
+      "w": 160,
+      "h": 70,
+      "internal": true
+    },
+    {
+      "thing": "proc-clinical-record-updating",
+      "opd": "opd-sd1-5",
+      "x": 350,
+      "y": 80,
+      "w": 160,
+      "h": 70,
+      "internal": true
+    },
+    {
+      "thing": "proc-patient-categorizing",
+      "opd": "opd-sd1-5",
+      "x": 150,
+      "y": 180,
+      "w": 160,
+      "h": 70,
+      "internal": true
+    },
+    {
+      "thing": "proc-continuity-deciding",
+      "opd": "opd-sd1-5",
+      "x": 350,
+      "y": 180,
+      "w": 160,
+      "h": 70,
+      "internal": true
+    },
+    {
+      "thing": "obj-vital-signs-data",
+      "opd": "opd-sd1-5",
+      "x": 50,
+      "y": 420,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-blood-pressure",
+      "opd": "opd-sd1-5",
+      "x": 250,
+      "y": 420,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-heart-rate",
+      "opd": "opd-sd1-5",
+      "x": 450,
+      "y": 420,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-respiratory-rate",
+      "opd": "opd-sd1-5",
+      "x": 650,
+      "y": 420,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-oxygen-saturation",
+      "opd": "opd-sd1-5",
+      "x": 850,
+      "y": 420,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-patient-category",
+      "opd": "opd-sd1-5",
+      "x": 50,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-continuity-decision",
+      "opd": "opd-sd1-5",
+      "x": 250,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-patient-group",
+      "opd": "opd-sd1-5",
+      "x": 450,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-medical-equipment",
+      "opd": "opd-sd1-5",
+      "x": 650,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-clinical-nurse",
+      "opd": "opd-sd1-5",
+      "x": 850,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-attending-physician",
+      "opd": "opd-sd1-5",
+      "x": 50,
+      "y": 620,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-clinical-record",
+      "opd": "opd-sd1-5",
+      "x": 250,
+      "y": 620,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-communication-system",
+      "opd": "opd-sd1-5",
+      "x": 450,
+      "y": 620,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "proc-patient-discharging",
+      "opd": "opd-sd1-6",
+      "x": 100,
+      "y": 0,
+      "w": 800,
+      "h": 400,
+      "internal": true
+    },
+    {
+      "thing": "proc-medical-discharge",
+      "opd": "opd-sd1-6",
+      "x": 150,
+      "y": 80,
+      "w": 160,
+      "h": 70,
+      "internal": true
+    },
+    {
+      "thing": "proc-hospital-readmission-discharge",
+      "opd": "opd-sd1-6",
+      "x": 350,
+      "y": 80,
+      "w": 160,
+      "h": 70,
+      "internal": true
+    },
+    {
+      "thing": "proc-death-discharge",
+      "opd": "opd-sd1-6",
+      "x": 550,
+      "y": 80,
+      "w": 160,
+      "h": 70,
+      "internal": true
+    },
+    {
+      "thing": "proc-voluntary-withdrawal-discharge",
+      "opd": "opd-sd1-6",
+      "x": 150,
+      "y": 180,
+      "w": 160,
+      "h": 70,
+      "internal": true
+    },
+    {
+      "thing": "proc-disciplinary-discharge",
+      "opd": "opd-sd1-6",
+      "x": 350,
+      "y": 180,
+      "w": 160,
+      "h": 70,
+      "internal": true
+    },
+    {
+      "thing": "obj-clinical-condition",
+      "opd": "opd-sd1-6",
+      "x": 50,
+      "y": 420,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-hospitalization-status",
+      "opd": "opd-sd1-6",
+      "x": 250,
+      "y": 420,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-epicrisis",
+      "opd": "opd-sd1-6",
+      "x": 450,
+      "y": 420,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-clinical-instability",
+      "opd": "opd-sd1-6",
+      "x": 650,
+      "y": 420,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-death-protocol",
+      "opd": "opd-sd1-6",
+      "x": 50,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-withdrawal-statement",
+      "opd": "opd-sd1-6",
+      "x": 250,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-treatment-adherence",
+      "opd": "opd-sd1-6",
+      "x": 450,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-attending-physician",
+      "opd": "opd-sd1-6",
+      "x": 650,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-technical-director",
+      "opd": "opd-sd1-6",
+      "x": 50,
+      "y": 620,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-inpatient-facility",
+      "opd": "opd-sd1-6",
+      "x": 250,
+      "y": 620,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-transport-vehicle",
+      "opd": "opd-sd1-6",
+      "x": 450,
+      "y": 620,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-informed-consent",
+      "opd": "opd-sd1-6",
+      "x": 650,
+      "y": 620,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-healthcare-team",
+      "opd": "opd-sd2",
+      "x": 100,
+      "y": 0,
+      "w": 900,
+      "h": 500,
+      "internal": true
+    },
+    {
+      "thing": "obj-technical-director",
+      "opd": "opd-sd2",
+      "x": 150,
+      "y": 80,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-coordination-professional",
+      "opd": "opd-sd2",
+      "x": 350,
+      "y": 80,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-attending-physician",
+      "opd": "opd-sd2",
+      "x": 550,
+      "y": 80,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-regulating-physician",
+      "opd": "opd-sd2",
+      "x": 150,
+      "y": 180,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-clinical-nurse",
+      "opd": "opd-sd2",
+      "x": 350,
+      "y": 180,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-kinesiologist",
+      "opd": "opd-sd2",
+      "x": 550,
+      "y": 180,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-nursing-technician",
+      "opd": "opd-sd2",
+      "x": 150,
+      "y": 280,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-social-worker",
+      "opd": "opd-sd2",
+      "x": 350,
+      "y": 280,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-administrative-staff",
+      "opd": "opd-sd2",
+      "x": 550,
+      "y": 280,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-clinical-experience",
+      "opd": "opd-sd2",
+      "x": 50,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-postgraduate-management-training",
+      "opd": "opd-sd2",
+      "x": 250,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-iaas-prevention-course",
+      "opd": "opd-sd2",
+      "x": 450,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-weekly-dedication",
+      "opd": "opd-sd2",
+      "x": 650,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-management-training",
+      "opd": "opd-sd2",
+      "x": 50,
+      "y": 620,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-iaas-course",
+      "opd": "opd-sd2",
+      "x": 250,
+      "y": 620,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-bls-certification",
+      "opd": "opd-sd2",
+      "x": 450,
+      "y": 620,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-regulation-experience",
+      "opd": "opd-sd2",
+      "x": 650,
+      "y": 620,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-admin-infrastructure",
+      "opd": "opd-sd3",
+      "x": 100,
+      "y": 0,
+      "w": 900,
+      "h": 500,
+      "internal": true
+    },
+    {
+      "thing": "obj-telephone-system",
+      "opd": "opd-sd3",
+      "x": 150,
+      "y": 80,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-it-system",
+      "opd": "opd-sd3",
+      "x": 350,
+      "y": 80,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-electrical-backup",
+      "opd": "opd-sd3",
+      "x": 550,
+      "y": 80,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-clinical-archive-area",
+      "opd": "opd-sd3",
+      "x": 750,
+      "y": 80,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-pharmacy",
+      "opd": "opd-sd3",
+      "x": 150,
+      "y": 180,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-supply-storage",
+      "opd": "opd-sd3",
+      "x": 350,
+      "y": 180,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-waste-disposal-area",
+      "opd": "opd-sd3",
+      "x": 550,
+      "y": 180,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-cleaning-supply-room",
+      "opd": "opd-sd3",
+      "x": 750,
+      "y": 180,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-staff-welfare-area",
+      "opd": "opd-sd3",
+      "x": 150,
+      "y": 280,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-vehicle-parking",
+      "opd": "opd-sd3",
+      "x": 350,
+      "y": 280,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-evacuation-signage",
+      "opd": "opd-sd3",
+      "x": 550,
+      "y": 280,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-availability",
+      "opd": "opd-sd3",
+      "x": 50,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-internet-connectivity",
+      "opd": "opd-sd3",
+      "x": 250,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-sec-authorization",
+      "opd": "opd-sd3",
+      "x": 450,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-security-level",
+      "opd": "opd-sd3",
+      "x": 650,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-cold-chain-compliance",
+      "opd": "opd-sd3",
+      "x": 50,
+      "y": 620,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-temperature-control",
+      "opd": "opd-sd3",
+      "x": 250,
+      "y": 620,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-reas-compliance",
+      "opd": "opd-sd3",
+      "x": 450,
+      "y": 620,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-dining-access",
+      "opd": "opd-sd3",
+      "x": 650,
+      "y": 620,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-hygiene-facilities",
+      "opd": "opd-sd3",
+      "x": 50,
+      "y": 720,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-lockers",
+      "opd": "opd-sd3",
+      "x": 250,
+      "y": 720,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-break-room",
+      "opd": "opd-sd3",
+      "x": 450,
+      "y": 720,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-medical-equipment",
+      "opd": "opd-sd4",
+      "x": 100,
+      "y": 0,
+      "w": 800,
+      "h": 300,
+      "internal": true
+    },
+    {
+      "thing": "obj-bp-monitor",
+      "opd": "opd-sd4",
+      "x": 150,
+      "y": 80,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-pulse-oximeter",
+      "opd": "opd-sd4",
+      "x": 350,
+      "y": 80,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-cardiac-monitor",
+      "opd": "opd-sd4",
+      "x": 550,
+      "y": 80,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-thermometer",
+      "opd": "opd-sd4",
+      "x": 150,
+      "y": 180,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-defibrillator",
+      "opd": "opd-sd4",
+      "x": 350,
+      "y": 180,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-specialty-instruments",
+      "opd": "opd-sd4",
+      "x": 550,
+      "y": 180,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-maintenance-status",
+      "opd": "opd-sd4",
+      "x": 50,
+      "y": 320,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-sanitary-authorization",
+      "opd": "opd-sd4",
+      "x": 250,
+      "y": 320,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-hodom-system",
+      "opd": "opd-sd5",
+      "x": 50,
+      "y": 0,
+      "w": 1100,
+      "h": 700,
+      "internal": true
+    },
+    {
+      "thing": "obj-documentation-system",
+      "opd": "opd-sd5",
+      "x": 100,
+      "y": 80,
+      "w": 900,
+      "h": 600,
+      "internal": true
+    },
+    {
+      "thing": "obj-internal-org-manual",
+      "opd": "opd-sd5",
+      "x": 150,
+      "y": 160,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-clinical-protocol-set",
+      "opd": "opd-sd5",
+      "x": 350,
+      "y": 160,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-procedures-manual",
+      "opd": "opd-sd5",
+      "x": 550,
+      "y": 160,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-waste-mgmt-protocol",
+      "opd": "opd-sd5",
+      "x": 150,
+      "y": 260,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-annual-training-plan",
+      "opd": "opd-sd5",
+      "x": 350,
+      "y": 260,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-organizational-chart",
+      "opd": "opd-sd5",
+      "x": 50,
+      "y": 720,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-role-definition-set",
+      "opd": "opd-sd5",
+      "x": 250,
+      "y": 720,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-schedule-definition",
+      "opd": "opd-sd5",
+      "x": 450,
+      "y": 720,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-hygiene-regulation",
+      "opd": "opd-sd5",
+      "x": 650,
+      "y": 720,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-admission-eval-protocol",
+      "opd": "opd-sd5",
+      "x": 850,
+      "y": 720,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-visit-route-protocol",
+      "opd": "opd-sd5",
+      "x": 1050,
+      "y": 720,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-categorization-discharge-protocol",
+      "opd": "opd-sd5",
+      "x": 50,
+      "y": 820,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-prescription-referral-protocol",
+      "opd": "opd-sd5",
+      "x": 250,
+      "y": 820,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-emergency-response-protocol",
+      "opd": "opd-sd5",
+      "x": 450,
+      "y": 820,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-staff-aggression-protocol",
+      "opd": "opd-sd5",
+      "x": 650,
+      "y": 820,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-peripheral-venous-proc",
+      "opd": "opd-sd5",
+      "x": 850,
+      "y": 820,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-central-venous-proc",
+      "opd": "opd-sd5",
+      "x": 1050,
+      "y": 820,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-urinary-catheter-proc",
+      "opd": "opd-sd5",
+      "x": 50,
+      "y": 920,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-tracheostomy-proc",
+      "opd": "opd-sd5",
+      "x": 250,
+      "y": 920,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-sample-collection-proc",
+      "opd": "opd-sd5",
+      "x": 450,
+      "y": 920,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-isolation-precaution-proc",
+      "opd": "opd-sd5",
+      "x": 650,
+      "y": 920,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-reas-decree-compliance",
+      "opd": "opd-sd5",
+      "x": 850,
+      "y": 920,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-iaas-training",
+      "opd": "opd-sd5",
+      "x": 1050,
+      "y": 920,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-bls-training",
+      "opd": "opd-sd5",
+      "x": 50,
+      "y": 1020,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-staff-induction-program",
+      "opd": "opd-sd5",
+      "x": 250,
+      "y": 1020,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-humanized-care-training",
+      "opd": "opd-sd5",
+      "x": 450,
+      "y": 1020,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-minimum-duration",
+      "opd": "opd-sd5",
+      "x": 650,
+      "y": 1020,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-hodom-system",
+      "opd": "opd-sd6",
+      "x": 50,
+      "y": 0,
+      "w": 1100,
+      "h": 500,
+      "internal": true
+    },
+    {
+      "thing": "proc-sanitary-auth-managing",
+      "opd": "opd-sd6",
+      "x": 100,
+      "y": 80,
+      "w": 160,
+      "h": 70,
+      "internal": true
+    },
+    {
+      "thing": "proc-quality-safety-managing",
+      "opd": "opd-sd6",
+      "x": 300,
+      "y": 80,
+      "w": 160,
+      "h": 70,
+      "internal": true
+    },
+    {
+      "thing": "proc-staff-training-managing",
+      "opd": "opd-sd6",
+      "x": 500,
+      "y": 80,
+      "w": 160,
+      "h": 70,
+      "internal": true
+    },
+    {
+      "thing": "proc-supply-chain-managing",
+      "opd": "opd-sd6",
+      "x": 100,
+      "y": 180,
+      "w": 160,
+      "h": 70,
+      "internal": true
+    },
+    {
+      "thing": "proc-waste-managing",
+      "opd": "opd-sd6",
+      "x": 300,
+      "y": 180,
+      "w": 160,
+      "h": 70,
+      "internal": true
+    },
+    {
+      "thing": "proc-equipment-maintenance-managing",
+      "opd": "opd-sd6",
+      "x": 500,
+      "y": 180,
+      "w": 160,
+      "h": 70,
+      "internal": true
+    },
+    {
+      "thing": "obj-sanitary-auth-status",
+      "opd": "opd-sd6",
+      "x": 50,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-authorization-validity",
+      "opd": "opd-sd6",
+      "x": 250,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-seremi",
+      "opd": "opd-sd6",
+      "x": 450,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-quality-level",
+      "opd": "opd-sd6",
+      "x": 650,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-adverse-reaction-audit",
+      "opd": "opd-sd6",
+      "x": 850,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-mortality-audit",
+      "opd": "opd-sd6",
+      "x": 1050,
+      "y": 520,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-training-compliance",
+      "opd": "opd-sd6",
+      "x": 50,
+      "y": 620,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-biomedical-waste",
+      "opd": "opd-sd6",
+      "x": 250,
+      "y": 620,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-sharps-disposal-protocol",
+      "opd": "opd-sd6",
+      "x": 450,
+      "y": 620,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-preventive-maintenance-program",
+      "opd": "opd-sd6",
+      "x": 650,
+      "y": 620,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-current-regulation",
+      "opd": "opd-sd6",
+      "x": 850,
+      "y": 620,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-documentation-system",
+      "opd": "opd-sd6",
+      "x": 1050,
+      "y": 620,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-annual-training-plan",
+      "opd": "opd-sd6",
+      "x": 50,
+      "y": 720,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-pharmacy",
+      "opd": "opd-sd6",
+      "x": 250,
+      "y": 720,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-waste-disposal-area",
+      "opd": "opd-sd6",
+      "x": 450,
+      "y": 720,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-waste-mgmt-protocol",
+      "opd": "opd-sd6",
+      "x": 650,
+      "y": 720,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-medical-equipment",
+      "opd": "opd-sd6",
+      "x": 850,
+      "y": 720,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-maintenance-status",
+      "opd": "opd-sd6",
+      "x": 1050,
+      "y": 720,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-healthcare-team",
+      "opd": "opd-sd6",
+      "x": 50,
+      "y": 820,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-clinical-supply",
+      "opd": "opd-sd6",
+      "x": 250,
+      "y": 820,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-medication",
+      "opd": "opd-sd6",
+      "x": 450,
+      "y": 820,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-technical-director",
+      "opd": "opd-sd6",
+      "x": 650,
+      "y": 820,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-coordination-professional",
+      "opd": "opd-sd6",
+      "x": 850,
+      "y": 820,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-patient-home",
+      "opd": "opd-sd7",
+      "x": 100,
+      "y": 0,
+      "w": 700,
+      "h": 300,
+      "internal": true
+    },
+    {
+      "thing": "obj-home-condition",
+      "opd": "opd-sd7",
+      "x": 150,
+      "y": 80,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-basic-services",
+      "opd": "opd-sd7",
+      "x": 350,
+      "y": 80,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-telephony-access",
+      "opd": "opd-sd7",
+      "x": 550,
+      "y": 80,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-road-access",
+      "opd": "opd-sd7",
+      "x": 150,
+      "y": 180,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-coverage-radius-compliance",
+      "opd": "opd-sd7",
+      "x": 350,
+      "y": 180,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-exclusion-condition",
+      "opd": "opd-sd8",
+      "x": 100,
+      "y": 0,
+      "w": 800,
+      "h": 250,
+      "internal": true
+    },
+    {
+      "thing": "obj-clinical-instability-exclusion",
+      "opd": "opd-sd8",
+      "x": 150,
+      "y": 80,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-unestablished-diagnosis-exclusion",
+      "opd": "opd-sd8",
+      "x": 350,
+      "y": 80,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-decompensated-mental-health-exclusion",
+      "opd": "opd-sd8",
+      "x": 550,
+      "y": 80,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-unlisted-service-exclusion",
+      "opd": "opd-sd8",
+      "x": 150,
+      "y": 180,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-prior-disciplinary-exclusion",
+      "opd": "opd-sd8",
+      "x": 350,
+      "y": 180,
+      "w": 160,
+      "h": 50,
+      "internal": true
+    },
+    {
+      "thing": "obj-inpatient-facility",
+      "opd": "opd-sd9",
+      "x": 50,
+      "y": 50,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-patient-group",
+      "opd": "opd-sd9",
+      "x": 250,
+      "y": 50,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-patient-home",
+      "opd": "opd-sd9",
+      "x": 450,
+      "y": 50,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-hodom-system",
+      "opd": "opd-sd9",
+      "x": 650,
+      "y": 50,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-current-regulation",
+      "opd": "opd-sd9",
+      "x": 50,
+      "y": 150,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-technical-director",
+      "opd": "opd-sd9",
+      "x": 250,
+      "y": 150,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-continuity-of-care",
+      "opd": "opd-sd9",
+      "x": 450,
+      "y": 150,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-attending-physician",
+      "opd": "opd-sd9",
+      "x": 650,
+      "y": 150,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-regulating-physician",
+      "opd": "opd-sd9",
+      "x": 50,
+      "y": 250,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-caregiver",
+      "opd": "opd-sd9",
+      "x": 250,
+      "y": 250,
+      "w": 160,
+      "h": 50
+    }
+  ],
+  "fans": [],
+  "scenarios": [],
+  "assertions": [],
+  "requirements": [],
+  "stereotypes": [],
+  "sub_models": []
+}

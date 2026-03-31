@@ -39,6 +39,7 @@ import { buildSearchResults } from "./lib/search";
 const STORAGE_KEY = "opmodel:current";
 
 export const EXAMPLES = [
+  { name: "HODOM HSC — Hospitalización Domiciliaria", file: "hodom-hsc.opmodel" },
   { name: "Coffee Making", file: "coffee-making.opmodel" },
   { name: "OnStar Driver Rescuing", file: "driver-rescuing.opmodel" },
   { name: "Hospitalización Domiciliaria (legacy)", file: "hospitalizacion-domiciliaria.opmodel" },
