@@ -35,6 +35,7 @@ import { SettingsPanel } from "./components/SettingsPanel";
 import { VerificationChecklist } from "./components/VerificationChecklist";
 import { SdWizard } from "./components/SdWizard";
 import { VisualReportPanel } from "./components/VisualReportPanel";
+import { buildSearchResults } from "./lib/search";
 
 const STORAGE_KEY = "opmodel:current";
 
@@ -272,6 +273,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
   const [showWizard, setShowWizard] = useState(false);
   (window as any).__openWizard = () => setShowWizard(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeSearchIndex, setActiveSearchIndex] = useState(0);
 
   const nlPipeline = useMemo(() => {
     if (!nlConfig) return undefined;
@@ -341,6 +343,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
         e.preventDefault();
         setShowSearch((v) => !v);
         setSearchQuery("");
+        setActiveSearchIndex(0);
       }
       if ((e.key === "Delete" || e.key === "Backspace") && ui.selectedThing && !e.metaKey && !e.ctrlKey) {
         const target = e.target as HTMLElement;
@@ -413,6 +416,17 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
     for (const e of errors) { if (e.entity) set.add(e.entity); }
     return set;
   }, [errors]);
+  const searchResults = useMemo(() => buildSearchResults(model, searchQuery, ui.currentOpd), [model, searchQuery, ui.currentOpd]);
+  const selectSearchResult = useCallback((thingId: string) => {
+    const apps = [...model.appearances.values()].filter((app) => app.thing === thingId);
+    const preferred = apps.find((app) => app.opd === ui.currentOpd) ?? apps[0];
+    if (preferred) dispatch({ tag: "selectOpd", opdId: preferred.opd });
+    dispatch({ tag: "selectThing", thingId });
+    setShowSearch(false);
+    setSearchQuery("");
+    setActiveSearchIndex(0);
+  }, [dispatch, model, ui.currentOpd]);
+
   const visualFindings = useMemo(() => {
     const appearances = [...model.appearances.values()].filter((a) => a.opd === ui.currentOpd);
     const ids = new Set(appearances.map((a) => a.thing));
@@ -608,91 +622,65 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
         errorEntities={errorEntities}
       />
       {/* Search panel — floating over canvas */}
-      {showSearch && (() => {
-        const q = searchQuery.toLowerCase();
-        const results = q.length > 0
-          ? [...model.things.values()]
-              .filter((t) => {
-                if (t.name.toLowerCase().includes(q)) return true;
-                // Also search states
-                const states = [...model.states.values()].filter(s => s.parent === t.id);
-                if (states.some(s => s.name.toLowerCase().includes(q))) return true;
-                // Search notes
-                if (t.notes?.toLowerCase().includes(q)) return true;
-                return false;
-              })
-              .slice(0, 20)
-          : [...model.things.values()].slice(0, 20);
-        // Find which OPDs each thing appears in
-        const thingOpds = (thingId: string): string[] => {
-          const opds: string[] = [];
-          for (const app of model.appearances.values()) {
-            if (app.thing === thingId) {
-              const opd = model.opds.get(app.opd);
-              if (opd) opds.push(opd.name);
-            }
-          }
-          return opds;
-        };
-        return (
-          <div className="search-panel">
-            <div className="search-panel__header">
-              <input
-                className="search-panel__input"
-                placeholder="Search things..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Escape") { setShowSearch(false); setSearchQuery(""); }
-                  if (e.key === "Enter" && results.length > 0) {
-                    const first = results[0]!;
-                    // Navigate to first OPD containing this thing
-                    for (const app of model.appearances.values()) {
-                      if (app.thing === first.id) {
-                        dispatch({ tag: "selectOpd", opdId: app.opd });
-                        break;
-                      }
-                    }
-                    dispatch({ tag: "selectThing", thingId: first.id });
-                    setShowSearch(false);
-                    setSearchQuery("");
-                  }
-                }}
-                autoFocus
-              />
-              <button className="search-panel__close" onClick={() => { setShowSearch(false); setSearchQuery(""); }}>×</button>
-            </div>
-            <div className="search-panel__results">
-              {results.map((t) => (
-                <div
-                  key={t.id}
-                  className="search-panel__item"
-                  onClick={() => {
-                    for (const app of model.appearances.values()) {
-                      if (app.thing === t.id) {
-                        dispatch({ tag: "selectOpd", opdId: app.opd });
-                        break;
-                      }
-                    }
-                    dispatch({ tag: "selectThing", thingId: t.id });
-                    setShowSearch(false);
-                    setSearchQuery("");
-                  }}
-                >
-                  <span className={`search-panel__kind search-panel__kind--${t.kind}`}>
-                    {t.kind === "object" ? "▭" : "⬭"}
-                  </span>
-                  <span className="search-panel__name">{t.name}</span>
-                  <span className="search-panel__opds">{thingOpds(t.id).join(", ")}</span>
-                </div>
-              ))}
-              {results.length === 0 && q.length > 0 && (
-                <div className="search-panel__empty">No results</div>
-              )}
-            </div>
+      {showSearch && (
+        <div className="search-panel">
+          <div className="search-panel__header">
+            <input
+              className="search-panel__input"
+              placeholder="Search things, states, notes..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setActiveSearchIndex(0);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  setShowSearch(false);
+                  setSearchQuery("");
+                  setActiveSearchIndex(0);
+                }
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setActiveSearchIndex((idx) => searchResults.length === 0 ? 0 : Math.min(idx + 1, searchResults.length - 1));
+                }
+                if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setActiveSearchIndex((idx) => searchResults.length === 0 ? 0 : Math.max(idx - 1, 0));
+                }
+                if (e.key === "Enter" && searchResults.length > 0) {
+                  e.preventDefault();
+                  const picked = searchResults[Math.min(activeSearchIndex, searchResults.length - 1)] ?? searchResults[0];
+                  if (picked) selectSearchResult(picked.thing.id);
+                }
+              }}
+              autoFocus
+            />
+            <button className="search-panel__close" onClick={() => { setShowSearch(false); setSearchQuery(""); setActiveSearchIndex(0); }}>×</button>
           </div>
-        );
-      })()}
+          <div className="search-panel__results">
+            {searchResults.map((result, index) => (
+              <div
+                key={result.thing.id}
+                className="search-panel__item"
+                onMouseEnter={() => setActiveSearchIndex(index)}
+                onClick={() => selectSearchResult(result.thing.id)}
+                style={{ background: index === activeSearchIndex ? "var(--bg-hover, rgba(255,255,255,0.04))" : undefined }}
+              >
+                <span className={`search-panel__kind search-panel__kind--${result.thing.kind}`}>
+                  {result.thing.kind === "object" ? "▭" : "⬭"}
+                </span>
+                <span className="search-panel__name">{result.thing.name}</span>
+                <span className="search-panel__opds">{result.opdNames.join(", ")}</span>
+                {result.inCurrentOpd && <span className="search-panel__opds">Current OPD</span>}
+                {result.matchedStates.length > 0 && <span className="search-panel__opds">States: {result.matchedStates.slice(0, 2).join(", ")}</span>}
+              </div>
+            ))}
+            {searchResults.length === 0 && searchQuery.trim().length > 0 && (
+              <div className="search-panel__empty">No results</div>
+            )}
+          </div>
+        </div>
+      )}
 
       <aside className="right-panel">
         {ui.simulation ? (
