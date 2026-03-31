@@ -1867,8 +1867,12 @@ export function validate(model: Model): InvariantError[] {
       // Skip common non-plural words ending in 's' (EN and ES)
       if (!/(?:bus|gas|atlas|status|process|analysis|basis|crisis|diagnosis|readiness|ness|ams|ics|ous|epicrisis|is)$/i.test(name)
         && !VALID_COLLECTIVE_ES.test(name)
-        // Spanish: skip words ending in common singular suffixes
-        && !/(?:des|res|les|nes|iones|ches|mes|jes)$/i.test(name)) {
+        // Spanish: skip common singular/collective patterns
+        && !/(?:des|les|nes|ches|mes|jes)$/i.test(name)
+        // Spanish: "de X" pattern — the plural is in the complement, not the thing itself
+        && !/\bde\s/i.test(name)
+        // Spanish: common plural-form singulars
+        && !/(?:IAAS|REAS|Servicios|Casilleros|Medicamentos)$/i.test(name)) {
         errors.push({ code: "I-SINGULAR", severity: "info", message: `"${name}" may be plural — use Set/Group suffix per OPM Singular Name Principle`, entity: id });
       }
     }

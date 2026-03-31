@@ -403,11 +403,13 @@ const links = [
   link("effect", "proc-patient-admitting", "obj-informed-consent", { source_state: "state-consent-unsigned", target_state: "state-consent-signed" }),
   // Patient Admitting consumption/result distributed to SD1.2 subprocesses
   // Care Planning
-  // Care Planning result distributed to SD1.3 subprocesses
+  // Care Planning: effect stays on outer contour, result distributed to SD1.3
+  link("effect", "proc-care-planning", "obj-therapeutic-plan", { target_state: "state-tp-draft" }),
   // Therapeutic Plan Executing
   link("instrument", "proc-therapeutic-plan-executing", "obj-therapeutic-plan", { source_state: "state-tp-active" }),
   link("instrument", "proc-therapeutic-plan-executing", "obj-nursing-care-plan", { source_state: "state-ncp-active" }),
-  // Therapeutic Plan Executing consumption distributed to SD1.4 subprocesses
+  // Therapeutic Plan Executing: effect stays on outer contour, consumption distributed to SD1.4
+  link("effect", "proc-therapeutic-plan-executing", "obj-patient-group"),
   link("instrument", "proc-therapeutic-plan-executing", "obj-medical-equipment"),
   link("instrument", "proc-therapeutic-plan-executing", "obj-transport-vehicle"),
   // Clinical Evolution Monitoring
