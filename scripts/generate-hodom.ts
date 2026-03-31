@@ -823,11 +823,11 @@ const appearances: AppearanceEntry[] = [
   ...autoLayout("opd-sd1-2", [
     "obj-admission-form", "obj-socioeconomic-status", "obj-care-indication-document",
     "obj-administrative-staff", "obj-social-worker", "obj-clinical-nurse", "obj-coordination-professional",
-  ], { startX: 50, startY: 430, cols: 7 }),
+  ], { startX: 50, startY: 440, cols: 7 }),
   ...autoLayout("opd-sd1-2", [
     "obj-communication-system", "obj-patient-home", "obj-social-report",
     "obj-patient-group", "obj-informed-consent", "obj-inpatient-facility",
-  ], { startX: 50, startY: 530, cols: 6 }),
+  ], { startX: 50, startY: 560, cols: 6 }),
 
   // SD1.3
   ...autoLayout("opd-sd1-3", [
@@ -840,11 +840,11 @@ const appearances: AppearanceEntry[] = [
   ...autoLayout("opd-sd1-3", [
     "obj-therapeutic-plan", "obj-nursing-care-plan", "obj-visit-schedule", "obj-transport-route",
     "obj-attending-physician",
-  ], { startX: 50, startY: 430, cols: 5 }),
+  ], { startX: 50, startY: 440, cols: 5 }),
   ...autoLayout("opd-sd1-3", [
     "obj-clinical-nurse", "obj-coordination-professional",
     "obj-administrative-staff", "obj-clinical-condition", "obj-patient-home",
-  ], { startX: 50, startY: 530, cols: 5 }),
+  ], { startX: 50, startY: 560, cols: 5 }),
 
   // SD1.4
   ...autoLayout("opd-sd1-4", [
@@ -893,11 +893,11 @@ const appearances: AppearanceEntry[] = [
   ...autoLayout("opd-sd1-6", [
     "obj-clinical-condition", "obj-hospitalization-status", "obj-epicrisis",
     "obj-clinical-instability", "obj-death-protocol", "obj-withdrawal-statement",
-  ], { startX: 50, startY: 480, cols: 6 }),
+  ], { startX: 50, startY: 490, cols: 6 }),
   ...autoLayout("opd-sd1-6", [
     "obj-treatment-adherence", "obj-attending-physician", "obj-technical-director",
     "obj-inpatient-facility", "obj-transport-vehicle", "obj-informed-consent",
-  ], { startX: 50, startY: 580, cols: 6 }),
+  ], { startX: 50, startY: 610, cols: 6 }),
 
   // SD2
   ...autoLayout("opd-sd2", [
@@ -911,11 +911,11 @@ const appearances: AppearanceEntry[] = [
   ...autoLayout("opd-sd2", [
     "obj-clinical-experience", "obj-postgraduate-management-training",
     "obj-iaas-prevention-course", "obj-weekly-dedication",
-  ], { startX: 50, startY: 530, cols: 4 }),
+  ], { startX: 50, startY: 540, cols: 4 }),
   ...autoLayout("opd-sd2", [
     "obj-management-training", "obj-iaas-course", "obj-bls-certification",
     "obj-regulation-experience",
-  ], { startX: 50, startY: 630, cols: 4 }),
+  ], { startX: 50, startY: 660, cols: 4 }),
 
   // SD3
   ...autoLayout("opd-sd3", [
