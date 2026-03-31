@@ -963,30 +963,45 @@ const appearances: AppearanceEntry[] = [
   // SD6
   ...autoLayout("opd-sd6", [
     "obj-hodom-system",
-  ], { internal: true, startX: 50, startY: 0 }).map(a => ({ ...a, w: 1100, h: 500 })),
+  ], { internal: true, startX: 50, startY: 0 }).map(a => ({ ...a, w: 1400, h: 500 })),
   ...autoLayout("opd-sd6", [
     "proc-sanitary-auth-managing", "proc-quality-safety-managing", "proc-staff-training-managing",
     "proc-supply-chain-managing", "proc-waste-managing", "proc-equipment-maintenance-managing",
   ], { internal: true, startX: 100, startY: 80, cols: 3 }),
+  // SD6 external objects — group by governance process for clarity
+  // Row 1: Sanitary auth related
   ...autoLayout("opd-sd6", [
     "obj-sanitary-auth-status", "obj-authorization-validity", "obj-seremi",
-    "obj-quality-level", "obj-adverse-reaction-audit", "obj-mortality-audit",
-    "obj-training-compliance", "obj-biomedical-waste", "obj-sharps-disposal-protocol",
-    "obj-preventive-maintenance-program", "obj-current-regulation", "obj-documentation-system",
-    "obj-annual-training-plan", "obj-pharmacy", "obj-waste-disposal-area",
-    "obj-waste-mgmt-protocol", "obj-medical-equipment", "obj-maintenance-status",
-    "obj-healthcare-team", "obj-clinical-supply", "obj-medication",
-    "obj-technical-director", "obj-coordination-professional",
+    "obj-current-regulation", "obj-technical-director", "obj-coordination-professional",
   ], { startX: 50, startY: 520, cols: 6 }),
+  // Row 2: Quality + training related
+  ...autoLayout("opd-sd6", [
+    "obj-quality-level", "obj-adverse-reaction-audit", "obj-mortality-audit",
+    "obj-training-compliance", "obj-annual-training-plan", "obj-documentation-system",
+  ], { startX: 50, startY: 620, cols: 6 }),
+  // Row 3: Supply + waste + equipment
+  ...autoLayout("opd-sd6", [
+    "obj-healthcare-team", "obj-clinical-supply", "obj-medication",
+    "obj-pharmacy", "obj-biomedical-waste", "obj-waste-disposal-area",
+  ], { startX: 50, startY: 720, cols: 6 }),
+  // Row 4: Remaining
+  ...autoLayout("opd-sd6", [
+    "obj-waste-mgmt-protocol", "obj-sharps-disposal-protocol",
+    "obj-medical-equipment", "obj-maintenance-status", "obj-preventive-maintenance-program",
+  ], { startX: 50, startY: 820, cols: 5 }),
 
-  // SD7
+  // SD7 — 5 exhibited attributes, spread wide to avoid link crossing
   ...autoLayout("opd-sd7", [
     "obj-patient-home",
-  ], { internal: true, startX: 100, startY: 0 }).map(a => ({ ...a, w: 700, h: 300 })),
+  ], { internal: true, startX: 80, startY: 0 }).map(a => ({ ...a, w: 1100, h: 400 })),
+  // Row 1: top 3
   ...autoLayout("opd-sd7", [
     "obj-home-condition", "obj-basic-services", "obj-telephony-access",
+  ], { internal: true, startX: 130, startY: 80, cols: 3 }),
+  // Row 2: bottom 2 spaced wider
+  ...autoLayout("opd-sd7", [
     "obj-road-access", "obj-coverage-radius-compliance",
-  ], { internal: true, startX: 150, startY: 80, cols: 3 }),
+  ], { internal: true, startX: 200, startY: 220, cols: 2 }),
 
   // SD8
   ...autoLayout("opd-sd8", [

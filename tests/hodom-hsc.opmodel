@@ -4,8 +4,8 @@
     "name": "HODOM HSC — Sistema de Hospitalización Domiciliaria",
     "description": "Modelo OPM del Sistema de Hospitalización Domiciliaria (HODOM) conforme a ISO/PAS 19450. Hospital de San Carlos. 16 OPDs, ~235 entidades.",
     "system_type": "socio-technical",
-    "created": "2026-03-31T14:27:57.208Z",
-    "modified": "2026-03-31T14:27:57.208Z"
+    "created": "2026-03-31T14:29:47.553Z",
+    "modified": "2026-03-31T14:29:47.553Z"
   },
   "settings": {
     "autosave_interval_s": 300,
@@ -5869,7 +5869,7 @@
       "opd": "opd-sd6",
       "x": 50,
       "y": 0,
-      "w": 1100,
+      "w": 1400,
       "h": 500,
       "internal": true
     },
@@ -5952,7 +5952,7 @@
       "h": 50
     },
     {
-      "thing": "obj-quality-level",
+      "thing": "obj-current-regulation",
       "opd": "opd-sd6",
       "x": 650,
       "y": 520,
@@ -5960,7 +5960,7 @@
       "h": 50
     },
     {
-      "thing": "obj-adverse-reaction-audit",
+      "thing": "obj-technical-director",
       "opd": "opd-sd6",
       "x": 850,
       "y": 520,
@@ -5968,7 +5968,7 @@
       "h": 50
     },
     {
-      "thing": "obj-mortality-audit",
+      "thing": "obj-coordination-professional",
       "opd": "opd-sd6",
       "x": 1050,
       "y": 520,
@@ -5976,7 +5976,7 @@
       "h": 50
     },
     {
-      "thing": "obj-training-compliance",
+      "thing": "obj-quality-level",
       "opd": "opd-sd6",
       "x": 50,
       "y": 620,
@@ -5984,7 +5984,7 @@
       "h": 50
     },
     {
-      "thing": "obj-biomedical-waste",
+      "thing": "obj-adverse-reaction-audit",
       "opd": "opd-sd6",
       "x": 250,
       "y": 620,
@@ -5992,7 +5992,7 @@
       "h": 50
     },
     {
-      "thing": "obj-sharps-disposal-protocol",
+      "thing": "obj-mortality-audit",
       "opd": "opd-sd6",
       "x": 450,
       "y": 620,
@@ -6000,7 +6000,7 @@
       "h": 50
     },
     {
-      "thing": "obj-preventive-maintenance-program",
+      "thing": "obj-training-compliance",
       "opd": "opd-sd6",
       "x": 650,
       "y": 620,
@@ -6008,7 +6008,7 @@
       "h": 50
     },
     {
-      "thing": "obj-current-regulation",
+      "thing": "obj-annual-training-plan",
       "opd": "opd-sd6",
       "x": 850,
       "y": 620,
@@ -6024,58 +6024,10 @@
       "h": 50
     },
     {
-      "thing": "obj-annual-training-plan",
-      "opd": "opd-sd6",
-      "x": 50,
-      "y": 720,
-      "w": 160,
-      "h": 50
-    },
-    {
-      "thing": "obj-pharmacy",
-      "opd": "opd-sd6",
-      "x": 250,
-      "y": 720,
-      "w": 160,
-      "h": 50
-    },
-    {
-      "thing": "obj-waste-disposal-area",
-      "opd": "opd-sd6",
-      "x": 450,
-      "y": 720,
-      "w": 160,
-      "h": 50
-    },
-    {
-      "thing": "obj-waste-mgmt-protocol",
-      "opd": "opd-sd6",
-      "x": 650,
-      "y": 720,
-      "w": 160,
-      "h": 50
-    },
-    {
-      "thing": "obj-medical-equipment",
-      "opd": "opd-sd6",
-      "x": 850,
-      "y": 720,
-      "w": 160,
-      "h": 50
-    },
-    {
-      "thing": "obj-maintenance-status",
-      "opd": "opd-sd6",
-      "x": 1050,
-      "y": 720,
-      "w": 160,
-      "h": 50
-    },
-    {
       "thing": "obj-healthcare-team",
       "opd": "opd-sd6",
       "x": 50,
-      "y": 820,
+      "y": 720,
       "w": 160,
       "h": 50
     },
@@ -6083,7 +6035,7 @@
       "thing": "obj-clinical-supply",
       "opd": "opd-sd6",
       "x": 250,
-      "y": 820,
+      "y": 720,
       "w": 160,
       "h": 50
     },
@@ -6091,12 +6043,60 @@
       "thing": "obj-medication",
       "opd": "opd-sd6",
       "x": 450,
+      "y": 720,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-pharmacy",
+      "opd": "opd-sd6",
+      "x": 650,
+      "y": 720,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-biomedical-waste",
+      "opd": "opd-sd6",
+      "x": 850,
+      "y": 720,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-waste-disposal-area",
+      "opd": "opd-sd6",
+      "x": 1050,
+      "y": 720,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-waste-mgmt-protocol",
+      "opd": "opd-sd6",
+      "x": 50,
       "y": 820,
       "w": 160,
       "h": 50
     },
     {
-      "thing": "obj-technical-director",
+      "thing": "obj-sharps-disposal-protocol",
+      "opd": "opd-sd6",
+      "x": 250,
+      "y": 820,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-medical-equipment",
+      "opd": "opd-sd6",
+      "x": 450,
+      "y": 820,
+      "w": 160,
+      "h": 50
+    },
+    {
+      "thing": "obj-maintenance-status",
       "opd": "opd-sd6",
       "x": 650,
       "y": 820,
@@ -6104,7 +6104,7 @@
       "h": 50
     },
     {
-      "thing": "obj-coordination-professional",
+      "thing": "obj-preventive-maintenance-program",
       "opd": "opd-sd6",
       "x": 850,
       "y": 820,
@@ -6114,16 +6114,16 @@
     {
       "thing": "obj-patient-home",
       "opd": "opd-sd7",
-      "x": 100,
+      "x": 80,
       "y": 0,
-      "w": 700,
-      "h": 300,
+      "w": 1100,
+      "h": 400,
       "internal": true
     },
     {
       "thing": "obj-home-condition",
       "opd": "opd-sd7",
-      "x": 150,
+      "x": 130,
       "y": 80,
       "w": 160,
       "h": 50,
@@ -6132,7 +6132,7 @@
     {
       "thing": "obj-basic-services",
       "opd": "opd-sd7",
-      "x": 350,
+      "x": 330,
       "y": 80,
       "w": 160,
       "h": 50,
@@ -6141,7 +6141,7 @@
     {
       "thing": "obj-telephony-access",
       "opd": "opd-sd7",
-      "x": 550,
+      "x": 530,
       "y": 80,
       "w": 160,
       "h": 50,
@@ -6150,8 +6150,8 @@
     {
       "thing": "obj-road-access",
       "opd": "opd-sd7",
-      "x": 150,
-      "y": 180,
+      "x": 200,
+      "y": 220,
       "w": 160,
       "h": 50,
       "internal": true
@@ -6159,8 +6159,8 @@
     {
       "thing": "obj-coverage-radius-compliance",
       "opd": "opd-sd7",
-      "x": 350,
-      "y": 180,
+      "x": 400,
+      "y": 220,
       "w": 160,
       "h": 50,
       "internal": true
