@@ -565,6 +565,9 @@ const links = [
   link("effect", "proc-disciplinary-discharge", "obj-hospitalization-status", { source_state: "state-hs-active", target_state: "state-hs-discharged" }),
   link("agent", "obj-technical-director", "proc-disciplinary-discharge"),
   link("result", "proc-disciplinary-discharge", "obj-epicrisis"),
+  // Condition links for SD1.6 (fix orphan warnings)
+  link("instrument", "proc-hospital-readmission-discharge", "obj-clinical-instability", { source_state: "state-ci-present" }),
+  link("instrument", "proc-disciplinary-discharge", "obj-treatment-adherence", { source_state: "state-ta-non-adherent" }),
 
   // ── SD2 (Healthcare Team aggregation) ──
   link("aggregation", "obj-healthcare-team", "obj-technical-director"),
@@ -814,26 +817,26 @@ const appearances: AppearanceEntry[] = [
   // SD1.2
   ...autoLayout("opd-sd1-2", [
     "proc-patient-admitting",
-  ], { internal: true, startX: 100, startY: 0 }).map(a => ({ ...a, w: 700, h: 400 })),
+  ], { internal: true, startX: 100, startY: 0 }).map(a => ({ ...a, w: 900, h: 400 })),
   ...autoLayout("opd-sd1-2", [
     "proc-admission-registering", "proc-social-diagnosis-elaborating",
     "proc-patient-documentation-delivering", "proc-referral-facility-coordinating",
-  ], { internal: true, startX: 150, startY: 80, cols: 2 }),
+  ], { internal: true, startX: 130, startY: 80, cols: 2 }),
   ...autoLayout("opd-sd1-2", [
     "obj-admission-form", "obj-socioeconomic-status", "obj-care-indication-document",
     "obj-administrative-staff", "obj-social-worker", "obj-clinical-nurse", "obj-coordination-professional",
     "obj-communication-system", "obj-patient-home", "obj-social-report",
     "obj-patient-group", "obj-informed-consent", "obj-inpatient-facility",
-  ], { startX: 50, startY: 420, cols: 5 }),
+  ], { startX: 50, startY: 420, cols: 7 }),
 
   // SD1.3
   ...autoLayout("opd-sd1-3", [
     "proc-care-planning",
-  ], { internal: true, startX: 100, startY: 0 }).map(a => ({ ...a, w: 700, h: 400 })),
+  ], { internal: true, startX: 100, startY: 0 }).map(a => ({ ...a, w: 900, h: 400 })),
   ...autoLayout("opd-sd1-3", [
     "proc-therapeutic-plan-elaborating", "proc-nursing-care-plan-elaborating",
     "proc-home-visit-scheduling", "proc-transport-route-programming",
-  ], { internal: true, startX: 150, startY: 80, cols: 2 }),
+  ], { internal: true, startX: 130, startY: 80, cols: 2 }),
   ...autoLayout("opd-sd1-3", [
     "obj-therapeutic-plan", "obj-nursing-care-plan", "obj-visit-schedule", "obj-transport-route",
     "obj-attending-physician", "obj-clinical-nurse", "obj-coordination-professional",
@@ -843,12 +846,12 @@ const appearances: AppearanceEntry[] = [
   // SD1.4
   ...autoLayout("opd-sd1-4", [
     "proc-therapeutic-plan-executing",
-  ], { internal: true, startX: 100, startY: 0 }).map(a => ({ ...a, w: 900, h: 500 })),
+  ], { internal: true, startX: 80, startY: 0 }).map(a => ({ ...a, w: 1300, h: 500 })),
   ...autoLayout("opd-sd1-4", [
     "proc-medical-visit-performing", "proc-nursing-care-executing",
     "proc-kinesiological-therapy-executing", "proc-medication-administering",
     "proc-remote-care-regulating", "proc-patient-caregiver-educating",
-  ], { internal: true, startX: 150, startY: 80, cols: 3 }),
+  ], { internal: true, startX: 130, startY: 80, cols: 3 }),
   ...autoLayout("opd-sd1-4", [
     "obj-motor-therapy", "obj-respiratory-therapy", "obj-prescription",
     "obj-telehealth-record", "obj-self-care-knowledge",
@@ -857,7 +860,7 @@ const appearances: AppearanceEntry[] = [
     "obj-medication", "obj-communication-system", "obj-domiciliary-clinical-summary",
     "obj-caregiver", "obj-attending-physician", "obj-clinical-nurse",
     "obj-kinesiologist", "obj-nursing-technician", "obj-regulating-physician",
-  ], { startX: 50, startY: 520, cols: 5 }),
+  ], { startX: 50, startY: 520, cols: 7 }),
 
   // SD1.5
   ...autoLayout("opd-sd1-5", [
@@ -878,28 +881,28 @@ const appearances: AppearanceEntry[] = [
   // SD1.6
   ...autoLayout("opd-sd1-6", [
     "proc-patient-discharging",
-  ], { internal: true, startX: 100, startY: 0 }).map(a => ({ ...a, w: 800, h: 400 })),
+  ], { internal: true, startX: 100, startY: 0 }).map(a => ({ ...a, w: 1100, h: 450 })),
   ...autoLayout("opd-sd1-6", [
     "proc-medical-discharge", "proc-hospital-readmission-discharge",
     "proc-death-discharge", "proc-voluntary-withdrawal-discharge",
     "proc-disciplinary-discharge",
-  ], { internal: true, startX: 150, startY: 80, cols: 3 }),
+  ], { internal: true, startX: 130, startY: 80, cols: 5 }),
   ...autoLayout("opd-sd1-6", [
     "obj-clinical-condition", "obj-hospitalization-status", "obj-epicrisis",
     "obj-clinical-instability", "obj-death-protocol", "obj-withdrawal-statement",
     "obj-treatment-adherence", "obj-attending-physician", "obj-technical-director",
     "obj-inpatient-facility", "obj-transport-vehicle", "obj-informed-consent",
-  ], { startX: 50, startY: 420, cols: 4 }),
+  ], { startX: 50, startY: 470, cols: 6 }),
 
   // SD2
   ...autoLayout("opd-sd2", [
     "obj-healthcare-team",
-  ], { internal: true, startX: 100, startY: 0 }).map(a => ({ ...a, w: 900, h: 500 })),
+  ], { internal: true, startX: 80, startY: 0 }).map(a => ({ ...a, w: 1100, h: 500 })),
   ...autoLayout("opd-sd2", [
     "obj-technical-director", "obj-coordination-professional", "obj-attending-physician",
     "obj-regulating-physician", "obj-clinical-nurse", "obj-kinesiologist",
     "obj-nursing-technician", "obj-social-worker", "obj-administrative-staff",
-  ], { internal: true, startX: 150, startY: 80, cols: 3 }),
+  ], { internal: true, startX: 130, startY: 80, cols: 5 }),
   ...autoLayout("opd-sd2", [
     "obj-clinical-experience", "obj-postgraduate-management-training",
     "obj-iaas-prevention-course", "obj-weekly-dedication",
@@ -939,14 +942,14 @@ const appearances: AppearanceEntry[] = [
   // SD5
   ...autoLayout("opd-sd5", [
     "obj-hodom-system",
-  ], { internal: true, startX: 50, startY: 0 }).map(a => ({ ...a, w: 1100, h: 700 })),
+  ], { internal: true, startX: 50, startY: 0 }).map(a => ({ ...a, w: 1600, h: 800 })),
   ...autoLayout("opd-sd5", [
     "obj-documentation-system",
-  ], { internal: true, startX: 100, startY: 80 }).map(a => ({ ...a, w: 900, h: 600 })),
+  ], { internal: true, startX: 100, startY: 80 }).map(a => ({ ...a, w: 1400, h: 700 })),
   ...autoLayout("opd-sd5", [
     "obj-internal-org-manual", "obj-clinical-protocol-set", "obj-procedures-manual",
     "obj-waste-mgmt-protocol", "obj-annual-training-plan",
-  ], { internal: true, startX: 150, startY: 160, cols: 3 }),
+  ], { internal: true, startX: 130, startY: 160, cols: 5 }),
   ...autoLayout("opd-sd5", [
     "obj-organizational-chart", "obj-role-definition-set", "obj-schedule-definition", "obj-hygiene-regulation",
     "obj-admission-eval-protocol", "obj-visit-route-protocol", "obj-categorization-discharge-protocol",
@@ -955,7 +958,7 @@ const appearances: AppearanceEntry[] = [
     "obj-tracheostomy-proc", "obj-sample-collection-proc", "obj-isolation-precaution-proc",
     "obj-reas-decree-compliance", "obj-iaas-training", "obj-bls-training",
     "obj-staff-induction-program", "obj-humanized-care-training", "obj-minimum-duration",
-  ], { startX: 50, startY: 720, cols: 6 }),
+  ], { startX: 50, startY: 820, cols: 8 }),
 
   // SD6
   ...autoLayout("opd-sd6", [
@@ -988,12 +991,12 @@ const appearances: AppearanceEntry[] = [
   // SD8
   ...autoLayout("opd-sd8", [
     "obj-exclusion-condition",
-  ], { internal: true, startX: 100, startY: 0 }).map(a => ({ ...a, w: 800, h: 250 })),
+  ], { internal: true, startX: 80, startY: 0 }).map(a => ({ ...a, w: 1200, h: 250 })),
   ...autoLayout("opd-sd8", [
     "obj-clinical-instability-exclusion", "obj-unestablished-diagnosis-exclusion",
     "obj-decompensated-mental-health-exclusion", "obj-unlisted-service-exclusion",
     "obj-prior-disciplinary-exclusion",
-  ], { internal: true, startX: 150, startY: 80, cols: 3 }),
+  ], { internal: true, startX: 120, startY: 80, cols: 5 }),
 
   // SD9 (tagged structural overview)
   ...autoLayout("opd-sd9", [
