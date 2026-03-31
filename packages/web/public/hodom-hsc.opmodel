@@ -4,8 +4,8 @@
     "name": "HODOM HSC — Sistema de Hospitalización Domiciliaria",
     "description": "Modelo OPM del Sistema de Hospitalización Domiciliaria (HODOM) conforme a ISO/PAS 19450. Hospital de San Carlos. 16 OPDs, ~235 entidades.",
     "system_type": "socio-technical",
-    "created": "2026-03-31T15:43:53.209Z",
-    "modified": "2026-03-31T15:43:53.209Z"
+    "created": "2026-03-31T15:46:40.631Z",
+    "modified": "2026-03-31T15:46:40.631Z"
   },
   "settings": {
     "autosave_interval_s": 300,
@@ -3840,15 +3840,15 @@
     {
       "thing": "obj-healthcare-team",
       "opd": "opd-sd",
-      "x": 50,
-      "y": 150,
+      "x": 850,
+      "y": 50,
       "w": 160,
       "h": 50
     },
     {
       "thing": "obj-medical-equipment",
       "opd": "opd-sd",
-      "x": 250,
+      "x": 50,
       "y": 150,
       "w": 160,
       "h": 50
@@ -3856,7 +3856,7 @@
     {
       "thing": "obj-communication-system",
       "opd": "opd-sd",
-      "x": 450,
+      "x": 250,
       "y": 150,
       "w": 160,
       "h": 50
@@ -3864,7 +3864,7 @@
     {
       "thing": "obj-transport-vehicle",
       "opd": "opd-sd",
-      "x": 650,
+      "x": 450,
       "y": 150,
       "w": 160,
       "h": 50
@@ -3872,32 +3872,8 @@
     {
       "thing": "obj-admin-infrastructure",
       "opd": "opd-sd",
-      "x": 50,
-      "y": 250,
-      "w": 160,
-      "h": 50
-    },
-    {
-      "thing": "obj-clinical-supply",
-      "opd": "opd-sd",
-      "x": 250,
-      "y": 250,
-      "w": 160,
-      "h": 50
-    },
-    {
-      "thing": "obj-medication",
-      "opd": "opd-sd",
-      "x": 450,
-      "y": 250,
-      "w": 160,
-      "h": 50
-    },
-    {
-      "thing": "obj-clinical-record",
-      "opd": "opd-sd",
       "x": 650,
-      "y": 250,
+      "y": 150,
       "w": 160,
       "h": 50
     },
@@ -3905,7 +3881,7 @@
       "thing": "obj-patient-home",
       "opd": "opd-sd",
       "x": 50,
-      "y": 350,
+      "y": 300,
       "w": 160,
       "h": 50
     },
@@ -3913,7 +3889,7 @@
       "thing": "obj-inpatient-facility",
       "opd": "opd-sd",
       "x": 250,
-      "y": 350,
+      "y": 300,
       "w": 160,
       "h": 50
     },
@@ -3921,7 +3897,7 @@
       "thing": "obj-current-regulation",
       "opd": "opd-sd",
       "x": 450,
-      "y": 350,
+      "y": 300,
       "w": 160,
       "h": 50
     },
@@ -3929,7 +3905,7 @@
       "thing": "proc-inpatient-bed-occupying",
       "opd": "opd-sd",
       "x": 650,
-      "y": 350,
+      "y": 300,
       "w": 160,
       "h": 70
     },
@@ -4123,27 +4099,9 @@
       "internal": false
     },
     {
-      "thing": "obj-clinical-supply",
-      "opd": "opd-sd1",
-      "x": 250,
-      "y": 720,
-      "w": 160,
-      "h": 50,
-      "internal": false
-    },
-    {
-      "thing": "obj-medication",
-      "opd": "opd-sd1",
-      "x": 450,
-      "y": 720,
-      "w": 160,
-      "h": 50,
-      "internal": false
-    },
-    {
       "thing": "obj-medical-equipment",
       "opd": "opd-sd1",
-      "x": 650,
+      "x": 250,
       "y": 720,
       "w": 160,
       "h": 50,
@@ -4152,8 +4110,8 @@
     {
       "thing": "obj-transport-vehicle",
       "opd": "opd-sd1",
-      "x": 50,
-      "y": 820,
+      "x": 450,
+      "y": 720,
       "w": 160,
       "h": 50,
       "internal": false
@@ -4161,17 +4119,8 @@
     {
       "thing": "obj-clinical-condition",
       "opd": "opd-sd1",
-      "x": 250,
-      "y": 820,
-      "w": 160,
-      "h": 50,
-      "internal": false
-    },
-    {
-      "thing": "obj-clinical-record",
-      "opd": "opd-sd1",
-      "x": 450,
-      "y": 820,
+      "x": 650,
+      "y": 720,
       "w": 160,
       "h": 50,
       "internal": false
@@ -4179,7 +4128,7 @@
     {
       "thing": "obj-inpatient-facility",
       "opd": "opd-sd1",
-      "x": 650,
+      "x": 50,
       "y": 820,
       "w": 160,
       "h": 50,

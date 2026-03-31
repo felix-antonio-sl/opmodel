@@ -768,13 +768,15 @@ function autoLayout(opdId: string, thingIds: string[], opts?: { internal?: boole
 }
 
 const appearances: AppearanceEntry[] = [
-  // SD
+  // SD — systemic objects top, environmental bottom
   ...autoLayout("opd-sd", [
     "proc-domiciliary-hospitalizing", "obj-patient-group", "obj-clinical-condition", "obj-hodom-system",
     "obj-healthcare-team", "obj-medical-equipment", "obj-communication-system", "obj-transport-vehicle",
-    "obj-admin-infrastructure", "obj-clinical-supply", "obj-medication", "obj-clinical-record",
+    "obj-admin-infrastructure",
+  ], { startX: 50, startY: 50, cols: 5 }),
+  ...autoLayout("opd-sd", [
     "obj-patient-home", "obj-inpatient-facility", "obj-current-regulation", "proc-inpatient-bed-occupying",
-  ]),
+  ], { startX: 50, startY: 300, cols: 4 }),
   // SD1
   ...autoLayout("opd-sd1", [
     "proc-domiciliary-hospitalizing",
@@ -790,8 +792,8 @@ const appearances: AppearanceEntry[] = [
     "obj-caregiver", "obj-support-network",
   ], { internal: true, startX: 150, startY: 400, cols: 5 }),
   ...autoLayout("opd-sd1", [
-    "obj-healthcare-team", "obj-clinical-supply", "obj-medication", "obj-medical-equipment",
-    "obj-transport-vehicle", "obj-clinical-condition", "obj-clinical-record", "obj-inpatient-facility",
+    "obj-healthcare-team", "obj-medical-equipment",
+    "obj-transport-vehicle", "obj-clinical-condition", "obj-inpatient-facility",
   ], { internal: false, startX: 50, startY: 720, cols: 4 }),
 
   // SD1.1
