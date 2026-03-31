@@ -4,8 +4,8 @@
     "name": "HODOM HSC — Sistema de Hospitalización Domiciliaria",
     "description": "Modelo OPM del Sistema de Hospitalización Domiciliaria (HODOM) conforme a ISO/PAS 19450. Hospital de San Carlos. 16 OPDs, ~235 entidades.",
     "system_type": "socio-technical",
-    "created": "2026-03-31T15:17:09.201Z",
-    "modified": "2026-03-31T15:17:09.201Z"
+    "created": "2026-03-31T15:30:38.730Z",
+    "modified": "2026-03-31T15:30:38.730Z"
   },
   "settings": {
     "autosave_interval_s": 300,
@@ -4449,7 +4449,7 @@
       "thing": "obj-admission-form",
       "opd": "opd-sd1-2",
       "x": 50,
-      "y": 420,
+      "y": 430,
       "w": 160,
       "h": 50
     },
@@ -4457,7 +4457,7 @@
       "thing": "obj-socioeconomic-status",
       "opd": "opd-sd1-2",
       "x": 250,
-      "y": 420,
+      "y": 430,
       "w": 160,
       "h": 50
     },
@@ -4465,7 +4465,7 @@
       "thing": "obj-care-indication-document",
       "opd": "opd-sd1-2",
       "x": 450,
-      "y": 420,
+      "y": 430,
       "w": 160,
       "h": 50
     },
@@ -4473,7 +4473,7 @@
       "thing": "obj-administrative-staff",
       "opd": "opd-sd1-2",
       "x": 650,
-      "y": 420,
+      "y": 430,
       "w": 160,
       "h": 50
     },
@@ -4481,7 +4481,7 @@
       "thing": "obj-social-worker",
       "opd": "opd-sd1-2",
       "x": 850,
-      "y": 420,
+      "y": 430,
       "w": 160,
       "h": 50
     },
@@ -4489,7 +4489,7 @@
       "thing": "obj-clinical-nurse",
       "opd": "opd-sd1-2",
       "x": 1050,
-      "y": 420,
+      "y": 430,
       "w": 160,
       "h": 50
     },
@@ -4497,7 +4497,7 @@
       "thing": "obj-coordination-professional",
       "opd": "opd-sd1-2",
       "x": 1250,
-      "y": 420,
+      "y": 430,
       "w": 160,
       "h": 50
     },
@@ -4505,7 +4505,7 @@
       "thing": "obj-communication-system",
       "opd": "opd-sd1-2",
       "x": 50,
-      "y": 520,
+      "y": 530,
       "w": 160,
       "h": 50
     },
@@ -4513,7 +4513,7 @@
       "thing": "obj-patient-home",
       "opd": "opd-sd1-2",
       "x": 250,
-      "y": 520,
+      "y": 530,
       "w": 160,
       "h": 50
     },
@@ -4521,7 +4521,7 @@
       "thing": "obj-social-report",
       "opd": "opd-sd1-2",
       "x": 450,
-      "y": 520,
+      "y": 530,
       "w": 160,
       "h": 50
     },
@@ -4529,7 +4529,7 @@
       "thing": "obj-patient-group",
       "opd": "opd-sd1-2",
       "x": 650,
-      "y": 520,
+      "y": 530,
       "w": 160,
       "h": 50
     },
@@ -4537,7 +4537,7 @@
       "thing": "obj-informed-consent",
       "opd": "opd-sd1-2",
       "x": 850,
-      "y": 520,
+      "y": 530,
       "w": 160,
       "h": 50
     },
@@ -4545,7 +4545,7 @@
       "thing": "obj-inpatient-facility",
       "opd": "opd-sd1-2",
       "x": 1050,
-      "y": 520,
+      "y": 530,
       "w": 160,
       "h": 50
     },
@@ -4598,7 +4598,7 @@
       "thing": "obj-therapeutic-plan",
       "opd": "opd-sd1-3",
       "x": 50,
-      "y": 420,
+      "y": 430,
       "w": 160,
       "h": 50
     },
@@ -4606,7 +4606,7 @@
       "thing": "obj-nursing-care-plan",
       "opd": "opd-sd1-3",
       "x": 250,
-      "y": 420,
+      "y": 430,
       "w": 160,
       "h": 50
     },
@@ -4614,7 +4614,7 @@
       "thing": "obj-visit-schedule",
       "opd": "opd-sd1-3",
       "x": 450,
-      "y": 420,
+      "y": 430,
       "w": 160,
       "h": 50
     },
@@ -4622,7 +4622,7 @@
       "thing": "obj-transport-route",
       "opd": "opd-sd1-3",
       "x": 650,
-      "y": 420,
+      "y": 430,
       "w": 160,
       "h": 50
     },
@@ -4630,7 +4630,7 @@
       "thing": "obj-attending-physician",
       "opd": "opd-sd1-3",
       "x": 850,
-      "y": 420,
+      "y": 430,
       "w": 160,
       "h": 50
     },
@@ -4638,7 +4638,7 @@
       "thing": "obj-clinical-nurse",
       "opd": "opd-sd1-3",
       "x": 50,
-      "y": 520,
+      "y": 530,
       "w": 160,
       "h": 50
     },
@@ -4646,7 +4646,7 @@
       "thing": "obj-coordination-professional",
       "opd": "opd-sd1-3",
       "x": 250,
-      "y": 520,
+      "y": 530,
       "w": 160,
       "h": 50
     },
@@ -4654,7 +4654,7 @@
       "thing": "obj-administrative-staff",
       "opd": "opd-sd1-3",
       "x": 450,
-      "y": 520,
+      "y": 530,
       "w": 160,
       "h": 50
     },
@@ -4662,7 +4662,7 @@
       "thing": "obj-clinical-condition",
       "opd": "opd-sd1-3",
       "x": 650,
-      "y": 520,
+      "y": 530,
       "w": 160,
       "h": 50
     },
@@ -4670,7 +4670,7 @@
       "thing": "obj-patient-home",
       "opd": "opd-sd1-3",
       "x": 850,
-      "y": 520,
+      "y": 530,
       "w": 160,
       "h": 50
     },
@@ -5104,7 +5104,7 @@
       "thing": "obj-clinical-condition",
       "opd": "opd-sd1-6",
       "x": 50,
-      "y": 470,
+      "y": 480,
       "w": 160,
       "h": 50
     },
@@ -5112,7 +5112,7 @@
       "thing": "obj-hospitalization-status",
       "opd": "opd-sd1-6",
       "x": 250,
-      "y": 470,
+      "y": 480,
       "w": 160,
       "h": 50
     },
@@ -5120,7 +5120,7 @@
       "thing": "obj-epicrisis",
       "opd": "opd-sd1-6",
       "x": 450,
-      "y": 470,
+      "y": 480,
       "w": 160,
       "h": 50
     },
@@ -5128,7 +5128,7 @@
       "thing": "obj-clinical-instability",
       "opd": "opd-sd1-6",
       "x": 650,
-      "y": 470,
+      "y": 480,
       "w": 160,
       "h": 50
     },
@@ -5136,7 +5136,7 @@
       "thing": "obj-death-protocol",
       "opd": "opd-sd1-6",
       "x": 850,
-      "y": 470,
+      "y": 480,
       "w": 160,
       "h": 50
     },
@@ -5144,7 +5144,7 @@
       "thing": "obj-withdrawal-statement",
       "opd": "opd-sd1-6",
       "x": 1050,
-      "y": 470,
+      "y": 480,
       "w": 160,
       "h": 50
     },
@@ -5152,7 +5152,7 @@
       "thing": "obj-treatment-adherence",
       "opd": "opd-sd1-6",
       "x": 50,
-      "y": 570,
+      "y": 580,
       "w": 160,
       "h": 50
     },
@@ -5160,7 +5160,7 @@
       "thing": "obj-attending-physician",
       "opd": "opd-sd1-6",
       "x": 250,
-      "y": 570,
+      "y": 580,
       "w": 160,
       "h": 50
     },
@@ -5168,7 +5168,7 @@
       "thing": "obj-technical-director",
       "opd": "opd-sd1-6",
       "x": 450,
-      "y": 570,
+      "y": 580,
       "w": 160,
       "h": 50
     },
@@ -5176,7 +5176,7 @@
       "thing": "obj-inpatient-facility",
       "opd": "opd-sd1-6",
       "x": 650,
-      "y": 570,
+      "y": 580,
       "w": 160,
       "h": 50
     },
@@ -5184,7 +5184,7 @@
       "thing": "obj-transport-vehicle",
       "opd": "opd-sd1-6",
       "x": 850,
-      "y": 570,
+      "y": 580,
       "w": 160,
       "h": 50
     },
@@ -5192,7 +5192,7 @@
       "thing": "obj-informed-consent",
       "opd": "opd-sd1-6",
       "x": 1050,
-      "y": 570,
+      "y": 580,
       "w": 160,
       "h": 50
     },
@@ -5290,7 +5290,7 @@
       "thing": "obj-clinical-experience",
       "opd": "opd-sd2",
       "x": 50,
-      "y": 520,
+      "y": 530,
       "w": 160,
       "h": 50
     },
@@ -5298,7 +5298,7 @@
       "thing": "obj-postgraduate-management-training",
       "opd": "opd-sd2",
       "x": 250,
-      "y": 520,
+      "y": 530,
       "w": 160,
       "h": 50
     },
@@ -5306,7 +5306,7 @@
       "thing": "obj-iaas-prevention-course",
       "opd": "opd-sd2",
       "x": 450,
-      "y": 520,
+      "y": 530,
       "w": 160,
       "h": 50
     },
@@ -5314,7 +5314,7 @@
       "thing": "obj-weekly-dedication",
       "opd": "opd-sd2",
       "x": 650,
-      "y": 520,
+      "y": 530,
       "w": 160,
       "h": 50
     },
@@ -5322,7 +5322,7 @@
       "thing": "obj-management-training",
       "opd": "opd-sd2",
       "x": 50,
-      "y": 620,
+      "y": 630,
       "w": 160,
       "h": 50
     },
@@ -5330,7 +5330,7 @@
       "thing": "obj-iaas-course",
       "opd": "opd-sd2",
       "x": 250,
-      "y": 620,
+      "y": 630,
       "w": 160,
       "h": 50
     },
@@ -5338,7 +5338,7 @@
       "thing": "obj-bls-certification",
       "opd": "opd-sd2",
       "x": 450,
-      "y": 620,
+      "y": 630,
       "w": 160,
       "h": 50
     },
@@ -5346,7 +5346,7 @@
       "thing": "obj-regulation-experience",
       "opd": "opd-sd2",
       "x": 650,
-      "y": 620,
+      "y": 630,
       "w": 160,
       "h": 50
     },
@@ -6170,8 +6170,8 @@
       "opd": "opd-sd8",
       "x": 80,
       "y": 0,
-      "w": 1200,
-      "h": 250,
+      "w": 700,
+      "h": 400,
       "internal": true
     },
     {
@@ -6204,8 +6204,8 @@
     {
       "thing": "obj-unlisted-service-exclusion",
       "opd": "opd-sd8",
-      "x": 720,
-      "y": 80,
+      "x": 200,
+      "y": 220,
       "w": 160,
       "h": 50,
       "internal": true
@@ -6213,8 +6213,8 @@
     {
       "thing": "obj-prior-disciplinary-exclusion",
       "opd": "opd-sd8",
-      "x": 920,
-      "y": 80,
+      "x": 400,
+      "y": 220,
       "w": 160,
       "h": 50,
       "internal": true
