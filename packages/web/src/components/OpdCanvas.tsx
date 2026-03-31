@@ -1081,8 +1081,11 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
 
             const hasInner = fork.type === "exhibition" || fork.type === "classification";
             const TRUNK = 10;
-            const TRI_H = hasInner ? 14 : 12;
-            const TRI_HALF = hasInner ? 9 : 7;
+            // Scale triangle with number of children so branches don't bunch up
+            const nChildren = childrenData.length;
+            const scaleFactor = nChildren > 3 ? 1 + (nChildren - 3) * 0.25 : 1;
+            const TRI_H = (hasInner ? 14 : 12) * scaleFactor;
+            const TRI_HALF = (hasInner ? 9 : 7) * scaleFactor;
 
             const isParentContainer = fork.parentId === containerThingId;
             const trunkStart = isParentContainer
@@ -1096,8 +1099,13 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
             const branches = childrenData.map((c, idx) => {
               const t = childrenData.length === 1 ? 0 : (idx / (childrenData.length - 1)) * 2 - 1;
               const origin = { x: baseCtr.x + perp.x * TRI_HALF * t, y: baseCtr.y + perp.y * TRI_HALF * t };
-              const endpoint = edgePoint(c.thing.kind, c.rect, origin);
-              return { ...c, origin, endpoint };
+              // CV-4/CV-5: distribute anchor points along child edge to avoid convergence
+              const endpoint = edgePoint(c.thing.kind, c.rect, { x: origin.x, y: origin.y });
+              // Nudge endpoint along edge if multiple branches target same child
+              const ep = childrenData.length > 2
+                ? { x: endpoint.x + perp.x * t * 4, y: endpoint.y + perp.y * t * 4 }
+                : endpoint;
+              return { ...c, origin, endpoint: ep };
             });
 
             const color = "#6b5fad";
