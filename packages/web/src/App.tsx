@@ -24,7 +24,7 @@ import { OplPanel } from "./components/OplPanel";
 import { PropertiesPanel } from "./components/PropertiesPanel";
 import { Toolbar } from "./components/Toolbar";
 import { SimulationPanel } from "./components/SimulationPanel";
-import { ValidationPanel } from "./components/ValidationPanel";
+import { ValidationPanel, type ValidationTab } from "./components/ValidationPanel";
 import { auditVisualOpd, computeVisualQuality } from "./lib/visual-lint";
 import { suggestLayoutForOpd } from "./lib/spatial-layout";
 import { BugCapture } from "./components/BugCapture";
@@ -34,7 +34,6 @@ import { NlSettingsModal } from "./components/NlSettingsModal";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { VerificationChecklist } from "./components/VerificationChecklist";
 import { SdWizard } from "./components/SdWizard";
-import { VisualReportPanel } from "./components/VisualReportPanel";
 import { buildSearchResults } from "./lib/search";
 
 const STORAGE_KEY = "opmodel:current";
@@ -266,10 +265,10 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
   const [showNlSettings, setShowNlSettings] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [showValidation, setShowValidation] = useState(false);
+  const [validationTab, setValidationTab] = useState<ValidationTab>("issues");
   const [showHelp, setShowHelp] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showVerification, setShowVerification] = useState(false);
-  const [showVisualReport, setShowVisualReport] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
   (window as any).__openWizard = () => setShowWizard(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -514,12 +513,12 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
           onImport={onImport}
           onSave={save}
           onAutoLayoutAll={autoLayoutAll}
-          onShowVisualReport={() => setShowVisualReport(true)}
+          onShowVisualReport={() => { setValidationTab("visual-report"); setShowValidation(true); }}
         />
         <div className="header__sep" />
         <button
           className={`header__pill header__pill--validation header__pill--${isValid ? "ok" : "error"}`}
-          onClick={() => setShowValidation(v => !v)}
+          onClick={() => { setValidationTab("issues"); setShowValidation(v => !v); }}
           title="Toggle validation panel"
         >
           <span className={`header__pill-dot header__pill-dot--${isValid ? "ok" : "error"}`} />
@@ -527,7 +526,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
         </button>
         <button
           className="header__pill header__pill--visual"
-          onClick={() => setShowVisualReport(true)}
+          onClick={() => { setValidationTab("visual-report"); setShowValidation(true); }}
           title={`Visual quality: ${visualQuality.grade} (${visualQuality.score}/100) — ${visualQuality.errorCount} errors, ${visualQuality.warningCount} warnings, ${visualQuality.infoCount} info`}
         >
           Visual {visualQuality.grade} {visualQuality.score}
@@ -706,18 +705,16 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
           errors={errors}
           visualFindings={visualFindings}
           dispatch={dispatch}
+          initialTab={validationTab}
           onClose={() => setShowValidation(false)}
         />
-      )}
-      {showVisualReport && (
-        <VisualReportPanel model={model} dispatch={dispatch} onClose={() => setShowVisualReport(false)} />
       )}
 
       {/* Status Bar */}
       <footer className="status-bar">
         <div
           className="status-bar__indicator status-bar__indicator--clickable"
-          onClick={() => setShowValidation(v => !v)}
+          onClick={() => { setValidationTab("issues"); setShowValidation(v => !v); }}
           title="Toggle validation panel"
         >
           <div className={`status-bar__dot status-bar__dot--${isValid ? "ok" : "error"}`} />
@@ -731,7 +728,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
         >✓ Verify</button>
         <div
           className="status-bar__indicator status-bar__indicator--clickable"
-          onClick={() => setShowValidation(true)}
+          onClick={() => { setValidationTab("issues"); setShowValidation(true); }}
           title={`Visual quality: ${visualQuality.grade} (${visualQuality.score}/100) — ${visualQuality.errorCount} errors, ${visualQuality.warningCount} warnings, ${visualQuality.infoCount} info`}
           style={{ cursor: "pointer" }}
         >
@@ -741,7 +738,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
         </div>
         <button
           className="status-bar__indicator status-bar__indicator--clickable"
-          onClick={() => setShowVisualReport(true)}
+          onClick={() => { setValidationTab("visual-report"); setShowValidation(true); }}
           title="Open model-level visual quality report"
           style={{ background: "none", border: "none", cursor: "pointer", fontSize: 11, color: "var(--accent)" }}
         >📊 Visual Report</button>

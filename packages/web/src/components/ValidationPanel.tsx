@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Model, InvariantError } from "@opmodel/core";
 import type { Command } from "../lib/commands";
+import { buildVisualReport, exportVisualReportMarkdown, type VisualFindingReportItem, type VisualOpdReport } from "../lib/visual-report";
 import { visualFindingSeverity, type VisualFinding } from "../lib/visual-lint";
 
 interface Props {
@@ -10,12 +11,13 @@ interface Props {
   visualFindings?: VisualFinding[];
   dispatch: (cmd: Command) => boolean;
   onClose: () => void;
+  initialTab?: ValidationTab;
 }
 
 type SeverityFilter = "all" | "error" | "warning" | "info";
 type ScopeFilter = "all" | "current-opd";
+export type ValidationTab = "issues" | "visual-report";
 
-/** Find the first OPD where this entity has an appearance */
 function findOpdForEntity(model: Model, entityId: string): string | null {
   for (const app of model.appearances.values()) {
     if (app.thing === entityId) return app.opd;
@@ -132,6 +134,22 @@ function errorSeverity(err: InvariantError): Exclude<SeverityFilter, "all"> {
   return (err.severity ?? "error") as Exclude<SeverityFilter, "all">;
 }
 
+function severityColor(severity: VisualFindingReportItem["severity"]): string {
+  switch (severity) {
+    case "error": return "var(--error, #e53e3e)";
+    case "warning": return "var(--warning, #dd6b20)";
+    case "info": return "var(--text-dim)";
+  }
+}
+
+function gradeColor(grade: VisualOpdReport["grade"]): string {
+  switch (grade) {
+    case "A": return "var(--success)";
+    case "F": return "var(--error, #e53e3e)";
+    default: return "var(--text)";
+  }
+}
+
 export function formatValidationMessage(err: InvariantError): string {
   if (err.code === "I-GERUND") {
     return "Process name should use accepted process naming: English may use a word ending in -ing; Spanish uses the first word ending in -ando/-iendo/-ción.";
@@ -139,9 +157,24 @@ export function formatValidationMessage(err: InvariantError): string {
   return err.message;
 }
 
-export function ValidationPanel({ model, currentOpd, errors, visualFindings = [], dispatch, onClose }: Props) {
+export function ValidationPanel({
+  model,
+  currentOpd,
+  errors,
+  visualFindings = [],
+  dispatch,
+  onClose,
+  initialTab = "issues",
+}: Props) {
+  const [tab, setTab] = useState<ValidationTab>(initialTab);
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>("all");
   const [scopeFilter, setScopeFilter] = useState<ScopeFilter>("current-opd");
+
+  useEffect(() => {
+    setTab(initialTab);
+  }, [initialTab]);
+
+  const visualReport = useMemo(() => buildVisualReport(model), [model]);
 
   const filteredErrors = useMemo(() => {
     return errors.filter((err) => {
@@ -159,10 +192,9 @@ export function ValidationPanel({ model, currentOpd, errors, visualFindings = []
     return visualFindings.filter((finding) => {
       const sev = visualFindingSeverity(finding);
       if (severityFilter !== "all" && sev !== severityFilter) return false;
-      if (scopeFilter === "current-opd") return true;
       return true;
     });
-  }, [visualFindings, severityFilter, scopeFilter]);
+  }, [visualFindings, severityFilter]);
 
   const errorCount = filteredErrors.filter((e) => errorSeverity(e) === "error").length;
   const warningCount = filteredErrors.filter((e) => errorSeverity(e) === "warning").length;
@@ -177,6 +209,32 @@ export function ValidationPanel({ model, currentOpd, errors, visualFindings = []
       .map((kind) => ({ kind, items: filteredVisualFindings.filter((finding) => finding.kind === kind) }))
       .filter((group) => group.items.length > 0);
   }, [filteredVisualFindings]);
+
+  const filteredReportOpds = useMemo(() => {
+    return visualReport.opds.filter((opd) => {
+      if (severityFilter !== "all") {
+        const matching = opd.findings.filter((finding) => finding.severity === severityFilter);
+        if (matching.length === 0) return false;
+      }
+      if (scopeFilter === "current-opd" && opd.opdId !== currentOpd) return false;
+      return true;
+    }).map((opd) => ({
+      ...opd,
+      findings: severityFilter === "all" ? opd.findings : opd.findings.filter((finding) => finding.severity === severityFilter),
+    }));
+  }, [visualReport, severityFilter, scopeFilter, currentOpd]);
+
+  const downloadMarkdown = () => {
+    const blob = new Blob([exportVisualReportMarkdown(visualReport)], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${(model.meta.name || "model").toLowerCase().replace(/[^a-z0-9]+/gi, "-")}-visual-report.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   const handleClick = (err: InvariantError) => {
     if (!err.entity) return;
@@ -194,20 +252,40 @@ export function ValidationPanel({ model, currentOpd, errors, visualFindings = []
     dispatch({ tag: "selectThing", thingId: entity });
   };
 
+  const navigateToReportFinding = (opdId: string, finding: VisualFindingReportItem) => {
+    dispatch({ tag: "selectOpd", opdId });
+    if (finding.primaryEntity) dispatch({ tag: "selectThing", thingId: finding.primaryEntity });
+    onClose();
+  };
+
   return (
     <div className="validation-panel">
       <div className="validation-panel__header">
         <span className="validation-panel__title">Validation</span>
         <button className="validation-panel__close" onClick={onClose}>×</button>
       </div>
+      <div className="validation-panel__tabs">
+        <button className={`validation-panel__tab${tab === "issues" ? " validation-panel__tab--active" : ""}`} onClick={() => setTab("issues")}>Issues</button>
+        <button className={`validation-panel__tab${tab === "visual-report" ? " validation-panel__tab--active" : ""}`} onClick={() => setTab("visual-report")}>Visual Report</button>
+      </div>
       <div className="validation-panel__summary">
         <span className="validation-panel__chip validation-panel__chip--error">{errorCount} errors</span>
         <span className="validation-panel__chip validation-panel__chip--warning">{warningCount} warnings</span>
         <span className="validation-panel__chip validation-panel__chip--info">{infoCount} info</span>
-        <span className="validation-panel__chip validation-panel__chip--visual">{filteredVisualFindings.length} visual</span>
-        {visualErrorCount > 0 && <span className="validation-panel__chip validation-panel__chip--error">{visualErrorCount} visual errors</span>}
-        {visualWarningCount > 0 && <span className="validation-panel__chip validation-panel__chip--warning">{visualWarningCount} visual warnings</span>}
-        {visualInfoCount > 0 && <span className="validation-panel__chip validation-panel__chip--info">{visualInfoCount} visual info</span>}
+        <span className="validation-panel__chip validation-panel__chip--visual">{tab === "issues" ? filteredVisualFindings.length : filteredReportOpds.reduce((sum, opd) => sum + opd.findings.length, 0)} visual</span>
+        {tab === "issues" ? (
+          <>
+            {visualErrorCount > 0 && <span className="validation-panel__chip validation-panel__chip--error">{visualErrorCount} visual errors</span>}
+            {visualWarningCount > 0 && <span className="validation-panel__chip validation-panel__chip--warning">{visualWarningCount} visual warnings</span>}
+            {visualInfoCount > 0 && <span className="validation-panel__chip validation-panel__chip--info">{visualInfoCount} visual info</span>}
+          </>
+        ) : (
+          <>
+            <span className="validation-panel__chip validation-panel__chip--visual">Avg {visualReport.avgScore}</span>
+            <span className="validation-panel__chip validation-panel__chip--visual">Best {visualReport.bestScore}</span>
+            <span className="validation-panel__chip validation-panel__chip--visual">Worst {visualReport.worstScore}</span>
+          </>
+        )}
       </div>
       <div className="validation-panel__filters">
         <div className="validation-panel__filter-group">
@@ -219,59 +297,106 @@ export function ValidationPanel({ model, currentOpd, errors, visualFindings = []
         <div className="validation-panel__filter-group">
           <button className={`validation-panel__filter-btn${scopeFilter === "current-opd" ? " validation-panel__filter-btn--active" : ""}`} onClick={() => setScopeFilter("current-opd")}>Current OPD</button>
           <button className={`validation-panel__filter-btn${scopeFilter === "all" ? " validation-panel__filter-btn--active" : ""}`} onClick={() => setScopeFilter("all")}>Whole model</button>
+          {tab === "visual-report" && <button className="validation-panel__filter-btn" onClick={downloadMarkdown}>Export MD</button>}
         </div>
       </div>
       <div className="validation-panel__list">
-        {filteredErrors.length === 0 && filteredVisualFindings.length === 0 ? (
-          <div className="validation-panel__ok">No issues for current filters</div>
-        ) : (
-          <>
-            {filteredErrors.length > 0 && (
-              <div className="validation-panel__section">
-                <div className="validation-panel__section-title">Model validation</div>
-                {filteredErrors.map((err, i) => (
-                  <div
-                    key={`err-${i}`}
-                    className={`validation-panel__item validation-panel__item--${err.severity ?? "error"}${err.entity ? " validation-panel__item--clickable" : ""}`}
-                    onClick={() => handleClick(err)}
-                  >
-                    <span className="validation-panel__code">{err.code}</span>
-                    <span className="validation-panel__msg">{formatValidationMessage(err)}</span>
-                    {err.entity && <span className="validation-panel__entity">{entityLabel(model, err.entity)}</span>}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {groupedVisualFindings.length > 0 && (
-              <div className="validation-panel__section">
-                <div className="validation-panel__section-title">Visual validation</div>
-                {groupedVisualFindings.map((group) => (
-                  <div key={group.kind} className="validation-panel__subsection">
-                    <div className="validation-panel__subsection-title">
-                      {visualFindingKindLabel(group.kind)}
-                      <span className="validation-panel__subsection-count">{group.items.length}</span>
+        {tab === "issues" ? (
+          filteredErrors.length === 0 && filteredVisualFindings.length === 0 ? (
+            <div className="validation-panel__ok">No issues for current filters</div>
+          ) : (
+            <>
+              {filteredErrors.length > 0 && (
+                <div className="validation-panel__section">
+                  <div className="validation-panel__section-title">Model validation</div>
+                  {filteredErrors.map((err, i) => (
+                    <div
+                      key={`err-${i}`}
+                      className={`validation-panel__item validation-panel__item--${err.severity ?? "error"}${err.entity ? " validation-panel__item--clickable" : ""}`}
+                      onClick={() => handleClick(err)}
+                    >
+                      <span className="validation-panel__code">{err.code}</span>
+                      <span className="validation-panel__msg">{formatValidationMessage(err)}</span>
+                      {err.entity && <span className="validation-panel__entity">{entityLabel(model, err.entity)}</span>}
                     </div>
-                    {group.items.map((finding, i) => {
-                      const entity = visualFindingEntity(finding);
-                      const severity = visualFindingSeverity(finding);
+                  ))}
+                </div>
+              )}
+
+              {groupedVisualFindings.length > 0 && (
+                <div className="validation-panel__section">
+                  <div className="validation-panel__section-title">Visual validation</div>
+                  {groupedVisualFindings.map((group) => (
+                    <div key={group.kind} className="validation-panel__subsection">
+                      <div className="validation-panel__subsection-title">
+                        {visualFindingKindLabel(group.kind)}
+                        <span className="validation-panel__subsection-count">{group.items.length}</span>
+                      </div>
+                      {group.items.map((finding, i) => {
+                        const entity = visualFindingEntity(finding);
+                        const severity = visualFindingSeverity(finding);
+                        return (
+                          <div
+                            key={`${group.kind}-${i}`}
+                            className={`validation-panel__item validation-panel__item--${severity}${entity ? " validation-panel__item--clickable" : ""}`}
+                            onClick={() => handleVisualClick(finding)}
+                          >
+                            <span className="validation-panel__code">VISUAL</span>
+                            <span className="validation-panel__msg">{visualFindingLabel(model, finding)}</span>
+                            {entity && <span className="validation-panel__entity">{thingLabel(model, entity)}</span>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )
+        ) : (
+          filteredReportOpds.length === 0 ? (
+            <div className="validation-panel__ok">No visual report findings for current filters</div>
+          ) : (
+            <div className="validation-panel__report-list">
+              {filteredReportOpds.map((opd) => (
+                <details key={opd.opdId} open={opd.opdId === currentOpd || opd.errors > 0} className="validation-panel__report-card">
+                  <summary className="validation-panel__report-summary">
+                    <div>
+                      <div className="validation-panel__report-name">{opd.name}</div>
+                      <div className="validation-panel__report-meta">
+                        Grade <span style={{ color: gradeColor(opd.grade), fontWeight: 700 }}>{opd.grade}</span> · Score {opd.score} · {opd.findings.length} findings
+                      </div>
+                    </div>
+                    <div className="validation-panel__report-metrics">{opd.errors}/{opd.warnings}/{opd.info}</div>
+                  </summary>
+                  <div className="validation-panel__report-findings">
+                    {opd.findings.map((finding, index) => {
+                      const clickable = Boolean(finding.primaryEntity);
                       return (
-                        <div
-                          key={`${group.kind}-${i}`}
-                          className={`validation-panel__item validation-panel__item--${severity}${entity ? " validation-panel__item--clickable" : ""}`}
-                          onClick={() => handleVisualClick(finding)}
+                        <button
+                          key={`${opd.opdId}-${finding.kind}-${index}`}
+                          type="button"
+                          className="validation-panel__report-item"
+                          onClick={() => clickable ? navigateToReportFinding(opd.opdId, finding) : undefined}
+                          disabled={!clickable}
+                          title={clickable ? "Go to affected thing in this OPD" : "Model-level finding without a direct entity target"}
                         >
-                          <span className="validation-panel__code">VISUAL</span>
-                          <span className="validation-panel__msg">{visualFindingLabel(model, finding)}</span>
-                          {entity && <span className="validation-panel__entity">{thingLabel(model, entity)}</span>}
-                        </div>
+                          <div className="validation-panel__report-item-head">
+                            <div>
+                              <span className="validation-panel__report-severity" style={{ color: severityColor(finding.severity) }}>{finding.severity}</span>
+                              <span className="validation-panel__report-kind">{finding.kind}</span>
+                            </div>
+                            {finding.primaryEntity && <span className="validation-panel__entity">{thingLabel(model, finding.primaryEntity)}</span>}
+                          </div>
+                          <div className="validation-panel__msg">{finding.summary}</div>
+                        </button>
                       );
                     })}
                   </div>
-                ))}
-              </div>
-            )}
-          </>
+                </details>
+              ))}
+            </div>
+          )
         )}
       </div>
     </div>
