@@ -1830,16 +1830,17 @@ export function validate(model: Model): InvariantError[] {
 
   // I-GERUND: Process names should use accepted process naming forms.
   // English: some word in the process name may use gerund (-ing).
-  // Spanish: the first word may use gerund (-ando/-iendo) or nominalized action form (-ción).
+  // Spanish: the first word may use infinitive (-ar/-er/-ir), gerund (-ando/-iendo),
+  //          or nominalized action form (-ción/-miento).
   for (const [id, thing] of model.things) {
     if (thing.kind !== "process") continue;
     const name = thing.name.trim();
     const words = name.split(/\s+/).filter(Boolean);
     const firstWord = words[0] ?? "";
     const englishGerundAnywhere = words.some((word) => /ing$/i.test(word));
-    const spanishProcessFirstWord = /(?:ando|iendo|ción)$/i.test(firstWord);
+    const spanishProcessFirstWord = /(?:ar|er|ir|ando|iendo|ción|miento)$/i.test(firstWord);
     if (!(englishGerundAnywhere || spanishProcessFirstWord)) {
-      errors.push({ code: "I-GERUND", severity: "warning", message: `Process "${name}" should use accepted process naming (English: a word ending in -ing; Spanish: first word ending in -ando/-iendo/-ción)`, entity: id });
+      errors.push({ code: "I-GERUND", severity: "warning", message: `Process "${name}" should use accepted process naming (English: a word ending in -ing; Spanish: first word ending in -ar/-er/-ir/-ando/-iendo/-ción/-miento)`, entity: id });
     }
   }
 
@@ -1858,11 +1859,16 @@ export function validate(model: Model): InvariantError[] {
   // I-SINGULAR: Plural names should use Set/Group suffix
   const PLURAL_PATTERNS = /(?:s|es|ies)$/i;
   const VALID_SUFFIXES = /(?:Set|Group|Series|Class|Collection|Suite|Network|Line)$/;
+  // OPM convention: "Grupo de X" / "Conjunto de X" are valid collective names
+  const VALID_COLLECTIVE_ES = /^(?:Grupo|Conjunto|Equipo|Red|Plan|Manual|Área)\b/;
   for (const [id, thing] of model.things) {
     const name = thing.name.trim();
     if (PLURAL_PATTERNS.test(name) && !VALID_SUFFIXES.test(name) && name.length > 3) {
-      // Skip common non-plural words ending in 's'
-      if (!/(?:bus|gas|atlas|status|process|analysis|basis|crisis|diagnosis|readiness|ness|ams|ics|ous)$/i.test(name)) {
+      // Skip common non-plural words ending in 's' (EN and ES)
+      if (!/(?:bus|gas|atlas|status|process|analysis|basis|crisis|diagnosis|readiness|ness|ams|ics|ous|epicrisis|is)$/i.test(name)
+        && !VALID_COLLECTIVE_ES.test(name)
+        // Spanish: skip words ending in common singular suffixes
+        && !/(?:des|res|les|nes|iones|ches|mes|jes)$/i.test(name)) {
         errors.push({ code: "I-SINGULAR", severity: "info", message: `"${name}" may be plural — use Set/Group suffix per OPM Singular Name Principle`, entity: id });
       }
     }

@@ -386,9 +386,8 @@ const links = [
   link("instrument", "proc-domiciliary-hospitalizing", "obj-communication-system"),
   link("instrument", "proc-domiciliary-hospitalizing", "obj-transport-vehicle"),
   link("instrument", "proc-domiciliary-hospitalizing", "obj-admin-infrastructure"),
-  link("consumption", "obj-clinical-supply", "proc-domiciliary-hospitalizing"),
-  link("consumption", "obj-medication", "proc-domiciliary-hospitalizing"),
-  link("result", "proc-domiciliary-hospitalizing", "obj-clinical-record"),
+  // consumption/result distributed to subprocesses per ISO 19450 §7.4
+  // (NOT on outer contour of in-zoomed process)
   link("tagged", "obj-patient-home", "proc-domiciliary-hospitalizing", { tag: "hosts" }),
   link("tagged", "obj-current-regulation", "obj-hodom-system", { tag: "governs" }),
   link("tagged", "obj-inpatient-facility", "proc-domiciliary-hospitalizing", { tag: "refers" }),
@@ -402,30 +401,24 @@ const links = [
   link("effect", "proc-eligibility-evaluating", "obj-support-network", { source_state: "state-sn-insufficient", target_state: "state-sn-verified" }),
   // Patient Admitting
   link("effect", "proc-patient-admitting", "obj-informed-consent", { source_state: "state-consent-unsigned", target_state: "state-consent-signed" }),
-  link("result", "proc-patient-admitting", "obj-admission-form"),
-  link("result", "proc-patient-admitting", "obj-social-report"),
-  link("consumption", "obj-clinical-supply", "proc-patient-admitting"),
+  // Patient Admitting consumption/result distributed to SD1.2 subprocesses
   // Care Planning
-  link("result", "proc-care-planning", "obj-therapeutic-plan", { target_state: "state-tp-draft" }),
-  link("result", "proc-care-planning", "obj-nursing-care-plan"),
+  // Care Planning result distributed to SD1.3 subprocesses
   // Therapeutic Plan Executing
   link("instrument", "proc-therapeutic-plan-executing", "obj-therapeutic-plan", { source_state: "state-tp-active" }),
   link("instrument", "proc-therapeutic-plan-executing", "obj-nursing-care-plan", { source_state: "state-ncp-active" }),
-  link("consumption", "obj-clinical-supply", "proc-therapeutic-plan-executing"),
-  link("consumption", "obj-medication", "proc-therapeutic-plan-executing"),
+  // Therapeutic Plan Executing consumption distributed to SD1.4 subprocesses
   link("instrument", "proc-therapeutic-plan-executing", "obj-medical-equipment"),
   link("instrument", "proc-therapeutic-plan-executing", "obj-transport-vehicle"),
   // Clinical Evolution Monitoring
   link("effect", "proc-clinical-evolution-monitoring", "obj-clinical-condition", { source_state: "state-acute-reacutized", target_state: "state-recovered" }),
-  link("result", "proc-clinical-evolution-monitoring", "obj-domiciliary-clinical-summary"),
-  link("result", "proc-clinical-evolution-monitoring", "obj-continuity-decision"),
+  // Clinical Evolution Monitoring result distributed to SD1.5 subprocesses
   // Patient Discharging
   link("effect", "proc-patient-discharging", "obj-hospitalization-status", { source_state: "state-hs-active", target_state: "state-hs-discharged" }),
   link("effect", "proc-patient-discharging", "obj-therapeutic-plan", { source_state: "state-tp-active", target_state: "state-tp-completed" }),
   link("effect", "proc-patient-discharging", "obj-nursing-care-plan", { source_state: "state-ncp-active", target_state: "state-ncp-completed" }),
-  link("result", "proc-patient-discharging", "obj-epicrisis"),
+  // Patient Discharging result distributed to SD1.6 subprocesses
   link("result", "proc-patient-discharging", "obj-satisfaction-survey"),
-  link("result", "proc-patient-discharging", "obj-clinical-record"),
   // Agent links for all SD1 subprocesses
   link("agent", "obj-healthcare-team", "proc-eligibility-evaluating"),
   link("agent", "obj-healthcare-team", "proc-patient-admitting"),
@@ -464,6 +457,7 @@ const links = [
   link("instrument", "proc-patient-documentation-delivering", "obj-informed-consent", { source_state: "state-consent-signed" }),
   link("result", "proc-patient-documentation-delivering", "obj-care-indication-document"),
   link("agent", "obj-clinical-nurse", "proc-patient-documentation-delivering"),
+  link("effect", "proc-referral-facility-coordinating", "obj-patient-group"),
   link("instrument", "proc-referral-facility-coordinating", "obj-inpatient-facility"),
   link("instrument", "proc-referral-facility-coordinating", "obj-communication-system"),
   link("agent", "obj-coordination-professional", "proc-referral-facility-coordinating"),
