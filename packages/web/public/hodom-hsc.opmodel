@@ -4,216 +4,216 @@
     "name": "HODOM HSC — Sistema de Hospitalización Domiciliaria",
     "description": "Modelo OPM del Sistema de Hospitalización Domiciliaria (HODOM) conforme a ISO/PAS 19450. Hospital de San Carlos. 16 OPDs, ~235 entidades.",
     "system_type": "socio-technical",
-    "created": "2026-03-31T14:29:47.553Z",
-    "modified": "2026-03-31T14:29:47.553Z"
+    "created": "2026-03-31T15:17:09.201Z",
+    "modified": "2026-03-31T15:17:09.201Z"
   },
   "settings": {
     "autosave_interval_s": 300,
     "methodology_coaching": true,
-    "opl_language": "en",
+    "opl_language": "es",
     "primary_essence": "physical"
   },
   "things": [
     {
       "id": "proc-domiciliary-hospitalizing",
       "kind": "process",
-      "name": "Domiciliary Hospitalizing",
+      "name": "Hospitalizar en Domicilio",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-patient-group",
       "kind": "object",
-      "name": "Patient Group",
+      "name": "Grupo de Pacientes",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-clinical-condition",
       "kind": "object",
-      "name": "Clinical Condition",
+      "name": "Condición Clínica",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-hodom-system",
       "kind": "object",
-      "name": "Domiciliary Hospitalization System",
+      "name": "Sistema de Hospitalización Domiciliaria",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-healthcare-team",
       "kind": "object",
-      "name": "Healthcare Team",
+      "name": "Equipo de Salud",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-medical-equipment",
       "kind": "object",
-      "name": "Medical Equipment",
+      "name": "Equipamiento Médico",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-communication-system",
       "kind": "object",
-      "name": "Communication System",
+      "name": "Sistema de Comunicación",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-transport-vehicle",
       "kind": "object",
-      "name": "Transport Vehicle",
+      "name": "Vehículo de Transporte",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-admin-infrastructure",
       "kind": "object",
-      "name": "Administrative Infrastructure",
+      "name": "Infraestructura Administrativa",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-clinical-supply",
       "kind": "object",
-      "name": "Clinical Supply",
+      "name": "Insumo Clínico",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-medication",
       "kind": "object",
-      "name": "Medication",
+      "name": "Medicamento",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-clinical-record",
       "kind": "object",
-      "name": "Clinical Record",
+      "name": "Ficha Clínica",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-patient-home",
       "kind": "object",
-      "name": "Patient Home",
+      "name": "Domicilio del Paciente",
       "essence": "physical",
       "affiliation": "environmental"
     },
     {
       "id": "obj-inpatient-facility",
       "kind": "object",
-      "name": "Inpatient Facility",
+      "name": "Establecimiento de Atención Cerrada",
       "essence": "physical",
       "affiliation": "environmental"
     },
     {
       "id": "obj-current-regulation",
       "kind": "object",
-      "name": "Current Regulation",
+      "name": "Normativa Vigente",
       "essence": "informatical",
       "affiliation": "environmental"
     },
     {
       "id": "proc-inpatient-bed-occupying",
       "kind": "process",
-      "name": "Inpatient Bed Occupying",
+      "name": "Ocupar Cama Hospitalaria",
       "essence": "physical",
       "affiliation": "environmental"
     },
     {
       "id": "proc-eligibility-evaluating",
       "kind": "process",
-      "name": "Eligibility Evaluating",
+      "name": "Evaluar Elegibilidad",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "proc-patient-admitting",
       "kind": "process",
-      "name": "Patient Admitting",
+      "name": "Ingresar Paciente",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "proc-care-planning",
       "kind": "process",
-      "name": "Care Planning",
+      "name": "Planificar Atención",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "proc-therapeutic-plan-executing",
       "kind": "process",
-      "name": "Therapeutic Plan Executing",
+      "name": "Ejecutar Plan Terapéutico",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "proc-clinical-evolution-monitoring",
       "kind": "process",
-      "name": "Clinical Evolution Monitoring",
+      "name": "Monitorear Evolución Clínica",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "proc-patient-discharging",
       "kind": "process",
-      "name": "Patient Discharging",
+      "name": "Egresar de Hospitalización Domiciliaria",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-eligibility-status",
       "kind": "object",
-      "name": "Eligibility Status",
+      "name": "Estado de Elegibilidad",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-informed-consent",
       "kind": "object",
-      "name": "Informed Consent",
+      "name": "Consentimiento Informado",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-therapeutic-plan",
       "kind": "object",
-      "name": "Therapeutic Plan",
+      "name": "Plan Terapéutico",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-nursing-care-plan",
       "kind": "object",
-      "name": "Nursing Care Plan",
+      "name": "Plan de Cuidados de Enfermería",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-social-report",
       "kind": "object",
-      "name": "Social Report",
+      "name": "Informe Social",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-admission-form",
       "kind": "object",
-      "name": "Admission Form",
+      "name": "Formulario de Ingreso",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-domiciliary-clinical-summary",
       "kind": "object",
-      "name": "Domiciliary Clinical Summary",
+      "name": "Resumen Clínico Domiciliario",
       "essence": "informatical",
       "affiliation": "systemic"
     },
@@ -227,952 +227,952 @@
     {
       "id": "obj-satisfaction-survey",
       "kind": "object",
-      "name": "Satisfaction Survey",
+      "name": "Encuesta de Satisfacción",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-continuity-decision",
       "kind": "object",
-      "name": "Continuity Decision",
+      "name": "Decisión de Continuidad",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-hospitalization-status",
       "kind": "object",
-      "name": "Hospitalization Status",
+      "name": "Estado de Hospitalización",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-caregiver",
       "kind": "object",
-      "name": "Caregiver",
+      "name": "Cuidador",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-support-network",
       "kind": "object",
-      "name": "Support Network",
+      "name": "Red de Apoyo",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "proc-clinical-condition-evaluating",
       "kind": "process",
-      "name": "Clinical Condition Evaluating",
+      "name": "Evaluar Condición Clínica",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "proc-home-condition-evaluating",
       "kind": "process",
-      "name": "Home Condition Evaluating",
+      "name": "Evaluar Condiciones del Domicilio",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "proc-support-network-verifying",
       "kind": "process",
-      "name": "Support Network Verifying",
+      "name": "Verificar Red de Apoyo",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "proc-informed-consent-obtaining",
       "kind": "process",
-      "name": "Informed Consent Obtaining",
+      "name": "Obtener Consentimiento Informado",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-home-condition",
       "kind": "object",
-      "name": "Home Condition",
+      "name": "Condición del Domicilio",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-rights-duties-charter",
       "kind": "object",
-      "name": "Rights and Duties Charter",
+      "name": "Carta de Derechos y Deberes",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-attending-physician",
       "kind": "object",
-      "name": "Attending Physician",
+      "name": "Médico de Atención Directa",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-social-worker",
       "kind": "object",
-      "name": "Social Worker",
+      "name": "Trabajador Social",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-clinical-nurse",
       "kind": "object",
-      "name": "Clinical Nurse",
+      "name": "Enfermero Clínico",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "proc-admission-registering",
       "kind": "process",
-      "name": "Admission Registering",
+      "name": "Registrar Ingreso",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "proc-social-diagnosis-elaborating",
       "kind": "process",
-      "name": "Social Diagnosis Elaborating",
+      "name": "Elaborar Diagnóstico Social",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "proc-patient-documentation-delivering",
       "kind": "process",
-      "name": "Patient Documentation Delivering",
+      "name": "Entregar Documentación al Paciente",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "proc-referral-facility-coordinating",
       "kind": "process",
-      "name": "Referral Facility Coordinating",
+      "name": "Coordinar con Establecimiento Derivador",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-socioeconomic-status",
       "kind": "object",
-      "name": "Socioeconomic Status",
+      "name": "Situación Socioeconómica",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-care-indication-document",
       "kind": "object",
-      "name": "Care Indication Document",
+      "name": "Documento de Indicaciones de Cuidado",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-administrative-staff",
       "kind": "object",
-      "name": "Administrative Staff",
+      "name": "Personal Administrativo",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-coordination-professional",
       "kind": "object",
-      "name": "Coordination Professional",
+      "name": "Profesional Coordinador",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "proc-therapeutic-plan-elaborating",
       "kind": "process",
-      "name": "Therapeutic Plan Elaborating",
+      "name": "Elaborar Plan Terapéutico",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "proc-nursing-care-plan-elaborating",
       "kind": "process",
-      "name": "Nursing Care Plan Elaborating",
+      "name": "Elaborar Plan de Cuidados de Enfermería",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "proc-home-visit-scheduling",
       "kind": "process",
-      "name": "Home Visit Scheduling",
+      "name": "Programar Visitas Domiciliarias",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "proc-transport-route-programming",
       "kind": "process",
-      "name": "Transport Route Programming",
+      "name": "Programar Rutas de Transporte",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-visit-schedule",
       "kind": "object",
-      "name": "Visit Schedule",
+      "name": "Programa de Visitas",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-transport-route",
       "kind": "object",
-      "name": "Transport Route",
+      "name": "Ruta de Transporte",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "proc-medical-visit-performing",
       "kind": "process",
-      "name": "Medical Visit Performing",
+      "name": "Realizar Visita Médica",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "proc-nursing-care-executing",
       "kind": "process",
-      "name": "Nursing Care Executing",
+      "name": "Ejecutar Cuidados de Enfermería",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "proc-kinesiological-therapy-executing",
       "kind": "process",
-      "name": "Kinesiological Therapy Executing",
+      "name": "Ejecutar Terapia Kinesiológica",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "proc-medication-administering",
       "kind": "process",
-      "name": "Medication Administering",
+      "name": "Administrar Medicamentos",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "proc-remote-care-regulating",
       "kind": "process",
-      "name": "Remote Care Regulating",
+      "name": "Regular Atención a Distancia",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "proc-patient-caregiver-educating",
       "kind": "process",
-      "name": "Patient and Caregiver Educating",
+      "name": "Educar a Paciente y Cuidador",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-motor-therapy",
       "kind": "object",
-      "name": "Motor Therapy",
+      "name": "Terapia Motora",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-respiratory-therapy",
       "kind": "object",
-      "name": "Respiratory Therapy",
+      "name": "Terapia Respiratoria",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-prescription",
       "kind": "object",
-      "name": "Prescription",
+      "name": "Receta Médica",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-telehealth-record",
       "kind": "object",
-      "name": "Telehealth Record",
+      "name": "Registro de Telesalud",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-self-care-knowledge",
       "kind": "object",
-      "name": "Self-Care Knowledge",
+      "name": "Conocimiento de Autocuidado",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-kinesiologist",
       "kind": "object",
-      "name": "Kinesiologist",
+      "name": "Kinesiólogo",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-nursing-technician",
       "kind": "object",
-      "name": "Nursing Technician",
+      "name": "Técnico de Enfermería",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-regulating-physician",
       "kind": "object",
-      "name": "Regulating Physician",
+      "name": "Médico Regulador",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "proc-vital-signs-evaluating",
       "kind": "process",
-      "name": "Vital Signs Evaluating",
+      "name": "Evaluar Signos Vitales",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "proc-clinical-record-updating",
       "kind": "process",
-      "name": "Clinical Record Updating",
+      "name": "Actualizar Registro Clínico",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "proc-patient-categorizing",
       "kind": "process",
-      "name": "Patient Categorizing",
+      "name": "Categorizar Paciente",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "proc-continuity-deciding",
       "kind": "process",
-      "name": "Continuity Deciding",
+      "name": "Decidir Continuidad",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-vital-signs-data",
       "kind": "object",
-      "name": "Vital Signs Data",
+      "name": "Datos de Signos Vitales",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-blood-pressure",
       "kind": "object",
-      "name": "Blood Pressure",
+      "name": "Presión Arterial",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-heart-rate",
       "kind": "object",
-      "name": "Heart Rate",
+      "name": "Frecuencia Cardíaca",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-respiratory-rate",
       "kind": "object",
-      "name": "Respiratory Rate",
+      "name": "Frecuencia Respiratoria",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-oxygen-saturation",
       "kind": "object",
-      "name": "Oxygen Saturation",
+      "name": "Saturación de Oxígeno",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-patient-category",
       "kind": "object",
-      "name": "Patient Category",
+      "name": "Categoría del Paciente",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "proc-medical-discharge",
       "kind": "process",
-      "name": "Medical Discharge",
+      "name": "Egresar por Alta Médica",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "proc-hospital-readmission-discharge",
       "kind": "process",
-      "name": "Hospital Readmission Discharge",
+      "name": "Egresar por Reingreso Hospitalario",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "proc-death-discharge",
       "kind": "process",
-      "name": "Death Discharge",
+      "name": "Egresar por Fallecimiento",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "proc-voluntary-withdrawal-discharge",
       "kind": "process",
-      "name": "Voluntary Withdrawal Discharge",
+      "name": "Egresar por Renuncia Voluntaria",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "proc-disciplinary-discharge",
       "kind": "process",
-      "name": "Disciplinary Discharge",
+      "name": "Egresar por Alta Disciplinaria",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-clinical-instability",
       "kind": "object",
-      "name": "Clinical Instability",
+      "name": "Inestabilidad Clínica",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-death-protocol",
       "kind": "object",
-      "name": "Death Protocol",
+      "name": "Protocolo de Fallecimiento",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-withdrawal-statement",
       "kind": "object",
-      "name": "Withdrawal Statement",
+      "name": "Declaración de Retiro",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-treatment-adherence",
       "kind": "object",
-      "name": "Treatment Adherence",
+      "name": "Adherencia al Tratamiento",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-technical-director",
       "kind": "object",
-      "name": "Technical Director",
+      "name": "Director Técnico",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-clinical-experience",
       "kind": "object",
-      "name": "Clinical Experience",
+      "name": "Experiencia Clínica",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-postgraduate-management-training",
       "kind": "object",
-      "name": "Postgraduate Management Training",
+      "name": "Formación de Postgrado en Gestión",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-iaas-prevention-course",
       "kind": "object",
-      "name": "IAAS Prevention Course",
+      "name": "Curso de Prevención de IAAS",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-weekly-dedication",
       "kind": "object",
-      "name": "Weekly Dedication",
+      "name": "Dedicación Semanal",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-management-training",
       "kind": "object",
-      "name": "Management Training",
+      "name": "Formación en Gestión",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-iaas-course",
       "kind": "object",
-      "name": "IAAS Course",
+      "name": "Curso IAAS",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-bls-certification",
       "kind": "object",
-      "name": "BLS Certification",
+      "name": "Certificación SVB",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-regulation-experience",
       "kind": "object",
-      "name": "Regulation Experience",
+      "name": "Experiencia en Regulación",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-telephone-system",
       "kind": "object",
-      "name": "Telephone System",
+      "name": "Sistema Telefónico",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-it-system",
       "kind": "object",
-      "name": "IT System",
+      "name": "Sistema Informático",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-electrical-backup",
       "kind": "object",
-      "name": "Electrical Backup System",
+      "name": "Respaldo Eléctrico",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-clinical-archive-area",
       "kind": "object",
-      "name": "Clinical Archive Area",
+      "name": "Área de Archivo Clínico",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-pharmacy",
       "kind": "object",
-      "name": "Pharmacy or Authorized Dispensary",
+      "name": "Farmacia o Botiquín Autorizado",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-supply-storage",
       "kind": "object",
-      "name": "Supply Storage",
+      "name": "Bodega de Insumos",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-waste-disposal-area",
       "kind": "object",
-      "name": "Waste Disposal Area",
+      "name": "Área de Disposición de Residuos",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-cleaning-supply-room",
       "kind": "object",
-      "name": "Cleaning Supply Room",
+      "name": "Recinto de Aseo",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-staff-welfare-area",
       "kind": "object",
-      "name": "Staff Welfare Area",
+      "name": "Área de Bienestar del Personal",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-vehicle-parking",
       "kind": "object",
-      "name": "Vehicle Parking",
+      "name": "Estacionamiento de Vehículos",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-evacuation-signage",
       "kind": "object",
-      "name": "Evacuation Signage System",
+      "name": "Sistema de Señalización y Evacuación",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-availability",
       "kind": "object",
-      "name": "Availability",
+      "name": "Disponibilidad",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-internet-connectivity",
       "kind": "object",
-      "name": "Internet Connectivity",
+      "name": "Conectividad Internet",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-sec-authorization",
       "kind": "object",
-      "name": "SEC Authorization",
+      "name": "Autorización SEC",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-security-level",
       "kind": "object",
-      "name": "Security Level",
+      "name": "Nivel de Seguridad",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-cold-chain-compliance",
       "kind": "object",
-      "name": "Cold Chain Compliance",
+      "name": "Cumplimiento de Cadena de Frío",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-temperature-control",
       "kind": "object",
-      "name": "Temperature Control",
+      "name": "Control de Temperatura",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-reas-compliance",
       "kind": "object",
-      "name": "REAS Compliance",
+      "name": "Cumplimiento REAS",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-dining-access",
       "kind": "object",
-      "name": "Dining Access",
+      "name": "Acceso a Alimentación",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-hygiene-facilities",
       "kind": "object",
-      "name": "Hygiene Facilities",
+      "name": "Servicios Higiénicos",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-lockers",
       "kind": "object",
-      "name": "Lockers",
+      "name": "Casilleros",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-break-room",
       "kind": "object",
-      "name": "Break Room",
+      "name": "Sala de Estar",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-bp-monitor",
       "kind": "object",
-      "name": "Blood Pressure Monitor",
+      "name": "Monitor de Presión Arterial",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-pulse-oximeter",
       "kind": "object",
-      "name": "Pulse Oximeter",
+      "name": "Oxímetro de Pulso",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-cardiac-monitor",
       "kind": "object",
-      "name": "Cardiac Monitor",
+      "name": "Monitor Cardíaco",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-thermometer",
       "kind": "object",
-      "name": "Thermometer",
+      "name": "Termómetro",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-defibrillator",
       "kind": "object",
-      "name": "Defibrillator",
+      "name": "Desfibrilador",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-specialty-instruments",
       "kind": "object",
-      "name": "Specialty Instrument Set",
+      "name": "Conjunto de Instrumentos Especializados",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-maintenance-status",
       "kind": "object",
-      "name": "Maintenance Status",
+      "name": "Estado de Mantención",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-sanitary-authorization",
       "kind": "object",
-      "name": "Sanitary Authorization",
+      "name": "Autorización Sanitaria",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-documentation-system",
       "kind": "object",
-      "name": "Documentation System",
+      "name": "Sistema Documental",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-internal-org-manual",
       "kind": "object",
-      "name": "Internal Organization Manual",
+      "name": "Manual de Organización Interna",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-clinical-protocol-set",
       "kind": "object",
-      "name": "Clinical Protocol Set",
+      "name": "Conjunto de Protocolos Clínicos",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-procedures-manual",
       "kind": "object",
-      "name": "Procedures Manual",
+      "name": "Manual de Procedimientos",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-waste-mgmt-protocol",
       "kind": "object",
-      "name": "Waste Management Protocol",
+      "name": "Protocolo de Manejo de Residuos",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-annual-training-plan",
       "kind": "object",
-      "name": "Annual Training Plan",
+      "name": "Plan Anual de Capacitación",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-organizational-chart",
       "kind": "object",
-      "name": "Organizational Chart",
+      "name": "Organigrama",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-role-definition-set",
       "kind": "object",
-      "name": "Role Definition Set",
+      "name": "Conjunto de Definiciones de Rol",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-schedule-definition",
       "kind": "object",
-      "name": "Schedule Definition",
+      "name": "Definición de Horarios",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-hygiene-regulation",
       "kind": "object",
-      "name": "Hygiene Regulation",
+      "name": "Reglamento de Higiene",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-admission-eval-protocol",
       "kind": "object",
-      "name": "Admission Evaluation Protocol",
+      "name": "Protocolo de Evaluación e Ingreso",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-visit-route-protocol",
       "kind": "object",
-      "name": "Visit and Route Scheduling Protocol",
+      "name": "Protocolo de Programación de Visitas y Rutas",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-categorization-discharge-protocol",
       "kind": "object",
-      "name": "Categorization and Discharge Protocol",
+      "name": "Protocolo de Categorización y Egreso",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-prescription-referral-protocol",
       "kind": "object",
-      "name": "Prescription and Referral Management Protocol",
+      "name": "Protocolo de Gestión de Recetas e Interconsultas",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-emergency-response-protocol",
       "kind": "object",
-      "name": "Emergency Response Protocol",
+      "name": "Protocolo de Actuación ante Emergencias",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-staff-aggression-protocol",
       "kind": "object",
-      "name": "Staff Aggression Protocol",
+      "name": "Protocolo ante Agresiones al Personal",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-peripheral-venous-proc",
       "kind": "object",
-      "name": "Peripheral Venous Line Procedure",
+      "name": "Procedimiento de Vía Venosa Periférica",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-central-venous-proc",
       "kind": "object",
-      "name": "Central Venous Line Procedure",
+      "name": "Procedimiento de Vía Venosa Central",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-urinary-catheter-proc",
       "kind": "object",
-      "name": "Urinary Catheter Procedure",
+      "name": "Procedimiento de Catéter Urinario",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-tracheostomy-proc",
       "kind": "object",
-      "name": "Tracheostomy Procedure",
+      "name": "Procedimiento de Traqueostomía",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-sample-collection-proc",
       "kind": "object",
-      "name": "Sample Collection Procedure",
+      "name": "Procedimiento de Toma de Muestras",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-isolation-precaution-proc",
       "kind": "object",
-      "name": "Isolation Precaution Procedure",
+      "name": "Procedimiento de Precauciones de Aislamiento",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-reas-decree-compliance",
       "kind": "object",
-      "name": "REAS Decree Compliance",
+      "name": "Cumplimiento Decreto REAS",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-iaas-training",
       "kind": "object",
-      "name": "IAAS Training",
+      "name": "Capacitación IAAS",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-bls-training",
       "kind": "object",
-      "name": "BLS Training",
+      "name": "Capacitación SVB",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-staff-induction-program",
       "kind": "object",
-      "name": "Staff Induction Program",
+      "name": "Programa de Inducción",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-humanized-care-training",
       "kind": "object",
-      "name": "Humanized Care Training",
+      "name": "Capacitación en Humanización del Cuidado",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-minimum-duration",
       "kind": "object",
-      "name": "Minimum Duration",
+      "name": "Duración Mínima",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "proc-sanitary-auth-managing",
       "kind": "process",
-      "name": "Sanitary Authorization Managing",
+      "name": "Gestionar Autorización Sanitaria",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "proc-quality-safety-managing",
       "kind": "process",
-      "name": "Quality and Safety Managing",
+      "name": "Gestionar Calidad y Seguridad",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "proc-staff-training-managing",
       "kind": "process",
-      "name": "Staff Training Managing",
+      "name": "Gestionar Capacitación del Personal",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "proc-supply-chain-managing",
       "kind": "process",
-      "name": "Supply Chain Managing",
+      "name": "Gestionar Cadena de Abastecimiento",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "proc-waste-managing",
       "kind": "process",
-      "name": "Waste Managing",
+      "name": "Gestionar Residuos",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "proc-equipment-maintenance-managing",
       "kind": "process",
-      "name": "Equipment Maintenance Managing",
+      "name": "Gestionar Mantención de Equipos",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-sanitary-auth-status",
       "kind": "object",
-      "name": "Sanitary Authorization Status",
+      "name": "Estado de Autorización Sanitaria",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-authorization-validity",
       "kind": "object",
-      "name": "Authorization Validity",
+      "name": "Vigencia de Autorización",
       "essence": "informatical",
       "affiliation": "systemic"
     },
@@ -1186,126 +1186,126 @@
     {
       "id": "obj-quality-level",
       "kind": "object",
-      "name": "Quality Level",
+      "name": "Nivel de Calidad",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-adverse-reaction-audit",
       "kind": "object",
-      "name": "Adverse Reaction Audit",
+      "name": "Auditoría de Reacciones Adversas",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-mortality-audit",
       "kind": "object",
-      "name": "Mortality Audit",
+      "name": "Auditoría de Mortalidad",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-training-compliance",
       "kind": "object",
-      "name": "Training Compliance",
+      "name": "Cumplimiento de Capacitación",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-biomedical-waste",
       "kind": "object",
-      "name": "Biomedical Waste",
+      "name": "Residuo Biomédico",
       "essence": "physical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-sharps-disposal-protocol",
       "kind": "object",
-      "name": "Sharps Disposal Protocol",
+      "name": "Protocolo de Desecho de Cortopunzantes",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-preventive-maintenance-program",
       "kind": "object",
-      "name": "Preventive Maintenance Program",
+      "name": "Programa de Mantención Preventiva",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-basic-services",
       "kind": "object",
-      "name": "Basic Services",
+      "name": "Servicios Básicos",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-telephony-access",
       "kind": "object",
-      "name": "Telephony Access",
+      "name": "Acceso a Telefonía",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-road-access",
       "kind": "object",
-      "name": "Road Access",
+      "name": "Acceso Vial",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-coverage-radius-compliance",
       "kind": "object",
-      "name": "Coverage Radius Compliance",
+      "name": "Cumplimiento de Radio de Cobertura",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-exclusion-condition",
       "kind": "object",
-      "name": "Exclusion Condition",
+      "name": "Condición de Exclusión",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-clinical-instability-exclusion",
       "kind": "object",
-      "name": "Clinical Instability Exclusion",
+      "name": "Exclusión por Inestabilidad Clínica",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-unestablished-diagnosis-exclusion",
       "kind": "object",
-      "name": "Unestablished Diagnosis Exclusion",
+      "name": "Exclusión por Diagnóstico no Establecido",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-decompensated-mental-health-exclusion",
       "kind": "object",
-      "name": "Decompensated Mental Health Exclusion",
+      "name": "Exclusión por Salud Mental Descompensada",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-unlisted-service-exclusion",
       "kind": "object",
-      "name": "Unlisted Service Exclusion",
+      "name": "Exclusión por Prestación no Listada",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-prior-disciplinary-exclusion",
       "kind": "object",
-      "name": "Prior Disciplinary Discharge Exclusion",
+      "name": "Exclusión por Alta Disciplinaria Previa",
       "essence": "informatical",
       "affiliation": "systemic"
     },
     {
       "id": "obj-continuity-of-care",
       "kind": "object",
-      "name": "Continuity of Care",
+      "name": "Continuidad de la Atención",
       "essence": "informatical",
       "affiliation": "systemic"
     }
@@ -1314,7 +1314,7 @@
     {
       "id": "state-acute-reacutized",
       "parent": "obj-clinical-condition",
-      "name": "acute/reacutized",
+      "name": "agudo/reagudizado",
       "initial": true,
       "final": false,
       "default": false
@@ -1322,7 +1322,7 @@
     {
       "id": "state-recovered",
       "parent": "obj-clinical-condition",
-      "name": "recovered",
+      "name": "recuperado",
       "initial": false,
       "final": true,
       "default": false
@@ -1330,7 +1330,7 @@
     {
       "id": "state-elig-pending",
       "parent": "obj-eligibility-status",
-      "name": "pending",
+      "name": "pendiente",
       "initial": true,
       "final": false,
       "default": false
@@ -1338,7 +1338,7 @@
     {
       "id": "state-elig-eligible",
       "parent": "obj-eligibility-status",
-      "name": "eligible",
+      "name": "elegible",
       "initial": false,
       "final": true,
       "default": false
@@ -1346,7 +1346,7 @@
     {
       "id": "state-elig-ineligible",
       "parent": "obj-eligibility-status",
-      "name": "ineligible",
+      "name": "no elegible",
       "initial": false,
       "final": false,
       "default": false
@@ -1354,7 +1354,7 @@
     {
       "id": "state-consent-unsigned",
       "parent": "obj-informed-consent",
-      "name": "unsigned",
+      "name": "sin firmar",
       "initial": true,
       "final": false,
       "default": false
@@ -1362,7 +1362,7 @@
     {
       "id": "state-consent-signed",
       "parent": "obj-informed-consent",
-      "name": "signed",
+      "name": "firmado",
       "initial": false,
       "final": true,
       "default": false
@@ -1370,7 +1370,7 @@
     {
       "id": "state-tp-draft",
       "parent": "obj-therapeutic-plan",
-      "name": "draft",
+      "name": "borrador",
       "initial": true,
       "final": false,
       "default": false
@@ -1378,7 +1378,7 @@
     {
       "id": "state-tp-active",
       "parent": "obj-therapeutic-plan",
-      "name": "active",
+      "name": "activo",
       "initial": false,
       "final": false,
       "default": true
@@ -1386,7 +1386,7 @@
     {
       "id": "state-tp-completed",
       "parent": "obj-therapeutic-plan",
-      "name": "completed",
+      "name": "completado",
       "initial": false,
       "final": true,
       "default": false
@@ -1394,7 +1394,7 @@
     {
       "id": "state-ncp-draft",
       "parent": "obj-nursing-care-plan",
-      "name": "draft",
+      "name": "borrador",
       "initial": true,
       "final": false,
       "default": false
@@ -1402,7 +1402,7 @@
     {
       "id": "state-ncp-active",
       "parent": "obj-nursing-care-plan",
-      "name": "active",
+      "name": "activo",
       "initial": false,
       "final": false,
       "default": false
@@ -1410,7 +1410,7 @@
     {
       "id": "state-ncp-completed",
       "parent": "obj-nursing-care-plan",
-      "name": "completed",
+      "name": "completado",
       "initial": false,
       "final": true,
       "default": false
@@ -1418,7 +1418,7 @@
     {
       "id": "state-cd-continue",
       "parent": "obj-continuity-decision",
-      "name": "continue-treatment",
+      "name": "continuar tratamiento",
       "initial": false,
       "final": false,
       "default": false
@@ -1426,7 +1426,7 @@
     {
       "id": "state-cd-discharge",
       "parent": "obj-continuity-decision",
-      "name": "proceed-discharge",
+      "name": "proceder egreso",
       "initial": false,
       "final": false,
       "default": false
@@ -1434,7 +1434,7 @@
     {
       "id": "state-hs-active",
       "parent": "obj-hospitalization-status",
-      "name": "active",
+      "name": "activo",
       "initial": true,
       "final": false,
       "default": false
@@ -1442,7 +1442,7 @@
     {
       "id": "state-hs-discharged",
       "parent": "obj-hospitalization-status",
-      "name": "discharged",
+      "name": "egresado",
       "initial": false,
       "final": true,
       "default": false
@@ -1450,7 +1450,7 @@
     {
       "id": "state-caregiver-available",
       "parent": "obj-caregiver",
-      "name": "available",
+      "name": "disponible",
       "initial": false,
       "final": false,
       "default": false
@@ -1458,7 +1458,7 @@
     {
       "id": "state-caregiver-unavailable",
       "parent": "obj-caregiver",
-      "name": "unavailable",
+      "name": "no disponible",
       "initial": false,
       "final": false,
       "default": false
@@ -1466,7 +1466,7 @@
     {
       "id": "state-sn-verified",
       "parent": "obj-support-network",
-      "name": "verified",
+      "name": "verificada",
       "initial": false,
       "final": false,
       "default": false
@@ -1474,7 +1474,7 @@
     {
       "id": "state-sn-insufficient",
       "parent": "obj-support-network",
-      "name": "insufficient",
+      "name": "insuficiente",
       "initial": false,
       "final": false,
       "default": false
@@ -1482,7 +1482,7 @@
     {
       "id": "state-hc-adequate",
       "parent": "obj-home-condition",
-      "name": "adequate",
+      "name": "adecuada",
       "initial": false,
       "final": true,
       "default": false
@@ -1490,7 +1490,7 @@
     {
       "id": "state-hc-inadequate",
       "parent": "obj-home-condition",
-      "name": "inadequate",
+      "name": "inadecuada",
       "initial": false,
       "final": false,
       "default": false
@@ -1498,7 +1498,7 @@
     {
       "id": "state-sck-insufficient",
       "parent": "obj-self-care-knowledge",
-      "name": "insufficient",
+      "name": "insuficiente",
       "initial": true,
       "final": false,
       "default": false
@@ -1506,7 +1506,7 @@
     {
       "id": "state-sck-sufficient",
       "parent": "obj-self-care-knowledge",
-      "name": "sufficient",
+      "name": "suficiente",
       "initial": false,
       "final": false,
       "default": false
@@ -1514,7 +1514,7 @@
     {
       "id": "state-ci-absent",
       "parent": "obj-clinical-instability",
-      "name": "absent",
+      "name": "ausente",
       "initial": false,
       "final": false,
       "default": false
@@ -1522,7 +1522,7 @@
     {
       "id": "state-ci-present",
       "parent": "obj-clinical-instability",
-      "name": "present",
+      "name": "presente",
       "initial": false,
       "final": false,
       "default": false
@@ -1530,7 +1530,7 @@
     {
       "id": "state-ta-adherent",
       "parent": "obj-treatment-adherence",
-      "name": "adherent",
+      "name": "adherente",
       "initial": false,
       "final": false,
       "default": false
@@ -1538,7 +1538,7 @@
     {
       "id": "state-ta-non-adherent",
       "parent": "obj-treatment-adherence",
-      "name": "non-adherent",
+      "name": "no adherente",
       "initial": false,
       "final": false,
       "default": false
@@ -1554,7 +1554,7 @@
     {
       "id": "state-avail-partial",
       "parent": "obj-availability",
-      "name": "partial",
+      "name": "parcial",
       "initial": false,
       "final": false,
       "default": false
@@ -1562,7 +1562,7 @@
     {
       "id": "state-sec-secured",
       "parent": "obj-security-level",
-      "name": "secured",
+      "name": "seguro",
       "initial": false,
       "final": false,
       "default": false
@@ -1570,7 +1570,7 @@
     {
       "id": "state-sec-unsecured",
       "parent": "obj-security-level",
-      "name": "unsecured",
+      "name": "no seguro",
       "initial": false,
       "final": false,
       "default": false
@@ -1578,7 +1578,7 @@
     {
       "id": "state-cc-compliant",
       "parent": "obj-cold-chain-compliance",
-      "name": "compliant",
+      "name": "cumple",
       "initial": true,
       "final": false,
       "default": false
@@ -1586,7 +1586,7 @@
     {
       "id": "state-cc-non-compliant",
       "parent": "obj-cold-chain-compliance",
-      "name": "non-compliant",
+      "name": "no cumple",
       "initial": false,
       "final": false,
       "default": false
@@ -1594,7 +1594,7 @@
     {
       "id": "state-reas-compliant",
       "parent": "obj-reas-compliance",
-      "name": "compliant",
+      "name": "cumple",
       "initial": false,
       "final": false,
       "default": false
@@ -1602,7 +1602,7 @@
     {
       "id": "state-reas-non-compliant",
       "parent": "obj-reas-compliance",
-      "name": "non-compliant",
+      "name": "no cumple",
       "initial": false,
       "final": false,
       "default": false
@@ -1610,7 +1610,7 @@
     {
       "id": "state-maint-current",
       "parent": "obj-maintenance-status",
-      "name": "current",
+      "name": "vigente",
       "initial": true,
       "final": false,
       "default": false
@@ -1618,7 +1618,7 @@
     {
       "id": "state-maint-overdue",
       "parent": "obj-maintenance-status",
-      "name": "overdue",
+      "name": "vencido",
       "initial": false,
       "final": false,
       "default": false
@@ -1626,7 +1626,7 @@
     {
       "id": "state-sa-authorized",
       "parent": "obj-sanitary-authorization",
-      "name": "authorized",
+      "name": "autorizado",
       "initial": true,
       "final": false,
       "default": false
@@ -1634,7 +1634,7 @@
     {
       "id": "state-sa-unauthorized",
       "parent": "obj-sanitary-authorization",
-      "name": "unauthorized",
+      "name": "no autorizado",
       "initial": false,
       "final": false,
       "default": false
@@ -1642,7 +1642,7 @@
     {
       "id": "state-sas-pending",
       "parent": "obj-sanitary-auth-status",
-      "name": "pending",
+      "name": "pendiente",
       "initial": true,
       "final": false,
       "default": false
@@ -1650,7 +1650,7 @@
     {
       "id": "state-sas-authorized",
       "parent": "obj-sanitary-auth-status",
-      "name": "authorized",
+      "name": "autorizado",
       "initial": false,
       "final": false,
       "default": false
@@ -1658,7 +1658,7 @@
     {
       "id": "state-sas-expired",
       "parent": "obj-sanitary-auth-status",
-      "name": "expired",
+      "name": "vencida",
       "initial": false,
       "final": false,
       "default": false
@@ -1666,7 +1666,7 @@
     {
       "id": "state-tc-compliant",
       "parent": "obj-training-compliance",
-      "name": "compliant",
+      "name": "cumple",
       "initial": false,
       "final": false,
       "default": false
@@ -1674,7 +1674,7 @@
     {
       "id": "state-tc-non-compliant",
       "parent": "obj-training-compliance",
-      "name": "non-compliant",
+      "name": "no cumple",
       "initial": false,
       "final": false,
       "default": false
@@ -1682,7 +1682,7 @@
     {
       "id": "state-bs-available",
       "parent": "obj-basic-services",
-      "name": "available",
+      "name": "disponible",
       "initial": true,
       "final": false,
       "default": false
@@ -1690,7 +1690,7 @@
     {
       "id": "state-bs-unavailable",
       "parent": "obj-basic-services",
-      "name": "unavailable",
+      "name": "no disponible",
       "initial": false,
       "final": false,
       "default": false
@@ -1698,7 +1698,7 @@
     {
       "id": "state-tel-available",
       "parent": "obj-telephony-access",
-      "name": "available",
+      "name": "disponible",
       "initial": false,
       "final": false,
       "default": false
@@ -1706,7 +1706,7 @@
     {
       "id": "state-tel-unavailable",
       "parent": "obj-telephony-access",
-      "name": "unavailable",
+      "name": "no disponible",
       "initial": false,
       "final": false,
       "default": false
@@ -1714,7 +1714,7 @@
     {
       "id": "state-ra-within",
       "parent": "obj-road-access",
-      "name": "within-coverage-radius",
+      "name": "dentro del radio",
       "initial": true,
       "final": false,
       "default": false
@@ -1722,7 +1722,7 @@
     {
       "id": "state-ra-outside",
       "parent": "obj-road-access",
-      "name": "outside-coverage-radius",
+      "name": "fuera del radio",
       "initial": false,
       "final": false,
       "default": false
@@ -1730,7 +1730,7 @@
     {
       "id": "state-cr-compliant",
       "parent": "obj-coverage-radius-compliance",
-      "name": "compliant",
+      "name": "cumple",
       "initial": false,
       "final": false,
       "default": false
@@ -1738,7 +1738,7 @@
     {
       "id": "state-cr-non-compliant",
       "parent": "obj-coverage-radius-compliance",
-      "name": "non-compliant",
+      "name": "no cumple",
       "initial": false,
       "final": false,
       "default": false
@@ -1746,7 +1746,7 @@
     {
       "id": "state-exc-absent",
       "parent": "obj-exclusion-condition",
-      "name": "absent",
+      "name": "ausente",
       "initial": true,
       "final": false,
       "default": false
@@ -1754,7 +1754,7 @@
     {
       "id": "state-exc-present",
       "parent": "obj-exclusion-condition",
-      "name": "present",
+      "name": "presente",
       "initial": false,
       "final": false,
       "default": false
@@ -1762,7 +1762,7 @@
     {
       "id": "state-pc-stable",
       "parent": "obj-patient-category",
-      "name": "stable",
+      "name": "estable",
       "initial": false,
       "final": false,
       "default": true
@@ -1770,7 +1770,7 @@
     {
       "id": "state-pc-improving",
       "parent": "obj-patient-category",
-      "name": "improving",
+      "name": "mejorando",
       "initial": false,
       "final": false,
       "default": false
@@ -1778,7 +1778,7 @@
     {
       "id": "state-pc-deteriorating",
       "parent": "obj-patient-category",
-      "name": "deteriorating",
+      "name": "deteriorándose",
       "initial": false,
       "final": false,
       "default": false
