@@ -204,6 +204,16 @@ export function useModelStore(initialModel: Model): ModelStore {
     }
 
     // ModelMutation — apply to present, push to History
+    if (effect.type === "replaceModel") {
+      let success = false;
+      setHistory((h) => {
+        setLastError(null);
+        success = true;
+        return pushHistory(h, effect.model);
+      });
+      return success;
+    }
+
     let success = false;
     setHistory((h) => {
       const result = effect.apply(h.present);

@@ -131,6 +131,7 @@ export type Command =
   | { tag: "resetSimulation" }
   | { tag: "setSimulationStep"; index: number }
   | { tag: "setSimulationSpeed"; speed: number }
+  | { tag: "importOpl"; model: Model }
   | { tag: "toggleSimulationAutoRun" };
 
 /* ─── Effect Coproduct ─── */
@@ -142,7 +143,8 @@ export type Effect =
   | { type: "uiTransition"; field: "mode"; value: EditorMode }
   | { type: "uiTransition"; field: "linkSource"; value: string | null }
   | { type: "uiTransition"; field: "linkType"; value: LinkTypeChoice }
-  | { type: "simulationEffect"; action: "start" | "step" | "reset" | "setStep" | "setSpeed" | "toggleAutoRun"; payload?: number };
+  | { type: "simulationEffect"; action: "start" | "step" | "reset" | "setStep" | "setSpeed" | "toggleAutoRun"; payload?: number }
+  | { type: "replaceModel"; model: Model };
 
 /* ─── Interpret: Natural Transformation η ─── */
 
@@ -461,5 +463,8 @@ export function interpret(cmd: Command): Effect {
 
     case "toggleSimulationAutoRun":
       return { type: "simulationEffect", action: "toggleAutoRun" };
+
+    case "importOpl":
+      return { type: "replaceModel", model: cmd.model };
   }
 }

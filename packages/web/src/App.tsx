@@ -21,6 +21,7 @@ import { useModelStore } from "./hooks/useModelStore";
 import { OpdTree } from "./components/OpdTree";
 import { OpdCanvas } from "./components/OpdCanvas";
 import { OplPanel } from "./components/OplPanel";
+import { OplImportPanel } from "./components/OplImportPanel";
 import { PropertiesPanel } from "./components/PropertiesPanel";
 import { Toolbar } from "./components/Toolbar";
 import { SimulationPanel } from "./components/SimulationPanel";
@@ -268,6 +269,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
   const [showValidation, setShowValidation] = useState(false);
   const [validationTab, setValidationTab] = useState<ValidationTab>("issues");
   const [showHelp, setShowHelp] = useState(false);
+  const [showImportOpl, setShowImportOpl] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showVerification, setShowVerification] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
@@ -506,6 +508,14 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
           </button>
         </div>
         <div className="header__sep" />
+        <div className="header__sep" />
+        <button
+          className="header__pill"
+          onClick={() => setShowImportOpl(v => !v)}
+          title="Import OPL text"
+        >
+          📝 OPL
+        </button>
         <QuickOpen onLoadExample={onLoadExample} />
         <FileMenu
           model={model}
@@ -841,6 +851,15 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
       )}
       {showSettings && (
         <SettingsPanel model={model} dispatch={dispatch} onClose={() => setShowSettings(false)} />
+      )}
+      {showImportOpl && (
+        <OplImportPanel
+          onClose={() => setShowImportOpl(false)}
+          onApply={(newModel) => {
+            dispatch({ tag: "importOpl", model: newModel });
+            setShowImportOpl(false);
+          }}
+        />
       )}
     </div>
   );
