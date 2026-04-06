@@ -705,7 +705,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
             />
           )
         )}
-        <OplPanel model={model} opdId={ui.currentOpd} selectedThing={ui.selectedThing} dispatch={dispatch} nlPipeline={nlPipeline} lastError={lastError} />
+        <OplPanel model={model} opdId={ui.currentOpd} selectedThing={ui.selectedThing} selectedLink={null} dispatch={dispatch} nlPipeline={nlPipeline} lastError={lastError} />
       </aside>
 
       {/* Validation Panel (floating, above status bar) */}

@@ -1330,8 +1330,7 @@ button.header__pill:hover {
   border-color: var(--success);
 }
 
-.opl-text__pre {
-  margin: 0;
+.opl-text__lines {
   padding: 10px;
   background: var(--bg-surface);
   border-radius: 4px;
@@ -1341,6 +1340,23 @@ button.header__pill:hover {
   white-space: pre-wrap;
   word-break: break-word;
   color: var(--text-secondary);
+  overflow-y: auto;
+  max-height: calc(100vh - 280px);
+}
+
+.opl-text__line {
+  min-height: 1.6em;
+  transition: background 0.15s;
+}
+
+.opl-text__line:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.opl-text__line--highlight {
+  background: rgba(88, 166, 255, 0.12);
+  border-left: 3px solid rgba(88, 166, 255, 0.6);
+  padding-left: 9px;
 }
 
 /* ─── Editor View ─── */

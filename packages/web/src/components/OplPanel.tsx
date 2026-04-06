@@ -12,12 +12,13 @@ interface Props {
   model: Model;
   opdId: string;
   selectedThing: string | null;
+  selectedLink: string | null;
   dispatch: (cmd: Command) => boolean;
   nlPipeline?: NlPipeline;
   lastError?: string | null;
 }
 
-export function OplPanel({ model, opdId, selectedThing, dispatch, nlPipeline, lastError }: Props) {
+export function OplPanel({ model, opdId, selectedThing, selectedLink, dispatch, nlPipeline, lastError }: Props) {
   const [activeTab, setActiveTab] = useState<OplTab>("sentences");
   const opd = model.opds.get(opdId);
   const currentLang = model.settings.opl_language === "es" ? "es" : "en";
@@ -50,7 +51,13 @@ export function OplPanel({ model, opdId, selectedThing, dispatch, nlPipeline, la
           onSelectThing={(id) => id && dispatch({ tag: "selectThing", thingId: id })} />
       )}
       {activeTab === "text" && (
-        <OplTextView model={model} opdId={opdId} />
+        <OplTextView
+          model={model}
+          opdId={opdId}
+          highlightThingId={selectedThing ?? undefined}
+          highlightLinkId={selectedLink ?? undefined}
+          onSelectThing={(id) => dispatch({ tag: "selectThing", thingId: id })}
+        />
       )}
       {activeTab === "editor" && (
         <OplEditorView model={model} opdId={opdId} dispatch={dispatch} nlPipeline={nlPipeline} lastError={lastError} />
