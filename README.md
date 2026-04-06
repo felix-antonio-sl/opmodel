@@ -2,7 +2,7 @@
 
 OPModel is a single-user tool for **Object Process Methodology (ISO 19450)** modeling.
 
-Current repo status: **baseline stabilized**.
+Current repo status: **OPL-first pipeline completo (Fases 1-3), web integration parcial (Fase 4-5 en progreso).**
 
 ## What works today
 
@@ -11,6 +11,8 @@ Current repo status: **baseline stabilized**.
 - OPL export (including Spanish OPL)
 - Fixture-driven real-case modeling
 - Visual audit / visual correctness checks
+- OPL-first pipeline: parse → compile → validate → model (Fases 1-3 completadas)
+- Live OPL editor with Ctrl+S, inline validation, layout preservation
 - Canonical real fixtures including HODOM HSC
 
 ## Canonical commands
@@ -20,7 +22,7 @@ export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
 ```
 
-Run full test suite:
+Run full test suite (1127 tests, 80 files):
 
 ```bash
 bun run test
@@ -72,15 +74,17 @@ bun run build:ev-ams
 Use OPModel today as:
 
 - a stable OPM core + web editor + export tool
-- a fixture-driven environment for real modeling cases
+- a fixture-driven modeling environment for real cases
 - a validated baseline for HODOM / HODOM V2 / EV-AMS / HODOM HSC
+- an OPL-first tool: OPL text → parse → compile → model → validate → visual render
+- a live OPL editor with inline validation and layout preservation
 
 Do **not** treat it yet as:
 
 - a fully polished large-model visual editor
 - a fully ISO-complete refinement implementation in every edge case
 - a clinically realistic simulation platform
-- a vehicle for new feature lines like System Map / system mapping
+- a vehicle for new feature lines like System Map / system mapping (not started)
 
 ## SSOT corpus
 
@@ -117,9 +121,9 @@ Start here:
 
 Short version:
 
-- **today**: `.opmodel` / `Model` is the source of truth, OPL is derived
-- **target**: `OPL text → parse → compile → Model → validate → visual render`
-- **main gap**: there is still no full `OPL text → Model` path
+- **today**: OPL-first pipeline completo — `OPL text → parse → compile → Model → validate → visual render` funciona para 6 fixtures
+- **target**: OPL como superficie principal de autoría, visual derivado
+- **current gap**: source mapping bidireccional (click OPL ↔ visual), editor OPL como panel principal (no solo tab)
 
 ## Notes
 

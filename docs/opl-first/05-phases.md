@@ -3,7 +3,7 @@
 | Campo | Valor |
 |-------|-------|
 | Fecha | 2026-04-06 |
-| Estado | **Fases 1-3 completadas, roundtrip validado** |
+| Estado | **Fases 1-3 completadas, Fase 4-5 parcial** |
 
 ## Fase 0 — Definir gramática OPL de entrada
 
@@ -98,24 +98,27 @@ Thing declarations, state enumerations, state descriptions, durations (simple + 
 
 **Commit**: `f0d3178`
 
-## Fase 4 — Integración visual ⏳ Pendiente
+## Fase 4 — Integración visual ⏳ Parcial
 
 **Objetivo**: Visual render desde modelo compilado por OPL.
 
 **Entregables**:
-- Flujo OPL → visual completo
-- Source mapping bidireccional (click OPL ↔ visual)
-- Layout cache entre re-compilaciones
+- ✅ Flujo OPL → visual completo (parse → compile → model → render funciona)
+- ✅ Layout preservation al recompilar OPL (`preserveLayoutPositions`)
+- ✅ Bidirectional link highlighting (OPL panel ↔ canvas)
+- ⬜ Source mapping bidireccional click-to-navigate (click línea OPL → cosa visual, click cosa → línea OPL)
+- ⬜ Layout cache explícito entre re-compilaciones
 
-## Fase 5 — Editor textual OPL en web ⏳ Pendiente
+## Fase 5 — Editor textual OPL en web ⏳ Parcial
 
 **Objetivo**: Superficie principal centrada en OPL.
 
 **Entregables**:
-- Editor de texto como panel principal
-- Validación inline
-- Re-compile on save
-- Visual preview derivado
+- ✅ Live OPL editor tab con Ctrl+S apply + inline validation (`OplEditorView`)
+- ✅ OPL text import panel con live validation (`OplImportPanel`)
+- ✅ Bidirectional OPL panel con entity highlighting + export (`OplPanel`)
+- ⬜ Editor OPL como superficie principal (no solo tab secundario)
+- ⬜ Visual preview derivado que se actualiza en tiempo real
 
 ---
 
@@ -152,11 +155,12 @@ EN y ES soportados. ¿Parser acepta ambos? ¿Se fija por modelo?
 
 | Métrica | Valor |
 |---------|-------|
-| Archivos de test | 77 |
-| Tests totales | 780 |
-| Tests pasando | 771 |
-| Tests fallando | 9 (preexistentes: touch/timestamp) |
+| Archivos de test | 80 |
+| Tests totales | 1127 |
+| Tests pasando | 1127 |
+| Tests fallando | 0 |
 | Constructos OPM parseados | 24 tipos + refinement edges |
 | Constructos OPM compilados | Todos |
 | Fixtures roundtrip | 6/6 |
 | Fases completadas | 1, 2, 3 |
+| Fases en progreso | 4 (parcial), 5 (parcial) |

@@ -187,13 +187,16 @@ For models without positions (NL, API, import):
 
 ## Test Coverage
 
-- **1,042 tests** across 70 files
+- **1,127 tests** across 80 files
 - Visual correctness 360°: OPL↔OPD correspondence verified
-- Visual audit: 0 errors across 5 fixtures (all grade A)
+- Visual audit: 0 errors across fixtures (all grade A)
 - OPL round-trip: expose is idempotent
+- OPL-first pipeline: parse → compile → validate → roundtrip 6/6 fixtures
 - Edge router: crossing detection + parallel offset
 - Auto-layout: topology-aware positioning
 - OPL sentence coverage: all 13 types mapped to visual elements
+- Live OPL editor: Ctrl+S compile, inline validation, layout preservation
+- Link selection: bidirectional highlighting between OPL panel and canvas
 
 ## Fixtures
 
@@ -204,3 +207,4 @@ For models without positions (NL, API, import):
 | HODOM | 48 | 82 | 6 | A (92-97) |
 | HODOM V2 | ~30 | ~40 | 2 | A (97-99) |
 | EV-AMS | 49 | 54 | 6 | A (95-100) |
+| HODOM HSC v0 | 36 | 53 | 2 | A |
