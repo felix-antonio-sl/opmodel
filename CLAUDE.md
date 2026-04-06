@@ -15,9 +15,9 @@ OPModel is a single-user power tool for **Object Process Methodology (ISO 19450)
 - **tests/** — Shared fixture files (`.opmodel`): coffee-making, driver-rescuing, hospitalizacion-domiciliaria, hodom-v2, ev-ams, hodom-hsc-v0.
 - **scripts/** — Build scripts for fixtures: `build-hodom-v2.ts`, `build-hodom-hsc-v0.ts`, `build-ev-ams.ts`.
 - **docs/** — Specs, plans, methodology docs. Historical — may not reflect current state.
-- **sessions/** — Session handoffs. Historical context, not guaranteed current.
-- **analysis/** — Formal foundations research. Read-only reference.
-- **audits/** — Formal verification against ISO 19450.
+- **docs/archive/sessions/** — Session handoffs. Historical context, not guaranteed current.
+- **docs/archive/analysis/** — Formal foundations research. Read-only reference.
+- **docs/archive/audits/** — Formal verification against ISO 19450.
 
 ## Language and Conventions
 

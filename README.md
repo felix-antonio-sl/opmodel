@@ -128,4 +128,4 @@ Short version:
 ## Notes
 
 - `CLAUDE.md` contains repo-specific guidance for coding agents.
-- Historical docs under `docs/` and `sessions/` are useful, but the **live repo state wins**.
+- Historical docs under `docs/` and `docs/archive/sessions/` are useful, but the **live repo state wins**.

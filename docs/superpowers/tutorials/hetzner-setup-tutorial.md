@@ -546,7 +546,7 @@ Una vez verificado el setup:
 ## Referencias
 
 - **Spec de diseño**: `docs/superpowers/specs/2026-03-19-dockerization-design.md`
-- **Handoff**: `sessions/2026-03-19-dockerization-handoff.md`
+- **Handoff**: `docs/archive/sessions/2026-03-19-dockerization-handoff.md`
 - **Traefik docs**: https://doc.traefik.io/traefik/
 - **Bun docs**: https://bun.sh/docs
 - **Vite docs**: https://vitejs.dev/config/
