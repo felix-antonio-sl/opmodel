@@ -854,6 +854,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
       )}
       {showImportOpl && (
         <OplImportPanel
+          model={model}
           onClose={() => setShowImportOpl(false)}
           onApply={(newModel) => {
             dispatch({ tag: "importOpl", model: newModel });

@@ -38,6 +38,8 @@ export interface OplCompileError {
 export interface OplCompileOptions {
   modelName?: string;
   ignoreUnsupported?: boolean;
+  /** Existing appearances to preserve positions from when re-compiling. */
+  preserveLayout?: Map<string, import("./types").Appearance>;
 }
 
 type CompoundHint = {
@@ -250,6 +252,7 @@ export function compileOplDocuments(docs: OplDocument[], options: OplCompileOpti
   }
 
   // Pass 4: add appearances in each OPD for declared things.
+  const layoutHints = options.preserveLayout;
   for (const doc of docs) {
     const actualOpdId = actualOpdIdByName.get(doc.opdName) ?? "opd-sd";
     const opd = model.opds.get(actualOpdId);
@@ -259,13 +262,17 @@ export function compileOplDocuments(docs: OplDocument[], options: OplCompileOpti
     for (const thingId of declaredIds) {
       const key = appearanceKey(thingId, actualOpdId);
       if (model.appearances.has(key)) continue;
+
+      // Try to preserve position from existing layout
+      const existingApp = layoutHints?.get(key);
+
       const appearance: Appearance = {
         thing: thingId,
         opd: actualOpdId,
-        x: 120 + col * 180,
-        y: 120 + row * 120,
-        w: 120,
-        h: 60,
+        x: existingApp ? existingApp.x : 120 + col * 180,
+        y: existingApp ? existingApp.y : 120 + row * 120,
+        w: existingApp ? existingApp.w : 120,
+        h: existingApp ? existingApp.h : 60,
         ...(opd?.refines ? { internal: true } : {}),
       };
       const r = addAppearance(model, appearance);

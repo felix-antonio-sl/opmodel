@@ -3,11 +3,12 @@ import type { Model, ValidationResult } from "@opmodel/core";
 import { validateOpl, parseOplDocuments, compileOplDocuments } from "@opmodel/core";
 
 interface OplImportPanelProps {
+  model: Model;
   onClose: () => void;
   onApply: (model: Model) => void;
 }
 
-export function OplImportPanel({ onClose, onApply }: OplImportPanelProps) {
+export function OplImportPanel({ model, onClose, onApply }: OplImportPanelProps) {
   const [text, setText] = useState("");
   const [validation, setValidation] = useState<ValidationResult | null>(null);
   const [applyError, setApplyError] = useState<string | null>(null);
@@ -46,7 +47,10 @@ export function OplImportPanel({ onClose, onApply }: OplImportPanelProps) {
         setApplyError(`Parse error: ${parsed.error.message}`);
         return;
       }
-      const compiled = compileOplDocuments(parsed.value, { ignoreUnsupported: true });
+      const compiled = compileOplDocuments(parsed.value, {
+        ignoreUnsupported: true,
+        preserveLayout: model.appearances,
+      });
       if (!compiled.ok) {
         setApplyError(`Compile error: ${compiled.error.message}`);
         return;

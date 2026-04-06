@@ -50,7 +50,10 @@ export function OplLiveEditor({ model, opdId, dispatch }: Props) {
         setStatus("error");
         return;
       }
-      const compiled = compileOplDocuments(parsed.value, { ignoreUnsupported: true });
+      const compiled = compileOplDocuments(parsed.value, {
+        ignoreUnsupported: true,
+        preserveLayout: model.appearances,
+      });
       if (!compiled.ok) {
         setErrorMsg(`Compile: ${compiled.error.message}`);
         setStatus("error");
