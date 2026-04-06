@@ -28,6 +28,7 @@ const STORAGE_KEY = "opmodel:current";
 export interface UIState {
   currentOpd: string;
   selectedThing: string | null;
+  selectedLink: string | null;
   mode: EditorMode;
   linkSource: string | null;
   linkType: LinkTypeChoice;
@@ -66,6 +67,7 @@ export function useModelStore(initialModel: Model): ModelStore {
   const [ui, setUi] = useState<UIState>({
     currentOpd: "opd-sd",
     selectedThing: null,
+    selectedLink: null,
     mode: "select",
     linkSource: null,
     linkType: "auto" as LinkTypeChoice,

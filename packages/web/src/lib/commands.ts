@@ -82,6 +82,7 @@ export type Command =
   | { tag: "addLink"; link: Omit<Link, never> }
   | { tag: "removeLink"; linkId: string }
   | { tag: "selectThing"; thingId: string | null }
+  | { tag: "selectLink"; linkId: string | null }
   | { tag: "selectOpd"; opdId: string }
   | { tag: "addState"; state: { id: string; parent: string; name: string; initial: boolean; final: boolean; default: boolean } }
   | { tag: "removeState"; stateId: string }
@@ -139,6 +140,7 @@ export type Command =
 export type Effect =
   | { type: "modelMutation"; apply: (model: Model) => Result<Model, InvariantError> }
   | { type: "uiTransition"; field: "selectedThing"; value: string | null }
+  | { type: "uiTransition"; field: "selectedLink"; value: string | null }
   | { type: "uiTransition"; field: "currentOpd"; value: string }
   | { type: "uiTransition"; field: "mode"; value: EditorMode }
   | { type: "uiTransition"; field: "linkSource"; value: string | null }
@@ -242,6 +244,9 @@ export function interpret(cmd: Command): Effect {
 
     case "selectThing":
       return { type: "uiTransition", field: "selectedThing", value: cmd.thingId };
+
+    case "selectLink":
+      return { type: "uiTransition", field: "selectedLink", value: cmd.linkId };
 
     case "selectOpd":
       return { type: "uiTransition", field: "currentOpd", value: cmd.opdId };
