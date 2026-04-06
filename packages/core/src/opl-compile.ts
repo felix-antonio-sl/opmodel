@@ -88,12 +88,17 @@ function isSupportedSentenceKind(kind: OplSentence["kind"]): boolean {
     "state-description",
     "duration",
     "attribute-value",
+    "grouped-structural",
     "link",
   ].includes(kind);
 }
 
 function isSupportedLinkType(type: Link["type"]): boolean {
   return ["agent", "instrument", "consumption", "result", "effect", "invocation"].includes(type);
+}
+
+function isSupportedGroupedStructuralType(type: string): boolean {
+  return ["aggregation", "exhibition", "generalization", "classification"].includes(type);
 }
 
 export function compileOplDocuments(docs: OplDocument[], options: OplCompileOptions = {}): Result<Model, OplCompileError> {
@@ -431,9 +436,55 @@ export function compileOplDocuments(docs: OplDocument[], options: OplCompileOpti
     }
   }
 
-  // Pass 10: procedural links subset.
+  // Pass 10: grouped structural + procedural links subset.
   for (const doc of docs) {
     for (const s of doc.sentences) {
+      if (s.kind === "grouped-structural") {
+        if (!isSupportedGroupedStructuralType(s.linkType)) {
+          if (!options.ignoreUnsupported) {
+            pushIssue(issues, `Compiler subset does not support grouped structural type: ${s.linkType}`, s, doc.opdName);
+          }
+          continue;
+        }
+
+        const parentRef = resolveThingRef(s.parentName, undefined, thingRefByDisplayName, thingIdsByActualName, doc.renderSettings.locale);
+        if (!parentRef) {
+          pushIssue(issues, `Could not resolve parent thing for grouped structural sentence: ${s.parentName}`, s, doc.opdName);
+          continue;
+        }
+
+        for (const childName of s.childNames) {
+          const childRef = resolveThingRef(childName, undefined, thingRefByDisplayName, thingIdsByActualName, doc.renderSettings.locale);
+          if (!childRef) {
+            pushIssue(issues, `Could not resolve child thing for grouped structural sentence: ${childName}`, s, doc.opdName);
+            continue;
+          }
+
+          const linkData: Link = {
+            id: uniqueId(`lnk-${oplSlug(parentRef.displayName)}-${s.linkType}-${oplSlug(childRef.displayName)}`, model),
+            type: s.linkType,
+            source: parentRef.thingId,
+            target: childRef.thingId,
+            ...(s.incomplete ? { incomplete: true } : {}),
+          };
+
+          const exists = [...model.links.values()].some(l =>
+            l.type === linkData.type &&
+            l.source === linkData.source &&
+            l.target === linkData.target,
+          );
+          if (exists) continue;
+
+          const r = addLink(model, linkData);
+          if (!r.ok) {
+            pushIssue(issues, r.error.message, s, doc.opdName);
+            continue;
+          }
+          model = r.value;
+        }
+        continue;
+      }
+
       if (s.kind !== "link") continue;
       if (!isSupportedLinkType(s.linkType)) {
         if (!options.ignoreUnsupported) {

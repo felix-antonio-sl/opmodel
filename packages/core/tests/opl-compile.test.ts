@@ -48,6 +48,18 @@ const COMPOUND_ATTRIBUTE = [
   "Clinical Condition of Patient is acute.",
 ].join("\n");
 
+const STRUCTURAL_SUBSET = [
+  "Car is an object, physical.",
+  "Engine is an object, physical.",
+  "Power is an object, informatical.",
+  "Electric Car is an object, physical.",
+  "Model X is an object, physical.",
+  "Car consists of Engine.",
+  "Car exhibits Power.",
+  "Electric Car is a Car.",
+  "Model X is an instance of Car.",
+].join("\n");
+
 describe("compileOplDocument", () => {
   it("compiles thing/state/duration subset into Model", () => {
     const parsed = parseOplDocument(BASIC_SUBSET, "SD", "opd-sd");
@@ -157,11 +169,37 @@ describe("compileOplDocument", () => {
     expect(text).toContain("Boiling invokes Alarm.");
   });
 
+  it("compiles grouped structural links", () => {
+    const parsed = parseOplDocument(STRUCTURAL_SUBSET, "SD", "opd-sd");
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+
+    const compiled = compileOplDocument(parsed.value);
+    expect(compiled.ok).toBe(true);
+    if (!compiled.ok) return;
+
+    const model = compiled.value;
+    const aggregation = [...model.links.values()].find(l => l.type === "aggregation");
+    const exhibition = [...model.links.values()].find(l => l.type === "exhibition");
+    const generalization = [...model.links.values()].find(l => l.type === "generalization");
+    const classification = [...model.links.values()].find(l => l.type === "classification");
+    expect(aggregation).toBeDefined();
+    expect(exhibition).toBeDefined();
+    expect(generalization).toBeDefined();
+    expect(classification).toBeDefined();
+
+    const text = render(expose(model, "opd-sd"));
+    expect(text).toContain("Car consists of Engine.");
+    expect(text).toContain("Car exhibits Power.");
+    expect(text).toContain("Electric Car is a Car.");
+    expect(text).toContain("Model X is an instance of Car.");
+  });
+
   it("returns a compile error for unsupported sentence kinds in strict mode", () => {
     const parsed = parseOplDocument([
-      "Car is an object, physical.",
-      "Engine is an object, physical.",
-      "Car consists of Engine.",
+      "P is a process, physical.",
+      "Q is a process, physical.",
+      "P initiates Q.",
     ].join("\n"), "SD", "opd-sd");
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
@@ -170,7 +208,7 @@ describe("compileOplDocument", () => {
     expect(compiled.ok).toBe(false);
     if (compiled.ok) return;
     expect(compiled.error.message).toContain("Unsupported");
-    expect(compiled.error.issues[0]?.sentenceKind).toBe("grouped-structural");
+    expect(compiled.error.issues[0]?.sentenceKind).toBe("modifier");
   });
 });
 
