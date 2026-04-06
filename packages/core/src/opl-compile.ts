@@ -100,11 +100,12 @@ function isSupportedSentenceKind(kind: OplSentence["kind"]): boolean {
     "requirement",
     "assertion",
     "scenario",
+    "in-zoom-sequence",
   ].includes(kind);
 }
 
 function isSupportedLinkType(type: Link["type"]): boolean {
-  return ["agent", "instrument", "consumption", "result", "effect", "invocation"].includes(type);
+  return ["agent", "instrument", "consumption", "result", "effect", "invocation", "tagged"].includes(type);
 }
 
 function isSupportedGroupedStructuralType(type: string): boolean {
@@ -503,11 +504,17 @@ export function compileOplDocuments(docs: OplDocument[], options: OplCompileOpti
         continue;
       }
 
-      const sourceRef = resolveThingRef(s.sourceName, undefined, thingRefByDisplayName, thingIdsByActualName, doc.renderSettings.locale);
-      const targetRef = resolveThingRef(s.targetName, undefined, thingRefByDisplayName, thingIdsByActualName, doc.renderSettings.locale);
+      let sourceRef = resolveThingRef(s.sourceName, undefined, thingRefByDisplayName, thingIdsByActualName, doc.renderSettings.locale);
+      let targetRef = s.targetName === "itself" || s.targetName === "sí mismo" || s.targetName === "si mismo"
+        ? null  // will be set below
+        : resolveThingRef(s.targetName, undefined, thingRefByDisplayName, thingIdsByActualName, doc.renderSettings.locale);
       if (!sourceRef) {
         pushIssue(issues, `Could not resolve source thing for link: ${s.sourceName}`, s, doc.opdName);
         continue;
+      }
+      // Self-invocation: target = source
+      if (!targetRef && (s.targetName === "itself" || s.targetName === "sí mismo" || s.targetName === "si mismo")) {
+        targetRef = sourceRef;
       }
       if (!targetRef) {
         pushIssue(issues, `Could not resolve target thing for link: ${s.targetName}`, s, doc.opdName);
@@ -754,6 +761,56 @@ export function compileOplDocuments(docs: OplDocument[], options: OplCompileOpti
         continue;
       }
       model = r.value;
+    }
+  }
+
+  // Pass 16: in-zoom sequences — create implicit invocation links between sequential subprocesses.
+  for (const doc of docs) {
+    for (const s of doc.sentences) {
+      if (s.kind !== "in-zoom-sequence") continue;
+
+      const parentRef = resolveThingRef(s.parentName, undefined, thingRefByDisplayName, thingIdsByActualName, doc.renderSettings.locale);
+      if (!parentRef) {
+        pushIssue(issues, `Could not resolve parent thing for in-zoom sequence: ${s.parentName}`, s, doc.opdName);
+        continue;
+      }
+
+      for (const step of s.steps) {
+        if (step.parallel) continue;
+
+        const resolved: ThingRef[] = [];
+        for (const name of step.thingNames) {
+          const ref = resolveThingRef(name, undefined, thingRefByDisplayName, thingIdsByActualName, doc.renderSettings.locale);
+          if (!ref) {
+            pushIssue(issues, `Could not resolve step thing for in-zoom sequence: ${name}`, s, doc.opdName);
+            continue;
+          }
+          resolved.push(ref);
+        }
+
+        // Create implicit invocation links between sequential steps
+        for (let i = 0; i < resolved.length - 1; i++) {
+          const src = resolved[i]!;
+          const tgt = resolved[i + 1]!;
+          const exists = [...model.links.values()].some(l =>
+            l.type === "invocation" && l.source === src.thingId && l.target === tgt.thingId,
+          );
+          if (exists) continue;
+
+          const linkData: Link = {
+            id: uniqueId(`lnk-${oplSlug(src.displayName)}-invocation-${oplSlug(tgt.displayName)}`, model),
+            type: "invocation",
+            source: src.thingId,
+            target: tgt.thingId,
+          };
+          const r = addLink(model, linkData);
+          if (!r.ok) {
+            pushIssue(issues, r.error.message, s, doc.opdName);
+            continue;
+          }
+          model = r.value;
+        }
+      }
     }
   }
 

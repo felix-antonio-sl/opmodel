@@ -86,10 +86,22 @@ const FAN_OR_CONVERGING = [
   "Proceso consumes at least one of A or B.",
 ].join("\n");
 
-const INZOOM_UNSUPPORTED = [
+const TAGGED_SUBSET = [
+  "Hospital is an object, physical.",
+  "Emergency is a process, physical.",
+  "Hospital communicates via Emergency.",
+].join("\n");
+
+const SELF_INVOCATION = [
+  "Processing is a process, physical.",
+  "Processing invokes itself.",
+].join("\n");
+
+const INZOOM_WITH_INVOCATIONS = [
   "Making Coffee is a process, physical.",
   "Grinding is a process, physical.",
   "Brewing is a process, physical.",
+  "Serving is a process, physical.",
   "Making Coffee zooms into Grinding, Brewing and Serving, in that sequence.",
 ].join("\n");
 
@@ -398,16 +410,64 @@ describe("compileOplDocument", () => {
     expect(scn.path_labels).toEqual(["standard"]);
   });
 
-  it("returns a compile error for unsupported sentence kinds in strict mode", () => {
-    const parsed = parseOplDocument(INZOOM_UNSUPPORTED, "SD", "opd-sd");
+  it("compiles tagged structural links", () => {
+    const parsed = parseOplDocument(TAGGED_SUBSET, "SD", "opd-sd");
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
 
     const compiled = compileOplDocument(parsed.value);
-    expect(compiled.ok).toBe(false);
-    if (compiled.ok) return;
-    expect(compiled.error.message).toContain("Unsupported");
-    expect(compiled.error.issues[0]?.sentenceKind).toBe("in-zoom-sequence");
+    expect(compiled.ok).toBe(true);
+    if (!compiled.ok) return;
+
+    const model = compiled.value;
+    const taggedLink = [...model.links.values()].find(l => l.type === "tagged");
+    expect(taggedLink).toBeDefined();
+    expect(taggedLink?.tag).toBe("communicates via");
+
+    const hospital = [...model.things.values()].find(t => t.name === "Hospital");
+    const emergency = [...model.things.values()].find(t => t.name === "Emergency");
+    expect(taggedLink?.source).toBe(hospital?.id);
+    expect(taggedLink?.target).toBe(emergency?.id);
+  });
+
+  it("compiles self-invocation links", () => {
+    const parsed = parseOplDocument(SELF_INVOCATION, "SD", "opd-sd");
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+
+    const compiled = compileOplDocument(parsed.value);
+    expect(compiled.ok).toBe(true);
+    if (!compiled.ok) return;
+
+    const model = compiled.value;
+    const selfInv = [...model.links.values()].find(l => l.type === "invocation");
+    expect(selfInv).toBeDefined();
+    expect(selfInv?.source).toBe(selfInv?.target);
+
+    const processing = [...model.things.values()].find(t => t.name === "Processing");
+    expect(selfInv?.source).toBe(processing?.id);
+  });
+
+  it("compiles in-zoom sequence with implicit invocation links", () => {
+    const parsed = parseOplDocument(INZOOM_WITH_INVOCATIONS, "SD", "opd-sd");
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+
+    const compiled = compileOplDocument(parsed.value);
+    expect(compiled.ok).toBe(true);
+    if (!compiled.ok) return;
+
+    const model = compiled.value;
+    const invocations = [...model.links.values()].filter(l => l.type === "invocation");
+    // Grinding → Brewing → Serving creates 2 invocation links
+    expect(invocations.length).toBe(2);
+
+    const grinding = [...model.things.values()].find(t => t.name === "Grinding");
+    const brewing = [...model.things.values()].find(t => t.name === "Brewing");
+    const serving = [...model.things.values()].find(t => t.name === "Serving");
+
+    expect(invocations.some(l => l.source === grinding?.id && l.target === brewing?.id)).toBe(true);
+    expect(invocations.some(l => l.source === brewing?.id && l.target === serving?.id)).toBe(true);
   });
 });
 
