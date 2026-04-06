@@ -71,11 +71,23 @@ const MODIFIER_SUBSET = [
   "Boiling occurs if Water is cold, otherwise Boiling is skipped.",
 ].join("\n");
 
-const FAN_UNSUPPORTED = [
+const FAN_XOR_DIVERGING = [
   "B is an object, physical.",
   "P1 is a process, physical.",
   "P2 is a process, physical.",
   "B handles exactly one of P1 or P2.",
+].join("\n");
+
+const FAN_OR_CONVERGING = [
+  "Proceso is a process, physical.",
+  "A is an object, physical.",
+  "B is an object, physical.",
+  "Proceso consumes at least one of A or B.",
+].join("\n");
+
+const REQUIREMENT_UNSUPPORTED = [
+  "B is an object, physical.",
+  "[R-01] Minimum Staff: at least one clinician on duty (applies to B).",
 ].join("\n");
 
 describe("compileOplDocument", () => {
@@ -235,8 +247,51 @@ describe("compileOplDocument", () => {
     expect(overLink?.type).toBe("effect");
   });
 
+  it("compiles fan sentences with implicit link creation", () => {
+    const parsed = parseOplDocument(FAN_XOR_DIVERGING, "SD", "opd-sd");
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+
+    const compiled = compileOplDocument(parsed.value);
+    expect(compiled.ok).toBe(true);
+    if (!compiled.ok) return;
+
+    const model = compiled.value;
+    expect(model.fans.size).toBe(1);
+    const fan = [...model.fans.values()][0]!;
+    expect(fan.type).toBe("xor");
+    expect(fan.direction).toBe("diverging");
+    expect(fan.members.length).toBe(2);
+
+    // Links should have been created implicitly.
+    expect(model.links.size).toBe(2);
+    for (const linkId of fan.members) {
+      const link = model.links.get(linkId);
+      expect(link).toBeDefined();
+      expect(link?.type).toBe("agent");
+    }
+  });
+
+  it("compiles OR converging fan", () => {
+    const parsed = parseOplDocument(FAN_OR_CONVERGING, "SD", "opd-sd");
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+
+    const compiled = compileOplDocument(parsed.value);
+    expect(compiled.ok).toBe(true);
+    if (!compiled.ok) return;
+
+    const model = compiled.value;
+    expect(model.fans.size).toBe(1);
+    const fan = [...model.fans.values()][0]!;
+    expect(fan.type).toBe("or");
+    expect(fan.direction).toBe("converging");
+    expect(fan.members.length).toBe(2);
+    expect(model.links.size).toBe(2);
+  });
+
   it("returns a compile error for unsupported sentence kinds in strict mode", () => {
-    const parsed = parseOplDocument(FAN_UNSUPPORTED, "SD", "opd-sd");
+    const parsed = parseOplDocument(REQUIREMENT_UNSUPPORTED, "SD", "opd-sd");
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
 
@@ -244,7 +299,7 @@ describe("compileOplDocument", () => {
     expect(compiled.ok).toBe(false);
     if (compiled.ok) return;
     expect(compiled.error.message).toContain("Unsupported");
-    expect(compiled.error.issues[0]?.sentenceKind).toBe("fan");
+    expect(compiled.error.issues[0]?.sentenceKind).toBe("requirement");
   });
 });
 

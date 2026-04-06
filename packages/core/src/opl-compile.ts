@@ -6,6 +6,7 @@ import { appearanceKey, collectAllIds } from "./helpers";
 import {
   addAppearance,
   addLink,
+  addFan,
   addModifier,
   addOPD,
   addState,
@@ -92,6 +93,7 @@ function isSupportedSentenceKind(kind: OplSentence["kind"]): boolean {
     "grouped-structural",
     "link",
     "modifier",
+    "fan",
   ].includes(kind);
 }
 
@@ -577,6 +579,99 @@ export function compileOplDocuments(docs: OplDocument[], options: OplCompileOpti
         type: s.modifierType,
         ...(s.negated ? { negated: true } : {}),
         ...(s.conditionMode ? { condition_mode: s.conditionMode } : {}),
+      });
+      if (!r.ok) {
+        pushIssue(issues, r.error.message, s, doc.opdName);
+        continue;
+      }
+      model = r.value;
+    }
+  }
+
+  // Pass 12: fans.
+  for (const doc of docs) {
+    for (const s of doc.sentences) {
+      if (s.kind !== "fan") continue;
+
+      const sharedRef = resolveThingRef(s.sharedEndpointName, undefined, thingRefByDisplayName, thingIdsByActualName, doc.renderSettings.locale);
+      if (!sharedRef) {
+        pushIssue(issues, `Could not resolve shared endpoint for fan: ${s.sharedEndpointName}`, s, doc.opdName);
+        continue;
+      }
+
+      const memberLinkIds: string[] = [];
+      let allResolved = true;
+
+      for (let i = 0; i < s.memberNames.length; i++) {
+        const memberName = s.memberNames[i]!;
+        const memberRef = resolveThingRef(memberName, undefined, thingRefByDisplayName, thingIdsByActualName, doc.renderSettings.locale);
+        if (!memberRef) {
+          pushIssue(issues, `Could not resolve member thing for fan: ${memberName}`, s, doc.opdName);
+          allResolved = false;
+          break;
+        }
+
+        const sourceRef = s.direction === "diverging" ? sharedRef : memberRef;
+        const targetRef = s.direction === "diverging" ? memberRef : sharedRef;
+
+        // Try to find an existing link of the right type.
+        let existing = [...model.links.values()].find(l =>
+          l.type === s.linkType &&
+          l.source === sourceRef.thingId &&
+          l.target === targetRef.thingId,
+        );
+
+        // Resolve states if provided.
+        const srcState = s.memberSourceStateNames?.[i]
+          ? resolveStateForLinkSide(model, stateIdByThingAndName, s.linkType, "source", sourceRef.thingId, targetRef.thingId, s.memberSourceStateNames[i])
+          : undefined;
+        const tgtState = s.memberTargetStateNames?.[i]
+          ? resolveStateForLinkSide(model, stateIdByThingAndName, s.linkType, "target", sourceRef.thingId, targetRef.thingId, s.memberTargetStateNames[i])
+          : undefined;
+
+        if (existing && !srcState && !tgtState) {
+          memberLinkIds.push(existing.id);
+          continue;
+        }
+
+        // Check with state match too.
+        if (existing && (srcState || tgtState)) {
+          const stateMatch =
+            (!srcState || existing.source_state === srcState) &&
+            (!tgtState || existing.target_state === tgtState);
+          if (stateMatch) {
+            memberLinkIds.push(existing.id);
+            continue;
+          }
+        }
+
+        // Create the implicit link.
+        const linkData: Link = {
+          id: uniqueId(`lnk-${oplSlug(sourceRef.displayName)}-${s.linkType}-${oplSlug(targetRef.displayName)}`, model),
+          type: s.linkType,
+          source: sourceRef.thingId,
+          target: targetRef.thingId,
+          ...(srcState ? { source_state: srcState } : {}),
+          ...(tgtState ? { target_state: tgtState } : {}),
+        };
+        const r = addLink(model, linkData);
+        if (!r.ok) {
+          pushIssue(issues, r.error.message, s, doc.opdName);
+          allResolved = false;
+          break;
+        }
+        model = r.value;
+        memberLinkIds.push(linkData.id);
+      }
+
+      if (!allResolved) continue;
+
+      const fanId = uniqueId(`fan-${oplSlug(sharedRef.displayName)}-${s.fanType}`, model);
+      const r = addFan(model, {
+        id: fanId,
+        type: s.fanType,
+        direction: s.direction,
+        members: memberLinkIds,
       });
       if (!r.ok) {
         pushIssue(issues, r.error.message, s, doc.opdName);
