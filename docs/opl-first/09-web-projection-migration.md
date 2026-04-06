@@ -134,9 +134,9 @@ Projection-native ahora:
 - suppressed states por thing
 - visible states por thing
 - parte del thing view-model (`isContainer`, `isRefined`, `hasSuppressedStates`)
+- state-pill anchoring / placement consumido desde `visualGraph`
 
 Todavía local / legacy-bound:
-- state-pill anchoring exacto
 - rect expansion
 - edge routing
 - fan/fork geometry
@@ -174,12 +174,10 @@ Hasta abrir persistencia nativa sobre `OpdAtlas + LayoutModel`, la capa nueva de
 ## Próximo paso recomendado
 
 ### Opción A — recomendada
-Mover **state-pill anchoring / placement** al `visualGraph`.
-
-Ese corte sigue bajando preparación visual desde `OpdCanvas` al adapter de proyección sin meterse todavía en persistencia ni simulation runtime.
+Adelgazar más el fallback basado en `fiber` dentro de `OpdCanvas`, especialmente en state/link targeting que todavía recalcula demasiado cuando falta `visualGraph` suficiente.
 
 ### Opción B
-Después de anchoring, adelgazar más el fallback basado en `fiber` dentro de `OpdCanvas`.
+Seguir subiendo preparación visual fina del canvas al adapter de proyección, más allá del anchoring de state pills.
 
 ### Opción C
 Recién después abrir persistencia nativa de layout sobre:

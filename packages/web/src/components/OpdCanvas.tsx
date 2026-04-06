@@ -256,6 +256,27 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, mode, 
     });
   }, [projectedSlice, fiber]);
 
+  const projectedStatePillsFor = useCallback((thingId: string, appearance: { x: number; y: number }) => {
+    const projectedThing = projectedSlice.visualGraph?.thingsById.get(thingId);
+    if (!projectedThing?.statePills?.length) return undefined;
+
+    const dx = appearance.x - projectedThing.appearance.x;
+    const dy = appearance.y - projectedThing.appearance.y;
+    return projectedThing.statePills.map((pill) => ({
+      ...pill,
+      x: pill.x + dx,
+      y: pill.y + dy,
+    }));
+  }, [projectedSlice]);
+
+  const statePillRectFor = useCallback((appearance: { x: number; y: number; w: number; h: number }, allStates: ReturnType<typeof statesForThing>, thingId: string, stateId: string) => {
+    const projectedPill = projectedStatePillsFor(thingId, appearance)?.find((pill) => pill.state.id === stateId);
+    if (projectedPill) {
+      return { x: projectedPill.x, y: projectedPill.y, w: projectedPill.w, h: projectedPill.h };
+    }
+    return statePillRect(appearance, visibleStatesFor(allStates, thingId), stateId);
+  }, [projectedStatePillsFor, visibleStatesFor]);
+
   // Collect visible links
   const visibleLinks = useMemo((): ProjectionVisualLinkEntry[] => {
     if (projectedSlice.visualGraph?.links) {
@@ -991,8 +1012,7 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, mode, 
                   const oy = draggedThings.has(objectEnd) ? dragDelta.y : 0;
                   const adj = { x: objApp.x + ox, y: objApp.y + oy, w: objApp.w, h: objApp.h };
                   const allObjStates = statesForThing(model, objectEnd);
-                  const visObjStates = visibleStatesFor(allObjStates, objectEnd);
-                  const pill = statePillRect(adj, visObjStates, link.source_state);
+                  const pill = statePillRectFor(adj, allObjStates, objectEnd, link.source_state);
                   if (pill) {
                     if (objectEnd === visualSource) { srcRect = pill; srcKindOverride = "object"; }
                     else { tgtRect = pill; tgtKindOverride = "object"; }
@@ -1006,8 +1026,7 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, mode, 
                   const oy = draggedThings.has(objectEnd) ? dragDelta.y : 0;
                   const adj = { x: objApp.x + ox, y: objApp.y + oy, w: objApp.w, h: objApp.h };
                   const allObjStates = statesForThing(model, objectEnd);
-                  const visObjStates = visibleStatesFor(allObjStates, objectEnd);
-                  const pill = statePillRect(adj, visObjStates, link.target_state);
+                  const pill = statePillRectFor(adj, allObjStates, objectEnd, link.target_state);
                   if (pill) {
                     if (objectEnd === visualTarget) { tgtRect = pill; tgtKindOverride = "object"; }
                     else { srcRect = pill; srcKindOverride = "object"; }
@@ -1022,8 +1041,7 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, mode, 
                   const oy = draggedThings.has(visualSource) ? dragDelta.y : 0;
                   const adj = { x: srcApp.x + ox, y: srcApp.y + oy, w: srcApp.w, h: srcApp.h };
                   const allSrcStates = statesForThing(model, visualSource);
-                  const visSrcStates = visibleStatesFor(allSrcStates, visualSource);
-                  const pill = statePillRect(adj, visSrcStates, link.source_state);
+                  const pill = statePillRectFor(adj, allSrcStates, visualSource, link.source_state);
                   if (pill) { srcRect = pill; srcKindOverride = "object"; }
                 }
               }
@@ -1034,8 +1052,7 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, mode, 
                   const oy = draggedThings.has(visualTarget) ? dragDelta.y : 0;
                   const adj = { x: tgtApp.x + ox, y: tgtApp.y + oy, w: tgtApp.w, h: tgtApp.h };
                   const allTgtStates = statesForThing(model, visualTarget);
-                  const visTgtStates = visibleStatesFor(allTgtStates, visualTarget);
-                  const pill = statePillRect(adj, visTgtStates, link.target_state);
+                  const pill = statePillRectFor(adj, allTgtStates, visualTarget, link.target_state);
                   if (pill) { tgtRect = pill; tgtKindOverride = "object"; }
                 }
               }
@@ -1310,6 +1327,8 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, mode, 
                   isError={errorEntities?.has(thingId)}
                   isShared={sharedThingIds.has(thingId)}
                   hasSuppressedStates={projectedThing ? projectedThing.hasSuppressedStates : allStates.length > states.length}
+                  hiddenStateCount={projectedThing?.hiddenStateCount}
+                  statePills={projectedStatePillsFor(thingId, app)}
                   dragDelta={isDragging ? dragDelta : { x: 0, y: 0 }}
                   simFilter={simFilter}
                   simStatePillOverride={simModelState && thing.kind === "object" ? simModelState.objects.get(thingId)?.currentState : undefined}
@@ -1443,6 +1462,8 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, mode, 
                   isContainer={false}
                   isRefined={false}
                   isImplicit={true}
+                  hiddenStateCount={entry.hiddenStateCount}
+                  statePills={entry.statePills}
                   dragDelta={{ x: 0, y: 0 }}
                   onMouseDown={() => {}}
                   onSelect={() => dispatch({ tag: "selectThing", thingId })}

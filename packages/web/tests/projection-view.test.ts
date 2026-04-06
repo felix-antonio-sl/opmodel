@@ -133,6 +133,8 @@ describe("projection-view", () => {
     expect(slice.visualGraph.thingsById.get("obj-a")?.isRefined).toBe(false);
     expect(slice.visualGraph.thingsById.get("obj-a")?.suppressedStateIds).toEqual(new Set(["state-a-hidden"]));
     expect(slice.visualGraph.thingsById.get("obj-a")?.visibleStates).toEqual([]);
+    expect(slice.visualGraph.thingsById.get("obj-a")?.hiddenStateCount).toBe(1);
+    expect(slice.visualGraph.thingsById.get("obj-a")?.statePills).toEqual([]);
     expect(slice.links.map((link) => link.id)).toEqual(["link-visible"]);
     expect(slice.visualLinks.map((entry) => entry.link.id)).toEqual(["link-visible"]);
     expect(slice.visualGraph.links.map((entry) => entry.link.id)).toEqual(["link-visible"]);

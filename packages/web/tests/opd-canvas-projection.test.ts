@@ -119,4 +119,39 @@ describe("OpdCanvas projection slice migration", () => {
 
     expect(container.querySelectorAll(".link-line").length).toBe(0);
   });
+
+  it("respects projected state pill anchoring from visualGraph", () => {
+    const model = createModel("Projected State Pill Anchoring");
+    model.things.set("obj-a", { id: "obj-a", name: "A", kind: "object", essence: "physical" });
+    model.states.set("state-a", { id: "state-a", parent: "obj-a", name: "Ready" });
+    model.appearances.set("app-a", { id: "app-a", thing: "obj-a", opd: "opd-sd", x: 20, y: 30, w: 120, h: 60 });
+
+    const baseSlice = buildPatchableOpdProjectionSlice(model, "opd-sd");
+    const projectedThing = baseSlice.visualGraph.thingsById.get("obj-a");
+    expect(projectedThing?.statePills.length).toBe(1);
+    if (!projectedThing) return;
+
+    const projectionSlice = {
+      ...baseSlice,
+      visualGraph: {
+        ...baseSlice.visualGraph,
+        thingsById: new Map(baseSlice.visualGraph.thingsById).set("obj-a", {
+          ...projectedThing,
+          statePills: projectedThing.statePills.map((pill) => ({ ...pill, x: 333, y: 444 })),
+        }),
+      },
+    };
+
+    const { container } = render(
+      <svg>
+        <OpdCanvas model={model} opdId="opd-sd" currentProjectionSlice={projectionSlice} />
+      </svg>,
+    );
+
+    const pill = container.querySelector("rect.state-pill");
+    expect(pill).not.toBeNull();
+    expect(pill?.getAttribute("x")).toBe("333");
+    expect(pill?.getAttribute("y")).toBe("444");
+  });
+
 });
