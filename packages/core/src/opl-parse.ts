@@ -31,18 +31,21 @@ export interface OplParseError {
   issues: OplParseIssue[];
 }
 
-const DEFAULT_RENDER_SETTINGS: OplRenderSettings = {
-  essenceVisibility: "all" satisfies OplEssenceVisibility,
-  unitsVisibility: "always" satisfies OplUnitsVisibility,
-  aliasVisibility: false,
-  primaryEssence: "informatical",
-  locale: "en",
-};
+function defaultRenderSettings(locale: "en" | "es"): OplRenderSettings {
+  return {
+    essenceVisibility: "all" satisfies OplEssenceVisibility,
+    unitsVisibility: "always" satisfies OplUnitsVisibility,
+    aliasVisibility: false,
+    primaryEssence: "informatical",
+    locale,
+  };
+}
 
 type ParseContext = {
   thingIdByName: Map<string, string>;
   stateIdByThingAndName: Map<string, string>;
   linkCounter: number;
+  locale: "en" | "es";
 };
 
 function spanForLine(lineText: string, line: number, offset: number): OplSourceSpan {
@@ -91,20 +94,48 @@ function ensureThing(ctx: ParseContext, name: string): string {
   return id;
 }
 
-function parseList(raw: string): string[] {
-  return raw
-    .split(/,\s*|\s+or\s+/)
+function parseList(raw: string, locale: "en" | "es"): string[] {
+  const normalized = locale === "es"
+    ? raw.replace(/\s+u\s+/g, ", ").replace(/\s+o\s+/g, ", ").replace(/\s+y\s+/g, ", ")
+    : raw.replace(/\s+or\s+/g, ", ").replace(/\s+and\s+/g, ", ");
+  return normalized
+    .split(/,\s*/)
     .map((s) => s.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    .filter((s) => !/^otros? estados$/i.test(s));
+}
+
+function detectLocale(text: string): "en" | "es" {
+  const lower = text.toLowerCase();
+  const esSignals = [
+    " es un objeto",
+    " es una objeto",
+    " es un proceso",
+    " puede estar ",
+    " maneja ",
+    " requiere ",
+    " consume ",
+    " genera ",
+    " cambia ",
+    " estado ",
+    " por defecto",
+  ];
+  return esSignals.some((s) => lower.includes(s)) ? "es" : "en";
 }
 
 function parseThingDeclaration(line: string, span: OplSourceSpan, ctx: ParseContext): OplThingDeclaration | null {
-  const match = line.match(/^(.*?) is (a|an) (object|process)(.*)\.$/);
+  const match = ctx.locale === "es"
+    ? line.match(/^(.*?) es un(?:a)? (objeto|proceso)(.*)\.$/)
+    : line.match(/^(.*?) is (a|an) (object|process)(.*)\.$/);
   if (!match) return null;
 
   const name = match[1]!.trim();
-  const thingKind = match[3]! as "object" | "process";
-  const tail = match[4] ?? "";
+  const thingKindRaw = ctx.locale === "es" ? match[2]! : match[3]!;
+  const normalizedThingKind: "object" | "process" =
+    thingKindRaw === "objeto" ? "object" :
+    thingKindRaw === "proceso" ? "process" :
+    thingKindRaw as "object" | "process";
+  const tail = (ctx.locale === "es" ? match[3] : match[4]) ?? "";
   const tokens = tail.split(",").map((t) => t.trim()).filter(Boolean);
 
   let essence: Essence = "informatical";
@@ -112,16 +143,26 @@ function parseThingDeclaration(line: string, span: OplSourceSpan, ctx: ParseCont
   let perseverance: "static" | "dynamic" | undefined;
 
   for (const token of tokens) {
-    if (token === "physical" || token === "informatical") essence = token;
-    if (token === "environmental" || token === "systemic") affiliation = token;
-    if (token === "dynamic") perseverance = "dynamic";
+    const normalized = token
+      .replace("físico", "physical")
+      .replace("física", "physical")
+      .replace("informático", "informatical")
+      .replace("informática", "informatical")
+      .replace("ambiental", "environmental")
+      .replace("sistémico", "systemic")
+      .replace("sistémica", "systemic")
+      .replace("dinámico", "dynamic")
+      .replace("dinámica", "dynamic");
+    if (normalized === "physical" || normalized === "informatical") essence = normalized;
+    if (normalized === "environmental" || normalized === "systemic") affiliation = normalized;
+    if (normalized === "dynamic") perseverance = "dynamic";
   }
 
   return {
     kind: "thing-declaration",
     thingId: ensureThing(ctx, name),
     name,
-    thingKind,
+    thingKind: normalizedThingKind,
     essence,
     affiliation,
     ...(perseverance ? { perseverance } : {}),
@@ -130,10 +171,12 @@ function parseThingDeclaration(line: string, span: OplSourceSpan, ctx: ParseCont
 }
 
 function parseStateEnumeration(line: string, span: OplSourceSpan, ctx: ParseContext): OplStateEnumeration | null {
-  const match = line.match(/^(.*?) can be (.*?)\.$/);
+  const match = ctx.locale === "es"
+    ? line.match(/^(.*?) puede estar (.*?)\.$/)
+    : line.match(/^(.*?) can be (.*?)\.$/);
   if (!match) return null;
   const thingName = match[1]!.trim();
-  const stateNames = parseList(match[2]!.trim());
+  const stateNames = parseList(match[2]!.trim(), ctx.locale);
   if (stateNames.length === 0) return null;
   const thingId = ensureThing(ctx, thingName);
   const stateIds = stateNames.map((name) => {
@@ -152,11 +195,19 @@ function parseStateEnumeration(line: string, span: OplSourceSpan, ctx: ParseCont
 }
 
 function parseStateDescription(line: string, span: OplSourceSpan, ctx: ParseContext): OplStateDescription | null {
-  const match = line.match(/^State (.*?) of (.*?) is (.*?)\.$/);
+  const match = ctx.locale === "es"
+    ? line.match(/^Estado (.*?) de (.*?) es (.*?)\.$/)
+    : line.match(/^State (.*?) of (.*?) is (.*?)\.$/);
   if (!match) return null;
   const stateName = match[1]!.trim();
   const thingName = match[2]!.trim();
-  const qualifiers = match[3]!.split(/\s+and\s+/).map((q) => q.trim());
+  const qualifiers = match[3]!
+    .split(ctx.locale === "es" ? /\s+y\s+/ : /\s+and\s+/)
+    .map((q) => q.trim())
+    .map((q) => q
+      .replace("por defecto", "default")
+      .replace("inicial", "initial")
+      .replace("final", "final"));
   const thingId = ensureThing(ctx, thingName);
   const stateIdValue = ctx.stateIdByThingAndName.get(stateKey(thingName, stateName)) ?? stateId(thingName, stateName);
   ctx.stateIdByThingAndName.set(stateKey(thingName, stateName), stateIdValue);
@@ -174,7 +225,9 @@ function parseStateDescription(line: string, span: OplSourceSpan, ctx: ParseCont
 }
 
 function parseDuration(line: string, span: OplSourceSpan, ctx: ParseContext): OplDuration | null {
-  const match = line.match(/^(.*?) requires (\d+(?:\.\d+)?)(ms|s|min|h|d)\.$/);
+  const match = ctx.locale === "es"
+    ? line.match(/^(.*?) requiere (\d+(?:\.\d+)?)(ms|s|min|h|d)\.$/)
+    : line.match(/^(.*?) requires (\d+(?:\.\d+)?)(ms|s|min|h|d)\.$/);
   if (!match) return null;
   const thingName = match[1]!.trim();
   return {
@@ -188,7 +241,9 @@ function parseDuration(line: string, span: OplSourceSpan, ctx: ParseContext): Op
 }
 
 function parseLink(line: string, span: OplSourceSpan, ctx: ParseContext): OplLinkSentence | null {
-  let match = line.match(/^(.*?) handles (.*?)\.$/);
+  let match = ctx.locale === "es"
+    ? line.match(/^(.*?) maneja (.*?)\.$/)
+    : line.match(/^(.*?) handles (.*?)\.$/);
   if (match) {
     const sourceName = match[1]!.trim();
     const targetName = match[2]!.trim();
@@ -206,7 +261,9 @@ function parseLink(line: string, span: OplSourceSpan, ctx: ParseContext): OplLin
     };
   }
 
-  match = line.match(/^(.*?) requires (.*?)\.$/);
+  match = ctx.locale === "es"
+    ? line.match(/^(.*?) requiere (.*?)\.$/)
+    : line.match(/^(.*?) requires (.*?)\.$/);
   if (match) {
     const targetName = match[1]!.trim();
     const sourceName = match[2]!.trim();
@@ -226,7 +283,9 @@ function parseLink(line: string, span: OplSourceSpan, ctx: ParseContext): OplLin
     };
   }
 
-  match = line.match(/^(.*?) consumes (.*?)\.$/);
+  match = ctx.locale === "es"
+    ? line.match(/^(.*?) consume (.*?)\.$/)
+    : line.match(/^(.*?) consumes (.*?)\.$/);
   if (match) {
     const targetName = match[1]!.trim();
     const objectPhrase = match[2]!.trim();
@@ -256,7 +315,9 @@ function parseLink(line: string, span: OplSourceSpan, ctx: ParseContext): OplLin
     };
   }
 
-  match = line.match(/^(.*?) yields (.*?)\.$/);
+  match = ctx.locale === "es"
+    ? line.match(/^(.*?) genera (.*?)\.$/)
+    : line.match(/^(.*?) yields (.*?)\.$/);
   if (match) {
     const sourceName = match[1]!.trim();
     const objectPhrase = match[2]!.trim();
@@ -286,7 +347,9 @@ function parseLink(line: string, span: OplSourceSpan, ctx: ParseContext): OplLin
     };
   }
 
-  match = line.match(/^(.*?) changes (.*?) from (.*?) to (.*?)\.$/);
+  match = ctx.locale === "es"
+    ? line.match(/^(.*?) cambia (.*?) de (.*?) a (.*?)\.$/)
+    : line.match(/^(.*?) changes (.*?) from (.*?) to (.*?)\.$/);
   if (match) {
     const sourceName = match[1]!.trim();
     const targetName = match[2]!.trim();
@@ -306,7 +369,9 @@ function parseLink(line: string, span: OplSourceSpan, ctx: ParseContext): OplLin
     };
   }
 
-  match = line.match(/^(.*?) changes (.*?) from (.*?)\.$/);
+  match = ctx.locale === "es"
+    ? line.match(/^(.*?) cambia (.*?) de (.*?)\.$/)
+    : line.match(/^(.*?) changes (.*?) from (.*?)\.$/);
   if (match) {
     const sourceName = match[1]!.trim();
     const targetName = match[2]!.trim();
@@ -325,7 +390,9 @@ function parseLink(line: string, span: OplSourceSpan, ctx: ParseContext): OplLin
     };
   }
 
-  match = line.match(/^(.*?) changes (.*?) to (.*?)\.$/);
+  match = ctx.locale === "es"
+    ? line.match(/^(.*?) cambia (.*?) a (.*?)\.$/)
+    : line.match(/^(.*?) changes (.*?) to (.*?)\.$/);
   if (match) {
     const sourceName = match[1]!.trim();
     const targetName = match[2]!.trim();
@@ -356,10 +423,12 @@ function parseSentence(line: string, span: OplSourceSpan, ctx: ParseContext) {
 }
 
 export function parseOplDocument(text: string, opdName = "SD", opdId = `opd-${oplSlug(opdName) || "sd"}`): Result<OplDocument, OplParseError> {
+  const locale = detectLocale(text);
   const ctx: ParseContext = {
     thingIdByName: new Map(),
     stateIdByThingAndName: new Map(),
     linkCounter: 0,
+    locale,
   };
   const issues: OplParseIssue[] = [];
   const sentences = [] as OplDocument["sentences"];
@@ -386,7 +455,7 @@ export function parseOplDocument(text: string, opdName = "SD", opdId = `opd-${op
     opdId,
     opdName,
     sentences,
-    renderSettings: DEFAULT_RENDER_SETTINGS,
+    renderSettings: defaultRenderSettings(locale),
     sourceText: text,
     sourceSpan: {
       line: 1,

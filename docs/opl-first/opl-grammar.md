@@ -21,6 +21,11 @@ Este subset está alineado con el output actual de `render()` / `renderAll()` y 
 
 ## Nivel de entrada soportado en esta fase
 
+Este primer subset acepta sentencias canónicas en **inglés** y en **español**, alineadas con:
+
+1. `opm-iso-19450.md` — superficie OPL-EN normativa
+2. `opm-opl-es.md` — sustitución de terminales léxicos para OPL-ES
+
 ### Estructura de archivo
 
 ```text
@@ -32,6 +37,17 @@ Boiling is a process, physical.
 Boiling requires 5min.
 Barista handles Boiling.
 Boiling changes Water from cold to hot.
+```
+
+```text
+=== SD ===
+Agua es un objeto, físico.
+Agua puede estar fría o caliente.
+Estado fría de Agua es inicial y por defecto.
+Hervir es un proceso, físico.
+Hervir requiere 5min.
+Barista maneja Hervir.
+Hervir cambia Agua de fría a caliente.
 ```
 
 ## Sentencias soportadas
@@ -59,6 +75,12 @@ Boiling is a process, physical.
 Cup is an object, physical, environmental.
 ```
 
+```text
+Agua es un objeto, físico.
+Hervir es un proceso, físico.
+Taza es un objeto, físico, ambiental.
+```
+
 Forma:
 
 ```ebnf
@@ -79,6 +101,11 @@ Water can be cold or hot.
 Coffee can be ready, warm, or unmade.
 ```
 
+```text
+Agua puede estar fría o caliente.
+Café puede estar listo, tibio o sin preparar.
+```
+
 Forma:
 
 ```ebnf
@@ -91,6 +118,11 @@ state-list        = state-name, { ", ", state-name }, [ " or ", state-name ] ;
 ```text
 State cold of Water is initial and default.
 State ready of Coffee is final.
+```
+
+```text
+Estado fría de Agua es inicial y por defecto.
+Estado listo de Café es final.
 ```
 
 Forma:
@@ -108,6 +140,11 @@ Boiling requires 5min.
 Coffee Making requires 120s.
 ```
 
+```text
+Hervir requiere 5min.
+Preparar Café requiere 120s.
+```
+
 Forma:
 
 ```ebnf
@@ -120,23 +157,29 @@ time-unit = "ms" | "s" | "min" | "h" | "d" ;
 #### agent
 ```text
 Barista handles Boiling.
+Barista maneja Hervir.
 ```
 
 #### instrument
 ```text
 Boiling requires Coffee Machine.
+Hervir requiere Máquina de Café.
 ```
 
 #### consumption
 ```text
 Brewing consumes Ground Coffee.
 Brewing consumes hot Water.
+Preparar consume Café Molido.
+Preparar consume Agua en caliente.
 ```
 
 #### result
 ```text
 Grinding yields Ground Coffee.
 Brewing yields ready Coffee.
+Moler genera Café Molido.
+Preparar genera Café en listo.
 ```
 
 #### effect
@@ -144,6 +187,9 @@ Brewing yields ready Coffee.
 Boiling changes Water from cold to hot.
 Process changes Object from old.
 Process changes Object to new.
+Hervir cambia Agua de fría a caliente.
+Proceso cambia Objeto de viejo.
+Proceso cambia Objeto a nuevo.
 ```
 
 ## Constructos explícitamente fuera de scope en esta fase
@@ -177,6 +223,12 @@ Como el OPL no trae IDs, el parser genera IDs sintéticos estables basados en no
 - links: `link-${counter}`
 
 Estos IDs son provisionales y sirven para el AST parseado y el futuro compiler.
+
+## Notas de implementación
+
+- El parser actual detecta idioma por terminales léxicos principales.
+- La forma canónica sigue siendo la que genera `render()` para cada locale.
+- Este documento define el subset inicial; no pretende cubrir todavía todo ISO/OPL-ES.
 
 ## TODO siguientes fases
 

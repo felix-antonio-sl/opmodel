@@ -15,6 +15,20 @@ const SIMPLE_SD = [
   "Boiling changes Water from cold to hot.",
 ].join("\n");
 
+const SIMPLE_SD_ES = [
+  "Agua es un objeto, físico.",
+  "Agua puede estar fría o caliente.",
+  "Estado fría de Agua es inicial y por defecto.",
+  "Estado caliente de Agua es final.",
+  "Hervir es un proceso, físico.",
+  "Hervir requiere 5min.",
+  "Barista es un objeto, físico.",
+  "Máquina de Café es un objeto, físico.",
+  "Barista maneja Hervir.",
+  "Hervir requiere Máquina de Café.",
+  "Hervir cambia Agua de fría a caliente.",
+].join("\n");
+
 describe("parseOplDocument", () => {
   it("parses the initial canonical subset", () => {
     const result = parseOplDocument(SIMPLE_SD, "SD", "opd-sd");
@@ -37,6 +51,15 @@ describe("parseOplDocument", () => {
     if (!result.ok) return;
 
     expect(render(result.value)).toBe(SIMPLE_SD);
+  });
+
+  it("round-trips the supported Spanish subset through render()", () => {
+    const result = parseOplDocument(SIMPLE_SD_ES, "SD", "opd-sd");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.value.renderSettings.locale).toBe("es");
+    expect(render(result.value)).toBe(SIMPLE_SD_ES);
   });
 
   it("returns structured issues for unsupported lines", () => {
