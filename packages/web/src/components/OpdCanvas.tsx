@@ -1,4 +1,5 @@
 import { useRef, useState, useCallback, useMemo, useEffect } from "react";
+import { buildOpdProjectionView } from "../lib/projection-view";
 import type { Model, Appearance, Fan } from "@opmodel/core";
 import { createInitialState, resolveOpdFiber, findConsumptionResultPairs, findStructuralForks, getSemiFoldedParts, type ModelState, type StructuralFork, type OpdFiber } from "@opmodel/core";
 import type { Command, EditorMode, LinkTypeChoice, SimulationUIState } from "../lib/commands";
@@ -141,12 +142,14 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
     return opd?.refines ?? null;
   }, [model, opdId]);
 
+  const projectionView = useMemo(() => buildOpdProjectionView(model, opdId), [model, opdId]);
+
   // Set of things that move during drag
   const draggedThings = useMemo(() => {
     if (!dragTarget) return new Set<string>();
     if (dragTarget === containerThingId) {
       const set = new Set<string>();
-      for (const app of model.appearances.values()) {
+      for (const app of projectionView.appearancesByThing.values()) {
         if (app.opd === opdId) set.add(app.thing);
       }
       return set;
@@ -157,7 +160,7 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
       return set;
     }
     return new Set([dragTarget]);
-  }, [dragTarget, containerThingId, model, opdId, multiSelect]);
+  }, [dragTarget, containerThingId, opdId, multiSelect, projectionView]);
 
   // Inline rename state
   const [renaming, setRenaming] = useState<string | null>(null);
@@ -185,25 +188,16 @@ export function OpdCanvas({ model, opdId, selectedThing, mode, linkType, dispatc
   }, [model.subModels]);
 
   // R-VI-2: Things appearing in multiple OPDs
-  const multiOpdThings = useMemo(() => {
-    const opdCount = new Map<string, number>();
-    for (const app of model.appearances.values()) {
-      opdCount.set(app.thing, (opdCount.get(app.thing) ?? 0) + 1);
-    }
-    const set = new Set<string>();
-    for (const [id, count] of opdCount) {
-      if (count > 1) set.add(id);
-    }
-    return set;
-  }, [model.appearances]);
+  const multiOpdThings = useMemo(() => projectionView.multiOpdThings, [projectionView]);
 
   const appearances = useMemo(() => {
     const map = new Map<string, Appearance>();
     for (const [id, entry] of fiber.things) {
-      if (!entry.implicit) map.set(id, entry.appearance);
+      if (entry.implicit) continue;
+      map.set(id, projectionView.appearancesByThing.get(id) ?? entry.appearance);
     }
     return map;
-  }, [fiber]);
+  }, [fiber, projectionView]);
 
   // Select all (Ctrl+A)
   useEffect(() => {

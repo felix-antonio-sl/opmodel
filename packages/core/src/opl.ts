@@ -1,5 +1,6 @@
 // packages/core/src/opl.ts
 import type { Model, ComputationalObject, Thing, State, Link, Modifier, Appearance } from "./types";
+import type { LayoutModel, OpdAtlas, SemanticKernel } from "./semantic-kernel";
 import type { InvariantError, Result } from "./result";
 import type {
   OplDocument, OplEdit, OplSentence,
@@ -15,6 +16,7 @@ import {
   addLink, removeLink, addModifier, removeModifier,
   addAppearance,
 } from "./api";
+import { legacyModelFromSemanticKernel } from "./semantic-kernel";
 
 // === OPL-ES Vocabulary (per urn:fxsl:kb:opm-opl-es §2, §15) ===
 
@@ -89,6 +91,16 @@ const ES_VOCAB: OplVocab = {
 
 function getVocab(locale: string): OplVocab {
   return locale === "es" ? ES_VOCAB : EN_VOCAB;
+}
+
+export function exposeFromSemanticKernel(
+  kernel: SemanticKernel,
+  opdId: string,
+  atlas?: OpdAtlas,
+  layout?: LayoutModel,
+): OplDocument {
+  const model = legacyModelFromSemanticKernel(kernel, atlas, layout);
+  return expose(model, opdId);
 }
 
 export function expose(model: Model, opdId: string): OplDocument {
@@ -1156,6 +1168,15 @@ export function render(doc: OplDocument): string {
 }
 
 // === Full-model OPL export ===
+
+export function renderAllFromSemanticKernel(
+  kernel: SemanticKernel,
+  atlas?: OpdAtlas,
+  layout?: LayoutModel,
+): string {
+  const model = legacyModelFromSemanticKernel(kernel, atlas, layout);
+  return renderAll(model);
+}
 
 /** Render OPL for all OPDs in the model, sorted hierarchically (root first, depth-first). */
 export function renderAll(model: Model): string {

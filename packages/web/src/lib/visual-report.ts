@@ -7,6 +7,7 @@ import {
   type VisualQualityScore,
   type VisualSeverity,
 } from "./visual-lint";
+import { buildPatchableOpdProjectionSlice } from "./projection-view";
 
 export interface VisualFindingReportItem {
   severity: VisualSeverity;
@@ -87,10 +88,8 @@ function summarizeFinding(model: Model, finding: VisualFinding): string {
 
 export function buildVisualReport(model: Model): VisualModelReport {
   const opds: VisualOpdReport[] = [...model.opds.values()].map((opd) => {
-    const appearances = [...model.appearances.values()].filter((a) => a.opd === opd.id);
-    const ids = new Set(appearances.map((a) => a.thing));
-    const links = [...model.links.values()].filter((l) => ids.has(l.source) && ids.has(l.target));
-    const findings = auditVisualOpd({ appearances, links, things: model.things.values(), states: model.states.values() });
+    const slice = buildPatchableOpdProjectionSlice(model, opd.id);
+    const findings = auditVisualOpd({ appearances: slice.appearances, links: slice.links, things: model.things.values(), states: model.states.values() });
     const quality = computeVisualQuality(findings);
     return {
       opdId: opd.id,

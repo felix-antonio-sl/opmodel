@@ -8,8 +8,9 @@
    Dispatch interprets Commands via η into Effects.
    ═══════════════════════════════════════════════════ */
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import {
+  type LegacyProjection,
   type Model,
   type History,
   createHistory,
@@ -19,9 +20,11 @@ import {
   isOk,
   saveModel,
   runSimulation,
+  projectLegacyModel,
 } from "@opmodel/core";
 import { type Command, interpret } from "../lib/commands";
 import type { EditorMode, LinkTypeChoice, SimulationUIState } from "../lib/commands";
+import { buildPatchableOpdProjectionSlice, type PatchableOpdProjectionSlice } from "../lib/projection-view";
 
 const STORAGE_KEY = "opmodel:current";
 
@@ -40,6 +43,10 @@ export type SaveStatus = "saved" | "saving" | "error";
 export interface ModelStore {
   /** Current model — extract from History comonad */
   model: Model;
+  /** Projection bridge from legacy model into kernel + atlas + layout */
+  projection: LegacyProjection;
+  /** Current OPD slice used by visual consumers */
+  currentProjectionSlice: PatchableOpdProjectionSlice;
   /** Ephemeral UI state — orthogonal to History */
   ui: UIState;
   /** Can undo? */
@@ -75,6 +82,12 @@ export function useModelStore(initialModel: Model): ModelStore {
   });
   const [lastError, setLastError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
+
+  const projection = useMemo(() => projectLegacyModel(history.present), [history.present]);
+  const currentProjectionSlice = useMemo(
+    () => buildPatchableOpdProjectionSlice(history.present, ui.currentOpd),
+    [history.present, ui.currentOpd],
+  );
 
   // Refs for accessing current state inside useCallback without stale closures
   const historyRef = useRef(history);
@@ -256,6 +269,8 @@ export function useModelStore(initialModel: Model): ModelStore {
 
   return {
     model: history.present,
+    projection,
+    currentProjectionSlice,
     ui,
     canUndo: history.past.length > 0,
     canRedo: history.future.length > 0,

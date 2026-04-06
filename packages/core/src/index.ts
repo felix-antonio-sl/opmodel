@@ -1,4 +1,5 @@
 export * from "./types";
+export * from "./semantic-kernel";
 export * from "./result";
 export { createModel } from "./model";
 export { appearanceKey, transformingMode, type TransformingMode } from "./helpers";
@@ -31,7 +32,7 @@ export {
   createHistory, pushHistory, undo, redo,
 } from "./history";
 export {
-  expose, applyOplEdit, render, renderAll, modelStats, oplSlug, editsFrom,
+  expose, exposeFromSemanticKernel, applyOplEdit, render, renderAll, renderAllFromSemanticKernel, modelStats, oplSlug, editsFrom,
 } from "./opl";
 export {
   parseOplDocument,

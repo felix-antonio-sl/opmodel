@@ -28,6 +28,7 @@ import { SimulationPanel } from "./components/SimulationPanel";
 import { ValidationPanel, type ValidationTab } from "./components/ValidationPanel";
 import { auditVisualOpd, computeVisualQuality } from "./lib/visual-lint";
 import { suggestLayoutForOpd } from "./lib/spatial-layout";
+import { buildPatchableOpdProjectionSliceFromProjection } from "./lib/projection-view";
 import { BugCapture } from "./components/BugCapture";
 import type { NlConfig } from "@opmodel/nl";
 import { createProvider, createPipeline } from "@opmodel/nl";
@@ -252,7 +253,7 @@ function FileMenu({ model, onNew, onLoadExample, onImport, onSave, onAutoLayoutA
 
 function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel: Model; onNew: () => void; onLoadExample: (file: string) => void; onImport: (model: Model) => void }) {
   const store = useModelStore(initialModel);
-  const { model, ui, dispatch, doUndo, doRedo, canUndo, canRedo, lastError, save, saveStatus } = store;
+  const { model, projection, currentProjectionSlice, ui, dispatch, doUndo, doRedo, canUndo, canRedo, lastError, save, saveStatus } = store;
 
   // NL pipeline
   const [nlConfig, setNlConfig] = useState<NlConfig | null>(() => {
@@ -434,11 +435,8 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
   }, [dispatch, model, ui.currentOpd]);
 
   const visualFindings = useMemo(() => {
-    const appearances = [...model.appearances.values()].filter((a) => a.opd === ui.currentOpd);
-    const ids = new Set(appearances.map((a) => a.thing));
-    const links = [...model.links.values()].filter((l) => ids.has(l.source) && ids.has(l.target));
-    return auditVisualOpd({ appearances, links, things: model.things.values(), states: model.states.values() });
-  }, [model, ui.currentOpd]);
+    return auditVisualOpd({ appearances: currentProjectionSlice.appearances, links: currentProjectionSlice.links, things: model.things.values(), states: model.states.values() });
+  }, [currentProjectionSlice, model]);
   const visualQuality = useMemo(() => computeVisualQuality(visualFindings), [visualFindings]);
   const validationLabel = isValid
     ? (errors.length > 0 ? `${errors.length} hints` : "Valid")
@@ -454,10 +452,8 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
     const allUpdates: Array<{ thingId: string; opdId: string; patch: Record<string, unknown> }> = [];
 
     for (const opd of opds) {
-      const apps = [...model.appearances.values()].filter((a) => a.opd === opd.id);
-      const ids = new Set(apps.map((a) => a.thing));
-      const links = [...model.links.values()].filter((l) => ids.has(l.source) && ids.has(l.target));
-      const beforeFindings = auditVisualOpd({ appearances: apps, links, things: model.things.values(), states: model.states.values() });
+      const slice = buildPatchableOpdProjectionSliceFromProjection(projection, model, opd.id);
+      const beforeFindings = auditVisualOpd({ appearances: slice.appearances, links: slice.links, things: model.things.values(), states: model.states.values() });
       beforeSum += computeVisualQuality(beforeFindings).score;
 
       const suggestion = suggestLayoutForOpd(model, opd.id);

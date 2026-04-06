@@ -1,6 +1,7 @@
 import type { Appearance, Fan, Link, Model, Thing } from "@opmodel/core";
 import { auditVisualOpd, type VisualFinding } from "./visual-lint";
 import { VISUAL_RULES, minimumWidthForStateNames } from "./visual-rules";
+import { buildPatchableOpdProjectionSlice } from "./projection-view";
 
 export interface AppearancePatch {
   thingId: string;
@@ -757,11 +758,11 @@ function layoutSdBalanced(
 
 export function suggestLayoutForOpd(model: Model, opdId: string): LayoutSuggestion {
   const opd = model.opds.get(opdId);
-  const apps = [...model.appearances.values()].filter((a) => a.opd === opdId);
-  const ids = new Set(apps.map((a) => a.thing));
-  const links = [...model.links.values()].filter((l) => ids.has(l.source) && ids.has(l.target));
-  const fans = [...model.fans.values()].filter((f) => f.members.some((id) => links.some((l) => l.id === id)));
   if (!opd) return { strategy: "none", patches: [], findings: [] };
+  const projected = buildPatchableOpdProjectionSlice(model, opdId);
+  const apps = projected.appearances;
+  const links = projected.links;
+  const fans = projected.fans;
   if (opd.refinement_type === "in-zoom") {
     const branching = layoutBranchingControl(model, opdId, apps, links, fans, opd.refines ?? undefined);
     if (branching.strategy !== "none") return branching;

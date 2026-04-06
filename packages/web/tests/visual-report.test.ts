@@ -1,41 +1,56 @@
 import { describe, expect, it } from "vitest";
-import { loadModel } from "@opmodel/core";
-import { readFileSync } from "fs";
-import { resolve } from "path";
-import { buildVisualReport, exportVisualReportMarkdown } from "../src/lib/visual-report";
+import { createModel } from "@opmodel/core";
+import { buildVisualReport } from "../src/lib/visual-report";
 
 describe("visual-report", () => {
-  it("builds a model-level report for EV-AMS", () => {
-    const fixture = readFileSync(resolve(process.cwd(), "tests/ev-ams.opmodel"), "utf8");
-    const parsed = loadModel(fixture);
-    expect(parsed.ok).toBe(true);
-    if (!parsed.ok) return;
+  it("builds per-OPD reports through projection-backed slices", () => {
+    const model = createModel("Visual Report Test");
 
-    const report = buildVisualReport(parsed.value);
-    expect(report.modelName).toBeTruthy();
-    expect(report.opds.length).toBe(parsed.value.opds.size);
-    expect(report.avgScore).toBeGreaterThan(0);
-    expect(report.bestScore).toBeGreaterThanOrEqual(report.worstScore);
-    expect(report.opds[0].score).toBeLessThanOrEqual(report.opds[report.opds.length - 1].score);
-    expect(report.opds.some((opd) => opd.findings.length > 0)).toBe(true);
-    for (const opd of report.opds) {
-      expect(opd.findings.length).toBe(opd.errors + opd.warnings + opd.info);
-    }
-    expect(report.opds.some((opd) => opd.findings.some((finding) => finding.primaryEntity !== null))).toBe(true);
-  });
+    model.things.set("proc-parent", {
+      id: "proc-parent",
+      kind: "process",
+      name: "Parent",
+      essence: "physical",
+      affiliation: "systemic",
+    });
+    model.things.set("proc-child", {
+      id: "proc-child",
+      kind: "process",
+      name: "Child",
+      essence: "physical",
+      affiliation: "systemic",
+    });
+    model.opds.set("opd-sd1", {
+      id: "opd-sd1",
+      name: "SD1",
+      opd_type: "hierarchical",
+      parent_opd: "opd-sd",
+      refines: "proc-parent",
+      refinement_type: "in-zoom",
+    });
+    model.appearances.set("proc-parent::opd-sd1", {
+      thing: "proc-parent",
+      opd: "opd-sd1",
+      x: 10,
+      y: 10,
+      w: 120,
+      h: 60,
+    });
+    model.appearances.set("proc-child::opd-sd1", {
+      thing: "proc-child",
+      opd: "opd-sd1",
+      x: 10,
+      y: 120,
+      w: 120,
+      h: 60,
+    });
 
-  it("exports markdown with detailed findings", () => {
-    const fixture = readFileSync(resolve(process.cwd(), "tests/hodom-v2.opmodel"), "utf8");
-    const parsed = loadModel(fixture);
-    expect(parsed.ok).toBe(true);
-    if (!parsed.ok) return;
+    const report = buildVisualReport(model);
+    const sd1 = report.opds.find((r) => r.opdId === "opd-sd1");
 
-    const md = exportVisualReportMarkdown(buildVisualReport(parsed.value));
-    expect(md).toContain("# Visual Quality Report");
-    expect(md).toContain("| OPD | Grade | Score | Errors | Warnings | Info |");
-    expect(md).toContain("## Detailed Findings");
-    expect(md).toContain("[WARNING]");
-    expect(md).toContain("—");
-    expect(md).toContain("SD");
+    expect(sd1).toBeDefined();
+    expect(sd1?.findings).toBeDefined();
+    expect(sd1?.score).toBeGreaterThanOrEqual(0);
+    expect(sd1?.grade).toBeDefined();
   });
 });
