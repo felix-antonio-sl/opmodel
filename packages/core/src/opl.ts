@@ -346,8 +346,12 @@ export function expose(model: Model, opdId: string): OplDocument {
     const childIds = group.links.map(l => group.parentIsSource ? l.target : l.source);
     const childNames = childIds.map(id => model.things.get(id)?.name ?? id);
     const childKinds = childIds.map(id => model.things.get(id)?.kind ?? "object" as const);
-    const childMultiplicities = group.links.map(l =>
-      group.parentIsSource ? l.multiplicity_target : l.multiplicity_source
+    const multiplicities = Object.fromEntries(
+      childNames.flatMap((name, index) => {
+        const link = group.links[index];
+        const multiplicity = group.parentIsSource ? link?.multiplicity_target : link?.multiplicity_source;
+        return multiplicity ? [[name, multiplicity]] : [];
+      }),
     );
     const parentApp = opdAppearances.get(group.parentId);
     sentences.push({
@@ -359,7 +363,7 @@ export function expose(model: Model, opdId: string): OplDocument {
       childIds,
       childNames,
       childKinds,
-      childMultiplicities,
+      ...(Object.keys(multiplicities).length > 0 ? { multiplicities } : {}),
       incomplete: group.links.some(l => l.incomplete),
       ...(parentApp?.semi_folded ? { semiFolded: true } : {}),
     } as OplGroupedStructuralSentence);
@@ -846,7 +850,7 @@ function renderGroupedStructural(s: OplGroupedStructuralSentence, v: OplVocab): 
   switch (s.linkType) {
     case "aggregation": {
       const qualifiedNames = s.childNames.map((name, i) =>
-        withMultiplicity(name, s.childMultiplicities?.[i], isES)
+        withMultiplicity(name, s.multiplicities?.[name], isES)
       );
       if (s.semiFolded) {
         return isES
@@ -858,7 +862,7 @@ function renderGroupedStructural(s: OplGroupedStructuralSentence, v: OplVocab): 
 
     case "exhibition": {
       const qualifiedNames = s.childNames.map((name, i) =>
-        withMultiplicity(name, s.childMultiplicities?.[i], isES)
+        withMultiplicity(name, s.multiplicities?.[name], isES)
       );
       const attrs = qualifiedNames.filter((_, i) => s.childKinds[i] === "object");
       const ops = qualifiedNames.filter((_, i) => s.childKinds[i] === "process");

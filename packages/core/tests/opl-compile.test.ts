@@ -116,6 +116,23 @@ const INZOOM_WITH_INVOCATIONS = [
   "Making Coffee zooms into Grinding, Brewing and Serving, in that sequence.",
 ].join("\n");
 
+const UNFOLD_WITHOUT_INVOCATIONS = [
+  "Vehicle is an object, physical.",
+  "Door is an object, physical.",
+  "Window is an object, physical.",
+  "Mirror is an object, physical.",
+  "Vehicle unfolds in SD1 into Door, Window and Mirror.",
+].join("\n");
+
+const STRUCTURAL_MULTIPLICITIES = [
+  "Car is an object, physical.",
+  "Engine is an object, physical.",
+  "Sunroof is an object, physical.",
+  "Airbag is an object, physical.",
+  "Car consists of Engine and an optional Sunroof.",
+  "Car exhibits at least one Airbag.",
+].join("\n");
+
 const REQUIREMENT_SUBSET = [
   "Hospital is an object, physical.",
   "Emergency is a process, physical.",
@@ -272,6 +289,26 @@ describe("compileOplDocument", () => {
     expect(text).toContain("Model X is an instance of Car.");
   });
 
+  it("compiles grouped structural multiplicities onto target links", () => {
+    const parsed = parseOplDocument(STRUCTURAL_MULTIPLICITIES, "SD", "opd-sd");
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+
+    const compiled = compileOplDocument(parsed.value);
+    expect(compiled.ok).toBe(true);
+    if (!compiled.ok) return;
+
+    const model = compiled.value;
+    const aggregation = [...model.links.values()].find(l => l.type === "aggregation" && l.multiplicity_target === "?");
+    const exhibition = [...model.links.values()].find(l => l.type === "exhibition" && l.multiplicity_target === "+");
+    expect(aggregation).toBeDefined();
+    expect(exhibition).toBeDefined();
+
+    const text = render(expose(model, "opd-sd"));
+    expect(text).toContain("Car consists of Engine and an optional Sunroof.");
+    expect(text).toContain("Car exhibits at least one Airbag.");
+  });
+
   it("compiles modifiers over resolved procedural links", () => {
     const parsed = parseOplDocument(MODIFIER_SUBSET, "SD", "opd-sd");
     expect(parsed.ok).toBe(true);
@@ -317,6 +354,19 @@ describe("compileOplDocument", () => {
       expect(link).toBeDefined();
       expect(link?.type).toBe("agent");
     }
+  });
+
+  it("does not create invocation links for unfolding sentences", () => {
+    const parsed = parseOplDocument(UNFOLD_WITHOUT_INVOCATIONS, "SD", "opd-sd");
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+
+    const compiled = compileOplDocument(parsed.value);
+    expect(compiled.ok).toBe(true);
+    if (!compiled.ok) return;
+
+    const invocationLinks = [...compiled.value.links.values()].filter(l => l.type === "invocation");
+    expect(invocationLinks).toHaveLength(0);
   });
 
   it("compiles OR converging fan", () => {
@@ -524,5 +574,32 @@ describe("compileOplDocuments", () => {
 
     const coffeeMaking = [...model.things.values()].find(t => t.name === "Coffee Making");
     expect(child?.refines).toBe(coffeeMaking?.id);
+  });
+
+  it("compiles OPD skeleton with unfold refinement edge", () => {
+    const parsed = parseOplDocuments([
+      "=== SD ===",
+      "Car is an object, physical.",
+      "",
+      "=== SD1 ===",
+      "SD is refined by unfolding Car in SD1.",
+      "Engine is an object, physical.",
+    ].join("\n"));
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+
+    const compiled = compileOplDocuments(parsed.value);
+    expect(compiled.ok).toBe(true);
+    if (!compiled.ok) return;
+
+    const model = compiled.value;
+    expect(model.opds.size).toBe(2);
+    const child = [...model.opds.values()].find(o => o.name === "SD1");
+    expect(child).toBeDefined();
+    expect(child?.parent_opd).toBe("opd-sd");
+    expect(child?.refinement_type).toBe("unfold");
+
+    const car = [...model.things.values()].find(t => t.name === "Car");
+    expect(child?.refines).toBe(car?.id);
   });
 });

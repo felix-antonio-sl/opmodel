@@ -110,7 +110,7 @@ export interface OplGroupedStructuralSentence extends OplSourceNode {
   childIds: string[];
   childNames: string[];
   childKinds: Kind[];
-  childMultiplicities?: (string | undefined)[];
+  multiplicities?: Record<string, string>;
   incomplete: boolean;
   semiFolded?: boolean;
 }
@@ -119,6 +119,7 @@ export interface OplInZoomSequence extends OplSourceNode {
   kind: "in-zoom-sequence";
   parentId: string;
   parentName: string;
+  refinementType?: "in-zoom" | "unfold";
   steps: {
     thingIds: string[];
     thingNames: string[];

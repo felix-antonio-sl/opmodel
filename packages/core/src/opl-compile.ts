@@ -476,6 +476,7 @@ export function compileOplDocuments(docs: OplDocument[], options: OplCompileOpti
             type: s.linkType,
             source: parentRef.thingId,
             target: childRef.thingId,
+            ...(s.multiplicities?.[childName] ? { multiplicity_target: s.multiplicities[childName] } : {}),
             ...(s.incomplete ? { incomplete: true } : {}),
           };
 
@@ -770,6 +771,7 @@ export function compileOplDocuments(docs: OplDocument[], options: OplCompileOpti
   for (const doc of docs) {
     for (const s of doc.sentences) {
       if (s.kind !== "in-zoom-sequence") continue;
+      if (s.refinementType === "unfold") continue;
 
       const parentRef = resolveThingRef(s.parentName, undefined, thingRefByDisplayName, thingIdsByActualName, doc.renderSettings.locale);
       if (!parentRef) {

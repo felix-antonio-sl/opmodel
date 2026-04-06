@@ -522,23 +522,41 @@ function parseLink(line: string, span: OplSourceSpan, ctx: ParseContext): OplLin
 
 function parseStructuralSentence(line: string, span: OplSourceSpan, ctx: ParseContext): OplGroupedStructuralSentence | null {
   const isES = ctx.locale === "es";
+  const parseStructuralChildren = (raw: string): Pick<OplGroupedStructuralSentence, "childIds" | "childNames" | "childKinds" | "multiplicities"> | null => {
+    const parsedChildren = parseList(raw, ctx.locale)
+      .map((item) => parseStructuralChild(item, ctx.locale))
+      .filter((item): item is { name: string; multiplicity?: string } => item != null);
+    if (parsedChildren.length === 0) return null;
+
+    const multiplicities = Object.fromEntries(
+      parsedChildren
+        .filter((item): item is { name: string; multiplicity: string } => item.multiplicity != null)
+        .map((item) => [item.name, item.multiplicity]),
+    );
+
+    return {
+      childIds: parsedChildren.map((item) => ensureThing(ctx, item.name)),
+      childNames: parsedChildren.map((item) => item.name),
+      childKinds: parsedChildren.map(() => "object" as const),
+      ...(Object.keys(multiplicities).length > 0 ? { multiplicities } : {}),
+    };
+  };
+
   // Aggregation: "X consta de A, B y C." / "X consists of A, B and C."
   let match = isES
     ? line.match(/^(.*?) consta de (.*?)\.$/)
     : line.match(/^(.*?) consists of (.*?)\.$/);
   if (match) {
     const parentName = match[1]!.trim();
-    const childNames = parseList(match[2]!.trim(), ctx.locale);
-    if (childNames.length === 0) return null;
+    const children = parseStructuralChildren(match[2]!.trim());
+    if (!children) return null;
     return {
       kind: "grouped-structural",
       linkType: "aggregation",
       parentId: ensureThing(ctx, parentName),
       parentName,
       parentKind: "object",
-      childIds: childNames.map(n => ensureThing(ctx, n)),
-      childNames,
-      childKinds: childNames.map(() => "object" as const),
+      ...children,
       incomplete: false,
       sourceSpan: span,
     };
@@ -550,17 +568,15 @@ function parseStructuralSentence(line: string, span: OplSourceSpan, ctx: ParseCo
     : line.match(/^(.*?) exhibits (.*?)\.$/);
   if (match) {
     const parentName = match[1]!.trim();
-    const childNames = parseList(match[2]!.trim(), ctx.locale);
-    if (childNames.length === 0) return null;
+    const children = parseStructuralChildren(match[2]!.trim());
+    if (!children) return null;
     return {
       kind: "grouped-structural",
       linkType: "exhibition",
       parentId: ensureThing(ctx, parentName),
       parentName,
       parentKind: "object",
-      childIds: childNames.map(n => ensureThing(ctx, n)),
-      childNames,
-      childKinds: childNames.map(() => "object" as const),
+      ...children,
       incomplete: false,
       sourceSpan: span,
     };
@@ -571,7 +587,8 @@ function parseStructuralSentence(line: string, span: OplSourceSpan, ctx: ParseCo
     ? line.match(/^(.*?) es una instancia de (.*?)\.$/)
     : line.match(/^(.*?) is an instance of (.*?)\.$/);
   if (match) {
-    const childName = match[1]!.trim();
+    const child = parseStructuralChild(match[1]!.trim(), ctx.locale);
+    if (!child) return null;
     const parentName = match[2]!.trim();
     return {
       kind: "grouped-structural",
@@ -579,9 +596,10 @@ function parseStructuralSentence(line: string, span: OplSourceSpan, ctx: ParseCo
       parentId: ensureThing(ctx, parentName),
       parentName,
       parentKind: "object",
-      childIds: [ensureThing(ctx, childName)],
-      childNames: [childName],
+      childIds: [ensureThing(ctx, child.name)],
+      childNames: [child.name],
       childKinds: ["object"],
+      ...(child.multiplicity ? { multiplicities: { [child.name]: child.multiplicity } } : {}),
       incomplete: false,
       sourceSpan: span,
     };
@@ -593,7 +611,8 @@ function parseStructuralSentence(line: string, span: OplSourceSpan, ctx: ParseCo
     ? line.match(/^(.*?) es un(?:a)? (.*?)\.$/)
     : line.match(/^(.*?) is (?:a |an )([A-Z].*?)\.$/);
   if (match) {
-    const childName = match[1]!.trim();
+    const child = parseStructuralChild(match[1]!.trim(), ctx.locale);
+    if (!child) return null;
     const parentName = match[2]!.trim();
     // Skip if it looks like a thing declaration
     if (["object", "process", "objeto", "proceso", "physical", "informatical", "físico", "informático"].includes(parentName.toLowerCase())) return null;
@@ -606,9 +625,10 @@ function parseStructuralSentence(line: string, span: OplSourceSpan, ctx: ParseCo
       parentId: ensureThing(ctx, parentName),
       parentName,
       parentKind: "object",
-      childIds: [ensureThing(ctx, childName)],
-      childNames: [childName],
+      childIds: [ensureThing(ctx, child.name)],
+      childNames: [child.name],
       childKinds: ["object"],
+      ...(child.multiplicity ? { multiplicities: { [child.name]: child.multiplicity } } : {}),
       incomplete: false,
       sourceSpan: span,
     };
@@ -620,9 +640,9 @@ function parseStructuralSentence(line: string, span: OplSourceSpan, ctx: ParseCo
     ? line.match(/^(.*?) son (?:un |una )?(.*?)\.$/)
     : line.match(/^(.*?) are (?:a |an )?(.*?)\.$/);
   if (match) {
-    const childNames = parseList(match[1]!.trim(), ctx.locale);
+    const children = parseStructuralChildren(match[1]!.trim());
     const parentName = match[2]!.trim();
-    if (childNames.length < 2) return null;
+    if (!children || children.childNames.length < 2) return null;
     // Skip thing declarations
     if (["object", "process", "objeto", "proceso"].includes(parentName.toLowerCase())) return null;
     return {
@@ -631,15 +651,40 @@ function parseStructuralSentence(line: string, span: OplSourceSpan, ctx: ParseCo
       parentId: ensureThing(ctx, parentName),
       parentName,
       parentKind: "object",
-      childIds: childNames.map(n => ensureThing(ctx, n)),
-      childNames,
-      childKinds: childNames.map(() => "object" as const),
+      ...children,
       incomplete: false,
       sourceSpan: span,
     };
   }
 
   return null;
+}
+
+function parseStructuralChild(raw: string, locale: "en" | "es"): { name: string; multiplicity?: string } | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  const patterns = locale === "es"
+    ? [
+      [/^(?:un|una) opcional\s+(.+)$/i, "?"],
+      [/^opcional(?:\s*\(cero o m[aá]s\))?\s+(.+)$/i, "*"],
+      [/^al menos (?:un|una)\s+(.+)$/i, "+"],
+    ] as const
+    : [
+      [/^an optional\s+(.+)$/i, "?"],
+      [/^optional(?:\s*\(none to many\))?\s+(.+)$/i, "*"],
+      [/^at least one\s+(.+)$/i, "+"],
+    ] as const;
+
+  for (const [pattern, multiplicity] of patterns) {
+    const match = trimmed.match(pattern);
+    if (!match) continue;
+    const name = match[1]!.trim();
+    if (!name) return null;
+    return { name, multiplicity };
+  }
+
+  return { name: trimmed };
 }
 
 function parseModifierSentence(line: string, span: OplSourceSpan, ctx: ParseContext): OplModifierSentence | null {
@@ -741,6 +786,7 @@ function parseInZoomSequence(line: string, span: OplSourceSpan, ctx: ParseContex
       kind: "in-zoom-sequence",
       parentId: ensureThing(ctx, parentName),
       parentName,
+      refinementType: "in-zoom",
       steps: childNames.length > 0
         ? [{ thingIds: childNames.map(n => ensureThing(ctx, n)), thingNames: childNames, parallel: false }]
         : [],
@@ -761,6 +807,26 @@ function parseInZoomSequence(line: string, span: OplSourceSpan, ctx: ParseContex
   }
 
   return null;
+}
+
+function parseUnfoldingSentence(line: string, span: OplSourceSpan, ctx: ParseContext): OplInZoomSequence | null {
+  const match = ctx.locale === "es"
+    ? line.match(/^(.*?)\s+se despliega en\s+(\S+)\s+en\s+(.*?)\.$/)
+    : line.match(/^(.*?)\s+unfolds in\s+(\S+)\s+into\s+(.*?)\.$/);
+  if (!match) return null;
+
+  const parentName = match[1]!.trim();
+  const childNames = parseList(match[3]!.trim(), ctx.locale);
+  if (childNames.length === 0) return null;
+
+  return {
+    kind: "in-zoom-sequence",
+    parentId: ensureThing(ctx, parentName),
+    parentName,
+    refinementType: "unfold",
+    steps: [{ thingIds: childNames.map((name) => ensureThing(ctx, name)), thingNames: childNames, parallel: false }],
+    sourceSpan: span,
+  };
 }
 
 function parseFanSentence(line: string, span: OplSourceSpan, ctx: ParseContext): OplFanSentence | null {
@@ -1292,6 +1358,7 @@ function parseSentence(line: string, span: OplSourceSpan, ctx: ParseContext): Pa
     ?? parseModifierSentence(line, span, ctx)
     ?? parseConditionModifier(line, span, ctx)
     ?? parseInZoomSequence(line, span, ctx)
+    ?? parseUnfoldingSentence(line, span, ctx)
     ?? parseExceptionLink(line, span, ctx)
     ?? parseAttributeValue(line, span, ctx)
     ?? parseInvocation(line, span, ctx)

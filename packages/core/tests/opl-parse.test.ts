@@ -49,6 +49,22 @@ const SIMPLE_INZOOM_ES = [
   "Preparar Café se descompone en Moler y Preparar, en esa secuencia.",
 ].join("\n");
 
+const SIMPLE_UNFOLD_EN = [
+  "Vehicle is an object, physical.",
+  "Door is an object, physical.",
+  "Window is an object, physical.",
+  "Mirror is an object, physical.",
+  "Vehicle unfolds in SD1 into Door, Window and Mirror.",
+].join("\n");
+
+const SIMPLE_UNFOLD_ES = [
+  "Vehículo es un objeto, físico.",
+  "Puerta es un objeto, físico.",
+  "Ventana es un objeto, físico.",
+  "Espejo es un objeto, físico.",
+  "Vehículo se despliega en SD1 en Puerta, Ventana y Espejo.",
+].join("\n");
+
 const SIMPLE_SD_ES = [
   "Agua es un objeto, físico.",
   "Agua puede estar fría o caliente.",
@@ -134,6 +150,80 @@ describe("parseOplDocument", () => {
     expect(inzoom).toBeDefined();
   });
 
+  it("parses English unfolding sentence", () => {
+    const result = parseOplDocument(SIMPLE_UNFOLD_EN, "SD", "opd-sd");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const unfold = result.value.sentences.find(s => s.kind === "in-zoom-sequence");
+    expect(unfold).toBeDefined();
+    if (unfold?.kind !== "in-zoom-sequence") return;
+    expect(unfold.refinementType).toBe("unfold");
+    expect(unfold.steps[0]?.thingNames).toEqual(["Door", "Window", "Mirror"]);
+  });
+
+  it("parses Spanish unfolding sentence", () => {
+    const result = parseOplDocument(SIMPLE_UNFOLD_ES, "SD", "opd-sd");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const unfold = result.value.sentences.find(s => s.kind === "in-zoom-sequence");
+    expect(unfold).toBeDefined();
+    if (unfold?.kind !== "in-zoom-sequence") return;
+    expect(unfold.refinementType).toBe("unfold");
+    expect(unfold.steps[0]?.thingNames).toEqual(["Puerta", "Ventana", "Espejo"]);
+  });
+
+  it("parses multiplicity prefixes in grouped structural sentences", () => {
+    const result = parseOplDocument([
+      "Car is an object, physical.",
+      "Engine is an object, physical.",
+      "Sunroof is an object, physical.",
+      "Airbag is an object, physical.",
+      "Car consists of Engine and an optional Sunroof.",
+      "Car exhibits at least one Airbag.",
+    ].join("\n"), "SD", "opd-sd");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const aggregation = result.value.sentences.find(
+      (s) => s.kind === "grouped-structural" && s.linkType === "aggregation",
+    );
+    const exhibition = result.value.sentences.find(
+      (s) => s.kind === "grouped-structural" && s.linkType === "exhibition",
+    );
+
+    expect(aggregation).toBeDefined();
+    expect(exhibition).toBeDefined();
+    if (aggregation?.kind !== "grouped-structural" || exhibition?.kind !== "grouped-structural") return;
+    expect(aggregation.multiplicities).toEqual({ Sunroof: "?" });
+    expect(exhibition.multiplicities).toEqual({ Airbag: "+" });
+  });
+
+  it("parses Spanish multiplicity prefixes in grouped structural sentences", () => {
+    const result = parseOplDocument([
+      "Auto es un objeto, físico.",
+      "Motor es un objeto, físico.",
+      "Techo Solar es un objeto, físico.",
+      "Bolsa de Aire es un objeto, físico.",
+      "Auto consta de Motor y un opcional Techo Solar.",
+      "Auto exhibe al menos una Bolsa de Aire.",
+    ].join("\n"), "SD", "opd-sd");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const aggregation = result.value.sentences.find(
+      (s) => s.kind === "grouped-structural" && s.linkType === "aggregation",
+    );
+    const exhibition = result.value.sentences.find(
+      (s) => s.kind === "grouped-structural" && s.linkType === "exhibition",
+    );
+
+    expect(aggregation).toBeDefined();
+    expect(exhibition).toBeDefined();
+    if (aggregation?.kind !== "grouped-structural" || exhibition?.kind !== "grouped-structural") return;
+    expect(aggregation.multiplicities).toEqual({ "Techo Solar": "?" });
+    expect(exhibition.multiplicities).toEqual({ "Bolsa de Aire": "+" });
+  });
+
   it("returns structured issues for unsupported lines", () => {
     const result = parseOplDocument("This is not valid OPL at all.", "SD", "opd-sd");
     expect(result.ok).toBe(false);
@@ -161,6 +251,29 @@ describe("parseOplDocuments", () => {
     expect(result.value).toHaveLength(2);
     expect(result.value[0]!.opdName).toBe("SD");
     expect(result.value[1]!.opdName).toBe("SD2");
+  });
+
+  it("parses unfold refinement edge in sectioned documents", () => {
+    const text = [
+      "=== SD ===",
+      "Car is an object, physical.",
+      "",
+      "=== SD1 ===",
+      "SD is refined by unfolding Car in SD1.",
+      "Engine is an object, physical.",
+    ].join("\n");
+
+    const result = parseOplDocuments(text);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.value).toHaveLength(2);
+    expect(result.value[1]!.refinementEdge).toEqual({
+      parentOpdName: "SD",
+      refinementType: "unfold",
+      refinedThingName: "Car",
+      childOpdName: "SD1",
+    });
   });
 
   it("fails if content appears before a section header", () => {
