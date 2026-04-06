@@ -1,5 +1,6 @@
 import type { Thing, Appearance, State } from "@opmodel/core";
 import type { Point } from "../../lib/geometry";
+import type { ProjectionStatePill } from "../../lib/projection-view";
 import { statePillLayout } from "../../lib/visual-rules";
 
 /* ─── Thing Renderer ─── */
@@ -19,6 +20,8 @@ export function ThingNode({
   isError,
   isShared,
   hasSuppressedStates,
+  statePills,
+  hiddenStateCount,
   dragDelta,
   simFilter,
   simStatePillOverride,
@@ -44,6 +47,8 @@ export function ThingNode({
   isError?: boolean;
   isShared?: boolean;
   hasSuppressedStates?: boolean;
+  statePills?: ProjectionStatePill[];
+  hiddenStateCount?: number;
   dragDelta: Point;
   simFilter?: string;
   simStatePillOverride?: string;
@@ -60,7 +65,10 @@ export function ThingNode({
   const x = appearance.x + ox;
   const y = appearance.y + oy;
   const { w, h } = appearance;
-  const hasStates = states.length > 0;
+  const fallbackMaxVisible = Math.min(states.length, Math.max(2, Math.floor((w - 8) / (30 + 4))));
+  const pills = statePills ?? [];
+  const effectiveHiddenStateCount = hiddenStateCount ?? Math.max(0, states.length - fallbackMaxVisible);
+  const hasStates = (pills.length > 0) || states.length > 0;
   const hasSemiFold = semiFoldEntries && semiFoldEntries.length > 0;
   const semiFoldH = hasSemiFold ? semiFoldEntries.length * 16 + (semiFoldHidden ? 16 : 0) + 10 : 0;
   const extraH = (hasStates ? 24 : 0) + semiFoldH;
@@ -219,64 +227,63 @@ export function ThingNode({
 
       {hasStates && (
         <g>
-          {states.map((state, i) => {
-            const minPillW = 30;
-            const maxVisibleH = Math.min(states.length, Math.max(2, Math.floor((w - 8) / (minPillW + 4))));
-            const layout = statePillLayout(w, maxVisibleH, "default");
-            const pillW = layout.pillW;
-            const pillH = layout.pillH;
-            const visibleCount = Math.min(states.length, maxVisibleH);
-            if (i >= visibleCount) return null; // overflow — truncated
-            const totalPillW = visibleCount * (pillW + 4) - 4;
+          {(pills.length > 0 ? pills : states.slice(0, fallbackMaxVisible).map((state, i) => {
+            const layout = statePillLayout(w, fallbackMaxVisible, "default");
+            const visibleCount = Math.min(states.length, fallbackMaxVisible);
+            const totalPillW = visibleCount * (layout.pillW + 4) - 4;
             const startX = x + (w - totalPillW) / 2;
-            const px = startX + i * (pillW + 4);
-            const py = y + h - 4;
+            return {
+              state,
+              x: startX + i * (layout.pillW + 4),
+              y: y + h - 4,
+              w: layout.pillW,
+              h: layout.pillH,
+            };
+          })).map((pill) => {
             const isCurrent = simStatePillOverride
-              ? state.id === simStatePillOverride
-              : state.current === true;
-            const isSimCurrent = simStatePillOverride ? state.id === simStatePillOverride : false;
+              ? pill.state.id === simStatePillOverride
+              : pill.state.current === true;
+            const isSimCurrent = simStatePillOverride ? pill.state.id === simStatePillOverride : false;
 
             return (
-              <g key={state.id}>
+              <g key={pill.state.id}>
                 <rect
                   className={`state-pill${isSimCurrent ? " state-pill--sim-current" : ""}`}
-                  x={px}
-                  y={py}
-                  width={pillW}
-                  height={pillH}
+                  x={pill.x}
+                  y={pill.y}
+                  width={pill.w}
+                  height={pill.h}
                   fill={isCurrent ? "var(--state-current-bg)" : "var(--state-bg)"}
                   stroke={isCurrent ? "var(--accent)" : "var(--state-border)"}
-                  strokeWidth={state.initial ? 2.5 : 1}
+                  strokeWidth={pill.state.initial ? 2.5 : 1}
                 />
-                {/* R-TC-8: final state — double border */}
-                {state.final && (
+                {pill.state.final && (
                   <rect
-                    x={px + 2} y={py + 2} width={pillW - 4} height={pillH - 4}
+                    x={pill.x + 2} y={pill.y + 2} width={pill.w - 4} height={pill.h - 4}
                     fill="none" stroke={isCurrent ? "var(--accent)" : "var(--state-border)"}
                     strokeWidth={1} rx={2}
                   />
                 )}
-                {/* R-TC-8: default state — diagonal arrow marker (ISO §4 line 329) */}
-                {state.default && (
+                {pill.state.default && (
                   <line
-                    x1={px + 1} y1={py + pillH - 1}
-                    x2={px + 9} y2={py + pillH - 9}
+                    x1={pill.x + 1} y1={pill.y + pill.h - 1}
+                    x2={pill.x + 9} y2={pill.y + pill.h - 9}
                     stroke="var(--accent)" strokeWidth={2}
                   />
                 )}
                 <text
                   className={`state-label${isCurrent ? " state-label--current" : ""}`}
-                  x={px + pillW / 2}
-                  y={py + pillH / 2}
+                  x={pill.x + pill.w / 2}
+                  y={pill.y + pill.h / 2}
                 >
-                  {state.name.length > Math.floor(pillW / 5) ? state.name.substring(0, Math.floor(pillW / 5)) + "…" : state.name}
+                  {pill.state.name.length > Math.floor(pill.w / 5) ? pill.state.name.substring(0, Math.floor(pill.w / 5)) + "…" : pill.state.name}
                 </text>
               </g>
             );
           })}
-          {states.length > Math.min(states.length, Math.max(2, Math.floor((w - 8) / 34))) && (
+          {effectiveHiddenStateCount > 0 && (
             <text fontSize={8} fill="var(--text-muted)" x={x + w - 8} y={y + h + 6} textAnchor="end">
-              +{states.length - Math.min(states.length, Math.max(2, Math.floor((w - 8) / 34)))}
+              +{effectiveHiddenStateCount}
             </text>
           )}
         </g>

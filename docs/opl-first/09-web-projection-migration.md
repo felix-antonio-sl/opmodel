@@ -95,6 +95,55 @@ El store ahora expone:
 
 Esto consolida la capa nueva y evita recomputar la proyección dispersa por componente.
 
+### 7. Visual graph adapter más rico
+
+Archivos principales:
+- `packages/web/src/lib/projection-view.ts`
+- `packages/web/src/components/OpdCanvas.tsx`
+- `packages/web/src/components/canvas/ThingNode.tsx`
+- `packages/web/src/App.tsx`
+- `packages/web/src/hooks/useModelStore.ts`
+
+En este tramo, la projection slice pasó de ser solo geometría + slices crudas a cargar más view-model visual listo para render.
+
+Ahora `visualGraph` entrega, como fuente primaria del canvas:
+- `thingsById`
+- `links`
+- `implicitThingIds`
+- `visibleStates` por thing
+- flags de render por thing:
+  - `hasSuppressedStates`
+  - `isContainer`
+  - `isRefined`
+
+Y `OpdCanvas` / `ThingNode` ya prefieren eso para:
+- things visibles
+- ghosts / implicit things
+- links visibles
+- estados visibles por thing
+- metadata básica de render del nodo
+
+### 8. Qué quedó projection-native vs legacy-bound
+
+Projection-native ahora:
+- appearances visibles
+- visible things
+- visible links
+- visible fans
+- implicit things
+- suppressed states por thing
+- visible states por thing
+- parte del thing view-model (`isContainer`, `isRefined`, `hasSuppressedStates`)
+
+Todavía local / legacy-bound:
+- state-pill anchoring exacto
+- rect expansion
+- edge routing
+- fan/fork geometry
+- simulation styling
+- resize / drag interactions
+- fallback completo basado en `fiber` cuando falta `visualGraph`
+
 ## Validaciones ya corridas
 
 ### Core
@@ -125,20 +174,19 @@ Hasta abrir persistencia nativa sobre `OpdAtlas + LayoutModel`, la capa nueva de
 ## Próximo paso recomendado
 
 ### Opción A — recomendada
-Hacer que `OpdCanvas` pueda aceptar un input nativo de proyección:
+Mover **state-pill anchoring / placement** al `visualGraph`.
 
-```ts
-projection + atlas + layout
-```
-
-en lugar de depender de `Model` como base principal.
+Ese corte sigue bajando preparación visual desde `OpdCanvas` al adapter de proyección sin meterse todavía en persistencia ni simulation runtime.
 
 ### Opción B
-Abrir persistencia nativa de layout sobre:
+Después de anchoring, adelgazar más el fallback basado en `fiber` dentro de `OpdCanvas`.
+
+### Opción C
+Recién después abrir persistencia nativa de layout sobre:
 - `ViewOccurrence`
 - `LayoutNode`
 
-Eso tiene más blast radius y conviene hacerlo después de la opción A.
+Eso tiene más blast radius y conviene hacerlo después de A y B.
 
 ## Criterio de salida de esta fase
 
@@ -148,8 +196,15 @@ Esta fase se considera completa cuando:
 2. el store centralice la proyección actual
 3. ningún consumidor visual nuevo dependa de `model.appearances` como superficie primaria
 4. la persistencia legacy siga funcionando sin regresiones
+5. el canvas consuma un `visualGraph` suficientemente rico como para reducir cálculo visual local a routing / interacción / presentación fina
 
 ## Resumen corto
 
 La web ya no está pegada totalmente a `Appearance` legacy.
 Existe una capa transicional real y usable que conecta el modelo actual con la arquitectura OPL-first sin romper producto.
+
+En particular, `OpdCanvas` ya no solo consume geometría proyectada. También empezó a consumir estructura visual preparada desde `projection-view`, acercando la tubería real a:
+
+```text
+OPL -> kernel -> atlas -> layout -> visualGraph -> canvas
+```

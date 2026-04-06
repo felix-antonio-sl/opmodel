@@ -69,6 +69,15 @@ describe("projection-view", () => {
       affiliation: "systemic",
     });
 
+    model.states.set("state-a-hidden", {
+      id: "state-a-hidden",
+      parent: "obj-a",
+      name: "hidden",
+      initial: false,
+      final: false,
+      default: false,
+    });
+
     model.appearances.set("obj-a::opd-sd", {
       thing: "obj-a",
       opd: "opd-sd",
@@ -77,6 +86,7 @@ describe("projection-view", () => {
       w: 100,
       h: 50,
       pinned: true,
+      suppressed_states: ["state-a-hidden"],
     });
     model.appearances.set("obj-b::opd-sd", {
       thing: "obj-b",
@@ -112,9 +122,98 @@ describe("projection-view", () => {
     const slice = buildPatchableOpdProjectionSlice(withFan, "opd-sd");
 
     expect(slice.patchableThingIds).toEqual(new Set(["obj-a", "obj-b"]));
+    expect(slice.visibleThingIds).toEqual(new Set(["obj-a", "obj-b"]));
     expect(slice.appearances.map((app) => app.thing)).toEqual(["obj-a", "obj-b"]);
     expect(slice.appearancesByThing.get("obj-a")?.pinned).toBe(true);
+    expect(slice.suppressedStateIdsByThing.get("obj-a")).toEqual(new Set(["state-a-hidden"]));
+    expect(slice.visualGraph.thingsById.get("obj-a")?.thing?.name).toBe("A");
+    expect(slice.visualGraph.thingsById.get("obj-a")?.implicit).toBe(false);
+    expect(slice.visualGraph.thingsById.get("obj-a")?.hasSuppressedStates).toBe(true);
+    expect(slice.visualGraph.thingsById.get("obj-a")?.isContainer).toBe(false);
+    expect(slice.visualGraph.thingsById.get("obj-a")?.isRefined).toBe(false);
+    expect(slice.visualGraph.thingsById.get("obj-a")?.suppressedStateIds).toEqual(new Set(["state-a-hidden"]));
+    expect(slice.visualGraph.thingsById.get("obj-a")?.visibleStates).toEqual([]);
     expect(slice.links.map((link) => link.id)).toEqual(["link-visible"]);
+    expect(slice.visualLinks.map((entry) => entry.link.id)).toEqual(["link-visible"]);
+    expect(slice.visualGraph.links.map((entry) => entry.link.id)).toEqual(["link-visible"]);
     expect(slice.fans.map((fan) => fan.id)).toEqual(["fan-visible"]);
+  });
+
+  it("prepares visual graph links for merged transforming pairs", () => {
+    const model = createModel("Projection Visual Graph Links");
+
+    model.things.set("obj-water", {
+      id: "obj-water",
+      kind: "object",
+      name: "Water",
+      essence: "physical",
+      affiliation: "systemic",
+    });
+    model.things.set("proc-heat", {
+      id: "proc-heat",
+      kind: "process",
+      name: "Heat",
+      essence: "physical",
+      affiliation: "systemic",
+    });
+
+    model.states.set("state-cold", {
+      id: "state-cold",
+      parent: "obj-water",
+      name: "Cold",
+      initial: false,
+      final: false,
+      default: false,
+    });
+    model.states.set("state-hot", {
+      id: "state-hot",
+      parent: "obj-water",
+      name: "Hot",
+      initial: false,
+      final: false,
+      default: false,
+    });
+
+    model.appearances.set("obj-water::opd-sd", {
+      thing: "obj-water",
+      opd: "opd-sd",
+      x: 10,
+      y: 20,
+      w: 100,
+      h: 50,
+    });
+    model.appearances.set("proc-heat::opd-sd", {
+      thing: "proc-heat",
+      opd: "opd-sd",
+      x: 200,
+      y: 20,
+      w: 120,
+      h: 60,
+    });
+
+    model.links.set("lnk-consume", {
+      id: "lnk-consume",
+      type: "consumption",
+      source: "obj-water",
+      target: "proc-heat",
+      source_state: "state-cold",
+    });
+    model.links.set("lnk-result", {
+      id: "lnk-result",
+      type: "result",
+      source: "proc-heat",
+      target: "obj-water",
+      target_state: "state-hot",
+    });
+
+    const slice = buildPatchableOpdProjectionSlice(model, "opd-sd");
+
+    expect(slice.visualGraph.links).toHaveLength(1);
+    expect(slice.visualGraph.links[0]).toMatchObject({
+      isMergedPair: true,
+      visualSource: "proc-heat",
+      visualTarget: "obj-water",
+      labelOverride: "Cold → Hot",
+    });
   });
 });

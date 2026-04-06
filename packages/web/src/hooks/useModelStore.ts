@@ -24,7 +24,7 @@ import {
 } from "@opmodel/core";
 import { type Command, interpret } from "../lib/commands";
 import type { EditorMode, LinkTypeChoice, SimulationUIState } from "../lib/commands";
-import { buildPatchableOpdProjectionSlice, type PatchableOpdProjectionSlice } from "../lib/projection-view";
+import { buildPatchableOpdProjectionSliceFromProjection, type PatchableOpdProjectionSlice } from "../lib/projection-view";
 
 const STORAGE_KEY = "opmodel:current";
 
@@ -85,8 +85,8 @@ export function useModelStore(initialModel: Model): ModelStore {
 
   const projection = useMemo(() => projectLegacyModel(history.present), [history.present]);
   const currentProjectionSlice = useMemo(
-    () => buildPatchableOpdProjectionSlice(history.present, ui.currentOpd),
-    [history.present, ui.currentOpd],
+    () => buildPatchableOpdProjectionSliceFromProjection(projection, history.present, ui.currentOpd),
+    [projection, history.present, ui.currentOpd],
   );
 
   // Refs for accessing current state inside useCallback without stale closures

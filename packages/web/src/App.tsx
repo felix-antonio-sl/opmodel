@@ -623,6 +623,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
       </div>
       <OpdCanvas
         model={ui.simulation ? ui.simulation.frozenModel : model}
+        projectionSlice={currentProjectionSlice}
         opdId={ui.currentOpd}
         selectedThing={ui.selectedThing}
         mode={ui.mode}
