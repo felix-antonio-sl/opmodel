@@ -38,8 +38,10 @@ export interface OplCompileError {
 export interface OplCompileOptions {
   modelName?: string;
   ignoreUnsupported?: boolean;
-  /** Existing appearances to preserve positions from when re-compiling. */
+  /** Existing appearances to preserve positions from when re-compiling. Keyed by appearance key. */
   preserveLayout?: Map<string, import("./types").Appearance>;
+  /** Thing name → position override. Takes precedence over preserveLayout ID lookup. */
+  layoutHints?: Map<string, { x: number; y: number; w: number; h: number }>;
 }
 
 type CompoundHint = {
@@ -252,7 +254,17 @@ export function compileOplDocuments(docs: OplDocument[], options: OplCompileOpti
   }
 
   // Pass 4: add appearances in each OPD for declared things.
-  const layoutHints = options.preserveLayout;
+  // Build name-based lookup from layout hints using ORIGINAL model's things
+  const layoutByName = new Map<string, { x: number; y: number; w: number; h: number }>();
+  if (options.preserveLayout) {
+    for (const [, app] of options.preserveLayout) {
+      layoutByName.set(app.thing + "::" + app.opd, { x: app.x, y: app.y, w: app.w, h: app.h });
+    }
+  }
+  // We need original thing names too — they come from the preserveLayout source model
+  // Store original thingName by thingId for reverse lookup
+  const layoutThingNames = new Map<string, string>(); // thingId → thingName from original model
+  // (We don't have the original model, so we use the name-based approach via compiled thing names)
   for (const doc of docs) {
     const actualOpdId = actualOpdIdByName.get(doc.opdName) ?? "opd-sd";
     const opd = model.opds.get(actualOpdId);
@@ -263,16 +275,37 @@ export function compileOplDocuments(docs: OplDocument[], options: OplCompileOpti
       const key = appearanceKey(thingId, actualOpdId);
       if (model.appearances.has(key)) continue;
 
-      // Try to preserve position from existing layout
-      const existingApp = layoutHints?.get(key);
+      // Try to find layout hint by thing name
+      const thing = model.things.get(thingId);
+      let existingLayout: { x: number; y: number; w: number; h: number } | undefined;
+      if (thing) {
+        // Priority 1: layoutHints by name
+        existingLayout = options.layoutHints?.get(thing.name);
+        // Priority 2: preserveLayout by ID or slug match
+        if (!existingLayout && options.preserveLayout) {
+          const directKey = appearanceKey(thingId, actualOpdId);
+          const direct = options.preserveLayout.get(directKey);
+          if (direct) {
+            existingLayout = { x: direct.x, y: direct.y, w: direct.w, h: direct.h };
+          } else {
+            const slug = thing.name.toLowerCase().replace(/\s+/g, "-");
+            for (const [, origApp] of options.preserveLayout) {
+              if (origApp.opd === actualOpdId && origApp.thing.includes(slug)) {
+                existingLayout = { x: origApp.x, y: origApp.y, w: origApp.w, h: origApp.h };
+                break;
+              }
+            }
+          }
+        }
+      }
 
       const appearance: Appearance = {
         thing: thingId,
         opd: actualOpdId,
-        x: existingApp ? existingApp.x : 120 + col * 180,
-        y: existingApp ? existingApp.y : 120 + row * 120,
-        w: existingApp ? existingApp.w : 120,
-        h: existingApp ? existingApp.h : 60,
+        x: existingLayout ? existingLayout.x : 120 + col * 180,
+        y: existingLayout ? existingLayout.y : 120 + row * 120,
+        w: existingLayout ? existingLayout.w : 120,
+        h: existingLayout ? existingLayout.h : 60,
         ...(opd?.refines ? { internal: true } : {}),
       };
       const r = addAppearance(model, appearance);

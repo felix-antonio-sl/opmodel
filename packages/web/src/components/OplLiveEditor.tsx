@@ -50,9 +50,18 @@ export function OplLiveEditor({ model, opdId, dispatch }: Props) {
         setStatus("error");
         return;
       }
+      // Build layout hints from current model (by thing name)
+      const layoutHints = new Map<string, { x: number; y: number; w: number; h: number }>();
+      for (const [, app] of model.appearances) {
+        const thing = model.things.get(app.thing);
+        if (thing) {
+          layoutHints.set(thing.name, { x: app.x, y: app.y, w: app.w, h: app.h });
+        }
+      }
       const compiled = compileOplDocuments(parsed.value, {
         ignoreUnsupported: true,
         preserveLayout: model.appearances,
+        layoutHints,
       });
       if (!compiled.ok) {
         setErrorMsg(`Compile: ${compiled.error.message}`);

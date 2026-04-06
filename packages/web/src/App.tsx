@@ -347,6 +347,10 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
         setSearchQuery("");
         setActiveSearchIndex(0);
       }
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "O") {
+        e.preventDefault();
+        setShowImportOpl((v) => !v);
+      }
       if ((e.key === "Delete" || e.key === "Backspace") && ui.selectedThing && !e.metaKey && !e.ctrlKey) {
         const target = e.target as HTMLElement;
         if (target.tagName === "INPUT" || target.tagName === "SELECT" || target.tagName === "TEXTAREA") return;
