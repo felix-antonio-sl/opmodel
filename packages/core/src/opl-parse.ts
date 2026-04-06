@@ -203,51 +203,126 @@ function parseStateEnumeration(line: string, span: OplSourceSpan, ctx: ParseCont
 }
 
 function parseStateDescription(line: string, span: OplSourceSpan, ctx: ParseContext): OplStateDescription | null {
-  const match = ctx.locale === "es"
-    ? line.match(/^Estado (.*?) de (.*?) es (.*?)\.$/)
-    : line.match(/^State (.*?) of (.*?) is (.*?)\.$/);
-  if (!match) return null;
-  const stateName = match[1]!.trim();
-  const thingName = match[2]!.trim();
-  const qualifiers = match[3]!
-    .split(ctx.locale === "es" ? /\s+y\s+/ : /\s+and\s+/)
-    .map((q) => q.trim())
-    .map((q) => q
-      .replace("por defecto", "default")
-      .replace("inicial", "initial")
-      .replace("final", "final"));
+  const isES = ctx.locale === "es";
+  const prefix = isES ? "Estado " : "State ";
+  const ofWord = isES ? " de " : " of ";
+  const isWord = isES ? " es " : " is ";
+  if (!line.startsWith(prefix)) return null;
+
+  // Pattern: "State {stateName} of {thingDisplay} is {qualifiers}."
+  // where thingDisplay may be "{thingName} of {exhibitorName}" (compound)
+  // and stateName / thingName may contain "of"/"de" internally.
+  // Strategy: match from the end — qualifiers are known, then "is/es", then
+  // split the middle at the LAST "of"/"de" for stateName vs thingDisplay.
+  const qualRe = isES ? /\b(inicial|final|por defecto)\b/g : /\b(initial|final|default)\b/g;
+  const dotLine = line.endsWith(".") ? line.slice(0, -1) : line;
+
+  // Split at " is " / " es "
+  const isIdx = isES ? dotLine.lastIndexOf(" es ") : dotLine.lastIndexOf(" is ");
+  if (isIdx < 0) return null;
+  const beforeIs = dotLine.substring(0, isIdx);
+  const qualRaw = dotLine.substring(isIdx + (isES ? 4 : 4)); // length of " es " / " is "
+
+  // Validate qualifiers
+  const normalizedQuals = qualRaw
+    .split(isES ? /\s+y\s+/ : /\s+and\s+/)
+    .map(q => q.trim())
+    .map(q => q.replace("por defecto", "default").replace("inicial", "initial"));
+  const validQualifiers = ["initial", "final", "default"];
+  if (!normalizedQuals.every(q => validQualifiers.includes(q))) return null;
+
+  // Now beforeIs is: "State {stateName} of {thingDisplay}" or "Estado {stateName} de {thingDisplay}"
+  // Strip prefix: "State " or "Estado "
+  const rest = beforeIs.substring(prefix.length);
+  if (!rest) return null;
+
+  // Split at the LAST "of"/"de" to separate stateName from thingDisplay
+  const lastOfIdx = isES ? rest.lastIndexOf(" de ") : rest.lastIndexOf(" of ");
+  if (lastOfIdx < 0) return null;
+
+  const stateName = rest.substring(0, lastOfIdx).trim();
+  const thingDisplay = rest.substring(lastOfIdx + (isES ? 4 : 4)).trim(); // length of " de " / " of "
+  if (!stateName || !thingDisplay) return null;
+
+  // Check if thingDisplay contains another "of"/"de" → compound form: "{thingName} de {exhibitorName}"
+  let thingName: string;
+  let exhibitorName: string | undefined;
+  const innerOfIdx = isES ? thingDisplay.lastIndexOf(" de ") : thingDisplay.lastIndexOf(" of ");
+  if (innerOfIdx > 0) {
+    thingName = thingDisplay.substring(0, innerOfIdx).trim();
+    exhibitorName = thingDisplay.substring(innerOfIdx + (isES ? 4 : 4)).trim();
+  } else {
+    thingName = thingDisplay;
+  }
+
   const thingId = ensureThing(ctx, thingName);
   const stateIdValue = ctx.stateIdByThingAndName.get(stateKey(thingName, stateName)) ?? stateId(thingName, stateName);
   ctx.stateIdByThingAndName.set(stateKey(thingName, stateName), stateIdValue);
+
   return {
     kind: "state-description",
     thingId,
     thingName,
     stateId: stateIdValue,
     stateName,
-    initial: qualifiers.includes("initial"),
-    final: qualifiers.includes("final"),
-    default: qualifiers.includes("default"),
+    initial: normalizedQuals.includes("initial"),
+    final: normalizedQuals.includes("final"),
+    default: normalizedQuals.includes("default"),
+    ...(exhibitorName ? { exhibitorName } : {}),
     sourceSpan: span,
   };
 }
 
 function parseDuration(line: string, span: OplSourceSpan, ctx: ParseContext): OplDuration | null {
-  const match = ctx.locale === "es"
-    ? line.match(/^(.*?) requiere (\d+(?:\.\d+)?)(ms|s|min|h|d)\.$/)
-    : line.match(/^(.*?) requires (\d+(?:\.\d+)?)(ms|s|min|h|d)\.$/);
-  if (!match) return null;
-  const thingName = match[1]!.trim();
-  return {
-    kind: "duration",
-    thingId: ensureThing(ctx, thingName),
-    thingName,
-    nominal: Number(match[2]),
-    unit: match[3] as TimeUnit,
-    sourceSpan: span,
-  };
-}
+  const verb = ctx.locale === "es" ? "requiere" : "requires";
+  const rangeRe = new RegExp(`^(.*?) ${verb} (\\d+(?:\\.\\d+)?)\\s*[–\\-](\\d+(?:\\.\\d+)?)\\s*[–\\-](\\d+(?:\\.\\d+)?)(ms|s|min|h|d)\\.$`);
+  const twoRe = new RegExp(`^(.*?) ${verb} (\\d+(?:\\.\\d+)?)\\s*[–\\-](\\d+(?:\\.\\d+)?)(ms|s|min|h|d)\\.$`);
+  const simpleRe = new RegExp(`^(.*?) ${verb} (\\d+(?:\\.\\d+)?)(ms|s|min|h|d)\\.$`);
 
+  let match = line.match(rangeRe);
+  if (match) {
+    const thingName = match[1]!.trim();
+    return {
+      kind: "duration",
+      thingId: ensureThing(ctx, thingName),
+      thingName,
+      min: Number(match[2]),
+      nominal: Number(match[3]),
+      max: Number(match[4]),
+      unit: match[5] as TimeUnit,
+      sourceSpan: span,
+    };
+  }
+
+  match = line.match(twoRe);
+  if (match) {
+    const thingName = match[1]!.trim();
+    return {
+      kind: "duration",
+      thingId: ensureThing(ctx, thingName),
+      thingName,
+      nominal: Number(match[2]),
+      max: Number(match[3]),
+      unit: match[4] as TimeUnit,
+      sourceSpan: span,
+    };
+  }
+
+  match = line.match(simpleRe);
+  if (match) {
+    const thingName = match[1]!.trim();
+    return {
+      kind: "duration",
+      thingId: ensureThing(ctx, thingName),
+      thingName,
+      nominal: Number(match[2]),
+      unit: match[3] as TimeUnit,
+      sourceSpan: span,
+    };
+  }
+
+  return null;
+}
 function parseLink(line: string, span: OplSourceSpan, ctx: ParseContext): OplLinkSentence | null {
   let match = ctx.locale === "es"
     ? line.match(/^(.*?) maneja (.*?)\.$/)
@@ -419,6 +494,26 @@ function parseLink(line: string, span: OplSourceSpan, ctx: ParseContext): OplLin
     };
   }
 
+  match = ctx.locale === "es"
+    ? line.match(/^(.*?) afecta (.*?)\.$/)
+    : line.match(/^(.*?) affects (.*?)\.$/);
+  if (match) {
+    const sourceName = match[1]!.trim();
+    const targetName = match[2]!.trim();
+    return {
+      kind: "link",
+      linkId: `link-${++ctx.linkCounter}`,
+      linkType: "effect",
+      sourceId: ensureThing(ctx, sourceName),
+      targetId: ensureThing(ctx, targetName),
+      sourceName,
+      targetName,
+      sourceKind: "process",
+      targetKind: "object",
+      sourceSpan: span,
+    };
+  }
+
   return null;
 }
 
@@ -490,9 +585,9 @@ function parseStructuralSentence(line: string, span: OplSourceSpan, ctx: ParseCo
   }
 
   // Generalization (single): "X es un Y." (ES) / "X is a Y." (EN)
-  // Be careful not to match thing declarations: "X is an object" vs "X is a Y"
+  // Generalization (single with article): "X es un Y." where parentName includes article
   match = isES
-    ? line.match(/^(.*?) es un (?:una )?(.*?)\.$/)
+    ? line.match(/^(.*?) es un(?:a)? (.*?)\.$/)
     : line.match(/^(.*?) is (?:a |an )([A-Z].*?)\.$/);
   if (match) {
     const childName = match[1]!.trim();
@@ -517,13 +612,16 @@ function parseStructuralSentence(line: string, span: OplSourceSpan, ctx: ParseCo
   }
 
   // Generalization (multiple): "A y B son C." (ES) / "A and B are C." (EN)
+  // Also: "A and B son un C." (ES, singular parent with article)
   match = isES
-    ? line.match(/^(.*?) son (.*?)\.$/)
-    : line.match(/^(.*?) are (.*?)\.$/);
+    ? line.match(/^(.*?) son (?:un |una )?(.*?)\.$/)
+    : line.match(/^(.*?) are (?:a |an )?(.*?)\.$/);
   if (match) {
     const childNames = parseList(match[1]!.trim(), ctx.locale);
     const parentName = match[2]!.trim();
     if (childNames.length < 2) return null;
+    // Skip thing declarations
+    if (["object", "process", "objeto", "proceso"].includes(parentName.toLowerCase())) return null;
     return {
       kind: "grouped-structural",
       linkType: "generalization",
@@ -543,12 +641,56 @@ function parseStructuralSentence(line: string, span: OplSourceSpan, ctx: ParseCo
 
 function parseModifierSentence(line: string, span: OplSourceSpan, ctx: ParseContext): OplModifierSentence | null {
   const isES = ctx.locale === "es";
-  // "Proceso ocurre si Objeto existe, en cuyo caso Objeto se consume, de lo contrario Proceso se omite."
-  // "Process occurs if Object exists, in which case Object is consumed, otherwise Process is skipped."
-  // These are complex condition sentences; skip for now in the initial subset.
+
+  // "critical X triggers Y" / "X crítico desencadena Y"
+  let match = isES
+    ? line.match(/^(.*?) (.*?) desencadena (.*?)\.$/)
+    : line.match(/^(.*?) (.*?) triggers (.*?)\.$/);
+  if (match) {
+    const maybeState = match[1]!.trim();
+    const sourceName = match[2]!.trim();
+    const targetName = match[3]!.trim();
+    // Check if maybeState is a valid state name (not just any word)
+    // Accept common patterns like "critical", "none", "low", "high", etc.
+    const isStateTrigger = maybeState.length > 0 && maybeState !== sourceName;
+    if (isStateTrigger) {
+      return {
+        kind: "modifier",
+        modifierId: `modifier-${++ctx.linkCounter}`,
+        linkId: `link-${ctx.linkCounter}`,
+        linkType: "agent",
+        sourceName,
+        targetName,
+        modifierType: "event",
+        negated: false,
+        sourceStateName: maybeState,
+        sourceSpan: span,
+      };
+    }
+  }
+
+  // Simple event trigger: "X triggers Y." / "X desencadena Y."
+  match = isES
+    ? line.match(/^(.*?) desencadena (.*?)\.$/)
+    : line.match(/^(.*?) triggers (.*?)\.$/);
+  if (match) {
+    const sourceName = match[1]!.trim();
+    const targetName = match[2]!.trim();
+    return {
+      kind: "modifier",
+      modifierId: `modifier-${++ctx.linkCounter}`,
+      linkId: `link-${ctx.linkCounter}`,
+      linkType: "agent",
+      sourceName,
+      targetName,
+      modifierType: "event",
+      negated: false,
+      sourceSpan: span,
+    };
+  }
 
   // Simple event trigger: "X inicia Y." / "X initiates Y."
-  let match = isES
+  match = isES
     ? line.match(/^(.*?) inicia (.*?)\.$/)
     : line.match(/^(.*?) initiates (.*?)\.$/);
   if (match) {
@@ -758,8 +900,11 @@ function parseAttributeValue(line: string, span: OplSourceSpan, ctx: ParseContex
   const thingName = match[1]!.trim();
   const exhibitorName = match[2]!.trim();
   const valueName = match[3]!.trim();
-  // Disambiguate from state description: "State X of Y is Z."
-  if (isES ? line.startsWith("Estado ") : line.startsWith("State ")) return null;
+  // NOTE: do NOT reject lines starting with "Estado"/"State" here.
+  // State-descriptions with non-standard qualifiers (like "deteriorado")
+  // already return null from parseStateDescription, and should fall through
+  // to attribute-value parsing. E.g. "Estado de Salud de Paciente Group es deteriorado."
+  // is an attribute-value, not a state-description.
   // Disambiguate from thing declaration: "X is an object."
   if (["object", "process", "objeto", "proceso"].includes(valueName.toLowerCase())) return null;
   return {
@@ -859,8 +1004,7 @@ function parseInvocation(line: string, span: OplSourceSpan, ctx: ParseContext): 
 
 function parseTaggedLink(line: string, span: OplSourceSpan, ctx: ParseContext): OplLinkSentence | null {
   const isES = ctx.locale === "es";
-  // "X tag Y." — unidirectional tagged structural
-  // Very broad pattern, only match if we can extract a clear tag
+
   // "Source relates to Destination." / "Origen se relaciona con Destino."
   let match = isES
     ? line.match(/^(.*?) se relaciona con (.*?)\.$/)
@@ -881,6 +1025,46 @@ function parseTaggedLink(line: string, span: OplSourceSpan, ctx: ParseContext): 
       sourceSpan: span,
     };
   }
+
+  // Generic tagged link: "A verb-phrase B." where A and B are known things.
+  // This catches patterns like:
+  //   "Driver communicates via OnStar Console."
+  //   "Cuidador habita en Domicilio."
+  //   "Cuidador acompaña a Paciente."
+  //   "Paciente reside en Domicilio."
+  // Strategy: find the longest known thing name from the start and end,
+  // the middle is the tag.
+  if (!line.endsWith(".")) return null;
+  const noDot = line.slice(0, -1);
+  
+  // Try to match against known thing names
+  const knownNames = [...ctx.thingIdByName.keys()].sort((a, b) => b.length - a.length);
+  for (const startName of knownNames) {
+    if (!noDot.startsWith(startName)) continue;
+    const rest = noDot.substring(startName.length).trim();
+    if (!rest) continue;
+    for (const endName of knownNames) {
+      if (startName === endName) continue;
+      if (!rest.endsWith(endName)) continue;
+      const tag = rest.slice(0, rest.length - endName.length).trim();
+      if (!tag || tag.length < 2) continue;
+      // Valid: startName + tag + endName
+      return {
+        kind: "link",
+        linkId: `link-${++ctx.linkCounter}`,
+        linkType: "tagged",
+        sourceId: ensureThing(ctx, startName),
+        targetId: ensureThing(ctx, endName),
+        sourceName: startName,
+        targetName: endName,
+        tag,
+        sourceKind: "object",
+        targetKind: "object",
+        sourceSpan: span,
+      };
+    }
+  }
+
   return null;
 }
 
@@ -930,7 +1114,6 @@ function parseConditionModifier(line: string, span: OplSourceSpan, ctx: ParseCon
     };
   }
 
-  // "P ocurre si Objeto está en estado, en cuyo caso Objeto se consume, de lo contrario P se omite."
   // "P occurs if Object is specified-state, in which case Object is consumed, otherwise Process is skipped."
   match = isES
     ? line.match(/^(.*?) ocurre si (.*?) está en (.*?), en cuyo caso (.*?) se consume, de lo contrario (.*?) se omite\.$/)
@@ -944,6 +1127,30 @@ function parseConditionModifier(line: string, span: OplSourceSpan, ctx: ParseCon
       modifierId: `modifier-${++ctx.linkCounter}`,
       linkId: `link-${ctx.linkCounter}`,
       linkType: "consumption",
+      sourceName,
+      targetName,
+      modifierType: "condition",
+      negated: false,
+      conditionMode: "skip",
+      sourceStateName,
+      sourceSpan: span,
+    };
+  }
+
+  // "P occurs if Object is state, otherwise P is skipped." (condition on effect link)
+  // "P ocurre si Objeto está en estado, de lo contrario P se omite."
+  match = isES
+    ? line.match(/^(.*?) ocurre si (.*?) está en (.*?), de lo contrario (.*?) se omite\.$/)
+    : line.match(/^(.*?) occurs if (.*?) is (.*?), otherwise (.*?) is skipped\.$/);
+  if (match) {
+    const targetName = match[1]!.trim();
+    const sourceName = match[2]!.trim();
+    const sourceStateName = match[3]!.trim();
+    return {
+      kind: "modifier",
+      modifierId: `modifier-${++ctx.linkCounter}`,
+      linkId: `link-${ctx.linkCounter}`,
+      linkType: "effect",
       sourceName,
       targetName,
       modifierType: "condition",
@@ -978,6 +1185,24 @@ function parseSentence(line: string, span: OplSourceSpan, ctx: ParseContext) {
     ?? parseLink(line, span, ctx);
 }
 
+function parseRefinementEdge(line: string): { parentOpdName: string; refinementType: "in-zoom" | "unfold"; refinedThingName: string; childOpdName: string } | null {
+  // EN: "SD is refined by in-zooming Coffee Making in SD1."
+  // EN: "SD1 is refined by unfolding AEV Fleet Operating in SD1.1."
+  let m = line.match(/^(.*?) is refined by in-zooming (.*?) in (.*?)\.$/);
+  if (m) return { parentOpdName: m[1]!.trim(), refinementType: "in-zoom", refinedThingName: m[2]!.trim(), childOpdName: m[3]!.trim() };
+  m = line.match(/^(.*?) is refined by unfolding (.*?) in (.*?)\.$/);
+  if (m) return { parentOpdName: m[1]!.trim(), refinementType: "unfold", refinedThingName: m[2]!.trim(), childOpdName: m[3]!.trim() };
+
+  // ES: "SD se refina por descomposición de Proceso en SD1."
+  m = line.match(/^(.*?) se refina por descomposici[óo]n de (.*?) en (.*?)\.$/);
+  if (m) return { parentOpdName: m[1]!.trim(), refinementType: "in-zoom", refinedThingName: m[2]!.trim(), childOpdName: m[3]!.trim() };
+  // ES: "SD se refina por despliegue de Proceso en SD1."
+  m = line.match(/^(.*?) se refina por despliegue de (.*?) en (.*?)\.$/);
+  if (m) return { parentOpdName: m[1]!.trim(), refinementType: "unfold", refinedThingName: m[2]!.trim(), childOpdName: m[3]!.trim() };
+
+  return null;
+}
+
 export function parseOplDocument(text: string, opdName = "SD", opdId = `opd-${oplSlug(opdName) || "sd"}`): Result<OplDocument, OplParseError> {
   const locale = detectLocale(text);
   const ctx: ParseContext = {
@@ -990,11 +1215,21 @@ export function parseOplDocument(text: string, opdName = "SD", opdId = `opd-${op
   const sentences = [] as OplDocument["sentences"];
   const lines = splitLinesWithOffsets(text);
 
+  let refinementEdge: OplDocument["refinementEdge"];
+
   for (const entry of lines) {
     const raw = entry.text;
     const line = raw.trim();
     if (!line) continue;
     const span = spanForLine(raw, entry.lineNumber, entry.offset);
+
+    // Try refinement edge first (it's a document-level property, not a sentence)
+    const edge = parseRefinementEdge(line);
+    if (edge) {
+      refinementEdge = edge;
+      continue;
+    }
+
     const sentence = parseSentence(line, span, ctx);
     if (!sentence) {
       pushIssue(issues, entry.lineNumber, raw, "Unsupported or invalid OPL sentence in current parser subset");
@@ -1013,6 +1248,7 @@ export function parseOplDocument(text: string, opdName = "SD", opdId = `opd-${op
     sentences,
     renderSettings: defaultRenderSettings(locale),
     sourceText: text,
+    ...(refinementEdge ? { refinementEdge } : {}),
     sourceSpan: {
       line: 1,
       column: 1,
