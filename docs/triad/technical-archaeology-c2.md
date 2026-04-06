@@ -135,4 +135,4 @@ OPModel no modela solo semántica OPM “pura”. Mezcla en el núcleo:
 Esa riqueza puede ser virtud, pero también complica estabilizar el producto si las fronteras entre núcleo semántico, visualización y metodología no quedan claras.
 
 ## Conclusión del corte 2
-El corazón técnico sí existe y sí es denso: OPModel tiene un núcleo semántico mucho más serio que el que sugeriría una lectura superficial de la UI o CLI. La aspiración de convertirlo en herramienta principal no parte desde humo; parte desde un core real, aunque aún con tensiones de frontera y estabilización.
+El corazón técnico sí existe y sí es denso: OPModel tiene un núcleo semántico mucho más serio que el que sugeriría una lectura superficial de la UI o del tooling heredado. La aspiración de convertirlo en herramienta principal no parte desde humo; parte desde un core real, aunque aún con tensiones de frontera y estabilización.

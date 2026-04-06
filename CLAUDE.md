@@ -4,12 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-OPModel is a single-user power tool for **Object Process Methodology (ISO 19450)** modeling. The monorepo contains a Domain Engine core (`packages/core/`), a CLI (`packages/cli/`), a web editor (`packages/web/`), and a natural language layer (`packages/nl/`).
+OPModel is a single-user power tool for **Object Process Methodology (ISO 19450)** modeling. The monorepo contains a Domain Engine core (`packages/core/`), a web editor (`packages/web/`), and a natural language layer (`packages/nl/`).
 
 ## Repository Structure
 
 - **packages/core/** — Domain Engine (TypeScript, zero dependencies). Types, Result monad, createModel, serialization, CRUD API, 37+ invariant guards, OPL bidirectional lens, OPL-first pipeline (parse → compile → validate), simulation engine (with in-zoom recursion), OPD fiber computation (DA-9). ~800+ tests.
-- **packages/cli/** — CLI `opmod` command (9 commands: new, add, remove, list, show, validate, update, refine, opl). ~90 tests. `stats` command exists in code but not wired to CLI.
 - **packages/web/** — Web editor (React/Vite, full CRUD, OPL panel with 3 tabs, live OPL editor tab with Ctrl+S + inline validation, layout preservation, bidirectional link selection, import/export SVG/PNG/OPL/Markdown, SD Wizard, bug capture). ~250 tests.
 - **packages/nl/** — Natural language layer (parse, resolve, prompt builders, LLM providers, pipeline). ~50 tests.
 - **tests/** — Shared fixture files (`.opmodel`): coffee-making, driver-rescuing, hospitalizacion-domiciliaria, hodom-v2, ev-ams, hodom-hsc-v0.
@@ -32,7 +31,7 @@ OPModel is a single-user power tool for **Object Process Methodology (ISO 19450)
 
 | DA | Name | Status |
 |----|------|--------|
-| DA-1 | CLI-First (AI-Agent Ready) — `opmod` command with full feature parity | Defined |
+| DA-1 | Tool-Friendly (AI-Agent Ready) — automation/script surfaces with full feature parity over core | Defined |
 | DA-2 | Graph-Native Storage with OPD fibration (property graph, not flat JSON) | Defined, pending categorical evolution |
 | DA-3 | Single-User Pro (no auth, sophisticated internals) | Defined |
 | DA-4 | Layered Architecture (Interfaces → Domain Engine → Graph Store) | Defined |

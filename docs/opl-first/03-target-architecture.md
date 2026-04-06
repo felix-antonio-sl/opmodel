@@ -59,7 +59,7 @@ editar OPL → re-parse → re-compile → re-validate → re-render
 |--------|-----------|
 | `opl-types.ts` | Spans en AST |
 | `validate()` | Source locations |
-| CLI `opmod` | Nuevos comandos: parse, compile, fmt |
+| Tooling / automation | Entrypoints scriptables sobre core/compiler, sin paquete de comandos dedicado |
 | `App.tsx` | Modo OPL-first |
 
 ## Baja de prioridad

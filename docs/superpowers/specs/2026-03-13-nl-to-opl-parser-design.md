@@ -56,9 +56,9 @@ Contravariante en model (más contexto → output más refinado), covariante en 
 |----------|--------------------------|---------------|
 | NlEditDescriptor (name-space) | OplEdit directo, OPL text + parser | Pullback correcto Name/ID; LLM no necesita conocer IDs internos |
 | LLM provider agnóstico | Claude-only, OpenAI-only | Interfaz minimal `complete(messages) → string`; no acopla a tool use |
-| Paquete `@opmodel/nl` aislado | En core, en web | Core permanece zero-dep; reutilizable desde CLI |
+| Paquete `@opmodel/nl` aislado | En core, en web | Core permanece zero-dep; reutilizable desde tooling/script surfaces |
 | Single-best con preview | Multi-candidate, clarification loop | YAGNI; preview existente es gate de validación humana |
-| API key: env var + UI | Solo env, solo UI | CLI necesita env; web necesita UI; localStorage no contamina Model |
+| API key: env var + UI | Solo env, solo UI | tooling local necesita env; web necesita UI; localStorage no contamina Model |
 | Input multilingüe, output preserva idioma | English-only, traducción forzada | OPL no prescribe idioma de nombres; LLM maneja multilingüe nativamente |
 | No rollback en partial apply | Transacción batch | Consistente con undo/redo existente; cada dispatch = pushHistory. Batch undo planificado V1.1 |
 | Exceptions en pipeline (no Result) | Result<NlResult, NlError> | Boundary async/impuro: `Promise` ya usa throw/catch nativamente. Result se usa dentro de parse y resolve (puros). La frontera impura (LLM API) lanza excepciones que pipeline propaga. |
@@ -181,7 +181,7 @@ packages/nl/
        ↑
 @opmodel/nl (pipeline, resolve, parse, prompt, provider)
        ↑                    ↑
-@opmodel/web            @opmodel/cli (futuro)
+@opmodel/web            tooling/script surfaces (futuro)
 ```
 
 ### package.json
@@ -657,7 +657,7 @@ No hay rollback automático. Cada `dispatch` es un `pushHistory` independiente. 
 - **Multi-candidate mode:** Retornar N interpretaciones rankeadas para selección
 - **Clarification loop:** Multi-turn si ambigüedad alta
 - **Streaming:** Mostrar descriptors conforme el LLM los genera
-- **CLI integration:** `opmod nl:describe <file>` usando @opmodel/nl
+- **Tooling integration:** flujo scriptable `nl:describe` usando @opmodel/nl
 - **Retry with backoff:** 1 retry tras 1s para 429/5xx
 - **Batch undo:** Command `applyOplEditBatch` con un solo pushHistory para rollback atómico
 - **update-thing / rename-thing:** Nuevos OplEdit kinds en core para edits de modificación

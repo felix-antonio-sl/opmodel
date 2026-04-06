@@ -14,7 +14,7 @@
 |---------|--------|-----------------|
 | `@opmodel/core` | 6,612 | Motor semántico, OPL, simulación, validación |
 | `@opmodel/web` | 10,126 | Editor visual React + SVG |
-| `@opmodel/cli` | ~1,000 | CLI `opmod` |
+| _(tooling retirado)_ | — | El paquete histórico de comando fue retirado del repo vivo y queda solo como legado archivado. |
 | `@opmodel/nl` | 637 | Pipeline NL→JSON→OplEdit vía LLM |
 
 ## Core: archivos principales
@@ -52,7 +52,7 @@
 Para mutaciones:
 
 ```
-UI/CLI → Command → api.addThing/addLink/... → Model mutado
+UI/tooling → Command → api.addThing/addLink/... → Model mutado
 OplEditorView → OplEdit → applyOplEdit() → Model mutado
 ```
 

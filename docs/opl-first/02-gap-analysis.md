@@ -79,5 +79,5 @@ Genera edits para things, states, links, modifiers. Ignora el resto. No crea OPD
 - Simulation engine
 - Methodology checks
 - Serialization `.opmodel`
-- CLI (se extiende)
+- tooling local (se extiende)
 - Fixtures como golden tests

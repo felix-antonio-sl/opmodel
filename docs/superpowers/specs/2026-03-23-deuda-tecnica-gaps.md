@@ -88,7 +88,7 @@ Cruce de 3 fuentes: (1) ISO 19450 — que DEBE soportar una herramienta conforma
 | M-06 | SubModels | Tipo + I-12 + API CRUD | Sin UI (P2, XL) | XL |
 | M-07 | Link rate/direction rendering | Tipos existen. Direction solo en tagged links | Rate sin rendering. Direction parcial | S |
 | M-08 | OPL inline text editing (L-M2-02) | Lens completo, form-based editor funciona | Sin edicion inline directa de texto OPL | XL |
-| M-09 | Validation panel web (L-M4-02) | `validateModel()` en API, CLI `opmod validate` | Sin panel continuo en web, sin error markers | M |
+| M-09 | Validation panel web (L-M4-02) | `validateModel()` en API/core | Sin panel continuo en web, sin error markers | M |
 | M-10 | Web test coverage | 4 test files basicos (commands, geometry, ids, store) | Sin component tests, sin E2E, sin visual regression | L ongoing |
 
 ---
