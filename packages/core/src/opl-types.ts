@@ -5,9 +5,22 @@ import type {
   Thing, State, Link, Modifier, Position,
 } from "./types";
 
+export interface OplSourceSpan {
+  line: number;
+  column: number;
+  offset: number;
+  endLine: number;
+  endColumn: number;
+  endOffset: number;
+}
+
+interface OplSourceNode {
+  sourceSpan?: OplSourceSpan;
+}
+
 // === OPL Sentence AST ===
 
-export interface OplThingDeclaration {
+export interface OplThingDeclaration extends OplSourceNode {
   kind: "thing-declaration";
   thingId: string;
   name: string;
@@ -21,7 +34,7 @@ export interface OplThingDeclaration {
   exhibitorName?: string;
 }
 
-export interface OplStateEnumeration {
+export interface OplStateEnumeration extends OplSourceNode {
   kind: "state-enumeration";
   thingId: string;
   thingName: string;
@@ -30,7 +43,7 @@ export interface OplStateEnumeration {
   exhibitorName?: string;
 }
 
-export interface OplDuration {
+export interface OplDuration extends OplSourceNode {
   kind: "duration";
   thingId: string;
   thingName: string;
@@ -40,7 +53,7 @@ export interface OplDuration {
   unit: TimeUnit;
 }
 
-export interface OplStateDescription {
+export interface OplStateDescription extends OplSourceNode {
   kind: "state-description";
   thingId: string;
   thingName: string;
@@ -52,7 +65,7 @@ export interface OplStateDescription {
   exhibitorName?: string;
 }
 
-export interface OplLinkSentence {
+export interface OplLinkSentence extends OplSourceNode {
   kind: "link";
   linkId: string;
   linkType: LinkType;
@@ -74,7 +87,7 @@ export interface OplLinkSentence {
   pathLabel?: string;
 }
 
-export interface OplModifierSentence {
+export interface OplModifierSentence extends OplSourceNode {
   kind: "modifier";
   modifierId: string;
   linkId: string;
@@ -88,7 +101,7 @@ export interface OplModifierSentence {
   targetStateName?: string;
 }
 
-export interface OplGroupedStructuralSentence {
+export interface OplGroupedStructuralSentence extends OplSourceNode {
   kind: "grouped-structural";
   linkType: "aggregation" | "exhibition" | "generalization" | "classification";
   parentId: string;
@@ -102,7 +115,7 @@ export interface OplGroupedStructuralSentence {
   semiFolded?: boolean;
 }
 
-export interface OplInZoomSequence {
+export interface OplInZoomSequence extends OplSourceNode {
   kind: "in-zoom-sequence";
   parentId: string;
   parentName: string;
@@ -114,7 +127,7 @@ export interface OplInZoomSequence {
   internalObjects?: { thingId: string; name: string }[];
 }
 
-export interface OplAttributeValue {
+export interface OplAttributeValue extends OplSourceNode {
   kind: "attribute-value";
   thingId: string;
   thingName: string;
@@ -123,7 +136,7 @@ export interface OplAttributeValue {
   valueName: string;
 }
 
-export interface OplFanSentence {
+export interface OplFanSentence extends OplSourceNode {
   kind: "fan";
   fanId: string;
   fanType: FanType;
@@ -135,7 +148,7 @@ export interface OplFanSentence {
   memberTargetStateNames?: (string | undefined)[];
 }
 
-export interface OplRequirementSentence {
+export interface OplRequirementSentence extends OplSourceNode {
   kind: "requirement";
   reqId: string;
   reqCode: string;  // e.g. "R-01"
@@ -144,7 +157,7 @@ export interface OplRequirementSentence {
   targetName: string;
 }
 
-export interface OplAssertionSentence {
+export interface OplAssertionSentence extends OplSourceNode {
   kind: "assertion";
   assertionId: string;
   predicate: string;
@@ -152,7 +165,7 @@ export interface OplAssertionSentence {
   category: string;
 }
 
-export interface OplScenarioSentence {
+export interface OplScenarioSentence extends OplSourceNode {
   kind: "scenario";
   scenarioId: string;
   name: string;
@@ -190,6 +203,8 @@ export interface OplDocument {
   opdName: string;
   sentences: OplSentence[];
   renderSettings: OplRenderSettings;
+  sourceSpan?: OplSourceSpan;
+  sourceText?: string;
   /** R-OPL-3: OPD tree edge label — e.g. "SD is refined by in-zooming Making Coffee in SD1" */
   refinementEdge?: {
     parentOpdName: string;

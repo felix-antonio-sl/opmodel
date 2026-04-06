@@ -33,12 +33,20 @@ export {
 export {
   expose, applyOplEdit, render, renderAll, modelStats, oplSlug, editsFrom,
 } from "./opl";
+export {
+  parseOplDocument,
+  parseOplDocuments,
+} from "./opl-parse";
 export type {
   OplSentence, OplThingDeclaration, OplStateEnumeration, OplDuration,
   OplLinkSentence, OplModifierSentence, OplDocument, OplEdit, OplRenderSettings,
   OplStateDescription, OplGroupedStructuralSentence, OplInZoomSequence, OplAttributeValue,
-  OplFanSentence,
+  OplFanSentence, OplSourceSpan,
 } from "./opl-types";
+export type {
+  OplParseIssue,
+  OplParseError,
+} from "./opl-parse";
 export type { ModelStats } from "./opl";
 export { verifyMethodology, type CheckResult } from "./methodology";
 export { getCompoundStates, type CompoundStateEntry } from "./compound-states";

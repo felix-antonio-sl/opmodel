@@ -82,6 +82,30 @@ Do **not** treat it yet as:
 - a clinically realistic simulation platform
 - a vehicle for new feature lines like System Map / system mapping
 
+## OPL-first transition documentation
+
+We are documenting a new architectural direction where:
+
+> **OPL becomes the source of truth for authoring**
+>
+> The semantic model and the visual representation become derived artifacts.
+
+Start here:
+
+- [`docs/opl-first/README.md`](./docs/opl-first/README.md) — index
+- [`docs/opl-first/00-decision.md`](./docs/opl-first/00-decision.md) — decision / ADR
+- [`docs/opl-first/01-baseline.md`](./docs/opl-first/01-baseline.md) — current repo baseline
+- [`docs/opl-first/02-gap-analysis.md`](./docs/opl-first/02-gap-analysis.md) — gaps vs OPL-first target
+- [`docs/opl-first/03-target-architecture.md`](./docs/opl-first/03-target-architecture.md) — proposed target architecture
+- [`docs/opl-first/04-reuse-map.md`](./docs/opl-first/04-reuse-map.md) — what can be reused
+- [`docs/opl-first/05-phases.md`](./docs/opl-first/05-phases.md) — proposed implementation phases
+
+Short version:
+
+- **today**: `.opmodel` / `Model` is the source of truth, OPL is derived
+- **target**: `OPL text → parse → compile → Model → validate → visual render`
+- **main gap**: there is still no full `OPL text → Model` path
+
 ## Notes
 
 - `CLAUDE.md` contains repo-specific guidance for coding agents.
