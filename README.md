@@ -82,6 +82,21 @@ Do **not** treat it yet as:
 - a clinically realistic simulation platform
 - a vehicle for new feature lines like System Map / system mapping
 
+## SSOT corpus
+
+Authoritative OPM references for this repo are exposed inside the repository at:
+
+- [`docs/ssot/README.md`](./docs/ssot/README.md)
+- [`docs/ssot/opm-ssot`](./docs/ssot/opm-ssot) → symlink to `/home/felix/kora/KNOWLEDGE/fxsl/opm/opm-ssot`
+
+Precedence:
+
+1. **ISO 19450**
+2. **OPL-ES**
+3. **Metodología de Modelamiento OPM**
+
+Any work on OPM semantics, OPL grammar, parsing, rendering, validation, or refinement should be checked against that corpus.
+
 ## OPL-first transition documentation
 
 We are documenting a new architectural direction where:

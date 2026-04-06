@@ -11,6 +11,18 @@
 Definir el primer subconjunto canónico del OPL aceptado como input.
 Este subset está alineado con el output actual de `render()` / `renderAll()` y sirve para implementar el parser inicial con blast radius bajo.
 
+## SSOT obligatoria
+
+Este documento debe leerse junto con el corpus expuesto en:
+
+- [`../ssot/opm-ssot`](../ssot/opm-ssot)
+
+Orden de precedencia:
+
+1. `opm-iso-19450.md`
+2. `opm-opl-es.md`
+3. `metodologia-modelamiento-opm.md`
+
 ## Principios
 
 1. **Canon first**: se acepta primero lo que `render()` ya produce hoy.

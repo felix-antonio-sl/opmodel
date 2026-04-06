@@ -15,6 +15,19 @@
 | 5 | [05-phases.md](./05-phases.md) | Fases de implementación + decisiones abiertas |
 | 6 | [opl-grammar.md](./opl-grammar.md) | Gramática canónica inicial del input OPL |
 
+## SSOT reference
+
+The OPL-first work in this directory is grounded on the authoritative OPM corpus exposed at:
+
+- [`../ssot/README.md`](../ssot/README.md)
+- [`../ssot/opm-ssot`](../ssot/opm-ssot)
+
+Precedence:
+
+1. ISO 19450
+2. OPL-ES
+3. Metodología de Modelamiento OPM
+
 ## En una frase
 
 - **Hoy**: `.opmodel` es la fuente de verdad, OPL es derivado
