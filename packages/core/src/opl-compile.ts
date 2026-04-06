@@ -88,7 +88,12 @@ function isSupportedSentenceKind(kind: OplSentence["kind"]): boolean {
     "state-description",
     "duration",
     "attribute-value",
+    "link",
   ].includes(kind);
+}
+
+function isSupportedLinkType(type: Link["type"]): boolean {
+  return ["agent", "instrument", "consumption", "result", "effect", "invocation"].includes(type);
 }
 
 export function compileOplDocuments(docs: OplDocument[], options: OplCompileOptions = {}): Result<Model, OplCompileError> {
@@ -426,6 +431,74 @@ export function compileOplDocuments(docs: OplDocument[], options: OplCompileOpti
     }
   }
 
+  // Pass 10: procedural links subset.
+  for (const doc of docs) {
+    for (const s of doc.sentences) {
+      if (s.kind !== "link") continue;
+      if (!isSupportedLinkType(s.linkType)) {
+        if (!options.ignoreUnsupported) {
+          pushIssue(issues, `Compiler subset does not support link type: ${s.linkType}`, s, doc.opdName);
+        }
+        continue;
+      }
+
+      const sourceRef = resolveThingRef(s.sourceName, undefined, thingRefByDisplayName, thingIdsByActualName, doc.renderSettings.locale);
+      const targetRef = resolveThingRef(s.targetName, undefined, thingRefByDisplayName, thingIdsByActualName, doc.renderSettings.locale);
+      if (!sourceRef) {
+        pushIssue(issues, `Could not resolve source thing for link: ${s.sourceName}`, s, doc.opdName);
+        continue;
+      }
+      if (!targetRef) {
+        pushIssue(issues, `Could not resolve target thing for link: ${s.targetName}`, s, doc.opdName);
+        continue;
+      }
+
+      const linkData: Link = {
+        id: uniqueId(`lnk-${oplSlug(sourceRef.displayName)}-${s.linkType}-${oplSlug(targetRef.displayName)}`, model),
+        type: s.linkType,
+        source: sourceRef.thingId,
+        target: targetRef.thingId,
+      };
+
+      const resolvedSourceState = resolveStateForLinkSide(model, stateIdByThingAndName, s.linkType, "source", sourceRef.thingId, targetRef.thingId, s.sourceStateName);
+      const resolvedTargetState = resolveStateForLinkSide(model, stateIdByThingAndName, s.linkType, "target", sourceRef.thingId, targetRef.thingId, s.targetStateName);
+      if (s.sourceStateName && !resolvedSourceState) {
+        pushIssue(issues, `Could not resolve source state for link: ${s.sourceStateName}`, s, doc.opdName);
+        continue;
+      }
+      if (s.targetStateName && !resolvedTargetState) {
+        pushIssue(issues, `Could not resolve target state for link: ${s.targetStateName}`, s, doc.opdName);
+        continue;
+      }
+      if (resolvedSourceState) linkData.source_state = resolvedSourceState;
+      if (resolvedTargetState) linkData.target_state = resolvedTargetState;
+      if (s.tag) linkData.tag = s.tag;
+      if (s.direction) linkData.direction = s.direction;
+      if (s.multiplicitySource) linkData.multiplicity_source = s.multiplicitySource;
+      if (s.multiplicityTarget) linkData.multiplicity_target = s.multiplicityTarget;
+      if (s.probability != null) linkData.probability = s.probability;
+      if (s.pathLabel) linkData.path_label = s.pathLabel;
+      if (s.exceptionType) linkData.exception_type = s.exceptionType;
+      if (s.incomplete) linkData.incomplete = s.incomplete;
+
+      const exists = [...model.links.values()].some(l =>
+        l.type === linkData.type &&
+        l.source === linkData.source &&
+        l.target === linkData.target &&
+        l.source_state === linkData.source_state &&
+        l.target_state === linkData.target_state,
+      );
+      if (exists) continue;
+
+      const r = addLink(model, linkData);
+      if (!r.ok) {
+        pushIssue(issues, r.error.message, s, doc.opdName);
+        continue;
+      }
+      model = r.value;
+    }
+  }
+
   if (issues.length > 0) {
     return err({ message: "Failed to compile OPL documents", issues });
   }
@@ -434,6 +507,31 @@ export function compileOplDocuments(docs: OplDocument[], options: OplCompileOpti
 
 export function compileOplDocument(doc: OplDocument, options: OplCompileOptions = {}): Result<Model, OplCompileError> {
   return compileOplDocuments([doc], options);
+}
+
+function resolveStateForLinkSide(
+  model: Model,
+  stateIdByThingAndName: Map<string, string>,
+  linkType: Link["type"],
+  side: "source" | "target",
+  sourceThingId: string,
+  targetThingId: string,
+  stateName: string | undefined,
+): string | undefined {
+  if (!stateName) return undefined;
+
+  const primaryThingId = (() => {
+    if (linkType === "effect") return targetThingId;
+    if (linkType === "result") return targetThingId;
+    if (linkType === "consumption") return sourceThingId;
+    return side === "source" ? sourceThingId : targetThingId;
+  })();
+
+  const fallbackThingId = primaryThingId === sourceThingId ? targetThingId : sourceThingId;
+  return stateIdByThingAndName.get(`${primaryThingId}::${stateName}`)
+    ?? stateIdByThingAndName.get(`${fallbackThingId}::${stateName}`)
+    ?? [...model.states.values()].find(s => s.parent === primaryThingId && s.name === stateName)?.id
+    ?? [...model.states.values()].find(s => s.parent === fallbackThingId && s.name === stateName)?.id;
 }
 
 function resolveThingRef(

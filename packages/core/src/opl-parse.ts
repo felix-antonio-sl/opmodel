@@ -1181,8 +1181,8 @@ function parseSentence(line: string, span: OplSourceSpan, ctx: ParseContext) {
     ?? parseInZoomSequence(line, span, ctx)
     ?? parseAttributeValue(line, span, ctx)
     ?? parseInvocation(line, span, ctx)
-    ?? parseTaggedLink(line, span, ctx)
-    ?? parseLink(line, span, ctx);
+    ?? parseLink(line, span, ctx)
+    ?? parseTaggedLink(line, span, ctx);
 }
 
 function parseRefinementEdge(line: string): { parentOpdName: string; refinementType: "in-zoom" | "unfold"; refinedThingName: string; childOpdName: string } | null {

@@ -17,6 +17,29 @@ const BASIC_SUBSET = [
   "Boiling requires 5min.",
 ].join("\n");
 
+const PROCEDURAL_SUBSET = [
+  "Water is an object, physical.",
+  "Water can be cold or hot.",
+  "State cold of Water is initial and default.",
+  "State hot of Water is final.",
+  "Barista is an object, physical.",
+  "Coffee Machine is an object, physical.",
+  "Boiling is a process, physical.",
+  "Barista handles Boiling.",
+  "Boiling requires Coffee Machine.",
+  "Boiling changes Water from cold to hot.",
+].join("\n");
+
+const RESULT_INVOCATION_SUBSET = [
+  "Steam is an object, physical.",
+  "Steam can be warm or hot.",
+  "State hot of Steam is initial and default.",
+  "Boiling is a process, physical.",
+  "Alarm is a process, physical.",
+  "Boiling yields hot Steam.",
+  "Boiling invokes Alarm.",
+].join("\n");
+
 const COMPOUND_ATTRIBUTE = [
   "Patient is an object, physical.",
   "Clinical Condition of Patient is an object, informatical.",
@@ -82,11 +105,63 @@ describe("compileOplDocument", () => {
     expect(text).toContain("Clinical Condition of Patient is acute.");
   });
 
+  it("compiles agent/instrument/effect links with state resolution", () => {
+    const parsed = parseOplDocument(PROCEDURAL_SUBSET, "SD", "opd-sd");
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+
+    const compiled = compileOplDocument(parsed.value);
+    expect(compiled.ok).toBe(true);
+    if (!compiled.ok) return;
+
+    const model = compiled.value;
+    expect(model.links.size).toBe(3);
+
+    const agent = [...model.links.values()].find(l => l.type === "agent");
+    const instrument = [...model.links.values()].find(l => l.type === "instrument");
+    const effect = [...model.links.values()].find(l => l.type === "effect");
+    expect(agent).toBeDefined();
+    expect(instrument).toBeDefined();
+    expect(effect).toBeDefined();
+
+    const cold = [...model.states.values()].find(s => s.name === "cold");
+    const hot = [...model.states.values()].find(s => s.name === "hot");
+    expect(effect?.source_state).toBe(cold?.id);
+    expect(effect?.target_state).toBe(hot?.id);
+
+    const text = render(expose(model, "opd-sd"));
+    expect(text).toContain("Barista handles Boiling.");
+    expect(text).toContain("Boiling requires Coffee Machine.");
+    expect(text).toContain("Boiling changes Water from cold to hot.");
+  });
+
+  it("compiles result and invocation links", () => {
+    const parsed = parseOplDocument(RESULT_INVOCATION_SUBSET, "SD", "opd-sd");
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+
+    const compiled = compileOplDocument(parsed.value);
+    expect(compiled.ok).toBe(true);
+    if (!compiled.ok) return;
+
+    const model = compiled.value;
+    const resultLink = [...model.links.values()].find(l => l.type === "result");
+    const invocationLink = [...model.links.values()].find(l => l.type === "invocation");
+    const hot = [...model.states.values()].find(s => s.name === "hot");
+    expect(resultLink).toBeDefined();
+    expect(resultLink?.target_state).toBe(hot?.id);
+    expect(invocationLink).toBeDefined();
+
+    const text = render(expose(model, "opd-sd"));
+    expect(text).toContain("Boiling yields hot Steam.");
+    expect(text).toContain("Boiling invokes Alarm.");
+  });
+
   it("returns a compile error for unsupported sentence kinds in strict mode", () => {
     const parsed = parseOplDocument([
-      "Water is an object, physical.",
-      "Boiling is a process, physical.",
-      "Water handles Boiling.",
+      "Car is an object, physical.",
+      "Engine is an object, physical.",
+      "Car consists of Engine.",
     ].join("\n"), "SD", "opd-sd");
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
@@ -95,7 +170,7 @@ describe("compileOplDocument", () => {
     expect(compiled.ok).toBe(false);
     if (compiled.ok) return;
     expect(compiled.error.message).toContain("Unsupported");
-    expect(compiled.error.issues[0]?.sentenceKind).toBe("link");
+    expect(compiled.error.issues[0]?.sentenceKind).toBe("grouped-structural");
   });
 });
 

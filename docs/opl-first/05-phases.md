@@ -53,26 +53,28 @@ Thing declarations, state enumerations, state descriptions, durations (simple + 
 
 **Objetivo**: Construir `Model` completo desde `OplDocument`.
 
-**Estado actual (slice 2.1)**:
+**Estado actual (slice 2.2)**:
 - ✅ `compileOplDocument()` y `compileOplDocuments()` creados
 - ✅ Name resolution base para things simples y compuestos (`Feature of Exhibitor`)
-- ✅ Compilación de subset inicial:
+- ✅ Compilación del subset actual:
   - thing declarations
   - state enumerations
   - state descriptions
   - durations
   - attribute-values
+  - procedural links: `agent`, `instrument`, `consumption`, `result`, `effect`, `invocation`
   - OPD skeleton + refinement edges
+- ✅ Resolución de estados para links state-specified
 - ✅ Exhibition links inferidos para features compuestas
 - ✅ Appearances mínimas generadas por OPD
 - ✅ Tests nuevos de compiler
 
 **Pendiente en Fase 2**:
-- Procedural links (`agent`, `instrument`, `consumption`, `result`, `effect`, `invocation`)
 - Structural links agrupados
 - Modifiers
 - Fans
 - Requirements / assertions / scenarios
+- Tagged / exception / input / output / path-labels completos
 - Source map fino sentencia → entidad
 - Auto-layout real / placement más inteligente
 
