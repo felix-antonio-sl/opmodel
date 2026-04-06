@@ -5,10 +5,13 @@ import { oplSlug } from "./opl";
 import { appearanceKey, collectAllIds } from "./helpers";
 import {
   addAppearance,
-  addLink,
+  addAssertion,
   addFan,
+  addLink,
   addModifier,
   addOPD,
+  addRequirement,
+  addScenario,
   addState,
   addThing,
   updateOPD,
@@ -94,6 +97,9 @@ function isSupportedSentenceKind(kind: OplSentence["kind"]): boolean {
     "link",
     "modifier",
     "fan",
+    "requirement",
+    "assertion",
+    "scenario",
   ].includes(kind);
 }
 
@@ -672,6 +678,76 @@ export function compileOplDocuments(docs: OplDocument[], options: OplCompileOpti
         type: s.fanType,
         direction: s.direction,
         members: memberLinkIds,
+      });
+      if (!r.ok) {
+        pushIssue(issues, r.error.message, s, doc.opdName);
+        continue;
+      }
+      model = r.value;
+    }
+  }
+
+  // Pass 13: requirements.
+  for (const doc of docs) {
+    for (const s of doc.sentences) {
+      if (s.kind !== "requirement") continue;
+
+      const target = resolveThingRef(s.targetName, undefined, thingRefByDisplayName, thingIdsByActualName, doc.renderSettings.locale);
+      if (!target) {
+        pushIssue(issues, `Could not resolve target for requirement: ${s.targetName}`, s, doc.opdName);
+        continue;
+      }
+
+      const r = addRequirement(model, {
+        id: uniqueId(`req-${oplSlug(s.name)}`, model),
+        target: target.thingId,
+        name: s.name,
+        description: s.description,
+        req_id: s.reqCode,
+      });
+      if (!r.ok) {
+        pushIssue(issues, r.error.message, s, doc.opdName);
+        continue;
+      }
+      model = r.value;
+    }
+  }
+
+  // Pass 14: assertions.
+  for (const doc of docs) {
+    for (const s of doc.sentences) {
+      if (s.kind !== "assertion") continue;
+
+      let targetId: string | undefined;
+      if (s.targetName) {
+        const ref = resolveThingRef(s.targetName, undefined, thingRefByDisplayName, thingIdsByActualName, doc.renderSettings.locale);
+        if (ref) targetId = ref.thingId;
+      }
+
+      const r = addAssertion(model, {
+        id: uniqueId(`assertion-${oplSlug(s.category)}`, model),
+        target: targetId,
+        predicate: s.predicate,
+        category: s.category as any,
+        enabled: true,
+      });
+      if (!r.ok) {
+        pushIssue(issues, r.error.message, s, doc.opdName);
+        continue;
+      }
+      model = r.value;
+    }
+  }
+
+  // Pass 15: scenarios.
+  for (const doc of docs) {
+    for (const s of doc.sentences) {
+      if (s.kind !== "scenario") continue;
+
+      const r = addScenario(model, {
+        id: uniqueId(`scenario-${oplSlug(s.name)}`, model),
+        name: s.name,
+        path_labels: s.pathLabels,
       });
       if (!r.ok) {
         pushIssue(issues, r.error.message, s, doc.opdName);
