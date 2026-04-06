@@ -56,6 +56,9 @@ type ParseContext = {
   locale: "en" | "es";
 };
 
+type ParsedSentence = OplDocument["sentences"][number];
+type ParsedSentenceResult = ParsedSentence | ParsedSentence[] | null;
+
 function spanForLine(lineText: string, line: number, offset: number): OplSourceSpan {
   return {
     line,
@@ -979,6 +982,40 @@ function parseScenario(line: string, span: OplSourceSpan, ctx: ParseContext): Op
   };
 }
 
+function parseExceptionLink(line: string, span: OplSourceSpan, ctx: ParseContext): OplLinkSentence | null {
+  const patterns = ctx.locale === "es"
+    ? [
+      { re: /^(.*?) ocurre si duración de (.*?) excede \d+(?:\.\d+)?(?:ms|s|min|h|d)\.$/, exceptionType: "overtime" as const },
+      { re: /^(.*?) ocurre si duración de (.*?) es menor que \d+(?:\.\d+)?(?:ms|s|min|h|d)\.$/, exceptionType: "undertime" as const },
+    ]
+    : [
+      { re: /^(.*?) occurs if duration of (.*?) exceeds \d+(?:\.\d+)?(?:ms|s|min|h|d)\.$/, exceptionType: "overtime" as const },
+      { re: /^(.*?) occurs if duration of (.*?) falls short of \d+(?:\.\d+)?(?:ms|s|min|h|d)\.$/, exceptionType: "undertime" as const },
+    ];
+
+  for (const { re, exceptionType } of patterns) {
+    const match = line.match(re);
+    if (!match) continue;
+    const targetName = match[1]!.trim();
+    const sourceName = match[2]!.trim();
+    return {
+      kind: "link",
+      linkId: `link-${++ctx.linkCounter}`,
+      linkType: "invocation",
+      sourceId: ensureThing(ctx, sourceName),
+      targetId: ensureThing(ctx, targetName),
+      sourceName,
+      targetName,
+      sourceKind: "process",
+      targetKind: "process",
+      exceptionType,
+      sourceSpan: span,
+    };
+  }
+
+  return null;
+}
+
 function parseInvocation(line: string, span: OplSourceSpan, ctx: ParseContext): OplLinkSentence | null {
   const isES = ctx.locale === "es";
   // "P invokes Q." / "P invoca Q."
@@ -1164,7 +1201,83 @@ function parseConditionModifier(line: string, span: OplSourceSpan, ctx: ParseCon
   return null;
 }
 
-function parseSentence(line: string, span: OplSourceSpan, ctx: ParseContext) {
+function parsePathLabelClause(line: string, span: OplSourceSpan, ctx: ParseContext): ParsedSentenceResult {
+  const clausePatterns = ctx.locale === "es"
+    ? [
+      { re: /^(.*?) maneja (.*?)\.$/, build: (subject: string, item: string) => `${subject} maneja ${item}.` },
+      { re: /^(.*?) requiere (.*?)\.$/, build: (subject: string, item: string) => `${subject} requiere ${item}.` },
+      { re: /^(.*?) consume (.*?)\.$/, build: (subject: string, item: string) => `${subject} consume ${item}.` },
+      { re: /^(.*?) genera (.*?)\.$/, build: (subject: string, item: string) => `${subject} genera ${item}.` },
+      { re: /^(.*?) invoca (.*?)\.$/, build: (subject: string, item: string) => `${subject} invoca ${item}.` },
+    ]
+    : [
+      { re: /^(.*?) handles (.*?)\.$/, build: (subject: string, item: string) => `${subject} handles ${item}.` },
+      { re: /^(.*?) requires (.*?)\.$/, build: (subject: string, item: string) => `${subject} requires ${item}.` },
+      { re: /^(.*?) consumes (.*?)\.$/, build: (subject: string, item: string) => `${subject} consumes ${item}.` },
+      { re: /^(.*?) yields (.*?)\.$/, build: (subject: string, item: string) => `${subject} yields ${item}.` },
+      { re: /^(.*?) invokes (.*?)\.$/, build: (subject: string, item: string) => `${subject} invokes ${item}.` },
+    ];
+
+  for (const { re, build } of clausePatterns) {
+    const match = line.match(re);
+    if (!match) continue;
+    const subject = match[1]!.trim();
+    const items = parseList(match[2]!.trim(), ctx.locale);
+    if (items.length <= 1) continue;
+    const sentences: ParsedSentence[] = items
+      .map((item) => parseSentence(build(subject, item), span, ctx))
+      .flatMap((sentence) => !sentence ? [] : Array.isArray(sentence) ? sentence : [sentence]);
+    return sentences.length > 0 ? sentences : null;
+  }
+
+  return parseSentence(line, span, ctx);
+}
+
+function parsePathLabelLine(line: string, span: OplSourceSpan, ctx: ParseContext): ParsedSentenceResult {
+  const match = ctx.locale === "es"
+    ? line.match(/^Por ruta (.*?),\s*(.*)$/)
+    : line.match(/^Following path (.*?),\s*(.*)$/);
+  if (!match) return null;
+
+  const pathLabel = match[1]!.trim();
+  const remainder = match[2]!.trim();
+  if (!pathLabel || !remainder) return null;
+
+  const parsed: ParsedSentenceResult = (() => {
+    const verbPattern = ctx.locale === "es"
+      ? /\b(maneja|requiere|consume|genera|cambia|afecta|invoca)\b/
+      : /\b(handles|requires|consumes|yields|changes|affects|invokes)\b/;
+    const splitPattern = ctx.locale === "es"
+      ? /,\s*(?=(?:maneja|requiere|consume|genera|cambia|afecta|invoca)\b)/g
+      : /,\s*(?=(?:handles|requires|consumes|yields|changes|affects|invokes)\b)/g;
+    const verbMatch = remainder.match(verbPattern);
+    if (!verbMatch || verbMatch.index == null) return null;
+    const subject = remainder.slice(0, verbMatch.index).trim();
+    const clauseText = remainder.slice(verbMatch.index).trim();
+    if (!subject || !clauseText) return null;
+
+    const sentences: ParsedSentence[] = clauseText
+      .split(splitPattern)
+      .flatMap((clause) => {
+        const normalized = clause.trim().replace(/\.$/, "");
+        if (!normalized) return [];
+        const fullClause = `${subject} ${normalized}.`;
+        const sentence = parsePathLabelClause(fullClause, span, ctx);
+        if (!sentence) return [];
+        return Array.isArray(sentence) ? sentence : [sentence];
+      });
+    return sentences.length > 0 ? sentences : parsePathLabelClause(remainder, span, ctx);
+  })();
+  if (!parsed) return null;
+
+  const sentences: ParsedSentence[] = Array.isArray(parsed) ? parsed : [parsed];
+  return sentences.map((sentence) => sentence.kind === "link" ? { ...sentence, pathLabel } : sentence);
+}
+
+function parseSentence(line: string, span: OplSourceSpan, ctx: ParseContext): ParsedSentenceResult {
+  const pathLabeled: ParsedSentenceResult = parsePathLabelLine(line, span, ctx);
+  if (pathLabeled) return pathLabeled;
+
   // Bracketed sentences ([R-01], [correctness], [scenario: ...]) must be tried before generic link parsing
   // because "X requires Y" after [bracket] gets consumed by instrument link parser.
   const bracketed = parseRequirement(line, span, ctx) ?? parseScenario(line, span, ctx) ?? parseAssertion(line, span, ctx);
@@ -1179,6 +1292,7 @@ function parseSentence(line: string, span: OplSourceSpan, ctx: ParseContext) {
     ?? parseModifierSentence(line, span, ctx)
     ?? parseConditionModifier(line, span, ctx)
     ?? parseInZoomSequence(line, span, ctx)
+    ?? parseExceptionLink(line, span, ctx)
     ?? parseAttributeValue(line, span, ctx)
     ?? parseInvocation(line, span, ctx)
     ?? parseLink(line, span, ctx)
@@ -1235,7 +1349,8 @@ export function parseOplDocument(text: string, opdName = "SD", opdId = `opd-${op
       pushIssue(issues, entry.lineNumber, raw, "Unsupported or invalid OPL sentence in current parser subset");
       continue;
     }
-    sentences.push(sentence);
+    if (Array.isArray(sentence)) sentences.push(...sentence);
+    else sentences.push(sentence);
   }
 
   if (issues.length > 0) {

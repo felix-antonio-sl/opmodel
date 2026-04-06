@@ -105,7 +105,7 @@ function isSupportedSentenceKind(kind: OplSentence["kind"]): boolean {
 }
 
 function isSupportedLinkType(type: Link["type"]): boolean {
-  return ["agent", "instrument", "consumption", "result", "effect", "invocation", "tagged"].includes(type);
+  return ["agent", "instrument", "consumption", "result", "effect", "invocation", "exception", "tagged"].includes(type);
 }
 
 function isSupportedGroupedStructuralType(type: string): boolean {
@@ -521,15 +521,17 @@ export function compileOplDocuments(docs: OplDocument[], options: OplCompileOpti
         continue;
       }
 
+      const linkType: Link["type"] = s.exceptionType ? "exception" : s.linkType;
+
       const linkData: Link = {
         id: uniqueId(`lnk-${oplSlug(sourceRef.displayName)}-${s.linkType}-${oplSlug(targetRef.displayName)}`, model),
-        type: s.linkType,
+        type: linkType,
         source: sourceRef.thingId,
         target: targetRef.thingId,
       };
 
-      const resolvedSourceState = resolveStateForLinkSide(model, stateIdByThingAndName, s.linkType, "source", sourceRef.thingId, targetRef.thingId, s.sourceStateName);
-      const resolvedTargetState = resolveStateForLinkSide(model, stateIdByThingAndName, s.linkType, "target", sourceRef.thingId, targetRef.thingId, s.targetStateName);
+      const resolvedSourceState = resolveStateForLinkSide(model, stateIdByThingAndName, linkType, "source", sourceRef.thingId, targetRef.thingId, s.sourceStateName);
+      const resolvedTargetState = resolveStateForLinkSide(model, stateIdByThingAndName, linkType, "target", sourceRef.thingId, targetRef.thingId, s.targetStateName);
       if (s.sourceStateName && !resolvedSourceState) {
         pushIssue(issues, `Could not resolve source state for link: ${s.sourceStateName}`, s, doc.opdName);
         continue;

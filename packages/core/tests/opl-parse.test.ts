@@ -273,6 +273,74 @@ describe("invocation and tagged links", () => {
     const link = result.value.sentences.find(s => s.kind === "link" && s.linkType === "invocation");
     expect(link).toBeDefined();
   });
+
+  it("parses English overtime exception link", () => {
+    const result = parseOplDocument([
+      "Source is a process, physical.",
+      "Handling is a process, physical.",
+      "Handling occurs if duration of Source exceeds 5min.",
+    ].join("\n"), "SD", "opd-sd");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const link = result.value.sentences.find(s => s.kind === "link" && s.linkType === "invocation");
+    expect(link).toBeDefined();
+    if (link?.kind !== "link") return;
+    expect(link.sourceName).toBe("Source");
+    expect(link.targetName).toBe("Handling");
+    expect(link.exceptionType).toBe("overtime");
+  });
+
+  it("parses Spanish undertime exception link", () => {
+    const result = parseOplDocument([
+      "Fuente es un proceso, físico.",
+      "Manejo es un proceso, físico.",
+      "Manejo ocurre si duración de Fuente es menor que 1min.",
+    ].join("\n"), "SD", "opd-sd");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const link = result.value.sentences.find(s => s.kind === "link" && s.linkType === "invocation");
+    expect(link).toBeDefined();
+    if (link?.kind !== "link") return;
+    expect(link.sourceName).toBe("Fuente");
+    expect(link.targetName).toBe("Manejo");
+    expect(link.exceptionType).toBe("undertime");
+  });
+
+  it("parses English path-labeled mixed link line into multiple links", () => {
+    const result = parseOplDocument([
+      "Food Preparing is a process, physical.",
+      "Meat is an object, physical.",
+      "Stew is an object, physical.",
+      "Steak is an object, physical.",
+      "Following path carnivore, Food Preparing consumes Meat, yields Stew and Steak.",
+    ].join("\n"), "SD", "opd-sd");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const links = result.value.sentences.filter(s => s.kind === "link");
+    expect(links).toHaveLength(3);
+    expect(links.every(link => link.pathLabel === "carnivore")).toBe(true);
+    expect(links.some(link => link.linkType === "consumption" && link.sourceName === "Meat")).toBe(true);
+    expect(links.filter(link => link.linkType === "result").map(link => link.targetName).sort()).toEqual(["Steak", "Stew"]);
+  });
+
+  it("parses Spanish path-labeled mixed link line into multiple links", () => {
+    const result = parseOplDocument([
+      "Preparar Alimento es un proceso, físico.",
+      "Carne es un objeto, físico.",
+      "Estofado es un objeto, físico.",
+      "Bistec es un objeto, físico.",
+      "Por ruta carnívoro, Preparar Alimento consume Carne, genera Estofado y Bistec.",
+    ].join("\n"), "SD", "opd-sd");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const links = result.value.sentences.filter(s => s.kind === "link");
+    expect(links).toHaveLength(3);
+    expect(links.every(link => link.pathLabel === "carnívoro")).toBe(true);
+    expect(links.some(link => link.linkType === "consumption" && link.sourceName === "Carne")).toBe(true);
+    expect(links.filter(link => link.linkType === "result").map(link => link.targetName).sort()).toEqual(["Bistec", "Estofado"]);
+  });
 });
 
 describe("attribute-value", () => {

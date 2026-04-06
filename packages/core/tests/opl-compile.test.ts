@@ -97,6 +97,17 @@ const SELF_INVOCATION = [
   "Processing invokes itself.",
 ].join("\n");
 
+const EXCEPTION_AND_PATH_SUBSET = [
+  "Food Preparing is a process, physical.",
+  "Food Preparing requires 3-5min.",
+  "Handling is a process, physical.",
+  "Meat is an object, physical.",
+  "Stew is an object, physical.",
+  "Steak is an object, physical.",
+  "Handling occurs if duration of Food Preparing exceeds 5min.",
+  "Following path carnivore, Food Preparing consumes Meat, yields Stew and Steak.",
+].join("\n");
+
 const INZOOM_WITH_INVOCATIONS = [
   "Making Coffee is a process, physical.",
   "Grinding is a process, physical.",
@@ -365,12 +376,10 @@ describe("compileOplDocument", () => {
 
   it("compiles scenario sentences", () => {
     // Scenarios require links with matching path_labels in the model.
-    // Since OPL parsing doesn't extract path_labels from link sentences,
-    // we test scenario compilation against a model with pre-set path_labels.
     const parsed = parseOplDocument([
       "Making Coffee is a process, physical.",
       "Grinding is a process, physical.",
-      "Making Coffee invokes Grinding.",
+      "Following path standard, Making Coffee invokes Grinding.",
     ].join("\n"), "SD", "opd-sd");
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
@@ -379,12 +388,11 @@ describe("compileOplDocument", () => {
     expect(compiled.ok).toBe(true);
     if (!compiled.ok) return;
 
-    // Manually set path_label on the invocation link to satisfy addScenario constraint.
     let model = compiled.value;
     const invocationLink = [...model.links.values()].find(l => l.type === "invocation");
     expect(invocationLink).toBeDefined();
     if (!invocationLink) return;
-    model = { ...model, links: new Map(model.links).set(invocationLink.id, { ...invocationLink, path_label: "standard" }) };
+    expect(invocationLink.path_label).toBe("standard");
 
     // Now compile a scenario sentence directly.
     const scenarioSentence = {
@@ -446,6 +454,25 @@ describe("compileOplDocument", () => {
 
     const processing = [...model.things.values()].find(t => t.name === "Processing");
     expect(selfInv?.source).toBe(processing?.id);
+  });
+
+  it("compiles exception type and path label on parsed links", () => {
+    const parsed = parseOplDocument(EXCEPTION_AND_PATH_SUBSET, "SD", "opd-sd");
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+
+    const compiled = compileOplDocument(parsed.value);
+    expect(compiled.ok).toBe(true);
+    if (!compiled.ok) return;
+
+    const model = compiled.value;
+    const exceptionLink = [...model.links.values()].find(l => l.type === "exception" && l.exception_type === "overtime");
+    expect(exceptionLink).toBeDefined();
+
+    const carnivoreLinks = [...model.links.values()].filter(l => l.path_label === "carnivore");
+    expect(carnivoreLinks).toHaveLength(3);
+    expect(carnivoreLinks.some(l => l.type === "consumption")).toBe(true);
+    expect(carnivoreLinks.filter(l => l.type === "result")).toHaveLength(2);
   });
 
   it("compiles in-zoom sequence with implicit invocation links", () => {
