@@ -60,6 +60,24 @@ const STRUCTURAL_SUBSET = [
   "Model X is an instance of Car.",
 ].join("\n");
 
+const MODIFIER_SUBSET = [
+  "Water is an object, physical.",
+  "Water can be cold or hot.",
+  "State cold of Water is initial and default.",
+  "State hot of Water is final.",
+  "Boiling is a process, physical.",
+  "Boiling changes Water from cold to hot.",
+  "cold Water triggers Boiling.",
+  "Boiling occurs if Water is cold, otherwise Boiling is skipped.",
+].join("\n");
+
+const FAN_UNSUPPORTED = [
+  "B is an object, physical.",
+  "P1 is a process, physical.",
+  "P2 is a process, physical.",
+  "B handles exactly one of P1 or P2.",
+].join("\n");
+
 describe("compileOplDocument", () => {
   it("compiles thing/state/duration subset into Model", () => {
     const parsed = parseOplDocument(BASIC_SUBSET, "SD", "opd-sd");
@@ -195,12 +213,30 @@ describe("compileOplDocument", () => {
     expect(text).toContain("Model X is an instance of Car.");
   });
 
+  it("compiles modifiers over resolved procedural links", () => {
+    const parsed = parseOplDocument(MODIFIER_SUBSET, "SD", "opd-sd");
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+
+    const compiled = compileOplDocument(parsed.value);
+    expect(compiled.ok).toBe(true);
+    if (!compiled.ok) return;
+
+    const model = compiled.value;
+    expect(model.modifiers.size).toBe(2);
+
+    const eventMod = [...model.modifiers.values()].find(m => m.type === "event");
+    const condMod = [...model.modifiers.values()].find(m => m.type === "condition");
+    expect(eventMod).toBeDefined();
+    expect(condMod).toBeDefined();
+    expect(condMod?.condition_mode).toBe("skip");
+
+    const overLink = eventMod ? model.links.get(eventMod.over) : undefined;
+    expect(overLink?.type).toBe("effect");
+  });
+
   it("returns a compile error for unsupported sentence kinds in strict mode", () => {
-    const parsed = parseOplDocument([
-      "P is a process, physical.",
-      "Q is a process, physical.",
-      "P initiates Q.",
-    ].join("\n"), "SD", "opd-sd");
+    const parsed = parseOplDocument(FAN_UNSUPPORTED, "SD", "opd-sd");
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
 
@@ -208,7 +244,7 @@ describe("compileOplDocument", () => {
     expect(compiled.ok).toBe(false);
     if (compiled.ok) return;
     expect(compiled.error.message).toContain("Unsupported");
-    expect(compiled.error.issues[0]?.sentenceKind).toBe("modifier");
+    expect(compiled.error.issues[0]?.sentenceKind).toBe("fan");
   });
 });
 

@@ -6,6 +6,7 @@ import { appearanceKey, collectAllIds } from "./helpers";
 import {
   addAppearance,
   addLink,
+  addModifier,
   addOPD,
   addState,
   addThing,
@@ -90,6 +91,7 @@ function isSupportedSentenceKind(kind: OplSentence["kind"]): boolean {
     "attribute-value",
     "grouped-structural",
     "link",
+    "modifier",
   ].includes(kind);
 }
 
@@ -550,6 +552,40 @@ export function compileOplDocuments(docs: OplDocument[], options: OplCompileOpti
     }
   }
 
+  // Pass 11: modifiers.
+  for (const doc of docs) {
+    for (const s of doc.sentences) {
+      if (s.kind !== "modifier") continue;
+
+      const over = resolveModifierOverLink(model, stateIdByThingAndName, thingRefByDisplayName, thingIdsByActualName, s, doc.renderSettings.locale);
+      if (!over) {
+        pushIssue(issues, `Could not resolve target link for modifier`, s, doc.opdName);
+        continue;
+      }
+
+      const exists = [...model.modifiers.values()].some(m =>
+        m.over === over &&
+        m.type === s.modifierType &&
+        !!m.negated === !!s.negated &&
+        (m.condition_mode ?? undefined) === (s.conditionMode ?? undefined),
+      );
+      if (exists) continue;
+
+      const r = addModifier(model, {
+        id: uniqueId(`mod-${oplSlug(over)}-${s.modifierType}`, model),
+        over,
+        type: s.modifierType,
+        ...(s.negated ? { negated: true } : {}),
+        ...(s.conditionMode ? { condition_mode: s.conditionMode } : {}),
+      });
+      if (!r.ok) {
+        pushIssue(issues, r.error.message, s, doc.opdName);
+        continue;
+      }
+      model = r.value;
+    }
+  }
+
   if (issues.length > 0) {
     return err({ message: "Failed to compile OPL documents", issues });
   }
@@ -583,6 +619,72 @@ function resolveStateForLinkSide(
     ?? stateIdByThingAndName.get(`${fallbackThingId}::${stateName}`)
     ?? [...model.states.values()].find(s => s.parent === primaryThingId && s.name === stateName)?.id
     ?? [...model.states.values()].find(s => s.parent === fallbackThingId && s.name === stateName)?.id;
+}
+
+function resolveModifierOverLink(
+  model: Model,
+  stateIdByThingAndName: Map<string, string>,
+  thingRefByDisplayName: Map<string, ThingRef>,
+  thingIdsByActualName: Map<string, string[]>,
+  sentence: Extract<OplSentence, { kind: "modifier" }>,
+  locale: "en" | "es",
+): string | null {
+  const sourceRef = resolveThingRef(sentence.sourceName, undefined, thingRefByDisplayName, thingIdsByActualName, locale);
+  const targetRef = resolveThingRef(sentence.targetName, undefined, thingRefByDisplayName, thingIdsByActualName, locale);
+  if (!sourceRef || !targetRef) return null;
+
+  const sourceThing = model.things.get(sourceRef.thingId);
+  const targetThing = model.things.get(targetRef.thingId);
+  if (!sourceThing || !targetThing) return null;
+
+  let candidates = [...model.links.values()].filter(link => {
+    const sameOrientation = link.source === sourceRef.thingId && link.target === targetRef.thingId;
+    const reverseOrientation = link.source === targetRef.thingId && link.target === sourceRef.thingId;
+    return sameOrientation || reverseOrientation;
+  });
+
+  if (candidates.length === 0) return null;
+
+  // Use parser hint when it narrows meaningfully.
+  const hinted = candidates.filter(link => link.type === sentence.linkType);
+  if (hinted.length > 0) candidates = hinted;
+
+  if (sentence.sourceStateName) {
+    const resolved = resolveStateForLinkSide(
+      model,
+      stateIdByThingAndName,
+      candidates[0]!.type,
+      "source",
+      sourceRef.thingId,
+      targetRef.thingId,
+      sentence.sourceStateName,
+    );
+    if (resolved) {
+      const byState = candidates.filter(link => link.source_state === resolved || link.target_state === resolved);
+      if (byState.length > 0) candidates = byState;
+    }
+  }
+  if (sentence.targetStateName) {
+    const resolved = resolveStateForLinkSide(
+      model,
+      stateIdByThingAndName,
+      candidates[0]!.type,
+      "target",
+      sourceRef.thingId,
+      targetRef.thingId,
+      sentence.targetStateName,
+    );
+    if (resolved) {
+      const byState = candidates.filter(link => link.source_state === resolved || link.target_state === resolved);
+      if (byState.length > 0) candidates = byState;
+    }
+  }
+
+  // Prefer non-structural links for modifiers.
+  const procedural = candidates.filter(link => !["aggregation", "exhibition", "generalization", "classification"].includes(link.type));
+  if (procedural.length > 0) candidates = procedural;
+
+  return candidates.length === 1 ? candidates[0]!.id : candidates[0]?.id ?? null;
 }
 
 function resolveThingRef(

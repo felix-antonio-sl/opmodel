@@ -64,6 +64,7 @@ Thing declarations, state enumerations, state descriptions, durations (simple + 
   - attribute-values
   - grouped structural: `aggregation`, `exhibition`, `generalization`, `classification`
   - procedural links: `agent`, `instrument`, `consumption`, `result`, `effect`, `invocation`
+  - modifiers: `event`, `condition` (resueltos semánticamente sobre links compilados)
   - OPD skeleton + refinement edges
 - ✅ Resolución de estados para links state-specified
 - ✅ Exhibition links inferidos para features compuestas
@@ -71,7 +72,6 @@ Thing declarations, state enumerations, state descriptions, durations (simple + 
 - ✅ Tests nuevos de compiler
 
 **Pendiente en Fase 2**:
-- Modifiers
 - Fans
 - Requirements / assertions / scenarios
 - Tagged / exception / input / output / path-labels completos
