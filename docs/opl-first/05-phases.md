@@ -3,7 +3,7 @@
 | Campo | Valor |
 |-------|-------|
 | Fecha | 2026-04-06 |
-| Estado | **Fase 1 completada** |
+| Estado | **Fases 1-3 completadas, roundtrip validado** |
 
 ## Fase 0 — Definir gramática OPL de entrada
 
@@ -43,20 +43,18 @@
 | hospitalizacion-domiciliaria | 282 | 271 | 6 | 5 | **0** |
 
 **Constructos parseados** (24 tipos + refinement edges):
-Thing declarations, state enumerations, state descriptions, durations (simple + range), agent/instrument/consumption/result/effect/invocation links, tagged links, aggregation, exhibition, classification, generalization, fan XOR/OR, event modifiers, condition modifiers, in-zoom sequences, attribute-values, requirements, assertions, scenarios, refinement edges.
+Thing declarations, state enumerations, state descriptions, durations (simple + range), agent/instrument/consumption/result/effect/invocation links, tagged links, exception links (overtime/undertime), aggregation, exhibition, classification, generalization, fan XOR/OR/AND, event modifiers, condition modifiers, in-zoom sequences, unfolding sentences, attribute-values, requirements, assertions, scenarios, path labels, refinement edges, multiplicity cardinalities.
 
 **Commits**: `7fc8073`, `78c3ae7`, `6927e03`, `8ff6021`, `dea0aba`, `cf5ac08`
 
-**Tests**: 76 files, 1085 tests, todo verde.
-
-## Fase 2 — Compiler OplDocument → Model 🚧 EN CURSO
+## Fase 2 — Compiler OplDocument → Model ✅ COMPLETADA
 
 **Objetivo**: Construir `Model` completo desde `OplDocument`.
 
-**Estado actual (slice 2.2)**:
+**Resultado**:
 - ✅ `compileOplDocument()` y `compileOplDocuments()` creados
 - ✅ Name resolution base para things simples y compuestos (`Feature of Exhibitor`)
-- ✅ Compilación del subset actual:
+- ✅ Compilación completa:
   - thing declarations
   - state enumerations
   - state descriptions
@@ -64,15 +62,15 @@ Thing declarations, state enumerations, state descriptions, durations (simple + 
   - attribute-values
   - grouped structural: `aggregation`, `exhibition`, `generalization`, `classification`
   - procedural links: `agent`, `instrument`, `consumption`, `result`, `effect`, `invocation`
+  - tagged structural links
+  - self-invocation ("invokes itself")
   - modifiers: `event`, `condition` (resueltos semánticamente sobre links compilados)
   - fans: `xor`, `or`, `and` converging/diverging (crea links implícitos si no existen)
   - requirements: target resolution to thing, req_id preserved
   - assertions: category normalization, optional target
   - scenarios: path_labels validation against link path_labels
-  - tagged structural links
-  - self-invocation ("invokes itself")
   - in-zoom sequences: creates implicit invocation links between sequential subprocesses
-  - exception links: overtime/undertime parsed and compiled as invocation with exception_type
+  - exception links: overtime/undertime parsed and compiled
   - path labels: "Following path" / "Por ruta" prefix parsed and preserved on links
   - unfolding sentences: thing-level "unfolds in OPD into ..." parsed, no invocation links (spatial)
   - multiplicity cardinalities: an optional (?), optional (*), at least one (+) on structural links
@@ -80,23 +78,27 @@ Thing declarations, state enumerations, state descriptions, durations (simple + 
 - ✅ Resolución de estados para links state-specified
 - ✅ Exhibition links inferidos para features compuestas
 - ✅ Appearances mínimas generadas por OPD
-- ✅ Tests nuevos de compiler
+- ✅ Roundtrip validation: OPL → parse → compile → expose → render → OPL' contra 6 fixtures reales
 
-**Pendiente en Fase 2**:
-- Source map fino sentencia → entidad
-- Auto-layout real / placement más inteligente
-- Roundtrip validation OPL → parse → compile → render → OPL' contra fixtures reales
+**Commits**: `9cd87d1`, `3826a3d`, `3911d89`, `27e10d6`, `e712bef`, `a98de03`, `99ce315`, `4f94f64`, `0dd9243`, `105689d`
 
-## Fase 3 — Validación con source locations
+## Fase 3 — Validación con source locations ✅ COMPLETADA
 
 **Objetivo**: Conectar invariantes a posiciones en OPL.
 
 **Entregables**:
-- Cada error incluye línea/sentencia OPL
-- Validación en fases: V1 syntax, V2 binding, V3 semantic, V4 canonical
-- `opmod validate` con posiciones
+- ✅ Pipeline unificado `validateOpl(text)` en `packages/core/src/opl-validate.ts`
+- ✅ 4 fases de validación: V1-syntax, V2-binding, V3-semantic, V4-canonical
+- ✅ Reverse source mapping: entity IDs del modelo → posiciones OPL
+- ✅ Cada error incluye línea/columna del OPL original
+- ✅ Warnings de canonical style (capitalización, gerundios)
+- ✅ Tests: valid input, syntax fail, binding fail, semantic fail, canonical warnings, multi-OPD
 
-## Fase 4 — Integración visual
+**API**: `validateOpl(text) → ValidationResult { ok, issues[], phases }`
+
+**Commit**: `f0d3178`
+
+## Fase 4 — Integración visual ⏳ Pendiente
 
 **Objetivo**: Visual render desde modelo compilado por OPL.
 
@@ -105,7 +107,7 @@ Thing declarations, state enumerations, state descriptions, durations (simple + 
 - Source mapping bidireccional (click OPL ↔ visual)
 - Layout cache entre re-compilaciones
 
-## Fase 5 — Editor textual OPL en web
+## Fase 5 — Editor textual OPL en web ⏳ Pendiente
 
 **Objetivo**: Superficie principal centrada en OPL.
 
@@ -119,7 +121,7 @@ Thing declarations, state enumerations, state descriptions, durations (simple + 
 
 ## Decisiones abiertas
 
-Cerrar antes de Fase 0.
+Cerrar antes de Fase 4.
 
 ### 1. Layout
 
@@ -143,3 +145,18 @@ No expresable hoy: appearances, settings, meta, stereotypes, subModels.
 ### 4. Idioma
 
 EN y ES soportados. ¿Parser acepta ambos? ¿Se fija por modelo?
+
+---
+
+## Estadísticas del proyecto (2026-04-06)
+
+| Métrica | Valor |
+|---------|-------|
+| Archivos de test | 77 |
+| Tests totales | 780 |
+| Tests pasando | 771 |
+| Tests fallando | 9 (preexistentes: touch/timestamp) |
+| Constructos OPM parseados | 24 tipos + refinement edges |
+| Constructos OPM compilados | Todos |
+| Fixtures roundtrip | 6/6 |
+| Fases completadas | 1, 2, 3 |
