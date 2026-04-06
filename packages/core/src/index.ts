@@ -41,6 +41,9 @@ export {
   compileOplDocument,
   compileOplDocuments,
 } from "./opl-compile";
+export {
+  validateOpl,
+} from "./opl-validate";
 export type {
   OplSentence, OplThingDeclaration, OplStateEnumeration, OplDuration,
   OplLinkSentence, OplModifierSentence, OplDocument, OplEdit, OplRenderSettings,
@@ -56,6 +59,11 @@ export type {
   OplCompileError,
   OplCompileOptions,
 } from "./opl-compile";
+export type {
+  ValidationIssue,
+  ValidationPhase,
+  ValidationResult,
+} from "./opl-validate";
 export type { ModelStats } from "./opl";
 export { verifyMethodology, type CheckResult } from "./methodology";
 export { getCompoundStates, type CompoundStateEntry } from "./compound-states";
