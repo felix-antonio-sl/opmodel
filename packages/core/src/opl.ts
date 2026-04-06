@@ -573,13 +573,13 @@ function formatList(names: string[], incomplete?: boolean, incompletePhrase?: st
   const andWord = v?.and ?? "and";
   if (names.length === 0) return "";
   if (names.length === 1) {
-    return incomplete && incompletePhrase ? `${names[0]} and ${incompletePhrase}` : names[0]!;
+    return incomplete && incompletePhrase ? `${names[0]} ${andWord} ${incompletePhrase}` : names[0]!;
   }
   if (names.length === 2) {
     if (incomplete && incompletePhrase) {
-      return `${names[0]}, ${names[1]}, and ${incompletePhrase}`;
+      return `${names[0]}, ${names[1]}, ${andWord} ${incompletePhrase}`;
     }
-    return `${names[0]} and ${names[1]}`;
+    return `${names[0]} ${andWord} ${names[1]}`;
   }
   const last = names[names.length - 1]!;
   const rest = names.slice(0, -1);

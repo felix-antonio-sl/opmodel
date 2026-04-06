@@ -77,6 +77,10 @@ function collectCompoundHints(docs: OplDocument[]): Map<string, CompoundHint> {
   const hints = new Map<string, CompoundHint>();
   for (const doc of docs) {
     for (const s of doc.sentences) {
+      if (s.kind === "thing-declaration" && s.exhibitorName) {
+        hints.set(displayName(s.name, s.exhibitorName, "en"), { baseName: s.name, exhibitorName: s.exhibitorName });
+        hints.set(displayName(s.name, s.exhibitorName, "es"), { baseName: s.name, exhibitorName: s.exhibitorName });
+      }
       if ((s.kind === "state-enumeration" || s.kind === "state-description" || s.kind === "attribute-value") && s.exhibitorName) {
         hints.set(displayName(s.thingName, s.exhibitorName, "en"), { baseName: s.thingName, exhibitorName: s.exhibitorName });
         hints.set(displayName(s.thingName, s.exhibitorName, "es"), { baseName: s.thingName, exhibitorName: s.exhibitorName });
@@ -186,7 +190,7 @@ export function compileOplDocuments(docs: OplDocument[], options: OplCompileOpti
     const declaredThingIds: string[] = [];
     for (const s of doc.sentences) {
       if (s.kind !== "thing-declaration") continue;
-      const hint = compoundHints.get(s.name);
+      const hint = s.exhibitorName ? { baseName: s.name, exhibitorName: s.exhibitorName } : compoundHints.get(s.name);
       const actualName = hint?.baseName ?? s.name;
       const exhibitorName = hint?.exhibitorName;
       const display = exhibitorName ? displayName(actualName, exhibitorName, doc.renderSettings.locale) : s.name;

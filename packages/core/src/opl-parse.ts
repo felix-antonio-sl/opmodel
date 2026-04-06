@@ -105,10 +105,87 @@ function ensureThing(ctx: ParseContext, name: string): string {
   return id;
 }
 
+function registerThingAlias(ctx: ParseContext, alias: string, id: string) {
+  if (!alias.trim()) return;
+  ctx.thingIdByName.set(alias, id);
+}
+
+function splitCompoundDisplay(
+  raw: string,
+  locale: "en" | "es",
+  knownNames: Iterable<string>,
+): { thingName: string; exhibitorName?: string } {
+  const separator = locale === "es" ? " de " : " of ";
+  const trimmed = raw.trim();
+  let best: string | null = null;
+
+  for (const candidate of knownNames) {
+    if (!candidate) continue;
+    if (candidate.length >= trimmed.length) continue;
+    if (!trimmed.endsWith(`${separator}${candidate}`)) continue;
+    if (!best || candidate.length > best.length) best = candidate;
+  }
+
+  if (!best) {
+    const splitCandidates: Array<{ thingName: string; exhibitorName: string }> = [];
+    let from = 0;
+    while (from < trimmed.length) {
+      const idx = trimmed.indexOf(separator, from);
+      if (idx < 0) break;
+      const thingName = trimmed.slice(0, idx).trim();
+      const exhibitorName = trimmed.slice(idx + separator.length).trim();
+      if (thingName && exhibitorName) splitCandidates.push({ thingName, exhibitorName });
+      from = idx + separator.length;
+    }
+
+    const heuristic = splitCandidates.find(candidate => candidate.thingName.split(/\s+/).length >= 2);
+    return heuristic ?? { thingName: trimmed };
+  }
+  const splitAt = trimmed.length - (separator.length + best.length);
+  const thingName = trimmed.slice(0, splitAt).trim();
+  return thingName ? { thingName, exhibitorName: best } : { thingName: trimmed };
+}
+
+function longestKnownThingSuffix(
+  raw: string,
+  locale: "en" | "es",
+  knownNames: Iterable<string>,
+): string | null {
+  const separator = locale === "es" ? " de " : " of ";
+  const trimmed = raw.trim();
+  let best: string | null = null;
+
+  for (const candidate of knownNames) {
+    if (!candidate) continue;
+    if (!trimmed.endsWith(`${separator}${candidate}`)) continue;
+    if (!best || candidate.length > best.length) best = candidate;
+  }
+
+  return best;
+}
+
+function longestKnownThingPrefix(
+  raw: string,
+  knownNames: Iterable<string>,
+): string | null {
+  const trimmed = raw.trim();
+  let best: string | null = null;
+
+  for (const candidate of knownNames) {
+    if (!candidate) continue;
+    if (!trimmed.startsWith(candidate)) continue;
+    const next = trimmed[candidate.length];
+    if (next && next !== " ") continue;
+    if (!best || candidate.length > best.length) best = candidate;
+  }
+
+  return best;
+}
+
 function parseList(raw: string, locale: "en" | "es"): string[] {
   const normalized = locale === "es"
-    ? raw.replace(/\s+u\s+/g, ", ").replace(/\s+o\s+/g, ", ").replace(/\s+y\s+/g, ", ")
-    : raw.replace(/\s+or\s+/g, ", ").replace(/\s+and\s+/g, ", ");
+    ? raw.replace(/\s+así como\s+/g, ", ").replace(/\s+u\s+/g, ", ").replace(/\s+o\s+/g, ", ").replace(/\s+y\s+/g, ", ")
+    : raw.replace(/\s+as well as\s+/g, ", ").replace(/\s+or\s+/g, ", ").replace(/\s+and\s+/g, ", ");
   return normalized
     .split(/,\s*/)
     .map((s) => s.trim())
@@ -146,6 +223,7 @@ function parseThingDeclaration(line: string, span: OplSourceSpan, ctx: ParseCont
     thingKindRaw === "objeto" ? "object" :
     thingKindRaw === "proceso" ? "process" :
     thingKindRaw as "object" | "process";
+  const splitName = splitCompoundDisplay(name, ctx.locale, ctx.thingIdByName.keys());
   const tail = (ctx.locale === "es" ? match[3] : match[4]) ?? "";
   const tokens = tail.split(",").map((t) => t.trim()).filter(Boolean);
 
@@ -171,12 +249,17 @@ function parseThingDeclaration(line: string, span: OplSourceSpan, ctx: ParseCont
 
   return {
     kind: "thing-declaration",
-    thingId: ensureThing(ctx, name),
-    name,
+    thingId: (() => {
+      const id = ensureThing(ctx, splitName.thingName);
+      registerThingAlias(ctx, name, id);
+      return id;
+    })(),
+    name: splitName.thingName,
     thingKind: normalizedThingKind,
     essence,
     affiliation,
     ...(perseverance ? { perseverance } : {}),
+    ...(splitName.exhibitorName ? { exhibitorName: splitName.exhibitorName } : {}),
     sourceSpan: span,
   };
 }
@@ -186,21 +269,24 @@ function parseStateEnumeration(line: string, span: OplSourceSpan, ctx: ParseCont
     ? line.match(/^(.*?) puede estar (.*?)\.$/)
     : line.match(/^(.*?) can be (.*?)\.$/);
   if (!match) return null;
-  const thingName = match[1]!.trim();
+  const displayName = match[1]!.trim();
+  const splitName = splitCompoundDisplay(displayName, ctx.locale, ctx.thingIdByName.keys());
   const stateNames = parseList(match[2]!.trim(), ctx.locale);
   if (stateNames.length === 0) return null;
-  const thingId = ensureThing(ctx, thingName);
+  const thingId = ensureThing(ctx, splitName.thingName);
+  registerThingAlias(ctx, displayName, thingId);
   const stateIds = stateNames.map((name) => {
-    const id = stateId(thingName, name);
-    ctx.stateIdByThingAndName.set(stateKey(thingName, name), id);
+    const id = stateId(splitName.thingName, name);
+    ctx.stateIdByThingAndName.set(stateKey(splitName.thingName, name), id);
     return id;
   });
   return {
     kind: "state-enumeration",
     thingId,
-    thingName,
+    thingName: splitName.thingName,
     stateIds,
     stateNames,
+    ...(splitName.exhibitorName ? { exhibitorName: splitName.exhibitorName } : {}),
     sourceSpan: span,
   };
 }
@@ -235,30 +321,21 @@ function parseStateDescription(line: string, span: OplSourceSpan, ctx: ParseCont
   if (!normalizedQuals.every(q => validQualifiers.includes(q))) return null;
 
   // Now beforeIs is: "State {stateName} of {thingDisplay}" or "Estado {stateName} de {thingDisplay}"
-  // Strip prefix: "State " or "Estado "
   const rest = beforeIs.substring(prefix.length);
   if (!rest) return null;
 
-  // Split at the LAST "of"/"de" to separate stateName from thingDisplay
-  const lastOfIdx = isES ? rest.lastIndexOf(" de ") : rest.lastIndexOf(" of ");
-  if (lastOfIdx < 0) return null;
-
-  const stateName = rest.substring(0, lastOfIdx).trim();
-  const thingDisplay = rest.substring(lastOfIdx + (isES ? 4 : 4)).trim(); // length of " de " / " of "
+  const thingDisplay = longestKnownThingSuffix(rest, ctx.locale, ctx.thingIdByName.keys());
+  if (!thingDisplay) return null;
+  const separator = isES ? " de " : " of ";
+  const stateName = rest.slice(0, rest.length - (separator.length + thingDisplay.length)).trim();
   if (!stateName || !thingDisplay) return null;
 
-  // Check if thingDisplay contains another "of"/"de" → compound form: "{thingName} de {exhibitorName}"
-  let thingName: string;
-  let exhibitorName: string | undefined;
-  const innerOfIdx = isES ? thingDisplay.lastIndexOf(" de ") : thingDisplay.lastIndexOf(" of ");
-  if (innerOfIdx > 0) {
-    thingName = thingDisplay.substring(0, innerOfIdx).trim();
-    exhibitorName = thingDisplay.substring(innerOfIdx + (isES ? 4 : 4)).trim();
-  } else {
-    thingName = thingDisplay;
-  }
+  const splitName = splitCompoundDisplay(thingDisplay, ctx.locale, ctx.thingIdByName.keys());
+  const thingName = splitName.thingName;
+  const exhibitorName = splitName.exhibitorName;
 
   const thingId = ensureThing(ctx, thingName);
+  registerThingAlias(ctx, thingDisplay, thingId);
   const stateIdValue = ctx.stateIdByThingAndName.get(stateKey(thingName, stateName)) ?? stateId(thingName, stateName);
   ctx.stateIdByThingAndName.set(stateKey(thingName, stateName), stateIdValue);
 
@@ -433,68 +510,55 @@ function parseLink(line: string, span: OplSourceSpan, ctx: ParseContext): OplLin
     };
   }
 
-  match = ctx.locale === "es"
-    ? line.match(/^(.*?) cambia (.*?) de (.*?) a (.*?)\.$/)
-    : line.match(/^(.*?) changes (.*?) from (.*?) to (.*?)\.$/);
-  if (match) {
-    const sourceName = match[1]!.trim();
-    const targetName = match[2]!.trim();
-    return {
-      kind: "link",
-      linkId: `link-${++ctx.linkCounter}`,
-      linkType: "effect",
-      sourceId: ensureThing(ctx, sourceName),
-      targetId: ensureThing(ctx, targetName),
-      sourceName,
-      targetName,
-      sourceKind: "process",
-      targetKind: "object",
-      sourceStateName: match[3]!.trim(),
-      targetStateName: match[4]!.trim(),
-      sourceSpan: span,
-    };
-  }
+  const effectVerb = ctx.locale === "es" ? " cambia " : " changes ";
+  if (line.includes(effectVerb) && line.endsWith(".")) {
+    const verbIdx = line.indexOf(effectVerb);
+    const sourceName = line.slice(0, verbIdx).trim();
+    const remainder = line.slice(verbIdx + effectVerb.length, -1).trim();
+    const targetName = longestKnownThingPrefix(remainder, ctx.thingIdByName.keys());
+    if (targetName) {
+      const tail = remainder.slice(targetName.length).trim();
+      const fromWord = ctx.locale === "es" ? "de" : "from";
+      const toWord = ctx.locale === "es" ? "a" : "to";
+      const fromToRe = new RegExp(`^${fromWord} (.*?) ${toWord} (.*?)$`);
+      const fromRe = new RegExp(`^${fromWord} (.*?)$`);
+      const toRe = new RegExp(`^${toWord} (.*?)$`);
 
-  match = ctx.locale === "es"
-    ? line.match(/^(.*?) cambia (.*?) de (.*?)\.$/)
-    : line.match(/^(.*?) changes (.*?) from (.*?)\.$/);
-  if (match) {
-    const sourceName = match[1]!.trim();
-    const targetName = match[2]!.trim();
-    return {
-      kind: "link",
-      linkId: `link-${++ctx.linkCounter}`,
-      linkType: "effect",
-      sourceId: ensureThing(ctx, sourceName),
-      targetId: ensureThing(ctx, targetName),
-      sourceName,
-      targetName,
-      sourceKind: "process",
-      targetKind: "object",
-      sourceStateName: match[3]!.trim(),
-      sourceSpan: span,
-    };
-  }
+      let sourceStateName: string | undefined;
+      let targetStateName: string | undefined;
+      if (!tail) {
+        // no-op
+      } else {
+        const fromToMatch = tail.match(fromToRe);
+        const fromMatch = tail.match(fromRe);
+        const toMatch = tail.match(toRe);
+        if (fromToMatch) {
+          sourceStateName = fromToMatch[1]!.trim();
+          targetStateName = fromToMatch[2]!.trim();
+        } else if (fromMatch) {
+          sourceStateName = fromMatch[1]!.trim();
+        } else if (toMatch) {
+          targetStateName = toMatch[1]!.trim();
+        } else {
+          return null;
+        }
+      }
 
-  match = ctx.locale === "es"
-    ? line.match(/^(.*?) cambia (.*?) a (.*?)\.$/)
-    : line.match(/^(.*?) changes (.*?) to (.*?)\.$/);
-  if (match) {
-    const sourceName = match[1]!.trim();
-    const targetName = match[2]!.trim();
-    return {
-      kind: "link",
-      linkId: `link-${++ctx.linkCounter}`,
-      linkType: "effect",
-      sourceId: ensureThing(ctx, sourceName),
-      targetId: ensureThing(ctx, targetName),
-      sourceName,
-      targetName,
-      sourceKind: "process",
-      targetKind: "object",
-      targetStateName: match[3]!.trim(),
-      sourceSpan: span,
-    };
+      return {
+        kind: "link",
+        linkId: `link-${++ctx.linkCounter}`,
+        linkType: "effect",
+        sourceId: ensureThing(ctx, sourceName),
+        targetId: ensureThing(ctx, targetName),
+        sourceName,
+        targetName,
+        sourceKind: "process",
+        targetKind: "object",
+        ...(sourceStateName ? { sourceStateName } : {}),
+        ...(targetStateName ? { targetStateName } : {}),
+        sourceSpan: span,
+      };
+    }
   }
 
   match = ctx.locale === "es"
@@ -961,14 +1025,12 @@ function parseFanSentence(line: string, span: OplSourceSpan, ctx: ParseContext):
 
 function parseAttributeValue(line: string, span: OplSourceSpan, ctx: ParseContext): OplAttributeValue | null {
   const isES = ctx.locale === "es";
-  // "Temperature of Water is normal." / "Temperatura de Agua es normal."
-  const match = isES
-    ? line.match(/^(.*?) de (.*?) es (.*?)\.$/)
-    : line.match(/^(.*?) of (.*?) is (.*?)\.$/);
-  if (!match) return null;
-  const thingName = match[1]!.trim();
-  const exhibitorName = match[2]!.trim();
-  const valueName = match[3]!.trim();
+  const isWord = isES ? " es " : " is ";
+  const dotLine = line.endsWith(".") ? line.slice(0, -1) : line;
+  const isIdx = dotLine.lastIndexOf(isWord);
+  if (isIdx < 0) return null;
+  const thingDisplay = dotLine.slice(0, isIdx).trim();
+  const valueName = dotLine.slice(isIdx + isWord.length).trim();
   // NOTE: do NOT reject lines starting with "Estado"/"State" here.
   // State-descriptions with non-standard qualifiers (like "deteriorado")
   // already return null from parseStateDescription, and should fall through
@@ -976,12 +1038,18 @@ function parseAttributeValue(line: string, span: OplSourceSpan, ctx: ParseContex
   // is an attribute-value, not a state-description.
   // Disambiguate from thing declaration: "X is an object."
   if (["object", "process", "objeto", "proceso"].includes(valueName.toLowerCase())) return null;
+  const splitName = splitCompoundDisplay(thingDisplay, ctx.locale, ctx.thingIdByName.keys());
+  if (!splitName.exhibitorName) return null;
   return {
     kind: "attribute-value",
-    thingId: ensureThing(ctx, thingName),
-    thingName,
-    exhibitorId: ensureThing(ctx, exhibitorName),
-    exhibitorName,
+    thingId: (() => {
+      const id = ensureThing(ctx, splitName.thingName);
+      registerThingAlias(ctx, thingDisplay, id);
+      return id;
+    })(),
+    thingName: splitName.thingName,
+    exhibitorId: ensureThing(ctx, splitName.exhibitorName),
+    exhibitorName: splitName.exhibitorName,
     valueName,
     sourceSpan: span,
   };
