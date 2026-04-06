@@ -207,6 +207,15 @@ export function LinkLine({
           {link.multiplicity_target}
         </text>
       )}
+      {link.path_label && (
+        <g transform={`translate(${mid.x}, ${mid.y - 18})`}>
+          <rect x={-4} y={-8} width={link.path_label.length * 5.5 + 8} height={14} rx={3}
+            fill="rgba(0,0,0,0.5)" stroke="rgba(88,166,255,0.4)" strokeWidth={0.5} />
+          <text fontSize={8} fill="rgba(88,166,255,0.9)" x={0} y={3} textAnchor="start">
+            {link.path_label}
+          </text>
+        </g>
+      )}
       {modifier && (() => {
         const isEvent = modifier.type === "event";
         const isSkip = !isEvent && modifier.condition_mode === "skip";
