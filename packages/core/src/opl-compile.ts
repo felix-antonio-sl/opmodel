@@ -253,6 +253,30 @@ export function compileOplDocuments(docs: OplDocument[], options: OplCompileOpti
     model = r.value;
   }
 
+  // Pass 3.5: Y-hints from in-zoom step order so roundtrip preserves
+  // sequential vs parallel grouping (avoids row-based Y collisions).
+  const inZoomYHints = new Map<string, number>();
+  for (const doc of docs) {
+    let yBase = 120;
+    for (const s of doc.sentences) {
+      if (s.kind !== "in-zoom-sequence" || s.refinementType === "unfold") continue;
+      for (const step of s.steps) {
+        if (step.parallel) {
+          for (const name of step.thingNames) {
+            if (!inZoomYHints.has(name)) inZoomYHints.set(name, yBase);
+          }
+          yBase += 120;
+          continue;
+        }
+
+        for (const name of step.thingNames) {
+          if (!inZoomYHints.has(name)) inZoomYHints.set(name, yBase);
+          yBase += 120;
+        }
+      }
+    }
+  }
+
   // Pass 4: add appearances in each OPD for declared things.
   // Build name-based lookup from layout hints using ORIGINAL model's things
   const layoutByName = new Map<string, { x: number; y: number; w: number; h: number }>();
@@ -295,6 +319,13 @@ export function compileOplDocuments(docs: OplDocument[], options: OplCompileOpti
                 break;
               }
             }
+          }
+        }
+        // Priority 3: in-zoom step order Y-hints
+        if (!existingLayout) {
+          const hintY = inZoomYHints.get(thing.name);
+          if (hintY !== undefined) {
+            existingLayout = { x: 120, y: hintY, w: 120, h: 60 };
           }
         }
       }

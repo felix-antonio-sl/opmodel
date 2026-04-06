@@ -97,6 +97,41 @@ function stateId(thingName: string, stateName: string): string {
   return `state-${oplSlug(thingName)}-${oplSlug(stateName)}`;
 }
 
+/**
+ * Try to split an OPL object phrase into { state, thing } using known thing names.
+ * EN: "state Thing" — state prefix
+ * ES: "Thing en state" — state suffix with "en" separator
+ * Returns null if the full phrase IS a known thing name (no state to extract).
+ */
+function splitStateAndThing(phrase: string, knownThings: Map<string, string>, locale: "en" | "es"): { stateName: string; thingName: string } | null {
+  // If the full phrase is a known thing, no split needed
+  if (knownThings.has(phrase)) return null;
+
+  if (locale === "es") {
+    // ES: "Thing en state" — look for " en " separator
+    const enIdx = phrase.lastIndexOf(" en ");
+    if (enIdx !== -1) {
+      const maybeThing = phrase.slice(0, enIdx).trim();
+      const maybeState = phrase.slice(enIdx + 4).trim();
+      if (knownThings.has(maybeThing) && maybeState.length > 0) {
+        return { stateName: maybeState, thingName: maybeThing };
+      }
+    }
+  }
+
+  // EN (or ES fallback): "state Thing" — try longest known thing name from the end
+  const parts = phrase.split(" ");
+  for (let i = parts.length - 2; i >= 0; i--) {
+    const maybeThing = parts.slice(i + 1).join(" ");
+    const maybeState = parts.slice(0, i + 1).join(" ");
+    if (knownThings.has(maybeThing) && maybeState.length > 0) {
+      return { stateName: maybeState, thingName: maybeThing };
+    }
+  }
+
+  return null;
+}
+
 function ensureThing(ctx: ParseContext, name: string): string {
   const existing = ctx.thingIdByName.get(name);
   if (existing) return existing;
@@ -408,8 +443,19 @@ function parseLink(line: string, span: OplSourceSpan, ctx: ParseContext): OplLin
     ? line.match(/^(.*?) maneja (.*?)\.$/)
     : line.match(/^(.*?) handles (.*?)\.$/);
   if (match) {
-    const sourceName = match[1]!.trim();
-    const targetName = match[2]!.trim();
+    let sourceName = match[1]!.trim();
+    let targetName = match[2]!.trim();
+    let sourceStateName: string | undefined;
+    // Prefer full phrase as known thing name before splitting into state + thing.
+    if (!ctx.thingIdByName.has(sourceName)) {
+      const split = splitStateAndThing(sourceName, ctx.thingIdByName, ctx.locale);
+      if (split) sourceName = split.thingName; // agent source state not used in this pattern
+    }
+    // Also check target for state prefix
+    if (!ctx.thingIdByName.has(targetName)) {
+      const split = splitStateAndThing(targetName, ctx.thingIdByName, ctx.locale);
+      if (split) targetName = split.thingName;
+    }
     return {
       kind: "link",
       linkId: `link-${++ctx.linkCounter}`,
@@ -429,9 +475,18 @@ function parseLink(line: string, span: OplSourceSpan, ctx: ParseContext): OplLin
     : line.match(/^(.*?) requires (.*?)\.$/);
   if (match) {
     const targetName = match[1]!.trim();
-    const sourceName = match[2]!.trim();
+    let sourceName = match[2]!.trim();
+    let sourceStateName: string | undefined;
     // avoid consuming duration sentence
     if (/\d+(?:\.\d+)?(?:ms|s|min|h|d)$/.test(sourceName)) return null;
+    // Prefer full phrase as known thing name before splitting into state + thing.
+    if (!ctx.thingIdByName.has(sourceName)) {
+      const split = splitStateAndThing(sourceName, ctx.thingIdByName, ctx.locale);
+      if (split) {
+        sourceName = split.thingName;
+        sourceStateName = split.stateName;
+      }
+    }
     return {
       kind: "link",
       linkId: `link-${++ctx.linkCounter}`,
@@ -442,6 +497,7 @@ function parseLink(line: string, span: OplSourceSpan, ctx: ParseContext): OplLin
       targetName,
       sourceKind: "object",
       targetKind: "process",
+      ...(sourceStateName ? { sourceStateName } : {}),
       sourceSpan: span,
     };
   }
@@ -452,15 +508,14 @@ function parseLink(line: string, span: OplSourceSpan, ctx: ParseContext): OplLin
   if (match) {
     const targetName = match[1]!.trim();
     const objectPhrase = match[2]!.trim();
-    const stateMatch = objectPhrase.match(/^(.*?) (.+)$/);
     let sourceName = objectPhrase;
     let sourceStateName: string | undefined;
-    if (stateMatch) {
-      const maybeState = stateMatch[1]!.trim();
-      const maybeName = stateMatch[2]!.trim();
-      if (ctx.thingIdByName.has(maybeName)) {
-        sourceName = maybeName;
-        sourceStateName = maybeState;
+    // Prefer full phrase as known thing name before splitting into state + thing.
+    if (!ctx.thingIdByName.has(objectPhrase)) {
+      const split = splitStateAndThing(objectPhrase, ctx.thingIdByName, ctx.locale);
+      if (split) {
+        sourceName = split.thingName;
+        sourceStateName = split.stateName;
       }
     }
     return {
@@ -484,15 +539,14 @@ function parseLink(line: string, span: OplSourceSpan, ctx: ParseContext): OplLin
   if (match) {
     const sourceName = match[1]!.trim();
     const objectPhrase = match[2]!.trim();
-    const stateMatch = objectPhrase.match(/^(.*?) (.+)$/);
     let targetName = objectPhrase;
     let targetStateName: string | undefined;
-    if (stateMatch) {
-      const maybeState = stateMatch[1]!.trim();
-      const maybeName = stateMatch[2]!.trim();
-      if (ctx.thingIdByName.has(maybeName)) {
-        targetName = maybeName;
-        targetStateName = maybeState;
+    // Prefer full phrase as known thing name before splitting into state + thing.
+    if (!ctx.thingIdByName.has(objectPhrase)) {
+      const split = splitStateAndThing(objectPhrase, ctx.thingIdByName, ctx.locale);
+      if (split) {
+        targetName = split.thingName;
+        targetStateName = split.stateName;
       }
     }
     return {
@@ -824,53 +878,148 @@ function parseModifierSentence(line: string, span: OplSourceSpan, ctx: ParseCont
   return null;
 }
 
+/** Parse an in-zoom sequence sentence, handling parallel steps.
+ *
+ *  Rendered forms (EN):
+ *    Sequential:  "Parent zooms into A, B, and C, as well as X, in that sequence."
+ *    Mixed:       "Parent zooms into A, parallel B, C, and D, as well as X, in that sequence."
+ *    All parallel: "Parent zooms into parallel A, B, and C, as well as X."
+ *    Single:      "Parent zooms into A."
+ *
+ *  The "parallel" prefix groups items that execute concurrently.
+ *  Items without prefix are sequential. Consecutive sequential items share a step.
+ */
 function parseInZoomSequence(line: string, span: OplSourceSpan, ctx: ParseContext): OplInZoomSequence | null {
   const isES = ctx.locale === "es";
-  // "Proceso se descompone en P1, P2 y P3, en esa secuencia."
-  // "Process zooms into P1, P2 and P3, in that sequence."
-  const seqMatch = isES
-    ? line.match(/^(.*?) se descompone en (.*?), en esa secuencia\.$/)
-    : line.match(/^(.*?) zooms into (.*?), in that sequence\.$/);
-  if (seqMatch) {
-    const parentName = seqMatch[1]!.trim();
-    // Parse mixed object/process list, handling "as well as" separator
-    const rawList = seqMatch[2]!.trim();
-    const parts = rawList
-      .split(isES ? /\s+así como\s+/ : /\s+as well as\s+/);
-    const childNames: string[] = [];
-    const childKinds: ("object" | "process")[] = [];
-    for (const part of parts) {
-      const items = parseList(part.trim(), ctx.locale);
-      for (const item of items) {
-        childNames.push(item);
-        childKinds.push("process"); // Default; as well as section contains objects
-      }
-    }
-    return {
-      kind: "in-zoom-sequence",
-      parentId: ensureThing(ctx, parentName),
-      parentName,
-      refinementType: "in-zoom",
-      steps: childNames.length > 0
-        ? [{ thingIds: childNames.map(n => ensureThing(ctx, n)), thingNames: childNames, parallel: false }]
-        : [],
-      sourceSpan: span,
-    };
+  const parallelWord = isES ? "paralelo" : "parallel";
+  const zoomVerb = isES ? "se descompone en" : "zooms into";
+  const seqSuffix = isES ? ", en esa secuencia." : ", in that sequence.";
+
+  // Try with "in that sequence" suffix first (sequential or mixed)
+  let rawBody: string | null = null;
+  let parentName: string | null = null;
+
+  if (line.endsWith(seqSuffix)) {
+    const prefix = line.slice(0, -seqSuffix.length);
+    const verbIdx = prefix.indexOf(` ${zoomVerb} `);
+    if (verbIdx === -1) return null;
+    parentName = prefix.slice(0, verbIdx).trim();
+    rawBody = prefix.slice(verbIdx + zoomVerb.length + 2).trim();
+  } else if (line.endsWith(".")) {
+    // No sequence suffix → allParallel or single-item
+    const prefix = line.slice(0, -1);
+    const verbIdx = prefix.indexOf(` ${zoomVerb} `);
+    if (verbIdx === -1) return null;
+    parentName = prefix.slice(0, verbIdx).trim();
+    rawBody = prefix.slice(verbIdx + zoomVerb.length + 2).trim();
   }
 
-  // "SD se refina por descomposición de Proceso en SD1."
-  // "SD is refined by in-zooming Process in SD1."
-  const refineMatch = isES
-    ? line.match(/^(.*?) se refina por descomposici[óo]n de (.*?) en (.*?)\.$/)
-    : line.match(/^(.*?) is refined by in-zooming (.*?) in (.*?)\.$/);
-  if (refineMatch) {
-    // This is a refinement edge label; we record it as metadata but
-    // for now return null since we don't have a dedicated sentence type
-    // TODO: add OplRefinementEdge sentence type
+  if (!rawBody || !parentName) {
+    // Try refinement pattern: "SD is refined by in-zooming Process in SD1."
+    const refineMatch = isES
+      ? line.match(/^(.*?) se refina por descomposici[óo]n de (.*?) en (.*?)\.$/)
+      : line.match(/^(.*?) is refined by in-zooming (.*?) in (.*?)\.$/);
+    if (refineMatch) return null;
     return null;
   }
 
-  return null;
+  // Split "as well as" to separate process list from internal objects
+  const asWellAsRe = isES ? /\s+así como\s+/ : /\s+as well as\s+/;
+  const parts = rawBody.split(asWellAsRe);
+  const processPart = parts[0]!.trim();
+  const internalObjectNames: string[] = [];
+  for (let i = 1; i < parts.length; i++) {
+    internalObjectNames.push(...parseList(parts[i]!.trim(), ctx.locale));
+  }
+
+  // Parse the process list into steps with parallel flags.
+  // formatList produces: "Grinding, parallel Boiling and Brewing, and Serving"
+  // Split on ", and " first (Oxford comma, 3+ items), then on ", " for the rest.
+  const items = splitInZoomList(processPart, ctx.locale);
+
+  // Group items into steps: consecutive non-parallel items share a step;
+  // each parallel item becomes its own step.
+  const steps: { thingIds: string[]; thingNames: string[]; parallel: boolean }[] = [];
+  for (const { names, parallel } of items) {
+    if (parallel) {
+      steps.push({
+        thingIds: names.map(n => ensureThing(ctx, n)),
+        thingNames: names,
+        parallel: true,
+      });
+    } else {
+      // Sequential item — if last step is also sequential, merge
+      const last = steps[steps.length - 1];
+      if (last && !last.parallel) {
+        for (const n of names) {
+          last.thingIds.push(ensureThing(ctx, n));
+          last.thingNames.push(n);
+        }
+      } else {
+        steps.push({
+          thingIds: names.map(n => ensureThing(ctx, n)),
+          thingNames: names,
+          parallel: false,
+        });
+      }
+    }
+  }
+
+  return {
+    kind: "in-zoom-sequence",
+    parentId: ensureThing(ctx, parentName),
+    parentName,
+    refinementType: "in-zoom",
+    steps,
+    ...(internalObjectNames.length > 0 ? {
+      internalObjects: internalObjectNames.map(n => ({ thingId: ensureThing(ctx, n), name: n })),
+    } : {}),
+    sourceSpan: span,
+  };
+}
+
+/** Split a formatted in-zoom process list into named groups with parallel flags.
+ *
+ *  Handles output from formatList where "parallel" is a prefix for parallel items.
+ *  Example input:  "Grinding, parallel Boiling and Brewing, and Serving"
+ *  Produces: [{ names: ["Grinding"], parallel: false },
+ *             { names: ["Boiling", "Brewing"], parallel: true },
+ *             { names: ["Serving"], parallel: false }]
+ */
+function splitInZoomList(raw: string, locale: "en" | "es"): { names: string[]; parallel: boolean }[] {
+  const parallelWord = locale === "es" ? "paralelo" : "parallel";
+  const andWord = locale === "es" ? "y" : "and";
+
+  // Use parseList to normalize language-specific conjunctions into comma-separated form.
+  // But we must detect "parallel" prefix BEFORE parseList normalizes "and" → ",".
+  // Strategy: split on ", " manually, handling ", and " (Oxford comma).
+
+  // Replace ", and " / ", y " with a token to protect it from comma-split
+  const PROTECTED = "\x00SEP\x00";
+  let text = raw;
+  text = text.replace(new RegExp(",\\s+" + andWord + "\\s+", "g"), PROTECTED);
+
+  // Now split on ", "
+  const segments = text.split(/,\s*/).map(s => s.trim()).filter(Boolean);
+
+  // Restore protected separators (they were within a "parallel" group's inner list)
+  const result: { names: string[]; parallel: boolean }[] = [];
+  for (const seg of segments) {
+    const restored = seg.replace(new RegExp(PROTECTED, "g"), ` ${andWord} `);
+    if (restored.toLowerCase().startsWith(parallelWord + " ")) {
+      const inner = restored.slice(parallelWord.length).trim();
+      const names = parseList(inner, locale);
+      result.push({ names, parallel: true });
+    } else {
+      // May contain embedded " and " from restored token (multi-word name)
+      const names = parseList(restored, locale);
+      for (const n of names) {
+        result.push({ names: [n], parallel: false });
+      }
+    }
+  }
+
+  return result;
 }
 
 function parseUnfoldingSentence(line: string, span: OplSourceSpan, ctx: ParseContext): OplInZoomSequence | null {
@@ -1117,7 +1266,43 @@ function parseScenario(line: string, span: OplSourceSpan, ctx: ParseContext): Op
 }
 
 function parseExceptionLink(line: string, span: OplSourceSpan, ctx: ParseContext): OplLinkSentence | null {
-  const patterns = ctx.locale === "es"
+  const isES = ctx.locale === "es";
+
+  // Generic exception: "Q handles exception from P." / "Q maneja excepción de P."
+  const excPatterns: { re: RegExp; exceptionType: "overtime" | "undertime" | undefined }[] = isES
+    ? [
+      { re: /^(.*?) maneja excepción de sobretiempo de (.*?)\.$/, exceptionType: "overtime" },
+      { re: /^(.*?) maneja excepción de subtiempo de (.*?)\.$/, exceptionType: "undertime" },
+      { re: /^(.*?) maneja excepción de (.*?)\.$/, exceptionType: undefined },
+    ]
+    : [
+      { re: /^(.*?) handles overtime exception from (.*?)\.$/, exceptionType: "overtime" },
+      { re: /^(.*?) handles undertime exception from (.*?)\.$/, exceptionType: "undertime" },
+      { re: /^(.*?) handles exception from (.*?)\.$/, exceptionType: undefined },
+    ];
+
+  for (const { re, exceptionType } of excPatterns) {
+    const match = line.match(re);
+    if (!match) continue;
+    const targetName = match[1]!.trim();
+    const sourceName = match[2]!.trim();
+    return {
+      kind: "link",
+      linkId: `link-${++ctx.linkCounter}`,
+      linkType: "exception",
+      sourceId: ensureThing(ctx, sourceName),
+      targetId: ensureThing(ctx, targetName),
+      sourceName,
+      targetName,
+      sourceKind: "process",
+      targetKind: "process",
+      ...(exceptionType ? { exceptionType } : {}),
+      sourceSpan: span,
+    };
+  }
+
+  // Duration-based exceptions
+  const patterns = isES
     ? [
       { re: /^(.*?) ocurre si duración de (.*?) excede \d+(?:\.\d+)?(?:ms|s|min|h|d)\.$/, exceptionType: "overtime" as const },
       { re: /^(.*?) ocurre si duración de (.*?) es menor que \d+(?:\.\d+)?(?:ms|s|min|h|d)\.$/, exceptionType: "undertime" as const },
