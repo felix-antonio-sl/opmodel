@@ -69,6 +69,9 @@ Thing declarations, state enumerations, state descriptions, durations (simple + 
   - requirements: target resolution to thing, req_id preserved
   - assertions: category normalization, optional target
   - scenarios: path_labels validation against link path_labels
+  - tagged structural links
+  - self-invocation ("invokes itself")
+  - in-zoom sequences: creates implicit invocation links between sequential subprocesses
   - OPD skeleton + refinement edges
 - ✅ Resolución de estados para links state-specified
 - ✅ Exhibition links inferidos para features compuestas
