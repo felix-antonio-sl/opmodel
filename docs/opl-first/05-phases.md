@@ -72,6 +72,10 @@ Thing declarations, state enumerations, state descriptions, durations (simple + 
   - tagged structural links
   - self-invocation ("invokes itself")
   - in-zoom sequences: creates implicit invocation links between sequential subprocesses
+  - exception links: overtime/undertime parsed and compiled as invocation with exception_type
+  - path labels: "Following path" / "Por ruta" prefix parsed and preserved on links
+  - unfolding sentences: thing-level "unfolds in OPD into ..." parsed, no invocation links (spatial)
+  - multiplicity cardinalities: an optional (?), optional (*), at least one (+) on structural links
   - OPD skeleton + refinement edges
 - ✅ Resolución de estados para links state-specified
 - ✅ Exhibition links inferidos para features compuestas
@@ -79,9 +83,9 @@ Thing declarations, state enumerations, state descriptions, durations (simple + 
 - ✅ Tests nuevos de compiler
 
 **Pendiente en Fase 2**:
-- Tagged / exception / input / output / path-labels completos
 - Source map fino sentencia → entidad
 - Auto-layout real / placement más inteligente
+- Roundtrip validation OPL → parse → compile → render → OPL' contra fixtures reales
 
 ## Fase 3 — Validación con source locations
 
