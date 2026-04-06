@@ -8,7 +8,10 @@ import type {
 import type {
   OplDocument,
   OplDuration,
+  OplGroupedStructuralSentence,
+  OplInZoomSequence,
   OplLinkSentence,
+  OplModifierSentence,
   OplRenderSettings,
   OplSourceSpan,
   OplStateDescription,
@@ -414,11 +417,210 @@ function parseLink(line: string, span: OplSourceSpan, ctx: ParseContext): OplLin
   return null;
 }
 
+function parseStructuralSentence(line: string, span: OplSourceSpan, ctx: ParseContext): OplGroupedStructuralSentence | null {
+  const isES = ctx.locale === "es";
+  // Aggregation: "X consta de A, B y C." / "X consists of A, B and C."
+  let match = isES
+    ? line.match(/^(.*?) consta de (.*?)\.$/)
+    : line.match(/^(.*?) consists of (.*?)\.$/);
+  if (match) {
+    const parentName = match[1]!.trim();
+    const childNames = parseList(match[2]!.trim(), ctx.locale);
+    if (childNames.length === 0) return null;
+    return {
+      kind: "grouped-structural",
+      linkType: "aggregation",
+      parentId: ensureThing(ctx, parentName),
+      parentName,
+      parentKind: "object",
+      childIds: childNames.map(n => ensureThing(ctx, n)),
+      childNames,
+      childKinds: childNames.map(() => "object" as const),
+      incomplete: false,
+      sourceSpan: span,
+    };
+  }
+
+  // Exhibition: "X exhibe A y B." / "X exhibits A and B."
+  match = isES
+    ? line.match(/^(.*?) exhibe (.*?)\.$/)
+    : line.match(/^(.*?) exhibits (.*?)\.$/);
+  if (match) {
+    const parentName = match[1]!.trim();
+    const childNames = parseList(match[2]!.trim(), ctx.locale);
+    if (childNames.length === 0) return null;
+    return {
+      kind: "grouped-structural",
+      linkType: "exhibition",
+      parentId: ensureThing(ctx, parentName),
+      parentName,
+      parentKind: "object",
+      childIds: childNames.map(n => ensureThing(ctx, n)),
+      childNames,
+      childKinds: childNames.map(() => "object" as const),
+      incomplete: false,
+      sourceSpan: span,
+    };
+  }
+
+  // Classification (single): "X es una instancia de Y." / "X is an instance of Y."
+  match = isES
+    ? line.match(/^(.*?) es una instancia de (.*?)\.$/)
+    : line.match(/^(.*?) is an instance of (.*?)\.$/);
+  if (match) {
+    const childName = match[1]!.trim();
+    const parentName = match[2]!.trim();
+    return {
+      kind: "grouped-structural",
+      linkType: "classification",
+      parentId: ensureThing(ctx, parentName),
+      parentName,
+      parentKind: "object",
+      childIds: [ensureThing(ctx, childName)],
+      childNames: [childName],
+      childKinds: ["object"],
+      incomplete: false,
+      sourceSpan: span,
+    };
+  }
+
+  // Generalization (single): "X es un Y." (ES) / "X is a Y." (EN)
+  // Be careful not to match thing declarations: "X is an object" vs "X is a Y"
+  match = isES
+    ? line.match(/^(.*?) es un (?:una )?(.*?)\.$/)
+    : line.match(/^(.*?) is (?:a |an )([A-Z].*?)\.$/);
+  if (match) {
+    const childName = match[1]!.trim();
+    const parentName = match[2]!.trim();
+    // Skip if it looks like a thing declaration
+    if (["object", "process", "objeto", "proceso", "physical", "informatical", "físico", "informático"].includes(parentName.toLowerCase())) return null;
+    // Skip if it matches thing declaration exactly
+    if (isES && /^.*? es un(?:a)? (objeto|proceso)/.test(line)) return null;
+    if (!isES && /^.*? is (a|an) (object|process)/.test(line)) return null;
+    return {
+      kind: "grouped-structural",
+      linkType: "generalization",
+      parentId: ensureThing(ctx, parentName),
+      parentName,
+      parentKind: "object",
+      childIds: [ensureThing(ctx, childName)],
+      childNames: [childName],
+      childKinds: ["object"],
+      incomplete: false,
+      sourceSpan: span,
+    };
+  }
+
+  // Generalization (multiple): "A y B son C." (ES) / "A and B are C." (EN)
+  match = isES
+    ? line.match(/^(.*?) son (.*?)\.$/)
+    : line.match(/^(.*?) are (.*?)\.$/);
+  if (match) {
+    const childNames = parseList(match[1]!.trim(), ctx.locale);
+    const parentName = match[2]!.trim();
+    if (childNames.length < 2) return null;
+    return {
+      kind: "grouped-structural",
+      linkType: "generalization",
+      parentId: ensureThing(ctx, parentName),
+      parentName,
+      parentKind: "object",
+      childIds: childNames.map(n => ensureThing(ctx, n)),
+      childNames,
+      childKinds: childNames.map(() => "object" as const),
+      incomplete: false,
+      sourceSpan: span,
+    };
+  }
+
+  return null;
+}
+
+function parseModifierSentence(line: string, span: OplSourceSpan, ctx: ParseContext): OplModifierSentence | null {
+  const isES = ctx.locale === "es";
+  // "Proceso ocurre si Objeto existe, en cuyo caso Objeto se consume, de lo contrario Proceso se omite."
+  // "Process occurs if Object exists, in which case Object is consumed, otherwise Process is skipped."
+  // These are complex condition sentences; skip for now in the initial subset.
+
+  // Simple event trigger: "X inicia Y." / "X initiates Y."
+  let match = isES
+    ? line.match(/^(.*?) inicia (.*?)\.$/)
+    : line.match(/^(.*?) initiates (.*?)\.$/);
+  if (match) {
+    const sourceName = match[1]!.trim();
+    const targetName = match[2]!.trim();
+    return {
+      kind: "modifier",
+      modifierId: `modifier-${++ctx.linkCounter}`,
+      linkId: `link-${ctx.linkCounter}`,
+      linkType: "agent",
+      sourceName,
+      targetName,
+      modifierType: "event",
+      negated: false,
+      sourceSpan: span,
+    };
+  }
+
+  return null;
+}
+
+function parseInZoomSequence(line: string, span: OplSourceSpan, ctx: ParseContext): OplInZoomSequence | null {
+  const isES = ctx.locale === "es";
+  // "Proceso se descompone en P1, P2 y P3, en esa secuencia."
+  // "Process zooms into P1, P2 and P3, in that sequence."
+  const seqMatch = isES
+    ? line.match(/^(.*?) se descompone en (.*?), en esa secuencia\.$/)
+    : line.match(/^(.*?) zooms into (.*?), in that sequence\.$/);
+  if (seqMatch) {
+    const parentName = seqMatch[1]!.trim();
+    // Parse mixed object/process list, handling "as well as" separator
+    const rawList = seqMatch[2]!.trim();
+    const parts = rawList
+      .split(isES ? /\s+así como\s+/ : /\s+as well as\s+/);
+    const childNames: string[] = [];
+    const childKinds: ("object" | "process")[] = [];
+    for (const part of parts) {
+      const items = parseList(part.trim(), ctx.locale);
+      for (const item of items) {
+        childNames.push(item);
+        childKinds.push("process"); // Default; as well as section contains objects
+      }
+    }
+    return {
+      kind: "in-zoom-sequence",
+      parentId: ensureThing(ctx, parentName),
+      parentName,
+      steps: childNames.length > 0
+        ? [{ thingIds: childNames.map(n => ensureThing(ctx, n)), thingNames: childNames, parallel: false }]
+        : [],
+      sourceSpan: span,
+    };
+  }
+
+  // "SD se refina por descomposición de Proceso en SD1."
+  // "SD is refined by in-zooming Process in SD1."
+  const refineMatch = isES
+    ? line.match(/^(.*?) se refina por descomposici[óo]n de (.*?) en (.*?)\.$/)
+    : line.match(/^(.*?) is refined by in-zooming (.*?) in (.*?)\.$/);
+  if (refineMatch) {
+    // This is a refinement edge label; we record it as metadata but
+    // for now return null since we don't have a dedicated sentence type
+    // TODO: add OplRefinementEdge sentence type
+    return null;
+  }
+
+  return null;
+}
+
 function parseSentence(line: string, span: OplSourceSpan, ctx: ParseContext) {
   return parseThingDeclaration(line, span, ctx)
     ?? parseStateEnumeration(line, span, ctx)
     ?? parseStateDescription(line, span, ctx)
     ?? parseDuration(line, span, ctx)
+    ?? parseStructuralSentence(line, span, ctx)
+    ?? parseModifierSentence(line, span, ctx)
+    ?? parseInZoomSequence(line, span, ctx)
     ?? parseLink(line, span, ctx);
 }
 

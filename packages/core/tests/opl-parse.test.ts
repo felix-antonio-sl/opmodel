@@ -15,6 +15,40 @@ const SIMPLE_SD = [
   "Boiling changes Water from cold to hot.",
 ].join("\n");
 
+const SIMPLE_STRUCTURAL_EN = [
+  "Car is an object, physical.",
+  "Engine is an object, physical.",
+  "Wheels is an object, physical.",
+  "Car consists of Engine and Wheels.",
+  "Engine exhibits Power.",
+  "Electric Engine is an Engine.",
+  "Model X is an instance of Car.",
+].join("\n");
+
+const SIMPLE_STRUCTURAL_ES = [
+  "Auto es un objeto, físico.",
+  "Motor es un objeto, físico.",
+  "Ruedas es un objeto, físico.",
+  "Auto consta de Motor y Ruedas.",
+  "Motor exhibe Potencia.",
+  "Motor Eléctrico es un Motor.",
+  "Modelo X es una instancia de Auto.",
+].join("\n");
+
+const SIMPLE_INZOOM_EN = [
+  "Coffee Making is a process, physical.",
+  "Grinding is a process, physical.",
+  "Brewing is a process, physical.",
+  "Coffee Making zooms into Grinding and Brewing, in that sequence.",
+].join("\n");
+
+const SIMPLE_INZOOM_ES = [
+  "Preparar Café es un proceso, físico.",
+  "Moler es un proceso, físico.",
+  "Preparar es un proceso, físico.",
+  "Preparar Café se descompone en Moler y Preparar, en esa secuencia.",
+].join("\n");
+
 const SIMPLE_SD_ES = [
   "Agua es un objeto, físico.",
   "Agua puede estar fría o caliente.",
@@ -62,8 +96,46 @@ describe("parseOplDocument", () => {
     expect(render(result.value)).toBe(SIMPLE_SD_ES);
   });
 
+  it("parses English structural sentences", () => {
+    const result = parseOplDocument(SIMPLE_STRUCTURAL_EN, "SD", "opd-sd");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const doc = result.value;
+    const structs = doc.sentences.filter(s => s.kind === "grouped-structural");
+    expect(structs.length).toBeGreaterThanOrEqual(3); // aggregation + exhibition + classification
+  });
+
+  it("parses Spanish structural sentences", () => {
+    const result = parseOplDocument(SIMPLE_STRUCTURAL_ES, "SD", "opd-sd");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const doc = result.value;
+    expect(doc.renderSettings.locale).toBe("es");
+    const structs = doc.sentences.filter(s => s.kind === "grouped-structural");
+    expect(structs.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("parses English in-zoom sequence", () => {
+    const result = parseOplDocument(SIMPLE_INZOOM_EN, "SD", "opd-sd");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const doc = result.value;
+    const inzoom = doc.sentences.find(s => s.kind === "in-zoom-sequence");
+    expect(inzoom).toBeDefined();
+  });
+
+  it("parses Spanish in-zoom sequence", () => {
+    const result = parseOplDocument(SIMPLE_INZOOM_ES, "SD", "opd-sd");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const doc = result.value;
+    expect(doc.renderSettings.locale).toBe("es");
+    const inzoom = doc.sentences.find(s => s.kind === "in-zoom-sequence");
+    expect(inzoom).toBeDefined();
+  });
+
   it("returns structured issues for unsupported lines", () => {
-    const result = parseOplDocument("Cup consists of Water.", "SD", "opd-sd");
+    const result = parseOplDocument("This is not valid OPL at all.", "SD", "opd-sd");
     expect(result.ok).toBe(false);
     if (result.ok) return;
 
