@@ -4,9 +4,10 @@ import type { NlPipeline } from "@opmodel/nl";
 import type { Command } from "../lib/commands";
 import { OplSentencesView } from "./OplSentencesView";
 import { OplTextView } from "./OplTextView";
+import { OplLiveEditor } from "./OplLiveEditor";
 import { OplEditorView } from "./OplEditorView";
 
-type OplTab = "sentences" | "text" | "editor";
+type OplTab = "sentences" | "text" | "edit" | "editor";
 
 interface Props {
   model: Model;
@@ -36,13 +37,13 @@ export function OplPanel({ model, opdId, selectedThing, selectedLink, dispatch, 
         </button>
       </div>
       <div className="opl-tabs">
-        {(["sentences", "text", "editor"] as const).map((tab) => (
+        {(["sentences", "text", "edit", "editor"] as const).map((tab) => (
           <button
             key={tab}
             className={`opl-tab${activeTab === tab ? " opl-tab--active" : ""}`}
             onClick={() => setActiveTab(tab)}
           >
-            {tab === "sentences" ? "Sentences" : tab === "text" ? "Text" : "Editor"}
+            {tab === "sentences" ? "Sentences" : tab === "text" ? "Text" : tab === "edit" ? "Edit" : "Editor"}
           </button>
         ))}
       </div>
@@ -61,6 +62,9 @@ export function OplPanel({ model, opdId, selectedThing, selectedLink, dispatch, 
       )}
       {activeTab === "editor" && (
         <OplEditorView model={model} opdId={opdId} dispatch={dispatch} nlPipeline={nlPipeline} lastError={lastError} />
+      )}
+      {activeTab === "edit" && (
+        <OplLiveEditor model={model} opdId={opdId} dispatch={dispatch} />
       )}
     </aside>
   );
