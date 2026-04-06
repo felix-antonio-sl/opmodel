@@ -66,6 +66,9 @@ Thing declarations, state enumerations, state descriptions, durations (simple + 
   - procedural links: `agent`, `instrument`, `consumption`, `result`, `effect`, `invocation`
   - modifiers: `event`, `condition` (resueltos semánticamente sobre links compilados)
   - fans: `xor`, `or`, `and` converging/diverging (crea links implícitos si no existen)
+  - requirements: target resolution to thing, req_id preserved
+  - assertions: category normalization, optional target
+  - scenarios: path_labels validation against link path_labels
   - OPD skeleton + refinement edges
 - ✅ Resolución de estados para links state-specified
 - ✅ Exhibition links inferidos para features compuestas
@@ -73,7 +76,6 @@ Thing declarations, state enumerations, state descriptions, durations (simple + 
 - ✅ Tests nuevos de compiler
 
 **Pendiente en Fase 2**:
-- Requirements / assertions / scenarios
 - Tagged / exception / input / output / path-labels completos
 - Source map fino sentencia → entidad
 - Auto-layout real / placement más inteligente
