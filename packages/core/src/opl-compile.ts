@@ -836,10 +836,15 @@ export function compileOplDocuments(docs: OplDocument[], options: OplCompileOpti
           resolved.push(ref);
         }
 
-        // Create implicit invocation links between sequential steps
+        // Create implicit invocation links between sequential steps (only between processes)
         for (let i = 0; i < resolved.length - 1; i++) {
           const src = resolved[i]!;
           const tgt = resolved[i + 1]!;
+          // Only create invocation links between processes
+          const srcThing = model.things.get(src.thingId);
+          const tgtThing = model.things.get(tgt.thingId);
+          if (!srcThing || !tgtThing) continue;
+          if (srcThing.kind !== "process" || tgtThing.kind !== "process") continue;
           const exists = [...model.links.values()].some(l =>
             l.type === "invocation" && l.source === src.thingId && l.target === tgt.thingId,
           );
