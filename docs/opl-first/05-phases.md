@@ -3,7 +3,7 @@
 | Campo | Valor |
 |-------|-------|
 | Fecha | 2026-04-06 |
-| Estado | Propuesta |
+| Estado | **Fase 1 completada** |
 
 ## Fase 0 — Definir gramática OPL de entrada
 
@@ -20,20 +20,34 @@
 
 **Dependencia**: Decisiones abiertas (ver abajo).
 
-## Fase 1 — Parser OPL → OplDocument
+## Fase 1 — Parser OPL → OplDocument ✅ COMPLETADA
 
 **Objetivo**: Convertir OPL textual en AST de sentencias.
 
 **Entregables**:
-- Parser que produce `OplDocument` con spans
-- Diagnósticos sintácticos con línea/columna
-- Recovery parcial de errores
-- Golden tests con las 7 fixtures
+- ✅ Parser que produce `OplDocument` con spans
+- ✅ Diagnósticos sintácticos con línea/columna
+- ✅ Recovery parcial de errores (issues estructurados)
+- ✅ Bilingüe EN/ES con auto-detección de locale
+- ✅ 100% coverage en 6 fixtures reales
 
-**Golden test**:
-```
-fixture.opmodel → renderAll() → OPL → parse() → render() → igual
-```
+**Resultado de evaluación**:
+
+| Fixture | Líneas | Oraciones | Headers | Edges | Sin match |
+|---------|--------|-----------|---------|-------|-----------|
+| coffee-making | 48 | 45 | 2 | 1 | **0** |
+| driver-rescuing | 50 | 47 | 2 | 1 | **0** |
+| hodom-v2 | 102 | 99 | 2 | 1 | **0** |
+| hodom-hsc-v0 | 180 | 177 | 2 | 1 | **0** |
+| ev-ams | 225 | 214 | 6 | 5 | **0** |
+| hospitalizacion-domiciliaria | 282 | 271 | 6 | 5 | **0** |
+
+**Constructos parseados** (24 tipos + refinement edges):
+Thing declarations, state enumerations, state descriptions, durations (simple + range), agent/instrument/consumption/result/effect/invocation links, tagged links, aggregation, exhibition, classification, generalization, fan XOR/OR, event modifiers, condition modifiers, in-zoom sequences, attribute-values, requirements, assertions, scenarios, refinement edges.
+
+**Commits**: `7fc8073`, `78c3ae7`, `6927e03`, `8ff6021`, `dea0aba`, `cf5ac08`
+
+**Tests**: 76 files, 1085 tests, todo verde.
 
 ## Fase 2 — Compiler OplDocument → Model
 

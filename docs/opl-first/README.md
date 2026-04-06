@@ -28,8 +28,14 @@ Precedence:
 2. OPL-ES
 3. Metodología de Modelamiento OPM
 
+## Estado actual
+
+- **Fase 1 completada**: parser `OPL → OplDocument` listo
+- **Coverage real**: 6 fixtures, 0 líneas sin match
+- **Siguiente paso**: compiler `OplDocument → Model`
+
 ## En una frase
 
 - **Hoy**: `.opmodel` es la fuente de verdad, OPL es derivado
 - **Target**: `OPL text → parse → compile → Model → validate → visual`
-- **Gap central**: no existe el camino `OPL text → Model`
+- **Gap central remanente**: no existe aún el camino `OplDocument → Model`
