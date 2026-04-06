@@ -49,16 +49,32 @@ Thing declarations, state enumerations, state descriptions, durations (simple + 
 
 **Tests**: 76 files, 1085 tests, todo verde.
 
-## Fase 2 — Compiler OplDocument → Model
+## Fase 2 — Compiler OplDocument → Model 🚧 EN CURSO
 
 **Objetivo**: Construir `Model` completo desde `OplDocument`.
 
-**Entregables**:
-- Name resolution (texto → IDs)
-- Creación de things, states, links, modifiers, fans
-- Creación de OPDs desde sentencias de refinement
-- Auto-generation de appearances (layout engine)
-- Source map: sentencia → entidad
+**Estado actual (slice 2.1)**:
+- ✅ `compileOplDocument()` y `compileOplDocuments()` creados
+- ✅ Name resolution base para things simples y compuestos (`Feature of Exhibitor`)
+- ✅ Compilación de subset inicial:
+  - thing declarations
+  - state enumerations
+  - state descriptions
+  - durations
+  - attribute-values
+  - OPD skeleton + refinement edges
+- ✅ Exhibition links inferidos para features compuestas
+- ✅ Appearances mínimas generadas por OPD
+- ✅ Tests nuevos de compiler
+
+**Pendiente en Fase 2**:
+- Procedural links (`agent`, `instrument`, `consumption`, `result`, `effect`, `invocation`)
+- Structural links agrupados
+- Modifiers
+- Fans
+- Requirements / assertions / scenarios
+- Source map fino sentencia → entidad
+- Auto-layout real / placement más inteligente
 
 ## Fase 3 — Validación con source locations
 

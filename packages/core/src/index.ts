@@ -37,6 +37,10 @@ export {
   parseOplDocument,
   parseOplDocuments,
 } from "./opl-parse";
+export {
+  compileOplDocument,
+  compileOplDocuments,
+} from "./opl-compile";
 export type {
   OplSentence, OplThingDeclaration, OplStateEnumeration, OplDuration,
   OplLinkSentence, OplModifierSentence, OplDocument, OplEdit, OplRenderSettings,
@@ -47,6 +51,11 @@ export type {
   OplParseIssue,
   OplParseError,
 } from "./opl-parse";
+export type {
+  OplCompileIssue,
+  OplCompileError,
+  OplCompileOptions,
+} from "./opl-compile";
 export type { ModelStats } from "./opl";
 export { verifyMethodology, type CheckResult } from "./methodology";
 export { getCompoundStates, type CompoundStateEntry } from "./compound-states";
