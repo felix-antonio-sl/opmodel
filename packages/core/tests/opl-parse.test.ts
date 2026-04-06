@@ -170,3 +170,140 @@ describe("parseOplDocuments", () => {
     expect(result.error.message).toContain("Expected section header");
   });
 });
+
+describe("fan sentences", () => {
+  it("parses English XOR agent fan (diverging)", () => {
+    const result = parseOplDocument([
+      "B is an object, physical.",
+      "P1 is a process, physical.",
+      "P2 is a process, physical.",
+      "B handles exactly one of P1 or P2.",
+    ].join("\n"), "SD", "opd-sd");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const fan = result.value.sentences.find(s => s.kind === "fan");
+    expect(fan).toBeDefined();
+    if (fan?.kind !== "fan") return;
+    expect(fan.fanType).toBe("xor");
+    expect(fan.linkType).toBe("agent");
+    expect(fan.direction).toBe("diverging");
+  });
+
+  it("parses Spanish OR consumption fan (converging)", () => {
+    const result = parseOplDocument([
+      "Proceso es un proceso, físico.",
+      "A es un objeto, físico.",
+      "B es un objeto, físico.",
+      "Proceso consume al menos uno de A o B.",
+    ].join("\n"), "SD", "opd-sd");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const fan = result.value.sentences.find(s => s.kind === "fan");
+    expect(fan).toBeDefined();
+    if (fan?.kind !== "fan") return;
+    expect(fan.fanType).toBe("or");
+    expect(fan.linkType).toBe("consumption");
+  });
+});
+
+describe("requirement / assertion / scenario", () => {
+  it("parses English requirement", () => {
+    const result = parseOplDocument([
+      "X is an object, physical.",
+      "[R-01] Minimum Staff: at least one clinician on duty (applies to X).",
+    ].join("\n"), "SD", "opd-sd");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const req = result.value.sentences.find(s => s.kind === "requirement");
+    expect(req).toBeDefined();
+    if (req?.kind !== "requirement") return;
+    expect(req.reqCode).toBe("R-01");
+    expect(req.targetName).toBe("X");
+  });
+
+  it("parses English assertion", () => {
+    const result = parseOplDocument([
+      "X is an object, physical.",
+      "[correctness] X requires Y.",
+    ].join("\n"), "SD", "opd-sd");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const ast = result.value.sentences.find(s => s.kind === "assertion");
+    expect(ast).toBeDefined();
+    if (ast?.kind !== "assertion") return;
+    expect(ast.category).toBe("correctness");
+  });
+
+  it("parses English scenario", () => {
+    const result = parseOplDocument([
+      "X is an object, physical.",
+      '[scenario: Emergency] 5 links on path "emergency"',
+    ].join("\n"), "SD", "opd-sd");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const sc = result.value.sentences.find(s => s.kind === "scenario");
+    expect(sc).toBeDefined();
+    if (sc?.kind !== "scenario") return;
+    expect(sc.name).toBe("Emergency");
+    expect(sc.linkCount).toBe(5);
+  });
+});
+
+describe("invocation and tagged links", () => {
+  it("parses English invocation", () => {
+    const result = parseOplDocument([
+      "P is a process, physical.",
+      "Q is a process, physical.",
+      "P invokes Q.",
+    ].join("\n"), "SD", "opd-sd");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const link = result.value.sentences.find(s => s.kind === "link" && s.linkType === "invocation");
+    expect(link).toBeDefined();
+  });
+
+  it("parses Spanish invocation", () => {
+    const result = parseOplDocument([
+      "P es un proceso, físico.",
+      "Q es un proceso, físico.",
+      "P invoca Q.",
+    ].join("\n"), "SD", "opd-sd");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const link = result.value.sentences.find(s => s.kind === "link" && s.linkType === "invocation");
+    expect(link).toBeDefined();
+  });
+});
+
+describe("attribute-value", () => {
+  it("parses English attribute value", () => {
+    const result = parseOplDocument([
+      "Temperature is an object, informatical.",
+      "Water is an object, physical.",
+      "Temperature of Water is normal.",
+    ].join("\n"), "SD", "opd-sd");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const av = result.value.sentences.find(s => s.kind === "attribute-value");
+    expect(av).toBeDefined();
+    if (av?.kind !== "attribute-value") return;
+    expect(av.thingName).toBe("Temperature");
+    expect(av.exhibitorName).toBe("Water");
+    expect(av.valueName).toBe("normal");
+  });
+
+  it("parses Spanish attribute value", () => {
+    const result = parseOplDocument([
+      "Temperatura es un objeto, informático.",
+      "Agua es un objeto, físico.",
+      "Temperatura de Agua es normal.",
+    ].join("\n"), "SD", "opd-sd");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const av = result.value.sentences.find(s => s.kind === "attribute-value");
+    expect(av).toBeDefined();
+    if (av?.kind !== "attribute-value") return;
+    expect(av.thingName).toBe("Temperatura");
+    expect(av.valueName).toBe("normal");
+  });
+});

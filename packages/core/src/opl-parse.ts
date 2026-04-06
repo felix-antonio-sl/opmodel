@@ -6,13 +6,18 @@ import type {
   TimeUnit,
 } from "./types";
 import type {
+  OplAssertionSentence,
+  OplAttributeValue,
   OplDocument,
   OplDuration,
+  OplFanSentence,
   OplGroupedStructuralSentence,
   OplInZoomSequence,
   OplLinkSentence,
   OplModifierSentence,
   OplRenderSettings,
+  OplRequirementSentence,
+  OplScenarioSentence,
   OplSourceSpan,
   OplStateDescription,
   OplStateEnumeration,
@@ -613,14 +618,363 @@ function parseInZoomSequence(line: string, span: OplSourceSpan, ctx: ParseContex
   return null;
 }
 
+function parseFanSentence(line: string, span: OplSourceSpan, ctx: ParseContext): OplFanSentence | null {
+  const isES = ctx.locale === "es";
+  const xor = isES ? "exactamente uno de" : "exactly one of";
+  const or_ = isES ? "al menos uno de" : "at least one of";
+
+  // Try both XOR and OR for each pattern
+  for (const fanType of ["xor", "or"] as const) {
+    const quantifier = fanType === "xor" ? xor : or_;
+    const capQ = quantifier.charAt(0).toUpperCase() + quantifier.slice(1);
+
+    // --- Agent ---
+    // Converging: "Exactly one of P1, P2 or P3 handles B." / "Exactamente uno de P1, P2 o P3 maneja B."
+    {
+      const re = new RegExp(`^${capQ} (.*?) ${isES ? "maneja" : "handles"} (.*?)\\.$`);
+      const m = line.match(re);
+      if (m) {
+        return { kind: "fan", fanId: `fan-${++ctx.linkCounter}`, fanType, direction: "converging", linkType: "agent", sharedEndpointName: m[2]!.trim(), memberNames: parseList(m[1]!.trim(), ctx.locale), sourceSpan: span };
+      }
+    }
+    // Diverging: "B handles exactly one of P1, P2 or P3." / "B maneja exactamente uno de P1, P2 o P3."
+    {
+      const re = new RegExp(`^(.*?) ${isES ? "maneja" : "handles"} ${quantifier} (.*?)\\.$`);
+      const m = line.match(re);
+      if (m) {
+        return { kind: "fan", fanId: `fan-${++ctx.linkCounter}`, fanType, direction: "diverging", linkType: "agent", sharedEndpointName: m[1]!.trim(), memberNames: parseList(m[2]!.trim(), ctx.locale), sourceSpan: span };
+      }
+    }
+
+    // --- Instrument ---
+    // Converging: "B requires exactly one of P1, P2 or P3."
+    {
+      const re = new RegExp(`^(.*?) ${isES ? "requiere" : "requires"} ${quantifier} (.*?)\\.$`);
+      const m = line.match(re);
+      if (m) {
+        return { kind: "fan", fanId: `fan-${++ctx.linkCounter}`, fanType, direction: "converging", linkType: "instrument", sharedEndpointName: m[1]!.trim(), memberNames: parseList(m[2]!.trim(), ctx.locale), sourceSpan: span };
+      }
+    }
+    // Diverging: "Exactly one of P1, P2 or P3 requires B."
+    {
+      const re = new RegExp(`^${capQ} (.*?) ${isES ? "requiere" : "requires"} (.*?)\\.$`);
+      const m = line.match(re);
+      if (m) {
+        return { kind: "fan", fanId: `fan-${++ctx.linkCounter}`, fanType, direction: "diverging", linkType: "instrument", sharedEndpointName: m[2]!.trim(), memberNames: parseList(m[1]!.trim(), ctx.locale), sourceSpan: span };
+      }
+    }
+
+    // --- Consumption ---
+    // Converging: "P consumes exactly one of A, B or C."
+    {
+      const verb = isES ? "consume" : "consumes";
+      const re = new RegExp(`^(.*?) ${verb} ${quantifier} (.*?)\\.$`);
+      const m = line.match(re);
+      if (m) {
+        return { kind: "fan", fanId: `fan-${++ctx.linkCounter}`, fanType, direction: "converging", linkType: "consumption", sharedEndpointName: m[1]!.trim(), memberNames: parseList(m[2]!.trim(), ctx.locale), sourceSpan: span };
+      }
+    }
+    // Diverging: "Exactly one of P, Q or R consumes B."
+    {
+      const verb = isES ? "consume" : "consumes";
+      const re = new RegExp(`^${capQ} (.*?) ${verb} (.*?)\\.$`);
+      const m = line.match(re);
+      if (m) {
+        return { kind: "fan", fanId: `fan-${++ctx.linkCounter}`, fanType, direction: "diverging", linkType: "consumption", sharedEndpointName: m[2]!.trim(), memberNames: parseList(m[1]!.trim(), ctx.locale), sourceSpan: span };
+      }
+    }
+
+    // --- Result ---
+    // Diverging: "P yields exactly one of A, B or C." / "P genera exactamente uno de A, B o C."
+    {
+      const verb = isES ? "genera" : "yields";
+      const re = new RegExp(`^(.*?) ${verb} ${quantifier} (.*?)\\.$`);
+      const m = line.match(re);
+      if (m) {
+        return { kind: "fan", fanId: `fan-${++ctx.linkCounter}`, fanType, direction: "diverging", linkType: "result", sharedEndpointName: m[1]!.trim(), memberNames: parseList(m[2]!.trim(), ctx.locale), sourceSpan: span };
+      }
+    }
+    // Converging: "Exactly one of P, Q or R yields B."
+    {
+      const verb = isES ? "genera" : "yields";
+      const re = new RegExp(`^${capQ} (.*?) ${verb} (.*?)\\.$`);
+      const m = line.match(re);
+      if (m) {
+        return { kind: "fan", fanId: `fan-${++ctx.linkCounter}`, fanType, direction: "converging", linkType: "result", sharedEndpointName: m[2]!.trim(), memberNames: parseList(m[1]!.trim(), ctx.locale), sourceSpan: span };
+      }
+    }
+
+    // --- Effect ---
+    // Diverging: "P affects exactly one of A, B or C."
+    {
+      const verb = isES ? "afecta" : "affects";
+      const re = new RegExp(`^(.*?) ${verb} ${quantifier} (.*?)\\.$`);
+      const m = line.match(re);
+      if (m) {
+        return { kind: "fan", fanId: `fan-${++ctx.linkCounter}`, fanType, direction: "diverging", linkType: "effect", sharedEndpointName: m[1]!.trim(), memberNames: parseList(m[2]!.trim(), ctx.locale), sourceSpan: span };
+      }
+    }
+    // Converging: "Exactly one of P, Q or R affects B."
+    {
+      const verb = isES ? "afecta" : "affects";
+      const re = new RegExp(`^${capQ} (.*?) ${verb} (.*?)\\.$`);
+      const m = line.match(re);
+      if (m) {
+        return { kind: "fan", fanId: `fan-${++ctx.linkCounter}`, fanType, direction: "converging", linkType: "effect", sharedEndpointName: m[2]!.trim(), memberNames: parseList(m[1]!.trim(), ctx.locale), sourceSpan: span };
+      }
+    }
+
+    // --- Invocation ---
+    // Diverging: "P invokes exactly one of Q or R."
+    {
+      const verb = isES ? "invoca" : "invokes";
+      const re = new RegExp(`^(.*?) ${verb} ${quantifier} (.*?)\\.$`);
+      const m = line.match(re);
+      if (m) {
+        return { kind: "fan", fanId: `fan-${++ctx.linkCounter}`, fanType, direction: "diverging", linkType: "invocation", sharedEndpointName: m[1]!.trim(), memberNames: parseList(m[2]!.trim(), ctx.locale), sourceSpan: span };
+      }
+    }
+    // Converging: "Exactly one of P or Q invokes R."
+    {
+      const verb = isES ? "invoca" : "invokes";
+      const re = new RegExp(`^${capQ} (.*?) ${verb} (.*?)\\.$`);
+      const m = line.match(re);
+      if (m) {
+        return { kind: "fan", fanId: `fan-${++ctx.linkCounter}`, fanType, direction: "converging", linkType: "invocation", sharedEndpointName: m[2]!.trim(), memberNames: parseList(m[1]!.trim(), ctx.locale), sourceSpan: span };
+      }
+    }
+  }
+
+  return null;
+}
+
+function parseAttributeValue(line: string, span: OplSourceSpan, ctx: ParseContext): OplAttributeValue | null {
+  const isES = ctx.locale === "es";
+  // "Temperature of Water is normal." / "Temperatura de Agua es normal."
+  const match = isES
+    ? line.match(/^(.*?) de (.*?) es (.*?)\.$/)
+    : line.match(/^(.*?) of (.*?) is (.*?)\.$/);
+  if (!match) return null;
+  const thingName = match[1]!.trim();
+  const exhibitorName = match[2]!.trim();
+  const valueName = match[3]!.trim();
+  // Disambiguate from state description: "State X of Y is Z."
+  if (isES ? line.startsWith("Estado ") : line.startsWith("State ")) return null;
+  // Disambiguate from thing declaration: "X is an object."
+  if (["object", "process", "objeto", "proceso"].includes(valueName.toLowerCase())) return null;
+  return {
+    kind: "attribute-value",
+    thingId: ensureThing(ctx, thingName),
+    thingName,
+    exhibitorId: ensureThing(ctx, exhibitorName),
+    exhibitorName,
+    valueName,
+    sourceSpan: span,
+  };
+}
+
+function parseRequirement(line: string, span: OplSourceSpan, ctx: ParseContext): OplRequirementSentence | null {
+  // "[R-01] Name: description (applies to X)." / "[R-01] Nombre: descripción (aplica a X)."
+  const match = line.match(/^\[([A-Z]-\d+)\]\s*(.*?):\s*(.*?)\s*\((?:applies to|aplica a)\s+(.*?)\)\.$/);
+  if (!match) return null;
+  return {
+    kind: "requirement",
+    reqId: `req-${match[1]}`,
+    reqCode: match[1]!,
+    name: match[2]!.trim(),
+    description: match[3]!.trim(),
+    targetName: match[4]!.trim(),
+    sourceSpan: span,
+  };
+}
+
+function parseAssertion(line: string, span: OplSourceSpan, ctx: ParseContext): OplAssertionSentence | null {
+  // "[correctness] predicate" / "[correctitud] predicado"
+  const match = line.match(/^\[(.*?)\]\s*(.+)$/);
+  if (!match) return null;
+  const categoryRaw = match[1]!.trim();
+  const predicate = match[2]!.trim().replace(/\.$/, "");
+  // Skip if this is a requirement (R-XX format)
+  if (/^[A-Z]-\d+$/.test(categoryRaw)) return null;
+  // Skip if this is a scenario
+  const isES = ctx.locale === "es";
+  const scenarioPrefix = isES ? "escenario: " : "scenario: ";
+  if (categoryRaw.toLowerCase().startsWith(scenarioPrefix.trim())) return null;
+  // Normalize category
+  const categoryMap: Record<string, string> = {
+    "correctness": "correctness", "correctitud": "correctness",
+    "safety": "safety", "seguridad": "safety",
+    "liveness": "liveness", "vivacidad": "liveness",
+  };
+  const category = categoryMap[categoryRaw.toLowerCase()] ?? categoryRaw;
+  return {
+    kind: "assertion",
+    assertionId: `assertion-${++ctx.linkCounter}`,
+    predicate,
+    targetName: "",
+    category,
+    sourceSpan: span,
+  };
+}
+
+function parseScenario(line: string, span: OplSourceSpan, ctx: ParseContext): OplScenarioSentence | null {
+  const isES = ctx.locale === "es";
+  // "[scenario: Name] 5 links on path \"label\"" / "[escenario: Nombre] 5 enlaces en ruta \"etiqueta\""
+  const match = isES
+    ? line.match(/^\[escenario:\s*(.*?)\]\s*(\d+) enlaces en ruta \"(.*?)\"$/)
+    : line.match(/^\[scenario:\s*(.*?)\]\s*(\d+) links on path \"(.*?)\"$/);
+  if (!match) return null;
+  return {
+    kind: "scenario",
+    scenarioId: `scenario-${++ctx.linkCounter}`,
+    name: match[1]!.trim(),
+    pathLabels: match[3]!.split(", ").map(s => s.trim()),
+    linkCount: Number(match[2]),
+    sourceSpan: span,
+  };
+}
+
+function parseInvocation(line: string, span: OplSourceSpan, ctx: ParseContext): OplLinkSentence | null {
+  const isES = ctx.locale === "es";
+  // "P invokes Q." / "P invoca Q."
+  const match = isES
+    ? line.match(/^(.*?) invoca (.*?)\.$/)
+    : line.match(/^(.*?) invokes (.*?)\.$/);
+  if (!match) return null;
+  const sourceName = match[1]!.trim();
+  const targetName = match[2]!.trim();
+  return {
+    kind: "link",
+    linkId: `link-${++ctx.linkCounter}`,
+    linkType: "invocation",
+    sourceId: ensureThing(ctx, sourceName),
+    targetId: ensureThing(ctx, targetName),
+    sourceName,
+    targetName,
+    sourceKind: "process",
+    targetKind: "process",
+    sourceSpan: span,
+  };
+}
+
+function parseTaggedLink(line: string, span: OplSourceSpan, ctx: ParseContext): OplLinkSentence | null {
+  const isES = ctx.locale === "es";
+  // "X tag Y." — unidirectional tagged structural
+  // Very broad pattern, only match if we can extract a clear tag
+  // "Source relates to Destination." / "Origen se relaciona con Destino."
+  let match = isES
+    ? line.match(/^(.*?) se relaciona con (.*?)\.$/)
+    : line.match(/^(.*?) relates to (.*?)\.$/);
+  if (match) {
+    const sourceName = match[1]!.trim();
+    const targetName = match[2]!.trim();
+    return {
+      kind: "link",
+      linkId: `link-${++ctx.linkCounter}`,
+      linkType: "tagged",
+      sourceId: ensureThing(ctx, sourceName),
+      targetId: ensureThing(ctx, targetName),
+      sourceName,
+      targetName,
+      sourceKind: "object",
+      targetKind: "object",
+      sourceSpan: span,
+    };
+  }
+  return null;
+}
+
+function parseConditionModifier(line: string, span: OplSourceSpan, ctx: ParseContext): OplModifierSentence | null {
+  const isES = ctx.locale === "es";
+  // "P ocurre si Objeto existe, en cuyo caso Objeto se consume, de lo contrario P se omite."
+  // "P occurs if Object exists, in which case Object is consumed, otherwise P is skipped."
+  let match = isES
+    ? line.match(/^(.*?) ocurre si (.*?) existe, en cuyo caso (.*?) se consume, de lo contrario (.*?) se omite\.$/)
+    : line.match(/^(.*?) occurs if (.*?) exists, in which case (.*?) is consumed, otherwise (.*?) is skipped\.$/);
+  if (match) {
+    const sourceName = match[2]!.trim();
+    const targetName = match[1]!.trim();
+    return {
+      kind: "modifier",
+      modifierId: `modifier-${++ctx.linkCounter}`,
+      linkId: `link-${ctx.linkCounter}`,
+      linkType: "consumption",
+      sourceName,
+      targetName,
+      modifierType: "condition",
+      negated: false,
+      conditionMode: "skip",
+      sourceSpan: span,
+    };
+  }
+
+  // "Agent handles Process if Agent exists, else Process is skipped."
+  // "Agente maneja Proceso si Agente existe, de lo contrario Proceso se omite."
+  match = isES
+    ? line.match(/^(.*?) maneja (.*?) si (.*?) existe, de lo contrario (.*?) se omite\.$/)
+    : line.match(/^(.*?) handles (.*?) if (.*?) exists, else (.*?) is skipped\.$/);
+  if (match) {
+    const sourceName = match[1]!.trim();
+    const targetName = match[2]!.trim();
+    return {
+      kind: "modifier",
+      modifierId: `modifier-${++ctx.linkCounter}`,
+      linkId: `link-${ctx.linkCounter}`,
+      linkType: "agent",
+      sourceName,
+      targetName,
+      modifierType: "condition",
+      negated: false,
+      conditionMode: "skip",
+      sourceSpan: span,
+    };
+  }
+
+  // "P ocurre si Objeto está en estado, en cuyo caso Objeto se consume, de lo contrario P se omite."
+  // "P occurs if Object is specified-state, in which case Object is consumed, otherwise Process is skipped."
+  match = isES
+    ? line.match(/^(.*?) ocurre si (.*?) está en (.*?), en cuyo caso (.*?) se consume, de lo contrario (.*?) se omite\.$/)
+    : line.match(/^(.*?) occurs if (.*?) is (.*?), in which case (.*?) is consumed, otherwise (.*?) is skipped\.$/);
+  if (match) {
+    const targetName = match[1]!.trim();
+    const sourceName = match[2]!.trim();
+    const sourceStateName = match[3]!.trim();
+    return {
+      kind: "modifier",
+      modifierId: `modifier-${++ctx.linkCounter}`,
+      linkId: `link-${ctx.linkCounter}`,
+      linkType: "consumption",
+      sourceName,
+      targetName,
+      modifierType: "condition",
+      negated: false,
+      conditionMode: "skip",
+      sourceStateName,
+      sourceSpan: span,
+    };
+  }
+
+  return null;
+}
+
 function parseSentence(line: string, span: OplSourceSpan, ctx: ParseContext) {
+  // Bracketed sentences ([R-01], [correctness], [scenario: ...]) must be tried before generic link parsing
+  // because "X requires Y" after [bracket] gets consumed by instrument link parser.
+  const bracketed = parseRequirement(line, span, ctx) ?? parseScenario(line, span, ctx) ?? parseAssertion(line, span, ctx);
+  if (bracketed) return bracketed;
+
   return parseThingDeclaration(line, span, ctx)
     ?? parseStateEnumeration(line, span, ctx)
     ?? parseStateDescription(line, span, ctx)
     ?? parseDuration(line, span, ctx)
     ?? parseStructuralSentence(line, span, ctx)
+    ?? parseFanSentence(line, span, ctx)
     ?? parseModifierSentence(line, span, ctx)
+    ?? parseConditionModifier(line, span, ctx)
     ?? parseInZoomSequence(line, span, ctx)
+    ?? parseAttributeValue(line, span, ctx)
+    ?? parseInvocation(line, span, ctx)
+    ?? parseTaggedLink(line, span, ctx)
     ?? parseLink(line, span, ctx);
 }
 
