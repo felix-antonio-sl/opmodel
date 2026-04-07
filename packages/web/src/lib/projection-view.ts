@@ -149,7 +149,7 @@ export function buildPatchableOpdProjectionSliceFromProjection(
       suppressedStateIds,
       visibleStates,
       hasSuppressedStates: suppressedStateIds.size > 0,
-      hiddenStateCount: hiddenCount,
+      hiddenStateCount: hiddenCount + suppressedStateIds.size,
       statePills: pills,
       isContainer: false,
       isRefined: [...model.opds.values()].some((opd) => opd.refines === thingId),

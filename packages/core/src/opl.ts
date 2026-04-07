@@ -1178,6 +1178,46 @@ export function renderAllFromSemanticKernel(
   return renderAll(model);
 }
 
+/**
+ * Render OPL from SemanticKernel via atlas-derived visibility.
+ * This is the ADR-003 kernel-native path: kernel + atlas → OPL text.
+ * The atlas provides per-OPD visibility; the kernel provides all semantic data.
+ * Layout is not needed for OPL generation (only for visual rendering).
+ */
+export function renderAllFromKernelNative(
+  kernel: SemanticKernel,
+  atlas: OpdAtlas,
+): string {
+  // Use legacyModelFromSemanticKernel to build a Model with all semantic data
+  // (mod/fan now preserved) and atlas-derived appearances for correct per-OPD visibility
+  const layout: LayoutModel = { opdLayouts: new Map() };
+  // Build minimal layout so expose() can derive per-OPD thing visibility
+  for (const [opdId, slice] of atlas.nodes) {
+    const nodes = new Map<string, import("./semantic-kernel").LayoutNode>();
+    let col = 0;
+    for (const thingId of slice.visibleThings) {
+      const occurrence = [...atlas.occurrences.values()].find(
+        (o) => o.opdId === opdId && o.thingId === thingId,
+      );
+      if (occurrence) {
+        nodes.set(occurrence.id, {
+          viewId: occurrence.id,
+          x: 120 + (col % 4) * 180,
+          y: 120 + Math.floor(col / 4) * 120,
+          w: 120,
+          h: 60,
+          ...(occurrence.role === "internal" ? { internal: true } : {}),
+        });
+        col++;
+      }
+    }
+    layout.opdLayouts.set(opdId, { opdId, nodes, edges: new Map() });
+  }
+
+  const model = legacyModelFromSemanticKernel(kernel, atlas, layout);
+  return renderAll(model);
+}
+
 /** Render OPL for all OPDs in the model, sorted hierarchically (root first, depth-first). */
 export function renderAll(model: Model): string {
   // Build hierarchy: root OPDs first, then children depth-first

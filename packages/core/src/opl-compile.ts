@@ -20,7 +20,9 @@ import {
   updateThing,
 } from "./api";
 import type { Model, OPD, Link, Thing, State, Appearance } from "./types";
-import type { OplDocument, OplSentence } from "./opl-types";
+import type { OplDocument, OplSentence, OplInZoomSequence } from "./opl-types";
+import type { SemanticKernel, SemanticSource, InZoomRefinement } from "./semantic-kernel";
+import { semanticKernelFromModel } from "./semantic-kernel";
 
 export interface OplCompileIssue {
   message: string;
@@ -906,6 +908,239 @@ export function compileOplDocuments(docs: OplDocument[], options: OplCompileOpti
 
 export function compileOplDocument(doc: OplDocument, options: OplCompileOptions = {}): Result<Model, OplCompileError> {
   return compileOplDocuments([doc], options);
+}
+
+/**
+ * Compile OPL documents directly to SemanticKernel — the canonical isomorphism target (ADR-003).
+ *
+ * Strategy: compile → Model (reuses all 16 battle-tested passes) → SemanticKernel,
+ * then enrich with sourceInfo, InZoomStep[], and derived invocation markers.
+ */
+export function compileToKernel(
+  docs: OplDocument[],
+  options: OplCompileOptions = {},
+): Result<SemanticKernel, OplCompileError> {
+  const modelResult = compileOplDocuments(docs, options);
+  if (!modelResult.ok) return modelResult as unknown as Result<SemanticKernel, OplCompileError>;
+  const model = modelResult.value;
+
+  const kernel = semanticKernelFromModel(model);
+
+  backfillSourceInfo(kernel, docs);
+  enrichRefinements(kernel, docs);
+  markDerivedInvocations(kernel, docs);
+
+  return ok(kernel);
+}
+
+// --- compileToKernel enrichment helpers ---
+
+function buildNameIndex(kernel: SemanticKernel): Map<string, string> {
+  const index = new Map<string, string>();
+  for (const [id, thing] of kernel.things) {
+    index.set(thing.name.toLowerCase(), id);
+  }
+  return index;
+}
+
+function backfillSourceInfo(kernel: SemanticKernel, docs: OplDocument[]): void {
+  const nameToThingId = buildNameIndex(kernel);
+
+  const stateIndex = new Map<string, string>();
+  for (const [id, state] of kernel.states) {
+    const thing = kernel.things.get(state.parentThing);
+    if (thing) stateIndex.set(`${thing.name.toLowerCase()}::${state.name.toLowerCase()}`, id);
+  }
+
+  for (const doc of docs) {
+    const source: Omit<SemanticSource, "sentenceKind"> = {
+      documentId: doc.opdId,
+      opdName: doc.opdName,
+    };
+
+    for (const sentence of doc.sentences) {
+      const span = sentence.sourceSpan;
+      const info: SemanticSource = {
+        ...source,
+        ...(span ? { span } : {}),
+        sentenceKind: sentence.kind,
+      };
+
+      switch (sentence.kind) {
+        case "thing-declaration": {
+          const thingId = nameToThingId.get(sentence.name.toLowerCase());
+          if (thingId) {
+            const thing = kernel.things.get(thingId);
+            if (thing && !thing.sourceInfo) thing.sourceInfo = info;
+          }
+          break;
+        }
+        case "state-enumeration": {
+          for (const stateName of sentence.stateNames) {
+            const key = `${sentence.thingName.toLowerCase()}::${stateName.toLowerCase()}`;
+            const stateId = stateIndex.get(key);
+            if (stateId) {
+              const state = kernel.states.get(stateId);
+              if (state && !state.sourceInfo) state.sourceInfo = info;
+            }
+          }
+          break;
+        }
+        case "link": {
+          // Match by source+target name + type
+          for (const [id, link] of kernel.links) {
+            const srcThing = kernel.things.get(link.source);
+            const tgtThing = kernel.things.get(link.target);
+            if (
+              srcThing && tgtThing &&
+              srcThing.name.toLowerCase() === sentence.sourceName.toLowerCase() &&
+              tgtThing.name.toLowerCase() === sentence.targetName.toLowerCase() &&
+              link.type === sentence.linkType &&
+              !link.sourceInfo
+            ) {
+              link.sourceInfo = info;
+              break;
+            }
+          }
+          break;
+        }
+        case "modifier": {
+          for (const [, mod] of kernel.modifiers) {
+            const link = kernel.links.get(mod.over);
+            if (!link) continue;
+            const srcThing = kernel.things.get(link.source);
+            const tgtThing = kernel.things.get(link.target);
+            if (
+              srcThing && tgtThing &&
+              srcThing.name.toLowerCase() === sentence.sourceName.toLowerCase() &&
+              tgtThing.name.toLowerCase() === sentence.targetName.toLowerCase() &&
+              mod.type === sentence.modifierType &&
+              !mod.sourceInfo
+            ) {
+              mod.sourceInfo = info;
+              break;
+            }
+          }
+          break;
+        }
+        case "fan": {
+          for (const [, fan] of kernel.fans) {
+            if (fan.type === sentence.fanType && !fan.sourceInfo) {
+              fan.sourceInfo = info;
+              break;
+            }
+          }
+          break;
+        }
+        case "requirement": {
+          for (const [, req] of kernel.requirements) {
+            if (req.name === sentence.name && !req.sourceInfo) {
+              req.sourceInfo = info;
+              break;
+            }
+          }
+          break;
+        }
+        case "assertion": {
+          for (const [, ast] of kernel.assertions) {
+            if (ast.predicate === sentence.predicate && !ast.sourceInfo) {
+              ast.sourceInfo = info;
+              break;
+            }
+          }
+          break;
+        }
+        case "scenario": {
+          for (const [, sc] of kernel.scenarios) {
+            if (sc.name === sentence.name && !sc.sourceInfo) {
+              sc.sourceInfo = info;
+              break;
+            }
+          }
+          break;
+        }
+      }
+    }
+  }
+}
+
+function enrichRefinements(kernel: SemanticKernel, docs: OplDocument[]): void {
+  const nameToThingId = buildNameIndex(kernel);
+
+  for (const doc of docs) {
+    for (const sentence of doc.sentences) {
+      if (sentence.kind !== "in-zoom-sequence") continue;
+      const seq = sentence as OplInZoomSequence;
+
+      // Find the refinement matching this sequence
+      const parentThingId = nameToThingId.get(seq.parentName.toLowerCase());
+      if (!parentThingId) continue;
+
+      for (const [, refinement] of kernel.refinements) {
+        if (refinement.kind !== "in-zoom" || refinement.parentThing !== parentThingId) continue;
+        const inZoom = refinement as InZoomRefinement;
+
+        // Build complete steps from the sentence
+        inZoom.steps = seq.steps.map((step, i) => ({
+          id: `step-${inZoom.id}-${i}`,
+          thingIds: step.thingNames
+            .map((name) => nameToThingId.get(name.toLowerCase()))
+            .filter((id): id is string => id !== undefined),
+          execution: step.parallel ? "parallel" : "sequential",
+          ...(seq.sourceSpan ? {
+            sourceInfo: {
+              documentId: doc.opdId,
+              opdName: doc.opdName,
+              span: seq.sourceSpan,
+              sentenceKind: "in-zoom-sequence",
+            },
+          } : {}),
+        }));
+
+        // Populate internal objects
+        if (seq.internalObjects) {
+          inZoom.internalObjects = seq.internalObjects
+            .map((obj) => nameToThingId.get(obj.name.toLowerCase()))
+            .filter((id): id is string => id !== undefined);
+        }
+
+        inZoom.completeness = "complete";
+
+        if (seq.sourceSpan) {
+          inZoom.sourceInfo = {
+            documentId: doc.opdId,
+            opdName: doc.opdName,
+            span: seq.sourceSpan,
+            sentenceKind: "in-zoom-sequence",
+          };
+        }
+        break;
+      }
+    }
+  }
+}
+
+function markDerivedInvocations(kernel: SemanticKernel, docs: OplDocument[]): void {
+  // Collect all process IDs that appear in in-zoom steps
+  const inZoomProcessIds = new Set<string>();
+  for (const refinement of kernel.refinements.values()) {
+    if (refinement.kind !== "in-zoom") continue;
+    for (const step of refinement.steps) {
+      for (const thingId of step.thingIds) {
+        inZoomProcessIds.add(thingId);
+      }
+    }
+  }
+
+  // Mark invocation links between in-zoom processes as derived
+  for (const link of kernel.links.values()) {
+    if (link.type !== "invocation") continue;
+    if (link.origin && link.origin !== "unknown") continue;
+    if (inZoomProcessIds.has(link.source) && inZoomProcessIds.has(link.target)) {
+      link.origin = "derived-in-zoom";
+      link.derived = { kind: "in-zoom-order" };
+    }
+  }
 }
 
 function resolveStateForLinkSide(

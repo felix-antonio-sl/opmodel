@@ -3,9 +3,11 @@ import { createModel } from "./model";
 import type {
   Appearance,
   Assertion,
+  Fan,
   Link,
   Meta,
   Model,
+  Modifier,
   OPD,
   Requirement,
   Scenario,
@@ -85,6 +87,14 @@ export interface SemanticRequirement extends Requirement {
   sourceInfo?: SemanticSource;
 }
 
+export interface SemanticModifier extends Modifier {
+  sourceInfo?: SemanticSource;
+}
+
+export interface SemanticFan extends Fan {
+  sourceInfo?: SemanticSource;
+}
+
 export interface InZoomStep {
   id: string;
   thingIds: ThingId[];
@@ -122,6 +132,9 @@ export type SemanticRefinement = InZoomRefinement | UnfoldRefinement;
 
 export interface OpdNode extends OPD {}
 
+export type ModifierId = string;
+export type FanId = string;
+
 export interface SemanticKernel {
   meta: KernelMeta;
   settings: KernelSettings;
@@ -133,6 +146,8 @@ export interface SemanticKernel {
   scenarios: Map<ScenarioId, SemanticScenario>;
   assertions: Map<AssertionId, SemanticAssertion>;
   requirements: Map<RequirementId, SemanticRequirement>;
+  modifiers: Map<ModifierId, SemanticModifier>;
+  fans: Map<FanId, SemanticFan>;
 }
 
 export interface ViewOccurrence {
@@ -243,6 +258,8 @@ export function createSemanticKernel(name: string, systemType?: SystemType): Sem
     scenarios: new Map(),
     assertions: new Map(),
     requirements: new Map(),
+    modifiers: new Map(),
+    fans: new Map(),
   };
 }
 
@@ -304,6 +321,8 @@ export function semanticKernelFromModel(model: Model): SemanticKernel {
     scenarios: new Map([...model.scenarios.entries()].map(([id, s]) => [id, { ...s }])),
     assertions: new Map([...model.assertions.entries()].map(([id, a]) => [id, { ...a }])),
     requirements: new Map([...model.requirements.entries()].map(([id, r]) => [id, { ...r }])),
+    modifiers: new Map([...model.modifiers.entries()].map(([id, mod]) => [id, { ...mod }])),
+    fans: new Map([...model.fans.entries()].map(([id, fan]) => [id, { ...fan }])),
   };
 }
 
@@ -332,8 +351,8 @@ export function legacyModelFromSemanticKernel(kernel: SemanticKernel, atlas?: Op
     assertions: new Map([...kernel.assertions.entries()].map(([id, a]) => [id, legacyAssertionFromSemantic(a)])),
     requirements: new Map([...kernel.requirements.entries()].map(([id, r]) => [id, legacyRequirementFromSemantic(r)])),
     appearances,
-    modifiers: new Map(),
-    fans: new Map(),
+    modifiers: new Map([...kernel.modifiers.entries()].map(([id, mod]) => [id, legacyModifierFromSemantic(mod)])),
+    fans: new Map([...kernel.fans.entries()].map(([id, fan]) => [id, legacyFanFromSemantic(fan)])),
     stereotypes: new Map(),
     subModels: new Map(),
   };
@@ -371,6 +390,16 @@ function legacyAssertionFromSemantic(assertion: SemanticAssertion): Assertion {
 
 function legacyRequirementFromSemantic(requirement: SemanticRequirement): Requirement {
   const { sourceInfo: _sourceInfo, ...rest } = requirement;
+  return stripUndefined(rest);
+}
+
+function legacyModifierFromSemantic(mod: SemanticModifier): Modifier {
+  const { sourceInfo: _sourceInfo, ...rest } = mod;
+  return stripUndefined(rest);
+}
+
+function legacyFanFromSemantic(fan: SemanticFan): Fan {
+  const { sourceInfo: _sourceInfo, ...rest } = fan;
   return stripUndefined(rest);
 }
 

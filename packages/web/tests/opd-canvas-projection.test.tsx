@@ -142,11 +142,16 @@ describe("OpdCanvas projection slice migration", () => {
       },
     };
 
-    const { container } = render(
-      <svg>
-        <OpdCanvas model={model} opdId="opd-sd" currentProjectionSlice={projectionSlice} />
-      </svg>,
-    );
+    const { container } = render(React.createElement(OpdCanvas, {
+      model,
+      projectionSlice,
+      opdId: "opd-sd",
+      selectedThing: null,
+      mode: "select",
+      linkType: "auto",
+      dispatch: vi.fn(() => true),
+      simulation: null,
+    }));
 
     const pill = container.querySelector("rect.state-pill");
     expect(pill).not.toBeNull();

@@ -18,6 +18,7 @@
 | 8 | [08-semantic-kernel-typescript-schema.md](./08-semantic-kernel-typescript-schema.md) | Schema TypeScript concreto para kernel, atlas y layout |
 | 9 | [09-web-projection-migration.md](./09-web-projection-migration.md) | Estado y estrategia de migración web a projection layer |
 | 10 | [opl-grammar.md](./opl-grammar.md) | Gramática canónica inicial del input OPL |
+| **11** | [**10-isomorphism-architecture.md**](./10-isomorphism-architecture.md) | **ADR-003 — Arquitectura categorial para isomorfismo OPL ↔ OPD (VINCULANTE)** |
 
 ## SSOT reference
 
@@ -40,8 +41,18 @@ Precedence:
 - **Migración web**: en progreso con projection layer ya conectado a canvas/layout/reporting/store
 - **Siguiente paso**: canvas nativo desde `projection` y luego persistencia de layout más allá de `Appearance` legacy
 
+## Decisión vinculante (ADR-003)
+
+El isomorfismo OPL ↔ OPD vive en `SemanticKernel`, no entre texto y píxeles:
+
+```
+OPL/~ ≅ SemanticKernel ≅ Atlas/~
+```
+
+Ver [10-isomorphism-architecture.md](./10-isomorphism-architecture.md) para las 4 leyes verificables y los 3 slices de implementación.
+
 ## En una frase
 
 - **Hoy**: convivimos entre `Model` legacy y pipeline nuevo `SemanticKernel → OpdAtlas → LayoutModel`
 - **Target**: `OPL text → parse → SemanticKernel → OpdAtlas → Layout → visual`
-- **Gap central remanente**: hacer al canvas consumir la proyección como input nativo y no solo vía bridge
+- **Gap central remanente**: compiler y render deben operar directamente sobre SemanticKernel sin round-trip por Model

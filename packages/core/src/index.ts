@@ -32,7 +32,7 @@ export {
   createHistory, pushHistory, undo, redo,
 } from "./history";
 export {
-  expose, exposeFromSemanticKernel, applyOplEdit, render, renderAll, renderAllFromSemanticKernel, modelStats, oplSlug, editsFrom,
+  expose, exposeFromSemanticKernel, applyOplEdit, render, renderAll, renderAllFromSemanticKernel, renderAllFromKernelNative, modelStats, oplSlug, editsFrom,
 } from "./opl";
 export {
   parseOplDocument,
@@ -41,6 +41,7 @@ export {
 export {
   compileOplDocument,
   compileOplDocuments,
+  compileToKernel,
 } from "./opl-compile";
 export {
   validateOpl,

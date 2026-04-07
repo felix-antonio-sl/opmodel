@@ -78,6 +78,16 @@ Do **not** treat it yet as:
 
 Current priority: **close Fase 4 (source mapping bidireccional) and Fase 5 (OPL editor as primary surface).**
 
+## Binding ADR: Isomorphism Architecture (ADR-003)
+
+**`docs/opl-first/10-isomorphism-architecture.md`** is a binding architectural decision. All pipeline work must respect:
+
+- `OPL/~ ≅ SemanticKernel ≅ Atlas/~` — isomorphism lives in the kernel, not between text and pixels
+- **5 categories**: 𝒫 (Presentation), 𝒮 (Semantics/SSOT), ℛ (Refinement), 𝒜 (Atlas), 𝓛 (Layout)
+- **4 verified laws**: textual roundtrip, atlas colimit, diamond commutativity, layout orthogonality
+- **No new code** may introduce layout→semantics dependency or Model round-trips in kernel-native functions
+- Compiler must target `SemanticKernel` directly (not Model). Render must operate on kernel directly (not via `legacyModelFromSemanticKernel`).
+
 ## Development
 
 - **Runtime:** Bun (`~/.bun/bin/bun`). Setup: `export BUN_INSTALL="$HOME/.bun" && export PATH="$BUN_INSTALL/bin:$PATH"`
