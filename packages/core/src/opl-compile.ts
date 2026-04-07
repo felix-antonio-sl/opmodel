@@ -239,7 +239,13 @@ export function compileOplDocuments(docs: OplDocument[], options: OplCompileOpti
     if (!doc.refinementEdge) continue;
     const actualOpdId = actualOpdIdByName.get(doc.opdName);
     if (!actualOpdId) continue;
-    const refined = resolveThingRef(doc.refinementEdge.refinedThingName, undefined, thingRefByDisplayName, thingIdsByActualName, doc.renderSettings.locale);
+    let refined = resolveThingRef(doc.refinementEdge.refinedThingName, undefined, thingRefByDisplayName, thingIdsByActualName, doc.renderSettings.locale);
+    if (!refined) {
+      const unfoldedPrefix = doc.renderSettings.locale === "es" ? "despliegue de " : "deployment of ";
+      if (doc.refinementEdge.refinedThingName.startsWith(unfoldedPrefix)) {
+        refined = resolveThingRef(doc.refinementEdge.refinedThingName.slice(unfoldedPrefix.length), undefined, thingRefByDisplayName, thingIdsByActualName, doc.renderSettings.locale);
+      }
+    }
     if (!refined) {
       pushIssue(issues, `Could not resolve refined thing: ${doc.refinementEdge.refinedThingName}`, undefined, doc.opdName);
       continue;
@@ -652,7 +658,36 @@ export function compileOplDocuments(docs: OplDocument[], options: OplCompileOpti
     for (const s of doc.sentences) {
       if (s.kind !== "modifier") continue;
 
-      const over = resolveModifierOverLink(model, stateIdByThingAndName, thingRefByDisplayName, thingIdsByActualName, s, doc.renderSettings.locale);
+      let over = resolveModifierOverLink(model, stateIdByThingAndName, thingRefByDisplayName, thingIdsByActualName, s, doc.renderSettings.locale);
+      if (!over && s.linkType === "instrument") {
+        // Some OPL condition/event modifier forms imply an instrument link
+        // from state-bearing object → process without rendering it explicitly.
+        const sourceRef = resolveThingRef(s.sourceName, undefined, thingRefByDisplayName, thingIdsByActualName, doc.renderSettings.locale);
+        const targetRef = resolveThingRef(s.targetName, undefined, thingRefByDisplayName, thingIdsByActualName, doc.renderSettings.locale);
+        if (sourceRef && targetRef) {
+          const existing = [...model.links.values()].find(link =>
+            link.type === "instrument" &&
+            link.source === sourceRef.thingId &&
+            link.target === targetRef.thingId,
+          );
+          if (existing) {
+            over = existing.id;
+          } else {
+            const linkData: Link = {
+              id: uniqueId(`lnk-${oplSlug(sourceRef.displayName)}-instrument-${oplSlug(targetRef.displayName)}`, model),
+              type: "instrument",
+              source: sourceRef.thingId,
+              target: targetRef.thingId,
+            };
+            const added = addLink(model, linkData);
+            if (added.ok) {
+              model = added.value;
+              over = linkData.id;
+            }
+          }
+        }
+      }
+
       if (!over) {
         pushIssue(issues, `Could not resolve target link for modifier`, s, doc.opdName);
         continue;
@@ -697,7 +732,14 @@ export function compileOplDocuments(docs: OplDocument[], options: OplCompileOpti
 
       for (let i = 0; i < s.memberNames.length; i++) {
         const memberName = s.memberNames[i]!;
-        const memberRef = resolveThingRef(memberName, undefined, thingRefByDisplayName, thingIdsByActualName, doc.renderSettings.locale);
+        let memberRef = resolveThingRef(memberName, undefined, thingRefByDisplayName, thingIdsByActualName, doc.renderSettings.locale);
+        if (!memberRef && doc.renderSettings.locale === "es") {
+          const enIdx = memberName.lastIndexOf(" en ");
+          if (enIdx !== -1) {
+            const maybeThing = memberName.slice(0, enIdx).trim();
+            memberRef = resolveThingRef(maybeThing, undefined, thingRefByDisplayName, thingIdsByActualName, doc.renderSettings.locale);
+          }
+        }
         if (!memberRef) {
           pushIssue(issues, `Could not resolve member thing for fan: ${memberName}`, s, doc.opdName);
           allResolved = false;

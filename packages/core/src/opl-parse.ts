@@ -108,6 +108,16 @@ function splitStateAndThing(phrase: string, knownThings: Map<string, string>, lo
   if (knownThings.has(phrase)) return null;
 
   if (locale === "es") {
+    // ES negated: "Thing no esté en state"
+    const negMatch = phrase.match(/^(.*?)\s+no est(?:é|e)\s+en\s+(.*?)$/i);
+    if (negMatch) {
+      const maybeThing = negMatch[1]!.trim();
+      const maybeState = negMatch[2]!.trim();
+      if (knownThings.has(maybeThing) && maybeState.length > 0) {
+        return { stateName: maybeState, thingName: maybeThing };
+      }
+    }
+
     // ES: "Thing en state" — look for " en " separator
     const enIdx = phrase.lastIndexOf(" en ");
     if (enIdx !== -1) {
@@ -149,12 +159,14 @@ function splitCompoundDisplay(
   raw: string,
   locale: "en" | "es",
   knownNames: Iterable<string>,
+  options?: { allowHeuristic?: boolean },
 ): { thingName: string; exhibitorName?: string } {
   const separator = locale === "es" ? " de " : " of ";
   const trimmed = raw.trim();
+  const knownSet = new Set(knownNames);
   let best: string | null = null;
 
-  for (const candidate of knownNames) {
+  for (const candidate of knownSet) {
     if (!candidate) continue;
     if (candidate.length >= trimmed.length) continue;
     if (!trimmed.endsWith(`${separator}${candidate}`)) continue;
@@ -173,8 +185,19 @@ function splitCompoundDisplay(
       from = idx + separator.length;
     }
 
-    const heuristic = splitCandidates.find(candidate => candidate.thingName.split(/\s+/).length >= 2);
-    return heuristic ?? { thingName: trimmed };
+    // Prefer a split where the exhibitor is already a known thing.
+    const knownExhibitor = splitCandidates.find(c => knownSet.has(c.exhibitorName));
+    if (knownExhibitor) return knownExhibitor;
+
+    if (options?.allowHeuristic === false) return { thingName: trimmed };
+
+    // Heuristic fallback for contexts like attribute values and state displays.
+    const viable = splitCandidates.filter(c =>
+      c.thingName.split(/\s+/).length >= 2 &&
+      /^[A-Z\u00C1\u00C9\u00CD\u00D3\u00DA\u00D1]/.test(c.exhibitorName)
+    );
+    const knownThing = viable.find(c => knownSet.has(c.thingName));
+    return knownThing ?? viable[0] ?? { thingName: trimmed };
   }
   const splitAt = trimmed.length - (separator.length + best.length);
   const thingName = trimmed.slice(0, splitAt).trim();
@@ -258,7 +281,7 @@ function parseThingDeclaration(line: string, span: OplSourceSpan, ctx: ParseCont
     thingKindRaw === "objeto" ? "object" :
     thingKindRaw === "proceso" ? "process" :
     thingKindRaw as "object" | "process";
-  const splitName = splitCompoundDisplay(name, ctx.locale, ctx.thingIdByName.keys());
+  const splitName = splitCompoundDisplay(name, ctx.locale, ctx.thingIdByName.keys(), { allowHeuristic: ctx.locale !== "es" });
   const tail = (ctx.locale === "es" ? match[3] : match[4]) ?? "";
   const tokens = tail.split(",").map((t) => t.trim()).filter(Boolean);
 
@@ -481,10 +504,16 @@ function parseLink(line: string, span: OplSourceSpan, ctx: ParseContext): OplLin
     if (/\d+(?:\.\d+)?(?:ms|s|min|h|d)$/.test(sourceName)) return null;
     // Prefer full phrase as known thing name before splitting into state + thing.
     if (!ctx.thingIdByName.has(sourceName)) {
+      const originalSource = sourceName;
       const split = splitStateAndThing(sourceName, ctx.thingIdByName, ctx.locale);
       if (split) {
         sourceName = split.thingName;
-        sourceStateName = split.stateName;
+        // Negated state requirements like "Paciente no esté en elegible" are
+        // normalized to the base enabling link only. The current model does not
+        // encode negated instrument-state requirements separately.
+        if (!/\bno est(?:é|e)\s+en\b/i.test(originalSource)) {
+          sourceStateName = split.stateName;
+        }
       }
     }
     return {
@@ -654,7 +683,15 @@ function parseStructuralSentence(line: string, span: OplSourceSpan, ctx: ParseCo
       text = text.slice(0, -incompleteES.length).replace(/,\s*$/, "").replace(/\s+y\s*$/, "").trim();
     }
 
-    const parsedChildren = parseList(text, ctx.locale)
+    // Protect multiplicity phrases like "1 o más X" / "1 or more X" from parseList,
+    // which would otherwise split on the conjunction.
+    const ONE_OR_MORE = "\x00ONE_OR_MORE\x00";
+    const protectedText = ctx.locale === "es"
+      ? text.replace(/\b1\s+o\s+m[aá]s\b/g, ONE_OR_MORE)
+      : text.replace(/\b1\s+or\s+more\b/g, ONE_OR_MORE);
+
+    const parsedChildren = parseList(protectedText, ctx.locale)
+      .map((item) => item.replace(new RegExp(ONE_OR_MORE, "g"), ctx.locale === "es" ? "1 o más" : "1 or more"))
       .map((item) => parseStructuralChild(item, ctx.locale))
       .filter((item): item is { name: string; multiplicity?: string } => item != null);
     if (parsedChildren.length === 0) return null;
@@ -798,11 +835,13 @@ function parseStructuralChild(raw: string, locale: "en" | "es"): { name: string;
       [/^(?:un|una) opcional\s+(.+)$/i, "?"],
       [/^opcional(?:\s*\(cero o m[aá]s\))?\s+(.+)$/i, "*"],
       [/^al menos (?:un|una)\s+(.+)$/i, "+"],
+      [/^1\s+o\s+m[aá]s\s+(.+)$/i, "+"],
     ] as const
     : [
       [/^an optional\s+(.+)$/i, "?"],
       [/^optional(?:\s*\(none to many\))?\s+(.+)$/i, "*"],
       [/^at least one\s+(.+)$/i, "+"],
+      [/^1\s+or\s+more\s+(.+)$/i, "+"],
     ] as const;
 
   for (const [pattern, multiplicity] of patterns) {
@@ -827,15 +866,19 @@ function parseModifierSentence(line: string, span: OplSourceSpan, ctx: ParseCont
     const maybeState = match[1]!.trim();
     const sourceName = match[2]!.trim();
     const targetName = match[3]!.trim();
-    // Check if maybeState is a valid state name (not just any word)
-    // Accept common patterns like "critical", "none", "low", "high", etc.
-    const isStateTrigger = maybeState.length > 0 && maybeState !== sourceName;
+    // Only treat as state-trigger when the remaining sourceName is already
+    // a known thing. Otherwise lines like "Threat Level triggers X" get
+    // misparsed as state="Threat" + source="Level".
+    const isStateTrigger =
+      maybeState.length > 0 &&
+      maybeState !== sourceName &&
+      ctx.thingIdByName.has(sourceName);
     if (isStateTrigger) {
       return {
         kind: "modifier",
         modifierId: `modifier-${++ctx.linkCounter}`,
         linkId: `link-${ctx.linkCounter}`,
-        linkType: "agent",
+        linkType: "instrument",
         sourceName,
         targetName,
         modifierType: "event",
@@ -853,15 +896,25 @@ function parseModifierSentence(line: string, span: OplSourceSpan, ctx: ParseCont
   if (match) {
     const sourceName = match[1]!.trim();
     const targetName = match[2]!.trim();
+    let normalizedSourceName = sourceName;
+    let sourceStateName: string | undefined;
+    if (!ctx.thingIdByName.has(normalizedSourceName)) {
+      const split = splitStateAndThing(normalizedSourceName, ctx.thingIdByName, ctx.locale);
+      if (split) {
+        normalizedSourceName = split.thingName;
+        sourceStateName = split.stateName;
+      }
+    }
     return {
       kind: "modifier",
       modifierId: `modifier-${++ctx.linkCounter}`,
       linkId: `link-${ctx.linkCounter}`,
-      linkType: "agent",
-      sourceName,
+      linkType: "instrument",
+      sourceName: normalizedSourceName,
       targetName,
       modifierType: "event",
       negated: false,
+      ...(sourceStateName ? { sourceStateName } : {}),
       sourceSpan: span,
     };
   }
@@ -871,17 +924,28 @@ function parseModifierSentence(line: string, span: OplSourceSpan, ctx: ParseCont
     ? line.match(/^(.*?) inicia (.*?)\.$/)
     : line.match(/^(.*?) initiates (.*?)\.$/);
   if (match) {
-    const sourceName = match[1]!.trim();
+    let sourceName = match[1]!.trim();
     const targetName = match[2]!.trim();
+    let sourceStateName: string | undefined;
+    let linkType: "agent" | "consumption" = "agent";
+    if (!ctx.thingIdByName.has(sourceName)) {
+      const split = splitStateAndThing(sourceName, ctx.thingIdByName, ctx.locale);
+      if (split) {
+        sourceName = split.thingName;
+        sourceStateName = split.stateName;
+        linkType = "consumption";
+      }
+    }
     return {
       kind: "modifier",
       modifierId: `modifier-${++ctx.linkCounter}`,
       linkId: `link-${ctx.linkCounter}`,
-      linkType: "agent",
+      linkType,
       sourceName,
       targetName,
       modifierType: "event",
       negated: false,
+      ...(sourceStateName ? { sourceStateName } : {}),
       sourceSpan: span,
     };
   }
@@ -1014,17 +1078,18 @@ function splitInZoomList(raw: string, locale: "en" | "es", ctx: ParseContext): {
     // Oxford comma produces OXFORD token — split on it for separate items
     const oxfordParts = seg.split(OXFORD).map(s => s.trim()).filter(Boolean);
     for (const part of oxfordParts) {
-      if (part.toLowerCase().startsWith(parallelWord + " ")) {
-        const inner = part.slice(parallelWord.length).trim();
+      const normalizedPart = part.replace(new RegExp(`^${andWord}\\s+`, "i"), "").trim();
+      if (normalizedPart.toLowerCase().startsWith(parallelWord + " ")) {
+        const inner = normalizedPart.slice(parallelWord.length).trim();
         const names = splitByKnownNames(inner, locale, ctx);
         result.push({ names, parallel: true });
-      } else if (part.includes(" " + andWord + " ")) {
-        const names = splitByKnownNames(part, locale, ctx);
+      } else if (normalizedPart.includes(" " + andWord + " ")) {
+        const names = splitByKnownNames(normalizedPart, locale, ctx);
         for (const n of names) {
           result.push({ names: [n], parallel: false });
         }
       } else {
-        result.push({ names: [part], parallel: false });
+        result.push({ names: [normalizedPart], parallel: false });
       }
     }
   }
@@ -1041,7 +1106,7 @@ function splitInZoomList(raw: string, locale: "en" | "es", ctx: ParseContext): {
  * If no known prefix matches, fall back to parseList splitting.
  */
 function splitByKnownNames(raw: string, locale: "en" | "es", ctx: ParseContext): string[] {
-  const knownNames = ctx.thingIdByName.keys();
+  const knownNames = [...ctx.thingIdByName.keys()];
   const andWord = locale === "es" ? "y" : "and";
   const andPattern = new RegExp("\\s+" + andWord + "\\s+");
 
@@ -1546,7 +1611,28 @@ function parseConditionModifier(line: string, span: OplSourceSpan, ctx: ParseCon
     };
   }
 
-  // "P occurs if Object is state, otherwise P is skipped." (condition on effect link)
+  // "P occurs if Object exists, otherwise P is skipped." (condition on implicit instrument link)
+  match = isES
+    ? line.match(/^(.*?) ocurre si (.*?) existe, de lo contrario (.*?) se omite\.$/)
+    : line.match(/^(.*?) occurs if (.*?) exists, otherwise (.*?) is skipped\.$/);
+  if (match) {
+    const targetName = match[1]!.trim();
+    const sourceName = match[2]!.trim();
+    return {
+      kind: "modifier",
+      modifierId: `modifier-${++ctx.linkCounter}`,
+      linkId: `link-${ctx.linkCounter}`,
+      linkType: "instrument",
+      sourceName,
+      targetName,
+      modifierType: "condition",
+      negated: false,
+      conditionMode: "skip",
+      sourceSpan: span,
+    };
+  }
+
+  // "P occurs if Object is state, otherwise P is skipped." (condition on implicit instrument link)
   // "P ocurre si Objeto está en estado, de lo contrario P se omite."
   match = isES
     ? line.match(/^(.*?) ocurre si (.*?) está en (.*?), de lo contrario (.*?) se omite\.$/)
@@ -1559,7 +1645,7 @@ function parseConditionModifier(line: string, span: OplSourceSpan, ctx: ParseCon
       kind: "modifier",
       modifierId: `modifier-${++ctx.linkCounter}`,
       linkId: `link-${ctx.linkCounter}`,
-      linkType: "effect",
+      linkType: "instrument",
       sourceName,
       targetName,
       modifierType: "condition",
@@ -1713,10 +1799,10 @@ function parseRefinementEdge(line: string): { parentOpdName: string; refinementT
   return null;
 }
 
-export function parseOplDocument(text: string, opdName = "SD", opdId = `opd-${oplSlug(opdName) || "sd"}`): Result<OplDocument, OplParseError> {
+export function parseOplDocument(text: string, opdName = "SD", opdId = `opd-${oplSlug(opdName) || "sd"}`, sharedThingMap?: Map<string, string>): Result<OplDocument, OplParseError> {
   const locale = detectLocale(text);
   const ctx: ParseContext = {
-    thingIdByName: new Map(),
+    thingIdByName: sharedThingMap ?? new Map(),
     stateIdByThingAndName: new Map(),
     linkCounter: 0,
     locale,
@@ -1801,9 +1887,13 @@ export function parseOplDocuments(text: string): Result<OplDocument[], OplParseE
     });
   }
 
+  // Shared thing-name map across all OPD sections so thing names registered in
+  // parent OPDs (e.g. SD) are visible to child OPDs (e.g. SD1).
+  const sharedThingMap = new Map<string, string>();
+
   const documents: OplDocument[] = [];
   for (const section of sections) {
-    const parsed = parseOplDocument(section.lines.join("\n"), section.name, `opd-${oplSlug(section.name) || "section"}`);
+    const parsed = parseOplDocument(section.lines.join("\n"), section.name, `opd-${oplSlug(section.name) || "section"}`, sharedThingMap);
     if (!parsed.ok) return parsed;
     documents.push(parsed.value);
   }
