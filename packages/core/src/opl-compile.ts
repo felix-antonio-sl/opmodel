@@ -857,11 +857,22 @@ export function compileOplDocuments(docs: OplDocument[], options: OplCompileOpti
       }
 
       for (const step of s.steps) {
-        if (step.parallel) continue;
+        if (step.parallel) {
+          // Resolve parallel step things too (they still need to exist in model)
+          for (const name of step.thingNames) {
+            const cleanName = stripParallelPrefix(name, doc.renderSettings.locale);
+            const ref = resolveThingRef(cleanName, undefined, thingRefByDisplayName, thingIdsByActualName, doc.renderSettings.locale);
+            if (!ref) {
+              pushIssue(issues, `Could not resolve parallel step thing for in-zoom sequence: ${name}`, s, doc.opdName);
+            }
+          }
+          continue;
+        }
 
         const resolved: ThingRef[] = [];
         for (const name of step.thingNames) {
-          const ref = resolveThingRef(name, undefined, thingRefByDisplayName, thingIdsByActualName, doc.renderSettings.locale);
+          const cleanName = stripParallelPrefix(name, doc.renderSettings.locale);
+          const ref = resolveThingRef(cleanName, undefined, thingRefByDisplayName, thingIdsByActualName, doc.renderSettings.locale);
           if (!ref) {
             pushIssue(issues, `Could not resolve step thing for in-zoom sequence: ${name}`, s, doc.opdName);
             continue;
@@ -1232,6 +1243,11 @@ function resolveModifierOverLink(
   if (procedural.length > 0) candidates = procedural;
 
   return candidates.length === 1 ? candidates[0]!.id : candidates[0]?.id ?? null;
+}
+
+function stripParallelPrefix(name: string, locale: "en" | "es"): string {
+  const prefix = locale === "es" ? "paralelo " : "parallel ";
+  return name.startsWith(prefix) ? name.slice(prefix.length) : name;
 }
 
 function resolveThingRef(

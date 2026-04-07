@@ -640,8 +640,21 @@ function parseLink(line: string, span: OplSourceSpan, ctx: ParseContext): OplLin
 
 function parseStructuralSentence(line: string, span: OplSourceSpan, ctx: ParseContext): OplGroupedStructuralSentence | null {
   const isES = ctx.locale === "es";
-  const parseStructuralChildren = (raw: string): Pick<OplGroupedStructuralSentence, "childIds" | "childNames" | "childKinds" | "multiplicities"> | null => {
-    const parsedChildren = parseList(raw, ctx.locale)
+  const parseStructuralChildren = (raw: string): Pick<OplGroupedStructuralSentence, "childIds" | "childNames" | "childKinds" | "multiplicities"> & { incomplete: boolean } | null => {
+    // Check for incomplete markers: "and at least one other part" / "y al menos una otra parte"
+    let incomplete = false;
+    let text = raw;
+    const incompleteEN = "at least one other part";
+    const incompleteES = "al menos una otra parte";
+    if (text.endsWith(incompleteEN)) {
+      incomplete = true;
+      text = text.slice(0, -incompleteEN.length).replace(/,\s*$/, "").replace(/\s+and\s*$/, "").trim();
+    } else if (text.endsWith(incompleteES)) {
+      incomplete = true;
+      text = text.slice(0, -incompleteES.length).replace(/,\s*$/, "").replace(/\s+y\s*$/, "").trim();
+    }
+
+    const parsedChildren = parseList(text, ctx.locale)
       .map((item) => parseStructuralChild(item, ctx.locale))
       .filter((item): item is { name: string; multiplicity?: string } => item != null);
     if (parsedChildren.length === 0) return null;
@@ -657,6 +670,7 @@ function parseStructuralSentence(line: string, span: OplSourceSpan, ctx: ParseCo
       childNames: parsedChildren.map((item) => item.name),
       childKinds: parsedChildren.map(() => "object" as const),
       ...(Object.keys(multiplicities).length > 0 ? { multiplicities } : {}),
+      incomplete,
     };
   };
 
@@ -675,7 +689,6 @@ function parseStructuralSentence(line: string, span: OplSourceSpan, ctx: ParseCo
       parentName,
       parentKind: "object",
       ...children,
-      incomplete: false,
       sourceSpan: span,
     };
   }
@@ -695,7 +708,6 @@ function parseStructuralSentence(line: string, span: OplSourceSpan, ctx: ParseCo
       parentName,
       parentKind: "object",
       ...children,
-      incomplete: false,
       sourceSpan: span,
     };
   }
@@ -770,7 +782,6 @@ function parseStructuralSentence(line: string, span: OplSourceSpan, ctx: ParseCo
       parentName,
       parentKind: "object",
       ...children,
-      incomplete: false,
       sourceSpan: span,
     };
   }
@@ -935,7 +946,7 @@ function parseInZoomSequence(line: string, span: OplSourceSpan, ctx: ParseContex
   // Parse the process list into steps with parallel flags.
   // formatList produces: "Grinding, parallel Boiling and Brewing, and Serving"
   // Split on ", and " first (Oxford comma, 3+ items), then on ", " for the rest.
-  const items = splitInZoomList(processPart, ctx.locale);
+  const items = splitInZoomList(processPart, ctx.locale, ctx);
 
   // Group items into steps: consecutive non-parallel items share a step;
   // each parallel item becomes its own step.
@@ -986,40 +997,82 @@ function parseInZoomSequence(line: string, span: OplSourceSpan, ctx: ParseContex
  *             { names: ["Boiling", "Brewing"], parallel: true },
  *             { names: ["Serving"], parallel: false }]
  */
-function splitInZoomList(raw: string, locale: "en" | "es"): { names: string[]; parallel: boolean }[] {
+function splitInZoomList(raw: string, locale: "en" | "es", ctx: ParseContext): { names: string[]; parallel: boolean }[] {
   const parallelWord = locale === "es" ? "paralelo" : "parallel";
   const andWord = locale === "es" ? "y" : "and";
 
-  // Use parseList to normalize language-specific conjunctions into comma-separated form.
-  // But we must detect "parallel" prefix BEFORE parseList normalizes "and" → ",".
-  // Strategy: split on ", " manually, handling ", and " (Oxford comma).
-
-  // Replace ", and " / ", y " with a token to protect it from comma-split
-  const PROTECTED = "\x00SEP\x00";
+  // Replace ", and " / ", y " (Oxford comma) with a separator token.
+  const OXFORD = "\x00OXFORD\x00";
   let text = raw;
-  text = text.replace(new RegExp(",\\s+" + andWord + "\\s+", "g"), PROTECTED);
+  text = text.replace(new RegExp(",\\s+" + andWord + "\\s+", "g"), OXFORD);
 
-  // Now split on ", "
+  // Split on ", " to get segments
   const segments = text.split(/,\s*/).map(s => s.trim()).filter(Boolean);
 
-  // Restore protected separators (they were within a "parallel" group's inner list)
   const result: { names: string[]; parallel: boolean }[] = [];
   for (const seg of segments) {
-    const restored = seg.replace(new RegExp(PROTECTED, "g"), ` ${andWord} `);
-    if (restored.toLowerCase().startsWith(parallelWord + " ")) {
-      const inner = restored.slice(parallelWord.length).trim();
-      const names = parseList(inner, locale);
-      result.push({ names, parallel: true });
-    } else {
-      // May contain embedded " and " from restored token (multi-word name)
-      const names = parseList(restored, locale);
-      for (const n of names) {
-        result.push({ names: [n], parallel: false });
+    // Oxford comma produces OXFORD token — split on it for separate items
+    const oxfordParts = seg.split(OXFORD).map(s => s.trim()).filter(Boolean);
+    for (const part of oxfordParts) {
+      if (part.toLowerCase().startsWith(parallelWord + " ")) {
+        const inner = part.slice(parallelWord.length).trim();
+        const names = splitByKnownNames(inner, locale, ctx);
+        result.push({ names, parallel: true });
+      } else if (part.includes(" " + andWord + " ")) {
+        const names = splitByKnownNames(part, locale, ctx);
+        for (const n of names) {
+          result.push({ names: [n], parallel: false });
+        }
+      } else {
+        result.push({ names: [part], parallel: false });
       }
     }
   }
 
   return result;
+}
+
+/**
+ * Greedy split of a string containing names joined by " y "/" and " conjunctions,
+ * using known thing names to disambiguate compound names (e.g. "Alta Formal y Contrarreferencia APS")
+ * from actual list conjunctions (e.g. "Trip Requesting and Road Danger Monitoring" = two items).
+ *
+ * Strategy: greedily match the longest known thing prefix from left to right.
+ * If no known prefix matches, fall back to parseList splitting.
+ */
+function splitByKnownNames(raw: string, locale: "en" | "es", ctx: ParseContext): string[] {
+  const knownNames = ctx.thingIdByName.keys();
+  const andWord = locale === "es" ? "y" : "and";
+  const andPattern = new RegExp("\\s+" + andWord + "\\s+");
+
+  // If no conjunction present, return as-is
+  if (!andPattern.test(raw)) return [raw];
+
+  // Try full match first (common case: entire string is one compound name)
+  const fullMatch = longestKnownThingPrefix(raw, knownNames);
+  if (fullMatch && fullMatch.length === raw.length) return [raw];
+
+  // Greedy left-to-right: try to consume known names
+  const result: string[] = [];
+  let remaining = raw;
+
+  while (remaining.length > 0) {
+    const match = longestKnownThingPrefix(remaining, knownNames);
+    if (match) {
+      result.push(match);
+      remaining = remaining.slice(match.length).trim();
+      // Strip leading conjunction
+      const conjLead = new RegExp("^(?:,\\s*)?(?:" + andWord + "\\s+)?");
+      remaining = remaining.replace(conjLead, "").trim();
+    } else {
+      // No known prefix — fall back to parseList for remainder and stop
+      const fallback = parseList(remaining, locale);
+      result.push(...fallback);
+      break;
+    }
+  }
+
+  return result.length > 0 ? result : parseList(raw, locale);
 }
 
 function parseUnfoldingSentence(line: string, span: OplSourceSpan, ctx: ParseContext): OplInZoomSequence | null {
@@ -1594,29 +1647,52 @@ function parsePathLabelLine(line: string, span: OplSourceSpan, ctx: ParseContext
 }
 
 function parseSentence(line: string, span: OplSourceSpan, ctx: ParseContext): ParsedSentenceResult {
+  // Try "Por ruta X, ..." / "Following path X, ..." prefix format first
   const pathLabeled: ParsedSentenceResult = parsePathLabelLine(line, span, ctx);
   if (pathLabeled) return pathLabeled;
 
+  // Detect inline [ruta: X] / [path: X] suffix and strip it before parsing.
+  // The renderer appends " [ruta: X]." to link sentences; the parser must strip it
+  // and reattach the pathLabel to the parsed link.
+  let inlinePathLabel: string | undefined;
+  let cleanLine = line;
+  const inlinePathMatch = line.match(/\s*\[(?:ruta|path):\s*(.+?)\]\s*\.?$/);
+  if (inlinePathMatch) {
+    inlinePathLabel = inlinePathMatch[1]!.trim();
+    cleanLine = line.slice(0, inlinePathMatch.index!).trim();
+    if (!cleanLine.endsWith(".")) cleanLine += ".";
+  }
+
   // Bracketed sentences ([R-01], [correctness], [scenario: ...]) must be tried before generic link parsing
   // because "X requires Y" after [bracket] gets consumed by instrument link parser.
-  const bracketed = parseRequirement(line, span, ctx) ?? parseScenario(line, span, ctx) ?? parseAssertion(line, span, ctx);
+  const bracketed = parseRequirement(cleanLine, span, ctx) ?? parseScenario(cleanLine, span, ctx) ?? parseAssertion(cleanLine, span, ctx);
   if (bracketed) return bracketed;
 
-  return parseThingDeclaration(line, span, ctx)
-    ?? parseStateEnumeration(line, span, ctx)
-    ?? parseStateDescription(line, span, ctx)
-    ?? parseDuration(line, span, ctx)
-    ?? parseStructuralSentence(line, span, ctx)
-    ?? parseFanSentence(line, span, ctx)
-    ?? parseModifierSentence(line, span, ctx)
-    ?? parseConditionModifier(line, span, ctx)
-    ?? parseInZoomSequence(line, span, ctx)
-    ?? parseUnfoldingSentence(line, span, ctx)
-    ?? parseExceptionLink(line, span, ctx)
-    ?? parseAttributeValue(line, span, ctx)
-    ?? parseInvocation(line, span, ctx)
-    ?? parseLink(line, span, ctx)
-    ?? parseTaggedLink(line, span, ctx);
+  const result = parseThingDeclaration(cleanLine, span, ctx)
+    ?? parseStateEnumeration(cleanLine, span, ctx)
+    ?? parseStateDescription(cleanLine, span, ctx)
+    ?? parseDuration(cleanLine, span, ctx)
+    ?? parseStructuralSentence(cleanLine, span, ctx)
+    ?? parseFanSentence(cleanLine, span, ctx)
+    ?? parseModifierSentence(cleanLine, span, ctx)
+    ?? parseConditionModifier(cleanLine, span, ctx)
+    ?? parseInZoomSequence(cleanLine, span, ctx)
+    ?? parseUnfoldingSentence(cleanLine, span, ctx)
+    ?? parseExceptionLink(cleanLine, span, ctx)
+    ?? parseAttributeValue(cleanLine, span, ctx)
+    ?? parseInvocation(cleanLine, span, ctx)
+    ?? parseLink(cleanLine, span, ctx)
+    ?? parseTaggedLink(cleanLine, span, ctx);
+
+  // Attach inline pathLabel to link sentences
+  if (result && inlinePathLabel) {
+    if (Array.isArray(result)) {
+      return result.map(s => s.kind === "link" ? { ...s, pathLabel: inlinePathLabel } : s);
+    }
+    return result.kind === "link" ? { ...result, pathLabel: inlinePathLabel } : result;
+  }
+
+  return result;
 }
 
 function parseRefinementEdge(line: string): { parentOpdName: string; refinementType: "in-zoom" | "unfold"; refinedThingName: string; childOpdName: string } | null {
