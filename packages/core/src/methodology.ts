@@ -102,15 +102,18 @@ export function verifyMethodology(model: Model): CheckResult[] {
       : "All names follow Singular Name Principle",
   });
 
-  // 8. Gerund naming
-  const nonGerundProcs = processes.filter(p => !/(?:ing|ando|iendo|ción|sión)$/i.test(p.name.trim()));
+  // 8. Process naming
+  const invalidProcessNames = processes.filter((p) => {
+    const first = p.name.trim().split(/\s+/)[0] ?? "";
+    return !/(?:ing|ando|iendo|ción|sión|miento|ar|er|ir)$/i.test(first);
+  });
   results.push({
-    id: "sd-gerund", level: "SD", label: "Gerund naming",
+    id: "sd-gerund", level: "SD", label: "Process naming",
     severity: "high",
-    passed: nonGerundProcs.length === 0,
-    detail: nonGerundProcs.length > 0
-      ? `Non-gerund: ${nonGerundProcs.slice(0, 3).map(p => p.name).join(", ")}`
-      : "All processes use gerund naming",
+    passed: invalidProcessNames.length === 0,
+    detail: invalidProcessNames.length > 0
+      ? `Invalid process naming: ${invalidProcessNames.slice(0, 3).map(p => p.name).join(", ")}`
+      : "All processes use accepted naming on first word",
   });
 
   // 9. Exhibition: system exhibits main process

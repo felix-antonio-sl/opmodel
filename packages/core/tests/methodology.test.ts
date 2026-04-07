@@ -49,6 +49,24 @@ describe("Methodology validation (P0)", () => {
     expect(errors.some(e => e.entity === "proc-bad")).toBe(true);
   });
 
+  it("I-GERUND: accepts Spanish infinitive and nominalized first words", () => {
+    let m = createModel("Test");
+    let r = addThing(m, { id: "proc-ar", kind: "process", name: "Coordinar Cuidados", essence: "physical", affiliation: "systemic" });
+    m = isOk(r) ? r.value : m;
+    r = addThing(m, { id: "proc-er", kind: "process", name: "Resolver Ingreso", essence: "physical", affiliation: "systemic" });
+    m = isOk(r) ? r.value : m;
+    r = addThing(m, { id: "proc-ir", kind: "process", name: "Asistir Paciente", essence: "physical", affiliation: "systemic" });
+    m = isOk(r) ? r.value : m;
+    r = addThing(m, { id: "proc-miento", kind: "process", name: "Seguimiento Domiciliario", essence: "physical", affiliation: "systemic" });
+    m = isOk(r) ? r.value : m;
+    const errors = validate(m).filter(e => e.code === "I-GERUND");
+
+    expect(errors.some(e => e.entity === "proc-ar")).toBe(false);
+    expect(errors.some(e => e.entity === "proc-er")).toBe(false);
+    expect(errors.some(e => e.entity === "proc-ir")).toBe(false);
+    expect(errors.some(e => e.entity === "proc-miento")).toBe(false);
+  });
+
   it("I-TRANSFORMEE: warns when process has no transforming link", () => {
     const m = buildModel();
     const errors = validate(m);

@@ -19,7 +19,7 @@ Agregar invariantes de validación que enforcen las reglas de la metodología.
 
 | ID | Invariante | Regla metodológica | Severidad | Enforcement |
 |----|-----------|-------------------|----------|-------------|
-| I-GERUND | Proceso principal usa naming procesual aceptado (inglés: -ing; español: -ando/-iendo o formas como -ción) | §6.1 | WARNING | validate() |
+| I-GERUND | Proceso principal usa naming procesual aceptado (inglés: -ing; español: -ar/-er/-ir, -ando/-iendo o formas como -ción/-sión/-miento) | §6.1 | WARNING | validate() |
 | I-SINGULAR | Nombres plurales deben usar Set/Group | §6.2 | WARNING | validate() |
 | I-TRANSFORMEE | Todo proceso tiene ≥1 transforming link (effect/consumption/result) | §4.3 | WARNING | validate() |
 | I-EXHIBITION | Sistema exhibe proceso principal via exhibition | §6.6 | INFO | validate() |

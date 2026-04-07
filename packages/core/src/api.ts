@@ -1831,16 +1831,16 @@ export function validate(model: Model): InvariantError[] {
   // I-GERUND: Process names should use accepted process naming forms.
   // English: some word in the process name may use gerund (-ing).
   // Spanish: the first word may use infinitive (-ar/-er/-ir), gerund (-ando/-iendo),
-  //          or nominalized action form (-ción/-miento).
+  //          or nominalized action form (-ción/-sión/-miento).
   for (const [id, thing] of model.things) {
     if (thing.kind !== "process") continue;
     const name = thing.name.trim();
     const words = name.split(/\s+/).filter(Boolean);
     const firstWord = words[0] ?? "";
     const englishGerundAnywhere = words.some((word) => /ing$/i.test(word));
-    const spanishProcessFirstWord = /(?:ar|er|ir|ando|iendo|ción|miento)$/i.test(firstWord);
+    const spanishProcessFirstWord = /(?:ar|er|ir|ando|iendo|ción|sión|miento)$/i.test(firstWord);
     if (!(englishGerundAnywhere || spanishProcessFirstWord)) {
-      errors.push({ code: "I-GERUND", severity: "warning", message: `Process "${name}" should use accepted process naming (English: a word ending in -ing; Spanish: first word ending in -ar/-er/-ir/-ando/-iendo/-ción/-miento)`, entity: id });
+      errors.push({ code: "I-GERUND", severity: "warning", message: `Process "${name}" should use accepted process naming (English: a word ending in -ing; Spanish: first word ending in -ar/-er/-ir/-ando/-iendo/-ción/-sión/-miento)`, entity: id });
     }
   }
 

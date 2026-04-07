@@ -146,7 +146,7 @@ El modelador DEBE identificar el proceso principal que provee el beneficio del s
 El nombre del proceso DEBE usar una forma aceptada de nombramiento de proceso.
 
 - **En ingles:** alguna palabra del nombre puede usar gerundio (`-ing`)
-- **En espanol:** la **primera palabra** puede usar gerundio (`-ando/-iendo`) **o** una forma nominalizada de accion en `-ción`
+- **En espanol:** la **primera palabra** puede usar infinitivo (`-ar/-er/-ir`), gerundio (`-ando/-iendo`) **o** una forma nominalizada de accion en `-ción/-sión/-miento`
 
 **Correcto:** `Battery Charging`, `Airplane Flying`, `Road Danger Warning`, `Evaluación de Elegibilidad`, `Coordinación Interequipo`
 
