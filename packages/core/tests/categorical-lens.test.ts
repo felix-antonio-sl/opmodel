@@ -26,7 +26,13 @@ const ALL_FIXTURES = [
 const COLIMIT_FIXTURES = ["tests/coffee-making.opmodel"] as const;
 
 // Fixtures that pass single roundtrip (compile succeeds, OPD tree preserved)
-const SINGLE_RT_FIXTURES = ["tests/coffee-making.opmodel", "tests/driver-rescuing.opmodel"] as const;
+const SINGLE_RT_FIXTURES = [
+  "tests/coffee-making.opmodel",
+  "tests/driver-rescuing.opmodel",
+  "tests/hodom-v2.opmodel",
+  "tests/ev-ams.opmodel",
+  "tests/hospitalizacion-domiciliaria.opmodel",
+] as const;
 
 function sig(s: OplSentence): string | null {
   switch (s.kind) {
@@ -192,9 +198,9 @@ describe("R-C2 Deep", () => {
 // ═══════════════════════════════════════════════════════════════════════
 
 describe("R-C2 Known gaps", () => {
-  it.todo("driver-rescuing: double roundtrip loses some links with state-qualified multi-word names");
-  it.todo("hodom-v2: double roundtrip loses result links with compound Spanish names");
-  it.todo("hodom-hsc: 16-OPD hierarchy — 'despliegue de' display names not resolved in compiler");
-  it.todo("ev-ams: 7-OPD hierarchy — grouped structural 'other part' and modifier resolution");
-  it.todo("hospitalizacion-domiciliaria: Spanish 'en' state suffix and path labels in state names");
+  it.todo("driver-rescuing: double roundtrip still diverges at sentence-signature level despite compile/tree convergence");
+  it.todo("hodom-v2: double roundtrip still drifts (thing delta +1, signatures not yet convergent)");
+  it.todo("hodom-hsc: tests/hodom-hsc.opmodel still fails first compile in categorical-lens (31 issues), even though hodom-hsc-v0 now roundtrips");
+  it.todo("ev-ams: single roundtrip is green, but double roundtrip still changes sentence signatures (thing delta -2)");
+  it.todo("hospitalizacion-domiciliaria: single roundtrip is green, but double roundtrip still changes sentence signatures");
 });
