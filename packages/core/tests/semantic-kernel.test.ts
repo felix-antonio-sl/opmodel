@@ -7,6 +7,7 @@ import {
   legacyModelFromSemanticKernel,
   projectLegacyModel,
   semanticKernelFromModel,
+  collectSemanticPatches,
 } from "../src/semantic-kernel";
 import { exposeFromSemanticKernel, renderAllFromSemanticKernel } from "../src/opl";
 
@@ -266,5 +267,90 @@ describe("semantic-kernel adapters", () => {
     expect(doc.sentences.length).toBeGreaterThan(0);
     expect(text).toContain("Coffee");
     expect(text).toContain("Brewing");
+  });
+});
+
+describe("F4: collectSemanticPatches", () => {
+  function setupKernelWithAtlas() {
+    const kernel = createSemanticKernel("Collect Test");
+    kernel.things.set("obj-a", { id: "obj-a", kind: "object", name: "A", essence: "physical", affiliation: "systemic" });
+    kernel.things.set("obj-b", { id: "obj-b", kind: "object", name: "B", essence: "physical", affiliation: "systemic" });
+    kernel.links.set("lnk-1", { id: "lnk-1", type: "agent", source: "obj-a", target: "obj-b" });
+    const atlas = exposeSemanticKernel(kernel);
+    return { kernel, atlas };
+  }
+
+  it("move-thing produces layout-only patch (Law 4)", () => {
+    const { kernel, atlas } = setupKernelWithAtlas();
+    const patch = collectSemanticPatches(kernel, atlas, {
+      kind: "move-thing",
+      opdId: "opd-sd",
+      thingId: "obj-a",
+      x: 500,
+      y: 300,
+    });
+    expect(patch.kind).toBe("layout-only");
+  });
+
+  it("add-link produces semantic patch", () => {
+    const { kernel, atlas } = setupKernelWithAtlas();
+    const patch = collectSemanticPatches(kernel, atlas, {
+      kind: "add-link",
+      linkId: "lnk-new",
+      sourceThingId: "obj-a",
+      targetThingId: "obj-b",
+      linkType: "effect",
+    });
+    expect(patch.kind).toBe("semantic");
+    if (patch.kind !== "semantic") return;
+    patch.apply(kernel);
+    expect(kernel.links.has("lnk-new")).toBe(true);
+    expect(kernel.links.get("lnk-new")?.type).toBe("effect");
+  });
+
+  it("remove-link produces semantic patch and cleans modifiers", () => {
+    const { kernel, atlas } = setupKernelWithAtlas();
+    kernel.modifiers.set("mod-1", { id: "mod-1", over: "lnk-1", type: "condition" });
+
+    const patch = collectSemanticPatches(kernel, atlas, {
+      kind: "remove-link",
+      linkId: "lnk-1",
+    });
+    expect(patch.kind).toBe("semantic");
+    if (patch.kind !== "semantic") return;
+    patch.apply(kernel);
+    expect(kernel.links.has("lnk-1")).toBe(false);
+    expect(kernel.modifiers.has("mod-1")).toBe(false);
+  });
+
+  it("remove-thing-from-opd is layout-only when thing appears in other OPDs", () => {
+    const { kernel, atlas } = setupKernelWithAtlas();
+    // Add another OPD with the same thing
+    kernel.opds.set("opd-sd1", { id: "opd-sd1", name: "SD1", opd_type: "hierarchical", parent_opd: "opd-sd" });
+    const atlas2 = exposeSemanticKernel(kernel);
+
+    const patch = collectSemanticPatches(kernel, atlas2, {
+      kind: "remove-thing-from-opd",
+      opdId: "opd-sd",
+      thingId: "obj-a",
+    });
+    // obj-a appears in both OPDs, so removing from one is layout-only
+    expect(patch.kind).toBe("layout-only");
+  });
+
+  it("remove-thing-from-opd is semantic when it's the last OPD", () => {
+    const kernel = createSemanticKernel("Single OPD");
+    kernel.things.set("lonely", { id: "lonely", kind: "object", name: "Lonely", essence: "physical", affiliation: "systemic" });
+    const atlas = exposeSemanticKernel(kernel);
+
+    const patch = collectSemanticPatches(kernel, atlas, {
+      kind: "remove-thing-from-opd",
+      opdId: "opd-sd",
+      thingId: "lonely",
+    });
+    expect(patch.kind).toBe("semantic");
+    if (patch.kind !== "semantic") return;
+    patch.apply(kernel);
+    expect(kernel.things.has("lonely")).toBe(false);
   });
 });

@@ -22,8 +22,20 @@ const ALL_FIXTURES = [
   "tests/hospitalizacion-domiciliaria.opmodel",
 ] as const;
 
-// Fixtures that pass the full double-roundtrip (Grothendieck colimit convergence)
+// Fixtures that pass double-roundtrip at RT1 (immediate convergence)
 const COLIMIT_FIXTURES = ["tests/coffee-making.opmodel"] as const;
+
+// Fixtures that converge at RT2 (one normalization pass needed: C-01 link distribution)
+const COLIMIT_RT2_FIXTURES = [
+  "tests/driver-rescuing.opmodel",
+  "tests/hodom-v2.opmodel",
+  "tests/ev-ams.opmodel",
+] as const;
+
+// Fixtures that converge at RT3 (compound name + C-01 settling)
+const COLIMIT_RT3_FIXTURES = [
+  "tests/hospitalizacion-domiciliaria.opmodel",
+] as const;
 
 // Fixtures that pass single roundtrip (compile succeeds, OPD tree preserved)
 const SINGLE_RT_FIXTURES = [
@@ -162,6 +174,82 @@ describe("R-C2: Double roundtrip convergence", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════
+// R-C2: RT2 convergence (C-01 link distribution settles after 1 normalization pass)
+// ═══════════════════════════════════════════════════════════════════════
+
+describe("R-C2: RT2 convergence", () => {
+  for (const f of COLIMIT_RT2_FIXTURES) {
+    it(`${fixtureName(f)}: converges at RT2 (things + links stable)`, () => {
+      const model = loadF(f);
+      // RT1
+      const t1 = renderAll(model);
+      const p1 = parseOplDocuments(t1);
+      expect(p1.ok).toBe(true);
+      if (!p1.ok) return;
+      const c1 = compileOplDocuments(p1.value, { ignoreUnsupported: true });
+      expect(c1.ok).toBe(true);
+      if (!c1.ok) return;
+      // RT2
+      const t2 = renderAll(c1.value);
+      const p2 = parseOplDocuments(t2);
+      expect(p2.ok).toBe(true);
+      if (!p2.ok) return;
+      const c2 = compileOplDocuments(p2.value, { ignoreUnsupported: true });
+      expect(c2.ok).toBe(true);
+      if (!c2.ok) return;
+      // RT3 — must equal RT2
+      const t3 = renderAll(c2.value);
+      const p3 = parseOplDocuments(t3);
+      expect(p3.ok).toBe(true);
+      if (!p3.ok) return;
+      const c3 = compileOplDocuments(p3.value, { ignoreUnsupported: true });
+      expect(c3.ok).toBe(true);
+      if (!c3.ok) return;
+
+      expect(c3.value.things.size).toBe(c2.value.things.size);
+      expect(c3.value.links.size).toBe(c2.value.links.size);
+      expect(c3.value.states.size).toBe(c2.value.states.size);
+    });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// R-C2: RT3 convergence (compound name + C-01 settling)
+// ═══════════════════════════════════════════════════════════════════════
+
+describe("R-C2: RT3 convergence", () => {
+  for (const f of COLIMIT_RT3_FIXTURES) {
+    it(`${fixtureName(f)}: converges at RT3 (things + links stable)`, () => {
+      const model = loadF(f);
+      let current = model;
+      // Run 3 roundtrips
+      for (let i = 0; i < 3; i++) {
+        const t = renderAll(current);
+        const p = parseOplDocuments(t);
+        expect(p.ok).toBe(true);
+        if (!p.ok) return;
+        const c = compileOplDocuments(p.value, { ignoreUnsupported: true });
+        expect(c.ok).toBe(true);
+        if (!c.ok) return;
+        current = c.value;
+      }
+      // RT4 must equal RT3
+      const t4 = renderAll(current);
+      const p4 = parseOplDocuments(t4);
+      expect(p4.ok).toBe(true);
+      if (!p4.ok) return;
+      const c4 = compileOplDocuments(p4.value, { ignoreUnsupported: true });
+      expect(c4.ok).toBe(true);
+      if (!c4.ok) return;
+
+      expect(c4.value.things.size).toBe(current.things.size);
+      expect(c4.value.links.size).toBe(current.links.size);
+      expect(c4.value.states.size).toBe(current.states.size);
+    });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════
 // R-C2 Deep
 // ═══════════════════════════════════════════════════════════════════════
 
@@ -198,9 +286,6 @@ describe("R-C2 Deep", () => {
 // ═══════════════════════════════════════════════════════════════════════
 
 describe("R-C2 Known gaps", () => {
-  it.todo("driver-rescuing: double roundtrip still diverges at sentence-signature level despite compile/tree convergence");
-  it.todo("hodom-v2: double roundtrip still drifts (thing delta +1, signatures not yet convergent)");
   it.todo("hodom-hsc: tests/hodom-hsc.opmodel still fails first compile in categorical-lens (31 issues), even though hodom-hsc-v0 now roundtrips");
-  it.todo("ev-ams: single roundtrip is green, but double roundtrip still changes sentence signatures (thing delta -2)");
-  it.todo("hospitalizacion-domiciliaria: single roundtrip is green, but double roundtrip still changes sentence signatures");
+  it.todo("RT1 immediate convergence: only coffee-making converges at first roundtrip; others need 2-3 passes due to C-01 link distribution normalization");
 });

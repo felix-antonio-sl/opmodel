@@ -663,3 +663,117 @@ function stripUndefined<T extends object>(value: T): T {
   const entries = Object.entries(value).filter(([, v]) => v !== undefined);
   return Object.fromEntries(entries) as T;
 }
+
+// === F4: Collect — Atlas edits → Kernel patches (ADR-003) ===
+
+export type AtlasEdit =
+  | { kind: "add-thing-to-opd"; opdId: OpdId; thingId: ThingId }
+  | { kind: "remove-thing-from-opd"; opdId: OpdId; thingId: ThingId }
+  | { kind: "move-thing"; opdId: OpdId; thingId: ThingId; x: number; y: number }
+  | { kind: "add-link"; linkId: LinkId; sourceThingId: ThingId; targetThingId: ThingId; linkType: Link["type"] }
+  | { kind: "remove-link"; linkId: LinkId }
+  | { kind: "reorder-steps"; refinementId: RefinementId; newOrder: ThingId[][] };
+
+export type KernelPatch =
+  | { kind: "semantic"; description: string; apply: (kernel: SemanticKernel) => void }
+  | { kind: "layout-only"; description: string };
+
+/**
+ * F4: Collect — the left adjoint of Expose.
+ *
+ * Classifies an atlas edit as either a semantic patch (changes kernel)
+ * or a layout-only patch (changes only positions, no semantic effect).
+ *
+ * ADR-003 Law 4 (orthogonality): move-thing produces layout-only patches.
+ * ADR-003 Law 3 (diamond): semantic patches must be roundtrip-stable.
+ */
+export function collectSemanticPatches(
+  kernel: SemanticKernel,
+  atlas: OpdAtlas,
+  edit: AtlasEdit,
+): KernelPatch {
+  switch (edit.kind) {
+    case "move-thing":
+      // Law 4: moving a thing is purely layout — no semantic change
+      return { kind: "layout-only", description: `Move ${edit.thingId} in ${edit.opdId}` };
+
+    case "add-thing-to-opd":
+      return {
+        kind: "semantic",
+        description: `Add appearance of ${edit.thingId} in ${edit.opdId}`,
+        apply: (_kernel) => {
+          // Adding a thing to an OPD creates a new occurrence in the atlas
+          // The kernel itself doesn't change — the thing already exists
+          // But if the thing doesn't exist yet, it would need to be created
+        },
+      };
+
+    case "remove-thing-from-opd": {
+      // Check if thing appears in other OPDs — if not, removing it from the last OPD
+      // effectively removes it from the model (semantic change)
+      const otherOccurrences = [...atlas.occurrences.values()].filter(
+        (o) => o.thingId === edit.thingId && o.opdId !== edit.opdId,
+      );
+      if (otherOccurrences.length === 0) {
+        return {
+          kind: "semantic",
+          description: `Remove ${edit.thingId} from model (last OPD)`,
+          apply: (k) => {
+            k.things.delete(edit.thingId);
+            // Remove associated states
+            for (const [sid, state] of k.states) {
+              if (state.parentThing === edit.thingId) k.states.delete(sid);
+            }
+            // Remove associated links
+            for (const [lid, link] of k.links) {
+              if (link.source === edit.thingId || link.target === edit.thingId) k.links.delete(lid);
+            }
+          },
+        };
+      }
+      return { kind: "layout-only", description: `Hide ${edit.thingId} from ${edit.opdId}` };
+    }
+
+    case "add-link":
+      return {
+        kind: "semantic",
+        description: `Add ${edit.linkType} link ${edit.sourceThingId} → ${edit.targetThingId}`,
+        apply: (k) => {
+          k.links.set(edit.linkId, {
+            id: edit.linkId,
+            type: edit.linkType,
+            source: edit.sourceThingId,
+            target: edit.targetThingId,
+          });
+        },
+      };
+
+    case "remove-link":
+      return {
+        kind: "semantic",
+        description: `Remove link ${edit.linkId}`,
+        apply: (k) => {
+          k.links.delete(edit.linkId);
+          // Remove modifiers on this link
+          for (const [mid, mod] of k.modifiers) {
+            if (mod.over === edit.linkId) k.modifiers.delete(mid);
+          }
+        },
+      };
+
+    case "reorder-steps":
+      return {
+        kind: "semantic",
+        description: `Reorder steps in refinement ${edit.refinementId}`,
+        apply: (k) => {
+          const refinement = k.refinements.get(edit.refinementId);
+          if (!refinement || refinement.kind !== "in-zoom") return;
+          refinement.steps = edit.newOrder.map((thingIds, i) => ({
+            id: `step-${edit.refinementId}-${i}`,
+            thingIds,
+            execution: thingIds.length > 1 ? "parallel" as const : "sequential" as const,
+          }));
+        },
+      };
+  }
+}
