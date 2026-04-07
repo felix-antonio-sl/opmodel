@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { Model, ValidationResult } from "@opmodel/core";
-import { validateOpl, parseOplDocuments, compileOplDocuments } from "@opmodel/core";
+import { validateOpl, parseOplDocuments, compileToKernel, legacyModelFromSemanticKernel, exposeSemanticKernel } from "@opmodel/core";
 
 interface OplImportPanelProps {
   model: Model;
@@ -55,7 +55,7 @@ export function OplImportPanel({ model, onClose, onApply }: OplImportPanelProps)
           layoutHints.set(thing.name, { x: app.x, y: app.y, w: app.w, h: app.h });
         }
       }
-      const compiled = compileOplDocuments(parsed.value, {
+      const compiled = compileToKernel(parsed.value, {
         ignoreUnsupported: true,
         preserveLayout: model.appearances,
         layoutHints,
@@ -64,7 +64,9 @@ export function OplImportPanel({ model, onClose, onApply }: OplImportPanelProps)
         setApplyError(`Compile error: ${compiled.error.message}`);
         return;
       }
-      onApply(compiled.value);
+      const kernel = compiled.value;
+      const atlas = exposeSemanticKernel(kernel);
+      onApply(legacyModelFromSemanticKernel(kernel, atlas));
       onClose();
     } catch (e) {
       setApplyError(e instanceof Error ? e.message : String(e));

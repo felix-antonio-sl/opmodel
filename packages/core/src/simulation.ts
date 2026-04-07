@@ -6,6 +6,9 @@ import type { Model, Thing, State, Link, Modifier, OPD, Fan, Appearance } from "
 import type { InvariantError, Result } from "./result";
 import { ok, err } from "./result";
 import { getStructuralChildren, getInheritedLinks } from "./structural";
+import type { SemanticKernel, OpdAtlas, LayoutModel, InZoomRefinement } from "./semantic-kernel";
+import { legacyModelFromSemanticKernel, exposeSemanticKernel } from "./semantic-kernel";
+import { appearanceKey } from "./helpers";
 
 /** Maximum self-invocation repetitions per process before stopping (ISO §9.5.2.5.2) */
 export const MAX_SELF_INVOCATIONS = 10;
@@ -664,6 +667,118 @@ function computeStateSuppression(
   }
 
   return result;
+}
+
+// === Kernel-Aware Simulation Functions (ADR-003 Fase 5) ===
+
+/**
+ * Build a Model from SemanticKernel + OpdAtlas with semantic subprocess ordering.
+ * Uses kernel.refinements.steps for process ordering instead of Y-coordinates.
+ * The returned Model has appearances with Y-values derived from step ordering,
+ * ensuring simulation respects semantic order (not layout-dependent).
+ */
+export function buildSimulationModel(kernel: SemanticKernel, atlas?: OpdAtlas, layout?: LayoutModel): Model {
+  const resolvedAtlas = atlas ?? exposeSemanticKernel(kernel);
+  const resolvedLayout = layout ?? { opdLayouts: new Map() };
+  const model = legacyModelFromSemanticKernel(kernel, resolvedAtlas, resolvedLayout);
+
+  // Ensure every visible thing in every OPD has an appearance
+  for (const [opdId, slice] of resolvedAtlas.nodes) {
+    let col = 0;
+    for (const thingId of slice.visibleThings) {
+      const key = appearanceKey(thingId, opdId);
+      if (!model.appearances.has(key)) {
+        const isInternal = [...resolvedAtlas.occurrences.values()].some(
+          (o) => o.opdId === opdId && o.thingId === thingId && o.role === "internal",
+        );
+        model.appearances.set(key, {
+          thing: thingId, opd: opdId,
+          x: 120 + (col % 4) * 180, y: 120 + Math.floor(col / 4) * 120,
+          w: 120, h: 60,
+          ...(isInternal ? { internal: true } : {}),
+        });
+        col++;
+      }
+    }
+  }
+
+  // Override Y-positions for in-zoom subprocesses based on kernel step ordering
+  for (const refinement of kernel.refinements.values()) {
+    if (refinement.kind !== "in-zoom") continue;
+    const inZoom = refinement as InZoomRefinement;
+    let yBase = 120;
+    for (const step of inZoom.steps) {
+      for (const thingId of step.thingIds) {
+        const key = appearanceKey(thingId, inZoom.childOpd);
+        const existing = model.appearances.get(key);
+        if (existing) {
+          model.appearances.set(key, { ...existing, y: yBase, internal: true });
+        } else {
+          model.appearances.set(key, {
+            thing: thingId, opd: inZoom.childOpd,
+            x: 120, y: yBase, w: 120, h: 60, internal: true,
+          });
+        }
+      }
+      yBase += 120;
+    }
+    // Place internal objects
+    for (const objId of inZoom.internalObjects) {
+      const key = appearanceKey(objId, inZoom.childOpd);
+      if (!model.appearances.has(key)) {
+        model.appearances.set(key, {
+          thing: objId, opd: inZoom.childOpd,
+          x: 350, y: 120, w: 120, h: 60, internal: true,
+        });
+      }
+    }
+  }
+
+  return model;
+}
+
+/**
+ * Kernel-aware getExecutableProcesses.
+ * Uses kernel refinement steps for subprocess ordering instead of appearance Y-coordinates.
+ */
+export function getExecutableProcessesFromKernel(
+  kernel: SemanticKernel,
+  atlas?: OpdAtlas,
+  layout?: LayoutModel,
+  maxDepth: number = 10,
+): ExecutableProcess[] {
+  const model = buildSimulationModel(kernel, atlas, layout);
+  return getExecutableProcesses(model, maxDepth);
+}
+
+/**
+ * Kernel-aware resolveLinksForOpd.
+ * Delegates to legacy function with a Model whose subprocess Y-ordering
+ * derives from kernel refinement steps, not layout appearances.
+ */
+export function resolveLinksForOpdFromKernel(
+  kernel: SemanticKernel,
+  opdId: string,
+  atlas?: OpdAtlas,
+  layout?: LayoutModel,
+): ResolvedLink[] {
+  const model = buildSimulationModel(kernel, atlas, layout);
+  return resolveLinksForOpd(model, opdId);
+}
+
+/**
+ * Kernel-aware resolveOpdFiber.
+ * Delegates to legacy function with a Model whose subprocess Y-ordering
+ * derives from kernel refinement steps, not layout appearances.
+ */
+export function resolveOpdFiberFromKernel(
+  kernel: SemanticKernel,
+  opdId: string,
+  atlas?: OpdAtlas,
+  layout?: LayoutModel,
+): OpdFiber {
+  const model = buildSimulationModel(kernel, atlas, layout);
+  return resolveOpdFiber(model, opdId);
 }
 
 // === Coalgebra: c: ModelState → Event × (Precond → ModelState + 1) ===

@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import type { Model } from "@opmodel/core";
-import { expose, renderAll, parseOplDocuments, compileOplDocuments, validateOpl } from "@opmodel/core";
+import { expose, renderAll, parseOplDocuments, compileToKernel, legacyModelFromSemanticKernel, exposeSemanticKernel, validateOpl } from "@opmodel/core";
 import type { Command } from "../lib/commands";
 
 interface Props {
@@ -58,7 +58,7 @@ export function OplLiveEditor({ model, opdId, dispatch }: Props) {
           layoutHints.set(thing.name, { x: app.x, y: app.y, w: app.w, h: app.h });
         }
       }
-      const compiled = compileOplDocuments(parsed.value, {
+      const compiled = compileToKernel(parsed.value, {
         ignoreUnsupported: true,
         preserveLayout: model.appearances,
         layoutHints,
@@ -68,7 +68,9 @@ export function OplLiveEditor({ model, opdId, dispatch }: Props) {
         setStatus("error");
         return;
       }
-      dispatch({ tag: "importOpl", model: compiled.value });
+      const kernel = compiled.value;
+      const atlas = exposeSemanticKernel(kernel);
+      dispatch({ tag: "importOpl", model: legacyModelFromSemanticKernel(kernel, atlas) });
       setStatus("idle");
       setErrorMsg(null);
     } catch (e) {

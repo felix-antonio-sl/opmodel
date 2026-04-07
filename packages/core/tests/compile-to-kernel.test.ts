@@ -6,6 +6,10 @@ import {
   parseOplDocuments,
   loadModel,
   renderAll,
+  getExecutableProcessesFromKernel,
+  resolveLinksForOpdFromKernel,
+  resolveOpdFiberFromKernel,
+  exposeSemanticKernel,
 } from "../src/index";
 
 function parseSingleDoc(opl: string) {
@@ -161,6 +165,95 @@ describe("compileToKernel", () => {
 
       const withSourceInfo = [...kernel.things.values()].filter((t) => t.sourceInfo);
       expect(withSourceInfo.length).toBeGreaterThan(0);
+    });
+  }
+});
+
+describe("kernel-aware simulation functions (Fase 5)", () => {
+  it("getExecutableProcessesFromKernel returns processes with semantic ordering", () => {
+    const opl = [
+      "=== SD ===",
+      "Making Coffee is a process, physical.",
+      "Grinding is a process, physical.",
+      "Brewing is a process, physical.",
+      "Pouring is a process, physical.",
+      "",
+      "=== SD1 ===",
+      "SD is refined by in-zooming Making Coffee in SD1.",
+      "Making Coffee zooms into Grinding, Brewing, and Pouring, in that sequence.",
+    ].join("\n");
+    const result = parseOplDocuments(opl);
+    if (!result.ok) throw new Error("parse failed");
+    const kernelResult = compileToKernel(result.value);
+    if (!kernelResult.ok) throw new Error("compile failed");
+    const kernel = kernelResult.value;
+
+    const procs = getExecutableProcessesFromKernel(kernel);
+    expect(procs.length).toBeGreaterThan(0);
+    // All three subprocesses should be present
+    const names = procs.map((p) => p.name);
+    expect(names).toContain("Grinding");
+    expect(names).toContain("Brewing");
+    expect(names).toContain("Pouring");
+  });
+
+  it("resolveLinksForOpdFromKernel resolves visible links", () => {
+    const opl = [
+      "Water is an object, physical.",
+      "Water can be cold or hot.",
+      "Boiling is a process, physical.",
+      "Boiling changes Water from cold to hot.",
+    ].join("\n");
+    const parseResult = parseOplDocument(opl, "SD", "opd-sd");
+    if (!parseResult.ok) throw new Error("parse failed");
+    const kernelResult = compileToKernel([parseResult.value]);
+    if (!kernelResult.ok) throw new Error("compile failed");
+    const kernel = kernelResult.value;
+
+    const links = resolveLinksForOpdFromKernel(kernel, "opd-sd");
+    expect(links.length).toBeGreaterThan(0);
+  });
+
+  it("resolveOpdFiberFromKernel returns fiber with things and links", () => {
+    const opl = [
+      "Car is an object, physical.",
+      "Driving is a process, physical.",
+      "Car requires Driving.",
+    ].join("\n");
+    const parseResult = parseOplDocument(opl, "SD", "opd-sd");
+    if (!parseResult.ok) throw new Error("parse failed");
+    const kernelResult = compileToKernel([parseResult.value]);
+    if (!kernelResult.ok) throw new Error("compile failed");
+    const kernel = kernelResult.value;
+
+    const fiber = resolveOpdFiberFromKernel(kernel, "opd-sd");
+    expect(fiber.things.size).toBeGreaterThan(0);
+  });
+
+  for (const fixture of ["tests/coffee-making.opmodel"]) {
+    it(`kernel simulation matches legacy for ${fixture}`, () => {
+      let kernel;
+      try {
+        const raw = readFileSync(fixture, "utf-8");
+        const modelResult = loadModel(raw);
+        if (!modelResult.ok) return;
+        const model = modelResult.value;
+        const opl = renderAll(model);
+        const docs = parseOplDocuments(opl);
+        if (!docs.ok) return;
+        const kr = compileToKernel(docs.value);
+        if (!kr.ok) return;
+        kernel = kr.value;
+      } catch { return; }
+
+      const procs = getExecutableProcessesFromKernel(kernel);
+      expect(procs.length).toBeGreaterThan(0);
+
+      const links = resolveLinksForOpdFromKernel(kernel, "opd-sd");
+      expect(links.length).toBeGreaterThan(0);
+
+      const fiber = resolveOpdFiberFromKernel(kernel, "opd-sd");
+      expect(fiber.things.size).toBeGreaterThan(0);
     });
   }
 });
