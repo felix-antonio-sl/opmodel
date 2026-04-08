@@ -39,6 +39,7 @@ interface Props {
   projectionSlice?: PatchableOpdProjectionSlice;
   opdId: string;
   selectedThing: string | null;
+  selectedLink: string | null;
   mode: EditorMode;
   linkType: LinkTypeChoice;
   dispatch: (cmd: Command) => boolean;
@@ -48,7 +49,7 @@ interface Props {
 
 /* ─── Main Canvas Component ─── */
 
-export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, mode, linkType, dispatch, simulation, errorEntities }: Props) {
+export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, selectedLink, mode, linkType, dispatch, simulation, errorEntities }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [pan, setPan] = useState({ x: 40, y: 20 });
   const [zoom, setZoom] = useState(1);
@@ -1197,8 +1198,10 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, mode, 
                   isInputHalf={isInputHalf}
                   isOutputHalf={isOutputHalf}
                   isError={errorEntities?.has(link.id)}
+                  isSelected={selectedLink === link.id}
                   hideLabel={hideLinkLabels}
                   edgePath={edgeRoutes.get(isInputHalf ? `${link.id}__in` : isOutputHalf ? `${link.id}__out` : link.id)}
+                  onClick={simulation ? undefined : (e) => { e.stopPropagation(); dispatch({ tag: "selectLink", linkId: link.id }); }}
                 />
               </g>
             );

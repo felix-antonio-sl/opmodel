@@ -123,6 +123,14 @@ export function useModelStore(initialModel: Model): ModelStore {
         // Clear selectedThing when navigating to a different OPD (thing may not exist there)
         if (effect.field === "currentOpd" && prev.selectedThing) {
           next.selectedThing = null;
+          next.selectedLink = null;
+        }
+        // Mutual exclusion: selecting a thing clears link selection and vice versa
+        if (effect.field === "selectedThing" && effect.value) {
+          next.selectedLink = null;
+        }
+        if (effect.field === "selectedLink" && effect.value) {
+          next.selectedThing = null;
         }
         return next;
       });

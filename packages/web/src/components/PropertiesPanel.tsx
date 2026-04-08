@@ -1356,3 +1356,131 @@ export function PropertiesPanel({ model, thingId, opdId, dispatch }: Props) {
     </div>
   );
 }
+
+/* ═══════════════════════════════════════════════════
+   Link Properties Panel — shown when a link is selected on canvas
+   ═══════════════════════════════════════════════════ */
+
+export function LinkPropertiesPanel({ model, linkId, dispatch }: { model: Model; linkId: string; dispatch: (cmd: Command) => boolean }) {
+  const link = model.links.get(linkId);
+  if (!link) return null;
+  const sourceThing = model.things.get(link.source);
+  const targetThing = model.things.get(link.target);
+  const sourceStates = sourceThing?.kind === "object" ? statesOf(model, link.source) : [];
+  const targetStates = targetThing?.kind === "object" ? statesOf(model, link.target) : [];
+  const allThings = [...model.things.values()];
+  const modifiers = [...model.modifiers.values()].filter(m => m.over === linkId);
+
+  return (
+    <div className="props-panel">
+      <div className="props-panel__title">Link Properties</div>
+      <div className="props-panel__section">
+        <label className="props-panel__label">Type</label>
+        <select className="props-panel__select" value={link.type} onChange={(e) =>
+          dispatch({ tag: "updateLink", linkId, patch: { type: e.target.value as LinkType } })
+        }>
+          {LINK_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+      </div>
+      <div className="props-panel__section">
+        <label className="props-panel__label">Source</label>
+        <select className="props-panel__select" style={{ fontSize: 10 }} value={link.source} onChange={(e) =>
+          dispatch({ tag: "updateLink", linkId, patch: { source: e.target.value, source_state: undefined } })
+        }>
+          {allThings.map(t => <option key={t.id} value={t.id}>{t.name} ({t.kind})</option>)}
+        </select>
+        {sourceStates.length > 0 && (
+          <select className="props-panel__select" style={{ fontSize: 9, marginTop: 2 }} value={link.source_state ?? ""} onChange={(e) =>
+            dispatch({ tag: "updateLink", linkId, patch: { source_state: e.target.value || undefined } })
+          }>
+            <option value="">(any state)</option>
+            {sourceStates.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        )}
+      </div>
+      <div className="props-panel__section">
+        <label className="props-panel__label">Target</label>
+        <select className="props-panel__select" style={{ fontSize: 10 }} value={link.target} onChange={(e) =>
+          dispatch({ tag: "updateLink", linkId, patch: { target: e.target.value, target_state: undefined } })
+        }>
+          {allThings.map(t => <option key={t.id} value={t.id}>{t.name} ({t.kind})</option>)}
+        </select>
+        {targetStates.length > 0 && (
+          <select className="props-panel__select" style={{ fontSize: 9, marginTop: 2 }} value={link.target_state ?? ""} onChange={(e) =>
+            dispatch({ tag: "updateLink", linkId, patch: { target_state: e.target.value || undefined } })
+          }>
+            <option value="">(any state)</option>
+            {targetStates.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        )}
+      </div>
+      <div className="props-panel__section">
+        <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+          <span style={{ fontSize: 9, color: "var(--text-muted)" }}>mult src</span>
+          <input className="props-panel__input" style={{ width: 36, fontSize: 9 }} value={link.multiplicity_source ?? ""} placeholder="*"
+            onChange={(e) => dispatch({ tag: "updateLink", linkId, patch: { multiplicity_source: e.target.value || undefined } })} />
+          <span style={{ fontSize: 9, color: "var(--text-muted)" }}>tgt</span>
+          <input className="props-panel__input" style={{ width: 36, fontSize: 9 }} value={link.multiplicity_target ?? ""} placeholder="*"
+            onChange={(e) => dispatch({ tag: "updateLink", linkId, patch: { multiplicity_target: e.target.value || undefined } })} />
+        </div>
+        <div style={{ display: "flex", gap: 4, alignItems: "center", marginTop: 4 }}>
+          <span style={{ fontSize: 9, color: "var(--text-muted)" }}>path</span>
+          <input className="props-panel__input" style={{ width: 50, fontSize: 9 }} value={link.path_label ?? ""} placeholder="label"
+            onChange={(e) => dispatch({ tag: "updateLink", linkId, patch: { path_label: e.target.value || undefined } })} />
+          <span style={{ fontSize: 9, color: "var(--text-muted)" }}>prob</span>
+          <input className="props-panel__input" style={{ width: 40, fontSize: 9 }} type="number" step="0.01" min={0} max={1} value={link.probability ?? ""} placeholder="0-1"
+            onChange={(e) => dispatch({ tag: "updateLink", linkId, patch: { probability: e.target.value ? Number(e.target.value) : undefined } })} />
+        </div>
+      </div>
+      {link.type === "tagged" && (
+        <div className="props-panel__section">
+          <label className="props-panel__label">Tag</label>
+          <input className="props-panel__input" value={link.tag ?? ""} placeholder="tag name"
+            onChange={(e) => dispatch({ tag: "updateLink", linkId, patch: { tag: e.target.value || undefined } })} />
+        </div>
+      )}
+      {["consumption", "result", "effect", "input", "output", "agent", "instrument"].includes(link.type) && (
+        <div className="props-panel__section">
+          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11 }}>
+            <input type="checkbox" checked={link.distributed ?? false}
+              onChange={(e) => dispatch({ tag: "updateLink", linkId, patch: { distributed: e.target.checked || undefined } })} />
+            Distributed (ISO §14.2.2.4.1)
+          </label>
+        </div>
+      )}
+      {/* Modifiers */}
+      <div className="props-panel__section">
+        <label className="props-panel__label">Modifiers ({modifiers.length})</label>
+        {modifiers.map(m => (
+          <div key={m.id} style={{ display: "flex", gap: 4, alignItems: "center", marginBottom: 2 }}>
+            <select className="props-panel__select" style={{ fontSize: 10, flex: 1 }} value={m.type}
+              onChange={(e) => dispatch({ tag: "updateModifier", modifierId: m.id, patch: { type: e.target.value as ModifierType } })}>
+              <option value="event">event</option>
+              <option value="condition">condition</option>
+            </select>
+            {m.type === "condition" && (
+              <select className="props-panel__select" style={{ fontSize: 9 }} value={m.condition_mode ?? "wait"}
+                onChange={(e) => dispatch({ tag: "updateModifier", modifierId: m.id, patch: { condition_mode: e.target.value as "skip" | "wait" } })}>
+                <option value="wait">wait</option>
+                <option value="skip">skip</option>
+              </select>
+            )}
+            <label style={{ fontSize: 9, display: "flex", alignItems: "center", gap: 2 }}>
+              <input type="checkbox" checked={m.negated ?? false}
+                onChange={(e) => dispatch({ tag: "updateModifier", modifierId: m.id, patch: { negated: e.target.checked || undefined } })} />
+              neg
+            </label>
+            <button className="props-panel__remove-btn" onClick={() => dispatch({ tag: "removeModifier", modifierId: m.id })}>×</button>
+          </div>
+        ))}
+        <button className="props-panel__add-btn" onClick={() => {
+          const id = genId("mod");
+          dispatch({ tag: "addModifier", modifier: { id, over: linkId, type: "event" } });
+        }}>+ Modifier</button>
+      </div>
+      <button className="props-panel__delete-btn" onClick={() => dispatch({ tag: "removeLink", linkId })}>
+        Delete link
+      </button>
+    </div>
+  );
+}

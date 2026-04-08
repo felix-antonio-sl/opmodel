@@ -23,8 +23,10 @@ export function LinkLine({
   isInputHalf,
   isOutputHalf,
   isError,
+  isSelected,
   hideLabel,
   edgePath,
+  onClick,
 }: {
   link: Link;
   sourceRect: Rect;
@@ -37,8 +39,10 @@ export function LinkLine({
   isInputHalf?: boolean;
   isOutputHalf?: boolean;
   isError?: boolean;
+  isSelected?: boolean;
   hideLabel?: boolean;
   edgePath?: EdgePath;
+  onClick?: (e: React.MouseEvent) => void;
 }) {
   const srcCenter = center(sourceRect);
   const tgtCenter = center(targetRect);
@@ -173,8 +177,25 @@ export function LinkLine({
     );
   }
 
+  // Hit area: wider invisible path for easier clicking
+  const hitAreaStyle: React.CSSProperties = { cursor: "pointer" };
+  let hitArea: React.ReactNode = null;
+  if (onClick) {
+    if (edgePath && !isLightning) {
+      hitArea = <path d={edgePath.d} fill="none" stroke="transparent" strokeWidth={12} style={hitAreaStyle} onClick={onClick} />;
+    } else if (!isLightning) {
+      hitArea = <line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="transparent" strokeWidth={12} style={hitAreaStyle} onClick={onClick} />;
+    }
+  }
+
   return (
     <g>
+      {hitArea}
+      {isSelected && !isLightning && (
+        edgePath
+          ? <path d={edgePath.d} fill="none" stroke="var(--accent, #3182ce)" strokeWidth={4} opacity={0.4} />
+          : <line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="var(--accent, #3182ce)" strokeWidth={4} opacity={0.4} />
+      )}
       {linkElement}
       {!hideLabel && (
         <text className="link-label" x={mid.x} y={mid.y - 7}>

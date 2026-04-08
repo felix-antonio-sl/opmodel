@@ -22,7 +22,7 @@ import { OpdTree } from "./components/OpdTree";
 import { OpdCanvas } from "./components/OpdCanvas";
 import { OplPanel } from "./components/OplPanel";
 import { OplImportPanel } from "./components/OplImportPanel";
-import { PropertiesPanel } from "./components/PropertiesPanel";
+import { PropertiesPanel, LinkPropertiesPanel } from "./components/PropertiesPanel";
 import { Toolbar } from "./components/Toolbar";
 import { SimulationPanel } from "./components/SimulationPanel";
 import { ValidationPanel, type ValidationTab } from "./components/ValidationPanel";
@@ -643,6 +643,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
         projectionSlice={currentProjectionSlice}
         opdId={ui.currentOpd}
         selectedThing={ui.selectedThing}
+        selectedLink={ui.selectedLink}
         mode={ui.mode}
         linkType={ui.linkType}
         dispatch={dispatch}
@@ -731,16 +732,16 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
       <aside className="right-panel">
         {ui.simulation ? (
           <SimulationPanel model={ui.simulation.frozenModel} simulation={ui.simulation} dispatch={dispatch} />
-        ) : (
-          ui.selectedThing && (
-            <PropertiesPanel
-              model={model}
-              thingId={ui.selectedThing}
-              opdId={ui.currentOpd}
-              dispatch={dispatch}
-            />
-          )
-        )}
+        ) : ui.selectedThing ? (
+          <PropertiesPanel
+            model={model}
+            thingId={ui.selectedThing}
+            opdId={ui.currentOpd}
+            dispatch={dispatch}
+          />
+        ) : ui.selectedLink ? (
+          <LinkPropertiesPanel model={model} linkId={ui.selectedLink} dispatch={dispatch} />
+        ) : null}
         <OplPanel model={model} opdId={ui.currentOpd} selectedThing={ui.selectedThing} selectedLink={ui.selectedLink} dispatch={dispatch} nlPipeline={nlPipeline} lastError={lastError} />
       </aside>
 
