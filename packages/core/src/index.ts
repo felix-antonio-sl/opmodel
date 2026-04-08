@@ -32,7 +32,7 @@ export {
   createHistory, pushHistory, undo, redo,
 } from "./history";
 export {
-  expose, exposeFromSemanticKernel, applyOplEdit, render, renderAll, renderAllFromSemanticKernel, renderAllFromKernelNative, modelStats, oplSlug, editsFrom,
+  expose, exposeFromKernel, exposeFromSemanticKernel, applyOplEdit, render, renderAll, renderAllFromSemanticKernel, renderAllFromKernelNative, modelStats, oplSlug, editsFrom,
 } from "./opl";
 export {
   parseOplDocument,
@@ -84,11 +84,16 @@ export {
   getPostprocessSet,
   getExecutableProcesses,
   getExecutableProcessesFromKernel,
+  getExecutableProcessesFromRefinements,
   resolveLinksForOpd,
   resolveLinksForOpdFromKernel,
+  resolveLinksForOpdNative,
   resolveOpdFiber,
   resolveOpdFiberFromKernel,
+  resolveOpdFiberNative,
   buildSimulationModel,
+  runSimulationFromKernel,
+  runMonteCarloSimulationFromKernel,
   type ModelState,
   type FiberEntry,
   type OpdFiber,

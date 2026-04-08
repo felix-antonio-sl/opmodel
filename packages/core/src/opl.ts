@@ -1,5 +1,5 @@
 // packages/core/src/opl.ts
-import type { Model, ComputationalObject, Thing, State, Link, Modifier, Appearance } from "./types";
+import type { Model, ComputationalObject, Thing, State, Link, Modifier, Appearance, OpmDataView, Settings } from "./types";
 import type { LayoutModel, OpdAtlas, SemanticKernel } from "./semantic-kernel";
 import type { InvariantError, Result } from "./result";
 import type {
@@ -93,17 +93,133 @@ function getVocab(locale: string): OplVocab {
   return locale === "es" ? ES_VOCAB : EN_VOCAB;
 }
 
+/** Pre-computed visibility data for expose(). Decouples from Model.appearances. */
+interface ExposeVisibility {
+  visibleThings: Set<string>;
+  internalThings: Set<string>;
+  /** Subprocesses in in-zoom, ordered semantically (step index or Y) */
+  subprocessOrder: Array<{ thingId: string; name: string; orderKey: number }>;
+  /** Internal objects in in-zoom */
+  internalObjects: Array<{ thingId: string; name: string }>;
+  /** Semi-folded thing IDs */
+  semiFoldedThings: Set<string>;
+}
+
+/** Build ExposeVisibility from Model appearances (legacy path) */
+function buildExposeVisibilityFromModel(model: Model, opdId: string, containerThingId?: string): ExposeVisibility {
+  const visibleThings = new Set<string>();
+  const internalThings = new Set<string>();
+  const semiFoldedThings = new Set<string>();
+  const subprocessOrder: ExposeVisibility["subprocessOrder"] = [];
+  const internalObjects: ExposeVisibility["internalObjects"] = [];
+
+  for (const app of model.appearances.values()) {
+    if (app.opd !== opdId) continue;
+    visibleThings.add(app.thing);
+    if (app.internal) internalThings.add(app.thing);
+    if (app.semi_folded) semiFoldedThings.add(app.thing);
+
+    if (containerThingId && app.thing !== containerThingId && app.internal) {
+      const thing = model.things.get(app.thing);
+      if (thing?.kind === "process") {
+        subprocessOrder.push({ thingId: thing.id, name: thing.name, orderKey: app.y });
+      } else if (thing?.kind === "object") {
+        internalObjects.push({ thingId: thing.id, name: thing.name });
+      }
+    }
+  }
+  subprocessOrder.sort((a, b) => a.orderKey - b.orderKey || a.thingId.localeCompare(b.thingId));
+  internalObjects.sort((a, b) => a.name.localeCompare(b.name));
+
+  return { visibleThings, internalThings, subprocessOrder, internalObjects, semiFoldedThings };
+}
+
+/** Build ExposeVisibility from SemanticKernel + OpdAtlas (kernel-native path) */
+function buildExposeVisibilityFromKernel(
+  kernel: SemanticKernel,
+  atlas: OpdAtlas,
+  opdId: string,
+  containerThingId?: string,
+): ExposeVisibility {
+  const slice = atlas.nodes.get(opdId);
+  const visibleThings = new Set<string>(slice?.visibleThings ?? []);
+  const internalThings = new Set<string>();
+  const semiFoldedThings = new Set<string>();
+  const subprocessOrder: ExposeVisibility["subprocessOrder"] = [];
+  const internalObjects: ExposeVisibility["internalObjects"] = [];
+
+  // Internal things from atlas occurrences
+  for (const occ of atlas.occurrences.values()) {
+    if (occ.opdId === opdId && occ.role === "internal") {
+      internalThings.add(occ.thingId);
+    }
+  }
+
+  // Semi-fold: check aggregation children (approximation — no appearance.semi_folded in kernel)
+  // For kernel path, semi_folded is not tracked; skip for now.
+
+  if (containerThingId) {
+    // Subprocess order from refinements (semantic, not Y-coords)
+    for (const ref of kernel.refinements.values()) {
+      if (ref.kind !== "in-zoom" || ref.parentThing !== containerThingId) continue;
+      let stepIdx = 0;
+      for (const step of ref.steps) {
+        for (const tid of step.thingIds) {
+          const thing = kernel.things.get(tid);
+          if (thing?.kind === "process") {
+            subprocessOrder.push({ thingId: tid, name: thing.name, orderKey: stepIdx });
+          } else if (thing?.kind === "object") {
+            internalObjects.push({ thingId: tid, name: thing.name });
+          }
+        }
+        stepIdx++;
+      }
+      // Also add internalObjects from refinement
+      for (const oid of ref.internalObjects) {
+        if (!internalObjects.some(o => o.thingId === oid)) {
+          const thing = kernel.things.get(oid);
+          if (thing) internalObjects.push({ thingId: oid, name: thing.name });
+        }
+      }
+      break;
+    }
+    internalObjects.sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  return { visibleThings, internalThings, subprocessOrder, internalObjects, semiFoldedThings };
+}
+
+/**
+ * Kernel-native expose: generates OplDocument from SemanticKernel + OpdAtlas.
+ * No Model intermediate — uses atlas for visibility and refinements for ordering.
+ */
+export function exposeFromKernel(
+  kernel: SemanticKernel,
+  atlas: OpdAtlas,
+  opdId: string,
+): OplDocument {
+  const vis = buildExposeVisibilityFromKernel(kernel, atlas, opdId, kernel.opds.get(opdId)?.refines);
+  return exposeInternal(kernel, opdId, vis);
+}
+
 export function exposeFromSemanticKernel(
   kernel: SemanticKernel,
   opdId: string,
   atlas?: OpdAtlas,
   layout?: LayoutModel,
 ): OplDocument {
+  // Use kernel-native path if atlas is available
+  if (atlas) return exposeFromKernel(kernel, atlas, opdId);
   const model = legacyModelFromSemanticKernel(kernel, atlas, layout);
   return expose(model, opdId);
 }
 
 export function expose(model: Model, opdId: string): OplDocument {
+  const vis = buildExposeVisibilityFromModel(model, opdId, model.opds.get(opdId)?.refines);
+  return exposeInternal(model, opdId, vis);
+}
+
+function exposeInternal(model: OpmDataView & { settings: Settings }, opdId: string, vis: ExposeVisibility): OplDocument {
   const opd = model.opds.get(opdId);
   const opdName = opd?.name ?? opdId;
   const containerThingId = opd?.refines;
@@ -118,26 +234,22 @@ export function expose(model: Model, opdId: string): OplDocument {
     locale,
   };
 
-  // 1. Collect visible things + appearance lookup for this OPD
-  const visibleThings = new Set<string>();
-  const opdAppearances = new Map<string, typeof model.appearances extends Map<any, infer V> ? V : never>();
-  for (const app of model.appearances.values()) {
-    if (app.opd === opdId) {
-      visibleThings.add(app.thing);
-      opdAppearances.set(app.thing, app);
-    }
-  }
+  // 1. Visibility pre-computed via vis parameter
+  const visibleThings = vis.visibleThings;
 
   // Build exhibition feature lookup: featureId → exhibitorName
   // Build exhibitorOf: maps feature → exhibitor for "X of Y" declarations.
   // Uses centralized structuralParentEnd for convention detection.
+  // IMPORTANT: Search GLOBALLY (not just visible in this OPD) to ensure compound names
+  // survive roundtrip even when exhibitor is not visible in the current OPD.
   const exhibitorOf = new Map<string, { id: string; name: string }>();
   const exhParentEnd = structuralParentEnd(model.links.values(), "exhibition");
   for (const link of model.links.values()) {
     if (link.type !== "exhibition") continue;
-    if (!visibleThings.has(link.source) || !visibleThings.has(link.target)) continue;
+    // Feature must be visible in this OPD; exhibitor can be global
     const exhibitorId = exhParentEnd === "source" ? link.source : link.target;
     const featureId = exhParentEnd === "source" ? link.target : link.source;
+    if (!visibleThings.has(featureId)) continue;
     const exhibitor = model.things.get(exhibitorId);
     if (exhibitor && !exhibitorOf.has(featureId)) {
       exhibitorOf.set(featureId, { id: exhibitorId, name: exhibitor.name });
@@ -159,37 +271,24 @@ export function expose(model: Model, opdId: string): OplDocument {
   if (containerThingId) {
     const containerThing = model.things.get(containerThingId);
     if (containerThing) {
-      const subprocessApps: Array<{ thingId: string; name: string; y: number }> = [];
-      const internalObjects: Array<{ thingId: string; name: string }> = [];
-      for (const app of model.appearances.values()) {
-        if (app.opd !== opdId) continue;
-        if (app.thing === containerThingId) continue;
-        if (!app.internal) continue;
-        const thing = model.things.get(app.thing);
-        if (thing?.kind === "process") {
-          subprocessApps.push({ thingId: thing.id, name: thing.name, y: app.y });
-        } else if (thing?.kind === "object") {
-          internalObjects.push({ thingId: thing.id, name: thing.name });
-        }
-      }
-      subprocessApps.sort((a, b) => a.y - b.y || a.thingId.localeCompare(b.thingId));
-      internalObjects.sort((a, b) => a.name.localeCompare(b.name));
+      // Use pre-computed subprocess order from vis (Model: Y-based, Kernel: step-based)
+      const subprocessApps = vis.subprocessOrder;
+      const internalObjects = vis.internalObjects;
 
       if (subprocessApps.length > 0) {
-        // R-OC-7: group subprocesses at same Y as parallel
-        type InZoomStepWithY = OplInZoomSequence["steps"][number] & { _y: number };
-        const steps: InZoomStepWithY[] = [];
+        // R-OC-7: group subprocesses at same orderKey as parallel
+        type InZoomStepWithKey = OplInZoomSequence["steps"][number] & { _key: number };
+        const steps: InZoomStepWithKey[] = [];
         for (const sp of subprocessApps) {
           const last = steps[steps.length - 1];
-          if (last && last._y === sp.y) {
+          if (last && last._key === sp.orderKey) {
             last.thingIds.push(sp.thingId);
             last.thingNames.push(sp.name);
             last.parallel = true;
           } else {
-            steps.push({ thingIds: [sp.thingId], thingNames: [sp.name], parallel: false, _y: sp.y });
+            steps.push({ thingIds: [sp.thingId], thingNames: [sp.name], parallel: false, _key: sp.orderKey });
           }
         }
-        // Strip internal _y helper
         const cleanSteps = steps.map(({ thingIds, thingNames, parallel }) => ({ thingIds, thingNames, parallel }));
 
         sentences.push({
@@ -301,10 +400,8 @@ export function expose(model: Model, opdId: string): OplDocument {
   // In refinement OPDs, filter parent-level procedural links (ISO: distributive semantics).
   // Keep structural links to container — they ARE the content of unfold/object in-zoom.
   if (containerThingId) {
-    const internalThings = new Set<string>();
-    for (const app of model.appearances.values()) {
-      if (app.opd === opdId && app.internal === true) internalThings.add(app.thing);
-    }
+    // Use pre-computed internal things from vis (no appearance scan)
+    const internalThings = vis.internalThings;
     sortedLinks = sortedLinks.filter(l => {
       const isStructural = STRUCTURAL_TYPES.has(l.type);
       const touchesContainer = l.source === containerThingId || l.target === containerThingId;
@@ -365,7 +462,6 @@ export function expose(model: Model, opdId: string): OplDocument {
         return multiplicity ? [[name, multiplicity]] : [];
       }),
     );
-    const parentApp = opdAppearances.get(group.parentId);
     sentences.push({
       kind: "grouped-structural",
       linkType: group.linkType,
@@ -377,7 +473,7 @@ export function expose(model: Model, opdId: string): OplDocument {
       childKinds,
       ...(Object.keys(multiplicities).length > 0 ? { multiplicities } : {}),
       incomplete: group.links.some(l => l.incomplete),
-      ...(parentApp?.semi_folded ? { semiFolded: true } : {}),
+      ...(vis.semiFoldedThings.has(group.parentId) ? { semiFolded: true } : {}),
     } as OplGroupedStructuralSentence);
   }
 
@@ -1184,38 +1280,44 @@ export function renderAllFromSemanticKernel(
  * The atlas provides per-OPD visibility; the kernel provides all semantic data.
  * Layout is not needed for OPL generation (only for visual rendering).
  */
+/**
+ * Kernel-native renderAll: generates OPL text from SemanticKernel + OpdAtlas.
+ * No Model intermediate — uses exposeFromKernel per OPD, then render per doc.
+ */
 export function renderAllFromKernelNative(
   kernel: SemanticKernel,
   atlas: OpdAtlas,
 ): string {
-  // Use legacyModelFromSemanticKernel to build a Model with all semantic data
-  // (mod/fan now preserved) and atlas-derived appearances for correct per-OPD visibility
-  const layout: LayoutModel = { opdLayouts: new Map() };
-  // Build minimal layout so expose() can derive per-OPD thing visibility
-  for (const [opdId, slice] of atlas.nodes) {
-    const nodes = new Map<string, import("./semantic-kernel").LayoutNode>();
-    let col = 0;
-    for (const thingId of slice.visibleThings) {
-      const occurrence = [...atlas.occurrences.values()].find(
-        (o) => o.opdId === opdId && o.thingId === thingId,
-      );
-      if (occurrence) {
-        nodes.set(occurrence.id, {
-          viewId: occurrence.id,
-          x: 120 + (col % 4) * 180,
-          y: 120 + Math.floor(col / 4) * 120,
-          w: 120,
-          h: 60,
-          ...(occurrence.role === "internal" ? { internal: true } : {}),
-        });
-        col++;
-      }
-    }
-    layout.opdLayouts.set(opdId, { opdId, nodes, edges: new Map() });
+  // Build OPD hierarchy (root first, depth-first)
+  const childrenOf = new Map<string | null, Array<[string, import("./types").OPD]>>();
+  for (const [id, opd] of kernel.opds) {
+    const parent = opd.parent_opd;
+    if (!childrenOf.has(parent)) childrenOf.set(parent, []);
+    childrenOf.get(parent)!.push([id, opd]);
   }
 
-  const model = legacyModelFromSemanticKernel(kernel, atlas, layout);
-  return renderAll(model);
+  const sorted: Array<[string, import("./types").OPD]> = [];
+  function walk(parentId: string | null) {
+    const children = childrenOf.get(parentId) ?? [];
+    children.sort((a, b) => a[1].name.localeCompare(b[1].name));
+    for (const entry of children) {
+      sorted.push(entry);
+      walk(entry[0]);
+    }
+  }
+  walk(null);
+
+  const sections: string[] = [];
+  for (const [opdId, opd] of sorted) {
+    const doc = exposeFromKernel(kernel, atlas, opdId);
+    const text = render(doc);
+    if (text.trim()) {
+      // Same format as renderAll: === name ===
+      sections.push(`=== ${opd.name} ===\n${text}`);
+    }
+  }
+
+  return sections.join("\n\n");
 }
 
 /** Render OPL for all OPDs in the model, sorted hierarchically (root first, depth-first). */

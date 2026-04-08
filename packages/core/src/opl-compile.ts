@@ -966,8 +966,16 @@ export function compileOplDocument(doc: OplDocument, options: OplCompileOptions 
 /**
  * Compile OPL documents directly to SemanticKernel — the canonical isomorphism target (ADR-003).
  *
- * Strategy: compile → Model (reuses all 16 battle-tested passes) → SemanticKernel,
- * then enrich with sourceInfo, InZoomStep[], and derived invocation markers.
+ * Pipeline (ADR-003 §Slice A):
+ *   1. compileOplDocuments(docs) → Model  (16 battle-tested passes)
+ *   2. semanticKernelFromModel(model) → SemanticKernel  (structural conversion)
+ *   3. backfillSourceInfo(kernel, docs)  → OPL source spans per entity
+ *   4. enrichRefinements(kernel, docs)   → InZoomStep[] with semantic ordering
+ *   5. markDerivedInvocations(kernel)    → origin annotation on Pass-16 links
+ *
+ * Step 2 is structurally lossy for refinement steps (Model doesn't store step ordering).
+ * Steps 3-5 recover what was lost by matching against the original OPL documents.
+ * The result is a complete SemanticKernel with sourceInfo, step ordering, and derivation marks.
  */
 export function compileToKernel(
   docs: OplDocument[],

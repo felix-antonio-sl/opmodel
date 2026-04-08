@@ -12,7 +12,7 @@
  * convention may differ; default is always "source".
  */
 
-import type { Model, Link } from "./types";
+import type { Model, Link, OpmDataView } from "./types";
 
 export const STRUCTURAL_TYPES = new Set([
   "aggregation", "exhibition", "generalization", "classification",
@@ -49,7 +49,7 @@ export function structuralParentEnd(
  * Direction-agnostic: uses hub detection to determine convention per link type.
  */
 export function getStructuralChildren(
-  model: Model,
+  model: OpmDataView,
   thingId: string,
   filterTypes?: Set<string>,
 ): Array<{ childId: string; link: Link }> {
@@ -78,7 +78,7 @@ export function getStructuralChildren(
  * Returns the first parent found, or null.
  */
 export function getStructuralParent(
-  model: Model,
+  model: OpmDataView,
   thingId: string,
   linkType: string,
 ): { parentId: string; link: Link } | null {
@@ -101,7 +101,7 @@ export function getStructuralParent(
  * A specialization inherits all agent, instrument, consumption, result, effect links from its general.
  * Walks up the generalization chain (ISO §6.3).
  */
-export function getInheritedLinks(model: Model, thingId: string): Link[] {
+export function getInheritedLinks(model: OpmDataView, thingId: string): Link[] {
   const inherited: Link[] = [];
   const visited = new Set<string>();
 

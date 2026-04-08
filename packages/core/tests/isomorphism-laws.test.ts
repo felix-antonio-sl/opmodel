@@ -126,12 +126,9 @@ describe("ADR-003 Isomorphism Laws", () => {
         const rendered = renderAllFromKernelNative(kernel, atlas);
         // Re-compile the rendered OPL
         const kernel2 = compileKernel(rendered);
-        // Thing counts should be within ~5% (known roundtrip gaps in compound Spanish names)
-        const thingDelta = Math.abs(kernel2.things.size - kernel.things.size);
-        expect(thingDelta).toBeLessThanOrEqual(Math.max(2, kernel.things.size * 0.05));
-        // State counts may differ due to compound name resolution (known gap in Spanish fixtures)
-        const stateDelta = Math.abs(kernel2.states.size - kernel.states.size);
-        expect(stateDelta).toBeLessThanOrEqual(Math.max(5, kernel.states.size * 0.15));
+        // Exact equality: compound name fix ensures zero delta across all fixtures
+        expect(kernel2.things.size).toBe(kernel.things.size);
+        expect(kernel2.states.size).toBe(kernel.states.size);
       });
 
       it("Law 2 — atlas colimit: union of visible things covers kernel", () => {
@@ -156,12 +153,10 @@ describe("ADR-003 Isomorphism Laws", () => {
           // Known roundtrip gap for this fixture — skip
           return;
         }
-        // Structural equivalence by name — allow small delta for compound name gaps
+        // Exact structural equivalence: same thing names (compound name fix ensures 100% match)
         const names1 = [...kernel.things.values()].map((t) => t.name).sort();
         const names2 = [...kernel2.things.values()].map((t) => t.name).sort();
-        // At least 95% of names must match (known gaps in compound Spanish names)
-        const intersection = names1.filter((n) => names2.includes(n));
-        expect(intersection.length).toBeGreaterThanOrEqual(names1.length * 0.95);
+        expect(names1).toEqual(names2);
       });
 
       it("Law 4 — layout orthogonality: different layouts produce same semantics", () => {

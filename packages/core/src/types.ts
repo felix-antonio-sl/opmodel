@@ -126,6 +126,13 @@ export interface OPD {
   refinement_type?: RefinementType;
 }
 
+/**
+ * Reified morphism in C_OPM (DA-10). Links are 1-cells relating Things,
+ * reified as entities with IDs via Yoneda embedding y: C_OPM → [C_OPM^op, Set].
+ * Links do NOT compose (no f:A→B ∘ g:B→C = h:A→C). This is correct for OPM:
+ * links are typed relations between objects and processes, not arrows in a free category.
+ * Cascade deletion preserves ontological dependency: no endpoints → no link (I-05).
+ */
 export interface Link {
   id: string;
   type: LinkType;
@@ -152,6 +159,11 @@ export interface Link {
   vertices?: Position[];
 }
 
+/**
+ * Modifier decorates a link with event/condition semantics (ISO §8.2).
+ * Not categorical 2-cells: no vertical or horizontal composition.
+ * Modifiers annotate links (1-cells) but do not form a higher morphism algebra.
+ */
 export interface Modifier {
   id: string;
   over: string;
@@ -160,22 +172,36 @@ export interface Modifier {
   condition_mode?: "skip" | "wait"; // ISO §8.2.3. Only when type === "condition". Default: "wait"
 }
 
+/**
+ * Appearance: fibration π + layout data combined (legacy type).
+ * Semantic fields: thing, opd (define fibration π: which thing in which OPD),
+ *   internal (in-zoom containment role), semi_folded (aggregation display mode).
+ * Layout fields: x, y, w, h, pinned, auto_sizing, state_alignment, style.
+ * In SemanticKernel architecture, these concerns are separated:
+ *   semantic → OpdAtlas (occurrences, slices)
+ *   layout  → LayoutModel (nodes, edges)
+ */
 export interface Appearance {
-  thing: string;
-  opd: string;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  internal?: boolean;
-  pinned?: boolean;
-  auto_sizing?: boolean;
-  state_alignment?: StateAlignment;
-  suppressed_states?: string[];
-  semi_folded?: boolean;
-  style?: Style;
+  thing: string;         // SEMANTIC: defines fibration π
+  opd: string;           // SEMANTIC: defines fibration π
+  x: number;             // LAYOUT
+  y: number;             // LAYOUT
+  w: number;             // LAYOUT
+  h: number;             // LAYOUT
+  internal?: boolean;    // SEMANTIC: in-zoom containment role
+  pinned?: boolean;      // LAYOUT hint
+  auto_sizing?: boolean; // LAYOUT hint
+  state_alignment?: StateAlignment; // LAYOUT hint
+  suppressed_states?: string[];     // DEPRECATED: computed by resolveOpdFiber
+  semi_folded?: boolean;            // SEMANTIC: aggregation display mode
+  style?: Style;                    // LAYOUT
 }
 
+/**
+ * Fan: grouped links sharing a common endpoint with XOR/OR/AND constraint semantics.
+ * Not categorical cones/cocones — fans are shared-endpoint structures with
+ * combinatorial semantics (ISO §12.2-12.3), not universal morphisms.
+ */
 export interface Fan {
   id: string;
   type: FanType;
@@ -252,6 +278,23 @@ export interface Settings {
   range_validation_simulation?: ValidationLevel;
   methodology_coaching?: boolean;
 }
+
+/**
+ * Readonly view over OPM semantic data. Both Model and SemanticKernel
+ * satisfy this structurally (SemanticThing extends Thing, etc.).
+ * Use for functions that read domain data without needing appearances/layout.
+ */
+export type OpmDataView = {
+  readonly things: ReadonlyMap<string, Thing>;
+  readonly states: ReadonlyMap<string, State>;
+  readonly links: ReadonlyMap<string, Link>;
+  readonly opds: ReadonlyMap<string, OPD>;
+  readonly modifiers: ReadonlyMap<string, Modifier>;
+  readonly fans: ReadonlyMap<string, Fan>;
+  readonly scenarios: ReadonlyMap<string, Scenario>;
+  readonly assertions: ReadonlyMap<string, Assertion>;
+  readonly requirements: ReadonlyMap<string, Requirement>;
+};
 
 // === Model (in-memory graph) ===
 export interface Model {

@@ -1,18 +1,34 @@
 // packages/core/src/simulation.ts
-// Motor de Simulación ECA (Event-Condition-Action) como Coalgebra
-// Según DA-5: c: ModelState → Event × (Precond → ModelState + 1)
+// Motor de Simulación ECA (Event-Condition-Action) como Coalgebra (DA-5)
+//
+// Coalgebra structure:
+//   Carrier:  S = ModelState
+//   Functor:  F(S) = SimulationEvent × (PreconditionResult → S + 1)
+//   Step:     c: S → F(S)  implemented by simulationStep()
+//
+// Where:
+//   PreconditionResult = { satisfied: true } | { satisfied: false; response: "lost"|"skip"|"wait" }
+//   S + 1 = ModelState | halt (when no further processes are executable)
+//
+// The functor F is observational: each step produces an event, evaluates preconditions
+// (trivalent), and yields a deterministic successor state or halts.
+//
+// Deadlock detection is empirical (no-progress + waiting processes), not based on
+// state-space fixed-point analysis. See MAX_WAIT_STEPS for timeout heuristic.
 
-import type { Model, Thing, State, Link, Modifier, OPD, Fan, Appearance } from "./types";
+import type { Model, Thing, State, Link, Modifier, OPD, Fan, Appearance, OpmDataView } from "./types";
 import type { InvariantError, Result } from "./result";
 import { ok, err } from "./result";
 import { getStructuralChildren, getInheritedLinks } from "./structural";
-import type { SemanticKernel, OpdAtlas, LayoutModel, InZoomRefinement } from "./semantic-kernel";
+import type { SemanticKernel, OpdAtlas, LayoutModel, InZoomRefinement, SemanticRefinement } from "./semantic-kernel";
 import { legacyModelFromSemanticKernel, exposeSemanticKernel } from "./semantic-kernel";
 import { appearanceKey } from "./helpers";
 
 /** Maximum self-invocation repetitions per process before stopping (ISO §9.5.2.5.2) */
 export const MAX_SELF_INVOCATIONS = 10;
 export const MAX_INVOCATION_CHAIN_DEPTH = 50;
+/** Max steps a process can wait before being timed out (heuristic, not formal) */
+const MAX_WAIT_STEPS = 20;
 
 // === Tipos Coalgebraicos ===
 
@@ -531,6 +547,10 @@ export function resolveLinksForOpd(model: Model, opdId: string): ResolvedLink[] 
  * The Model is the "god diagram" (Grothendieck colimit ∫ M).
  * Each OPD is a fiber π⁻¹(OPD_i) — a computed view over the total graph.
  *
+ * NOTE: This is fiber computation with semantic enrichment, not a pure categorical
+ * pullback. It applies: implicit materialization (1-hop connectivity closure),
+ * C-01 link distribution (ISO §14.2.2.4.1), and state suppression derivation.
+ *
  * Returns:
  *   - things: explicit (with stored appearance) + implicit (connected via link, 1-hop)
  *   - links: resolved links (delegates to resolveLinksForOpd)
@@ -739,37 +759,422 @@ export function buildSimulationModel(kernel: SemanticKernel, atlas?: OpdAtlas, l
 
 /**
  * Kernel-aware getExecutableProcesses.
- * Uses kernel refinement steps for subprocess ordering instead of appearance Y-coordinates.
+ * Delegates to getExecutableProcessesFromRefinements — no Model intermediate.
+ * @deprecated atlas/layout params are ignored; use getExecutableProcessesFromRefinements directly.
  */
 export function getExecutableProcessesFromKernel(
   kernel: SemanticKernel,
-  atlas?: OpdAtlas,
-  layout?: LayoutModel,
+  _atlas?: OpdAtlas,
+  _layout?: LayoutModel,
   maxDepth: number = 10,
 ): ExecutableProcess[] {
-  const model = buildSimulationModel(kernel, atlas, layout);
-  return getExecutableProcesses(model, maxDepth);
+  return getExecutableProcessesFromRefinements(kernel, kernel.refinements, maxDepth);
+}
+
+/**
+ * Kernel-native link resolution. Uses atlas visibility + refinement step ordering.
+ * No Model intermediate — reads things/links/modifiers from OpmDataView (kernel),
+ * visibility from OpdAtlas, and subprocess ordering from refinements.
+ */
+export function resolveLinksForOpdNative(
+  data: OpmDataView,
+  refinements: ReadonlyMap<string, SemanticRefinement>,
+  atlas: OpdAtlas,
+  opdId: string,
+): ResolvedLink[] {
+  // 1. Visibility from atlas
+  const slice = atlas.nodes.get(opdId);
+  if (!slice) return [];
+  const visible = new Set<string>(slice.visibleThings);
+
+  // Semi-fold: find objects with aggregation children — include children as visible
+  for (const thingId of slice.visibleThings) {
+    const thing = data.things.get(thingId);
+    if (thing?.kind === "object") {
+      const children = getStructuralChildren(data, thingId, new Set(["aggregation", "exhibition"]));
+      for (const { childId } of children) {
+        if (!visible.has(childId)) visible.add(childId);
+      }
+    }
+  }
+
+  // 2. Build subprocessToAncestor from refinements (not appearances)
+  const subprocessToAncestor = new Map<string, string>();
+  const inZoomRefinements = new Map<string, InZoomRefinement>();
+  for (const ref of refinements.values()) {
+    if (ref.kind === "in-zoom") inZoomRefinements.set(ref.parentThing, ref);
+  }
+
+  function registerDescendants(ancestorId: string, processId: string): void {
+    const ref = inZoomRefinements.get(processId);
+    if (!ref) return;
+    for (const step of ref.steps) {
+      for (const tid of step.thingIds) {
+        const thing = data.things.get(tid);
+        if (thing?.kind === "process") {
+          subprocessToAncestor.set(tid, ancestorId);
+          registerDescendants(ancestorId, tid);
+        }
+      }
+    }
+  }
+
+  for (const thingId of visible) {
+    const thing = data.things.get(thingId);
+    if (thing?.kind === "process") registerDescendants(thingId, thingId);
+  }
+
+  // 3. Resolve endpoint visibility
+  function resolve(thingId: string): string | null {
+    if (visible.has(thingId)) return thingId;
+    return subprocessToAncestor.get(thingId) ?? null;
+  }
+
+  // 4. Internal objects consumed by subprocesses (suppress aggregated effect/result)
+  const internallyConsumedObjects = new Set<string>();
+  for (const link of data.links.values()) {
+    const isSiblingLink = subprocessToAncestor.has(link.source) || subprocessToAncestor.has(link.target);
+    if (!isSiblingLink) continue;
+    if (link.type === "consumption") {
+      const srcThing = data.things.get(link.source);
+      const objId = srcThing?.kind === "object" ? link.source : link.target;
+      internallyConsumedObjects.add(objId);
+    }
+  }
+
+  const result: ResolvedLink[] = [];
+  const seen = new Set<string>();
+
+  // Container/internal detection from atlas occurrences
+  const opd = data.opds.get(opdId);
+  const containerThingId = opd?.refines;
+  let internalThings: Set<string> | null = null;
+  let subprocessesByOrder: string[] = [];
+
+  if (containerThingId) {
+    internalThings = new Set<string>();
+    // Internal things from atlas occurrences
+    for (const occ of atlas.occurrences.values()) {
+      if (occ.opdId === opdId && occ.role === "internal") {
+        internalThings.add(occ.thingId);
+      }
+    }
+    // Subprocess order from refinements (C-01, no Y-coords)
+    const ref = inZoomRefinements.get(containerThingId);
+    if (ref) {
+      for (const step of ref.steps) {
+        for (const tid of step.thingIds) {
+          const thing = data.things.get(tid);
+          if (thing?.kind === "process" && tid !== containerThingId) {
+            subprocessesByOrder.push(tid);
+          }
+        }
+      }
+    }
+  }
+
+  // 5. Resolve links (same algorithm as resolveLinksForOpd but with atlas-based data)
+  for (const link of data.links.values()) {
+    const vs = resolve(link.source);
+    const vt = resolve(link.target);
+    if (!vs || !vt) continue;
+    if (vs === vt) continue;
+
+    // C-01: In-zoom link distribution
+    if (containerThingId && internalThings) {
+      const isStructural = ["aggregation", "exhibition", "generalization", "classification", "tagged"].includes(link.type);
+      const touchesContainer = vs === containerThingId || vt === containerThingId;
+
+      if (touchesContainer && !isStructural) {
+        if (subprocessesByOrder.length > 0) {
+          const first = subprocessesByOrder[0]!;
+          const last = subprocessesByOrder[subprocessesByOrder.length - 1]!;
+          const otherEnd = vs === containerThingId ? vt : vs;
+
+          if (link.type === "consumption" || link.type === "input") {
+            result.push({ link, visualSource: vs === containerThingId ? first : vs, visualTarget: vt === containerThingId ? first : vt, aggregated: true });
+          } else if (link.type === "result" || link.type === "output") {
+            result.push({ link, visualSource: vs === containerThingId ? last : vs, visualTarget: vt === containerThingId ? last : vt, aggregated: true });
+          } else if (link.type === "effect" && (link.source_state || link.target_state)) {
+            result.push({ link, visualSource: otherEnd, visualTarget: first, aggregated: true, splitHalf: "input" });
+            result.push({ link, visualSource: last, visualTarget: otherEnd, aggregated: true, splitHalf: "output" });
+          } else if (link.type === "invocation" || link.type === "exception") {
+            // Simplified: resolve to first internal subprocess
+            const targetSp = internalThings.has(link.target) ? link.target : (internalThings.has(link.source) ? link.source : first);
+            const finalVs = vs === containerThingId ? targetSp : vs;
+            const finalVt = vt === containerThingId ? targetSp : vt;
+            if (finalVs !== finalVt) {
+              result.push({ link, visualSource: finalVs, visualTarget: finalVt, aggregated: true });
+            }
+          } else {
+            // Agent/instrument → all subprocesses
+            for (const spId of subprocessesByOrder) {
+              const dvs = vs === containerThingId ? spId : vs;
+              const dvt = vt === containerThingId ? spId : vt;
+              const spKey = `${link.type}|${dvs}|${dvt}`;
+              if (!seen.has(spKey)) {
+                seen.add(spKey);
+                result.push({ link, visualSource: dvs, visualTarget: dvt, aggregated: true });
+              }
+            }
+          }
+          continue;
+        }
+      }
+      if (!internalThings.has(vs) && !internalThings.has(vt)) continue;
+    }
+
+    const isAggregated = vs !== link.source || vt !== link.target;
+
+    if (isAggregated) {
+      if (["effect", "result"].includes(link.type)) {
+        const srcThing = data.things.get(link.source);
+        const objId = srcThing?.kind === "object" ? link.source : link.target;
+        if (internallyConsumedObjects.has(objId)) continue;
+      }
+    }
+
+    const key = `${link.type}|${vs}|${vt}`;
+    if (seen.has(key)) {
+      if (!isAggregated) {
+        const idx = result.findIndex(r =>
+          `${r.link.type}|${r.visualSource}|${r.visualTarget}` === key && r.aggregated
+        );
+        if (idx !== -1) {
+          result[idx] = { link, visualSource: vs, visualTarget: vt, aggregated: false };
+        }
+      }
+      continue;
+    }
+    seen.add(key);
+    result.push({ link, visualSource: vs, visualTarget: vt, aggregated: isAggregated });
+  }
+
+  // Post-filter: VISUAL-03 and R-OZ (same as resolveLinksForOpd)
+  const partToWhole = new Map<string, string>();
+  for (const l of data.links.values()) {
+    if (l.type === "aggregation") {
+      partToWhole.set(l.target, l.source);
+      partToWhole.set(l.source, l.target);
+    }
+  }
+
+  const directLinkKeys = new Set<string>();
+  const directParticipants = new Set<string>();
+  for (const rl of result) {
+    if (!rl.aggregated) {
+      directLinkKeys.add(`${rl.link.type}|${rl.visualSource}|${rl.visualTarget}`);
+      const srcThing = data.things.get(rl.visualSource);
+      const tgtThing = data.things.get(rl.visualTarget);
+      if (srcThing?.kind === "object") directParticipants.add(`${rl.visualSource}|${rl.visualTarget}`);
+      if (tgtThing?.kind === "object") directParticipants.add(`${rl.visualTarget}|${rl.visualSource}`);
+    }
+  }
+
+  const afterVisual03 = result.filter(rl => {
+    if (!rl.aggregated) return true;
+    if (!["instrument", "agent"].includes(rl.link.type)) return true;
+    const whole = partToWhole.get(rl.visualSource);
+    if (whole && directLinkKeys.has(`${rl.link.type}|${whole}|${rl.visualTarget}`)) return false;
+    if (directParticipants.has(`${rl.visualSource}|${rl.visualTarget}`)) return false;
+    return true;
+  });
+
+  // R-IH: Structural inheritance
+  for (const thingId of visible) {
+    const inherited = getInheritedLinks(data, thingId);
+    for (const iLink of inherited) {
+      const generalId = iLink.source === thingId || iLink.target === thingId ? null :
+        (data.things.get(iLink.source)?.kind === "object" ? iLink.source : iLink.target);
+      if (!generalId) continue;
+      const ivs = generalId === iLink.source ? thingId : iLink.source;
+      const ivt = generalId === iLink.target ? thingId : iLink.target;
+      if (!visible.has(ivs) || !visible.has(ivt)) continue;
+      const ikey = `inherited|${iLink.type}|${ivs}|${ivt}`;
+      if (!seen.has(ikey)) {
+        seen.add(ikey);
+        afterVisual03.push({ link: iLink, visualSource: ivs, visualTarget: ivt, aggregated: true });
+      }
+    }
+  }
+
+  // R-OZ: Out-zoom precedence
+  const OZ_PRECEDENCE: Record<string, number> = {
+    consumption: 5, result: 5, input: 5, output: 5,
+    effect: 4, agent: 3, instrument: 2,
+  };
+  const aggPairBest = new Map<string, number>();
+  for (const rl of afterVisual03) {
+    if (!rl.aggregated) continue;
+    const objId = data.things.get(rl.visualSource)?.kind === "object" ? rl.visualSource : rl.visualTarget;
+    const procId = objId === rl.visualSource ? rl.visualTarget : rl.visualSource;
+    const pairKey = `${objId}|${procId}`;
+    const prec = OZ_PRECEDENCE[rl.link.type] ?? 0;
+    const best = aggPairBest.get(pairKey) ?? -1;
+    if (prec > best) aggPairBest.set(pairKey, prec);
+  }
+
+  return afterVisual03.filter(rl => {
+    if (!rl.aggregated) return true;
+    const prec = OZ_PRECEDENCE[rl.link.type] ?? 0;
+    const objId = data.things.get(rl.visualSource)?.kind === "object" ? rl.visualSource : rl.visualTarget;
+    const procId = objId === rl.visualSource ? rl.visualTarget : rl.visualSource;
+    return prec >= (aggPairBest.get(`${objId}|${procId}`) ?? 0);
+  });
+}
+
+/**
+ * Kernel-native OPD fiber computation. Uses atlas for visibility + layout for geometry.
+ * No Model intermediate — fiber computation with semantic enrichment
+ * (implicit materialization, C-01 distribution, state suppression).
+ */
+export function resolveOpdFiberNative(
+  data: OpmDataView,
+  refinements: ReadonlyMap<string, SemanticRefinement>,
+  atlas: OpdAtlas,
+  layout: LayoutModel,
+  opdId: string,
+): OpdFiber {
+  const slice = atlas.nodes.get(opdId);
+  if (!slice) return { things: new Map(), links: [], suppressedStates: new Map() };
+
+  // 1. Explicit things from atlas visibility
+  const things = new Map<string, FiberEntry>();
+  const opdLayout = layout.opdLayouts?.get(opdId);
+
+  for (const thingId of slice.visibleThings) {
+    const thing = data.things.get(thingId);
+    if (!thing) continue;
+    const layoutNode = opdLayout?.nodes?.get(thingId);
+    const appearance: Appearance = {
+      thing: thingId,
+      opd: opdId,
+      x: layoutNode?.x ?? 100,
+      y: layoutNode?.y ?? 100,
+      w: layoutNode?.w ?? (thing.kind === "process" ? 140 : 120),
+      h: layoutNode?.h ?? 60,
+    };
+    things.set(thingId, { thing, appearance, implicit: false });
+  }
+
+  // 2. Resolved links
+  const links = resolveLinksForOpdNative(data, refinements, atlas, opdId);
+
+  // 3. Implicit things (1-hop connected, no appearance)
+  const explicitIds = new Set(things.keys());
+  // Child OPD internal things (exclude from implicit)
+  const childRefinements = [...refinements.values()].filter(
+    r => r.kind === "in-zoom" && data.opds.get(r.childOpd)?.parent_opd === opdId
+  );
+  const internalToChildOpd = new Set<string>();
+  for (const ref of childRefinements) {
+    if (ref.kind === "in-zoom") {
+      for (const step of ref.steps) {
+        for (const tid of step.thingIds) internalToChildOpd.add(tid);
+      }
+      for (const oid of ref.internalObjects) internalToChildOpd.add(oid);
+    }
+  }
+
+  let maxRight = 0;
+  let minTop = Infinity;
+  for (const entry of things.values()) {
+    const r = entry.appearance.x + entry.appearance.w;
+    if (r > maxRight) maxRight = r;
+    if (entry.appearance.y < minTop) minTop = entry.appearance.y;
+  }
+  if (!isFinite(minTop)) minTop = 50;
+  const ghostStartX = maxRight + 80;
+  const ghostColWidth = 160;
+  const ghostRowHeight = 80;
+
+  const implicitSeen = new Set<string>();
+  const implicitCandidates: Array<{ candidateId: string; thing: Thing }> = [];
+  for (const link of data.links.values()) {
+    checkImplicit(link.source, link.target);
+    checkImplicit(link.target, link.source);
+  }
+  function checkImplicit(anchorId: string, candidateId: string): void {
+    if (!explicitIds.has(anchorId)) return;
+    if (things.has(candidateId)) return;
+    if (implicitSeen.has(candidateId)) return;
+    if (internalToChildOpd.has(candidateId)) return;
+    const thing = data.things.get(candidateId);
+    if (!thing) return;
+    implicitSeen.add(candidateId);
+    implicitCandidates.push({ candidateId, thing });
+  }
+
+  let gridIndex = 0;
+  for (const { candidateId, thing } of implicitCandidates) {
+    const w = thing.kind === "process" ? 140 : 120;
+    const h = 60;
+    things.set(candidateId, {
+      thing,
+      appearance: {
+        thing: candidateId, opd: opdId,
+        x: ghostStartX + (gridIndex % 3) * ghostColWidth,
+        y: minTop + Math.floor(gridIndex / 3) * ghostRowHeight,
+        w, h,
+      },
+      implicit: true,
+    });
+    gridIndex++;
+  }
+
+  // 4. State suppression from child in-zoom refinements
+  const suppressedStates = new Map<string, Set<string>>();
+  for (const ref of childRefinements) {
+    if (ref.kind !== "in-zoom") continue;
+    const refinedThingId = ref.parentThing;
+    // External things in child OPD (visible but not internal)
+    const childSlice = atlas.nodes.get(ref.childOpd);
+    if (!childSlice) continue;
+    for (const extId of childSlice.visibleThings) {
+      if (extId === refinedThingId) continue;
+      // Check if external (not internal role)
+      const isInternal = [...atlas.occurrences.values()].some(
+        o => o.opdId === ref.childOpd && o.thingId === extId && o.role === "internal"
+      );
+      if (isInternal) continue;
+
+      for (const link of data.links.values()) {
+        const connects =
+          (link.source === extId && link.target === refinedThingId) ||
+          (link.target === extId && link.source === refinedThingId);
+        if (!connects) continue;
+        if (link.source_state) {
+          if (!suppressedStates.has(extId)) suppressedStates.set(extId, new Set());
+          suppressedStates.get(extId)!.add(link.source_state);
+        }
+        if (link.target_state) {
+          if (!suppressedStates.has(extId)) suppressedStates.set(extId, new Set());
+          suppressedStates.get(extId)!.add(link.target_state);
+        }
+      }
+    }
+  }
+
+  return { things, links, suppressedStates };
 }
 
 /**
  * Kernel-aware resolveLinksForOpd.
- * Delegates to legacy function with a Model whose subprocess Y-ordering
- * derives from kernel refinement steps, not layout appearances.
+ * Delegates to resolveLinksForOpdNative — no Model intermediate.
  */
 export function resolveLinksForOpdFromKernel(
   kernel: SemanticKernel,
   opdId: string,
   atlas?: OpdAtlas,
-  layout?: LayoutModel,
+  _layout?: LayoutModel,
 ): ResolvedLink[] {
-  const model = buildSimulationModel(kernel, atlas, layout);
-  return resolveLinksForOpd(model, opdId);
+  const resolvedAtlas = atlas ?? exposeSemanticKernel(kernel);
+  return resolveLinksForOpdNative(kernel, kernel.refinements, resolvedAtlas, opdId);
 }
 
 /**
  * Kernel-aware resolveOpdFiber.
- * Delegates to legacy function with a Model whose subprocess Y-ordering
- * derives from kernel refinement steps, not layout appearances.
+ * Delegates to resolveOpdFiberNative — no Model intermediate.
  */
 export function resolveOpdFiberFromKernel(
   kernel: SemanticKernel,
@@ -777,16 +1182,18 @@ export function resolveOpdFiberFromKernel(
   atlas?: OpdAtlas,
   layout?: LayoutModel,
 ): OpdFiber {
-  const model = buildSimulationModel(kernel, atlas, layout);
-  return resolveOpdFiber(model, opdId);
+  const resolvedAtlas = atlas ?? exposeSemanticKernel(kernel);
+  const resolvedLayout = layout ?? { opdLayouts: new Map() };
+  return resolveOpdFiberNative(kernel, kernel.refinements, resolvedAtlas, resolvedLayout, opdId);
 }
 
 // === Coalgebra: c: ModelState → Event × (Precond → ModelState + 1) ===
 
 /**
- * Crear estado inicial del modelo para simulación
+ * Crear estado inicial del modelo para simulación.
+ * Accepts Model or SemanticKernel via OpmDataView.
  */
-export function createInitialState(model: Model): ModelState {
+export function createInitialState(model: OpmDataView): ModelState {
   const objects = new Map<string, ObjectState>();
 
   for (const [id, thing] of model.things) {
@@ -813,7 +1220,7 @@ export function createInitialState(model: Model): ModelState {
 /**
  * Determine response for a failed precondition based on modifiers on the link
  */
-function getResponse(model: Model, linkId: string): "lost" | "skip" | "wait" {
+function getResponse(model: OpmDataView, linkId: string): "lost" | "skip" | "wait" {
   const mod = [...model.modifiers.values()].find(m => m.over === linkId);
   if (!mod) return "lost";
   if (mod.type === "event") return "lost";
@@ -824,7 +1231,7 @@ function getResponse(model: Model, linkId: string): "lost" | "skip" | "wait" {
 }
 
 /** Build lookup: linkId → Fan for XOR/OR fans (AND fans use default all-must-pass logic) */
-function buildFanLookup(model: Model): Map<string, Fan> {
+function buildFanLookup(model: OpmDataView): Map<string, Fan> {
   const lookup = new Map<string, Fan>();
   for (const fan of model.fans.values()) {
     if (fan.type === "and") continue;
@@ -837,7 +1244,7 @@ function buildFanLookup(model: Model): Map<string, Fan> {
 
 /** Check if a single link's precondition is individually satisfied */
 function checkLinkPrecondition(
-  model: Model,
+  model: OpmDataView,
   state: ModelState,
   link: Link,
   processId: string,
@@ -905,8 +1312,9 @@ function checkLinkPrecondition(
  * Choose which fan member links are active for postcondition application.
  * XOR: exactly 1 (probability-weighted or uniform).
  * OR: at least 1 (each member independently included, guarantee >= 1).
+ * Accepts Model or SemanticKernel via OpmDataView.
  */
-export function chooseFanBranch(model: Model, fan: Fan, rng: () => number = Math.random): string[] {
+export function chooseFanBranch(model: OpmDataView, fan: Fan, rng: () => number = Math.random): string[] {
   if (fan.type === "xor") {
     const memberLinks = fan.members.map(mid => model.links.get(mid)!);
     const hasProbs = memberLinks.every(l => l.probability != null);
@@ -943,9 +1351,10 @@ export function chooseFanBranch(model: Model, fan: Fan, rng: () => number = Math
  * Evaluar precondición de un proceso — versión trivalent (C2)
  * Fan-aware: XOR/OR fans require at least 1 member satisfied.
  * AND fans / no fan: all must be satisfied (default behavior).
+ * Accepts Model or SemanticKernel via OpmDataView.
  */
 export function evaluatePrecondition(
-  model: Model,
+  model: OpmDataView,
   state: ModelState,
   processId: string
 ): PreconditionResult {
@@ -993,11 +1402,12 @@ export function evaluatePrecondition(
 }
 
 /**
- * Ejecutar un paso de simulación (evaluación coalgébrica)
- * c: ModelState → Event × (Precond → ModelState + 1)
+ * Ejecutar un paso de simulación (evaluación coalgébrica).
+ * Implements c: S → F(S) where F(S) = Event × (PreconditionResult → S + 1).
+ * Accepts Model or SemanticKernel via OpmDataView.
  */
 export function simulationStep(
-  model: Model,
+  model: OpmDataView,
   state: ModelState,
   event: SimulationEvent,
   rng: () => number = Math.random,
@@ -1186,8 +1596,12 @@ export function simulationStep(
 }
 
 /**
- * Ejecutar simulación completa hasta completar o alcanzar maxSteps
- * Con re-evaluación de waitingProcesses y detección de deadlock
+ * Ejecutar simulación completa hasta completar o alcanzar maxSteps.
+ * Re-evaluates waitingProcesses each iteration and detects deadlock.
+ *
+ * Deadlock detection is empirical (no-progress + waiting processes), not based
+ * on state-space fixed-point analysis or dependency graph cycle detection.
+ * The MAX_WAIT_STEPS timeout (20 steps) is a pragmatic heuristic.
  */
 export function runSimulation(
   model: Model,
@@ -1228,7 +1642,7 @@ export function runSimulation(
   const allowedProcessIds = new Set(executableProcesses.map(ep => ep.id));
   const selfInvocationCount = new Map<string, number>();
   const waitingSince = new Map<string, number>(); // processId → step when started waiting
-  const MAX_WAIT_STEPS = 20; // Max steps a process can wait before being timed out
+  // MAX_WAIT_STEPS defined at module scope
   const pendingInvocations = new Map<string, string>(); // targetId → sourceId (who invoked it)
   let totalInvocations = 0; // Global guard against infinite invocation chains
 
@@ -1549,7 +1963,7 @@ export function runMonteCarloSimulation(
 }
 
 /** Verify model assertions against final simulation state */
-function verifyAssertions(model: Model, finalState: ModelState, steps: SimulationStep[]): AssertionResult[] {
+function verifyAssertions(model: OpmDataView, finalState: ModelState, steps: SimulationStep[]): AssertionResult[] {
   const results: AssertionResult[] = [];
   for (const assertion of model.assertions.values()) {
     if (!assertion.enabled) continue;
@@ -1653,10 +2067,11 @@ function verifyAssertions(model: Model, finalState: ModelState, steps: Simulatio
 }
 
 /**
- * Obtener preprocess object set de un proceso
+ * Obtener preprocess object set de un proceso.
+ * Accepts Model or SemanticKernel via OpmDataView.
  */
 export function getPreprocessSet(
-  model: Model,
+  model: OpmDataView,
   processId: string
 ): Array<{ objectId: string; objectType: "consumee" | "affectee" | "agent" | "instrument" }> {
   const result: Array<{ objectId: string; objectType: "consumee" | "affectee" | "agent" | "instrument" }> = [];
@@ -1688,10 +2103,11 @@ export function getPreprocessSet(
 }
 
 /**
- * Obtener postprocess object set de un proceso
+ * Obtener postprocess object set de un proceso.
+ * Accepts Model or SemanticKernel via OpmDataView.
  */
 export function getPostprocessSet(
-  model: Model,
+  model: OpmDataView,
   processId: string
 ): Array<{ objectId: string; objectType: "resultee" | "affectee" }> {
   const result: Array<{ objectId: string; objectType: "resultee" | "affectee" }> = [];
@@ -1752,4 +2168,417 @@ export function renderTrace(model: Model, trace: SimulationTrace): string {
   }
 
   return lines.join("\n");
+}
+
+// === Kernel-Native Simulation (ADR-003: no Model intermediate) ===
+
+/**
+ * Expand in-zoomed processes into executable leaves using kernel refinement steps.
+ * Unlike getExecutableProcesses (which reads appearance Y-coordinates),
+ * this function derives subprocess ordering from SemanticKernel.refinements.steps,
+ * eliminating the layout→semantics dependency (C-3 fix).
+ *
+ * For parallel steps (step.execution === "parallel"), all processes share the same order.
+ */
+export function getExecutableProcessesFromRefinements(
+  data: OpmDataView,
+  refinements: ReadonlyMap<string, SemanticRefinement>,
+  maxDepth: number = 10,
+): ExecutableProcess[] {
+  const result: ExecutableProcess[] = [];
+
+  // Build lookup: processId → in-zoom refinement
+  const inZoomRefinements = new Map<string, InZoomRefinement>();
+  for (const ref of refinements.values()) {
+    if (ref.kind === "in-zoom") {
+      inZoomRefinements.set(ref.parentThing, ref);
+    }
+  }
+
+  // Track all subprocess IDs to exclude from top-level
+  const subprocessIds = new Set<string>();
+  for (const ref of inZoomRefinements.values()) {
+    for (const step of ref.steps) {
+      for (const tid of step.thingIds) {
+        const thing = data.things.get(tid);
+        if (thing?.kind === "process") subprocessIds.add(tid);
+      }
+    }
+  }
+
+  function expand(processId: string, parentId: string | undefined, depth: number): void {
+    if (depth > maxDepth) return;
+    const ref = inZoomRefinements.get(processId);
+    if (!ref || ref.steps.length === 0) {
+      // Leaf process — directly executable
+      const thing = data.things.get(processId);
+      if (!thing) return;
+      result.push({
+        id: processId,
+        name: thing.name,
+        order: 0,
+        parentProcessId: parentId,
+        opdId: parentId ? inZoomRefinements.get(parentId)?.childOpd : undefined,
+      });
+      return;
+    }
+
+    // Expand subprocesses using semantic step ordering
+    let stepOrder = 0;
+    for (const step of ref.steps) {
+      const processThings = step.thingIds
+        .map(tid => ({ id: tid, thing: data.things.get(tid) }))
+        .filter((e): e is { id: string; thing: Thing } => e.thing?.kind === "process");
+
+      for (const { id: spId } of processThings) {
+        expand(spId, processId, depth + 1);
+        // Set order from step index (semantic) instead of Y-coordinate
+        const last = result[result.length - 1];
+        if (last && last.id === spId) {
+          last.order = stepOrder;
+          last.opdId = ref.childOpd;
+        }
+      }
+      // Parallel steps share the same order; sequential steps increment
+      if (step.execution === "sequential") stepOrder++;
+    }
+  }
+
+  // Start with top-level processes only
+  const topLevelProcesses = [...data.things.values()]
+    .filter(t => t.kind === "process" && !subprocessIds.has(t.id))
+    .sort((a, b) => a.id.localeCompare(b.id));
+
+  for (const thing of topLevelProcesses) {
+    expand(thing.id, undefined, 0);
+  }
+
+  // Sort by semantic order, then by duration (shortest first), then by ID
+  result.sort((a, b) => {
+    if (a.order !== b.order) return a.order - b.order;
+    const durA = data.things.get(a.id)?.duration?.nominal ?? Infinity;
+    const durB = data.things.get(b.id)?.duration?.nominal ?? Infinity;
+    if (durA !== durB) return durA - durB;
+    return a.id.localeCompare(b.id);
+  });
+
+  return result;
+}
+
+/**
+ * Kernel-native simulation: run complete simulation on SemanticKernel directly.
+ * No Model intermediate — uses refinement steps for process ordering (not Y-coords),
+ * and reads things/links/states/modifiers/fans directly from the kernel.
+ *
+ * This eliminates the C-3 (layout→semantics) dependency and the C-1 (Model roundtrip)
+ * in the simulation path.
+ */
+export function runSimulationFromKernel(
+  kernel: SemanticKernel,
+  initialState?: ModelState,
+  maxSteps: number = 100,
+  rng: () => number = Math.random,
+  scenarioId?: string,
+): SimulationTrace {
+  const state = initialState ?? createInitialState(kernel);
+  const steps: SimulationStep[] = [];
+  let currentState = state;
+
+  // Use kernel refinements for process ordering (no Y-coordinates)
+  let executableProcesses = getExecutableProcessesFromRefinements(kernel, kernel.refinements);
+
+  // Scenario filter
+  const scenario = scenarioId ? kernel.scenarios.get(scenarioId) : undefined;
+  if (scenario && scenario.path_labels.length > 0) {
+    const pathLabels = new Set(scenario.path_labels);
+    const scenarioLinks = [...kernel.links.values()].filter(l => l.path_label && pathLabels.has(l.path_label));
+    const scenarioProcessIds = new Set<string>();
+    for (const link of scenarioLinks) {
+      const src = kernel.things.get(link.source);
+      const tgt = kernel.things.get(link.target);
+      if (src?.kind === "process") scenarioProcessIds.add(src.id);
+      if (tgt?.kind === "process") scenarioProcessIds.add(tgt.id);
+    }
+    if (scenarioProcessIds.size > 0) {
+      executableProcesses = executableProcesses.filter(ep =>
+        scenarioProcessIds.has(ep.id) || (ep.parentProcessId && scenarioProcessIds.has(ep.parentProcessId))
+      );
+    }
+  }
+
+  const completedProcesses = new Set<string>();
+  const allowedProcessIds = new Set(executableProcesses.map(ep => ep.id));
+  const selfInvocationCount = new Map<string, number>();
+  const waitingSince = new Map<string, number>();
+  const pendingInvocations = new Map<string, string>();
+  let totalInvocations = 0;
+
+  function processInvocations(justCompleted: string): boolean {
+    let triggered = false;
+    for (const link of kernel.links.values()) {
+      if (link.type !== "invocation" || link.source !== justCompleted) continue;
+      const targetId = link.target;
+      const isSelf = targetId === justCompleted;
+      if (isSelf) {
+        const count = selfInvocationCount.get(targetId) ?? 0;
+        if (count >= MAX_SELF_INVOCATIONS) continue;
+        selfInvocationCount.set(targetId, count + 1);
+      } else {
+        selfInvocationCount.delete(targetId);
+      }
+      completedProcesses.delete(targetId);
+      if (++totalInvocations > MAX_INVOCATION_CHAIN_DEPTH) continue;
+      pendingInvocations.set(targetId, justCompleted);
+      triggered = true;
+    }
+    return triggered;
+  }
+
+  function enrichStep(stepResult: SimulationStep, processId: string): void {
+    const ep = executableProcesses.find(p => p.id === processId);
+    if (ep?.parentProcessId) {
+      stepResult.parentProcessId = ep.parentProcessId;
+      stepResult.opdContext = ep.opdId;
+    }
+    if (pendingInvocations.has(processId)) {
+      stepResult.invokedBy = pendingInvocations.get(processId);
+      pendingInvocations.delete(processId);
+    }
+  }
+
+  let currentWaveOrder: number | null = null;
+  let waveSnapshot: ModelState | null = null;
+
+  for (let i = 0; i < maxSteps; i++) {
+    let executed = false;
+
+    if (!(currentState.waitingProcesses instanceof Set)) {
+      currentState = { ...currentState, waitingProcesses: new Set() };
+    }
+    if (!(currentState.objects instanceof Map)) break;
+
+    // Phase 1: Re-evaluate waiting processes
+    for (const waitingId of [...currentState.waitingProcesses]) {
+      if (!allowedProcessIds.has(waitingId)) continue;
+      if (!waitingSince.has(waitingId)) waitingSince.set(waitingId, i);
+      if (i - (waitingSince.get(waitingId) ?? 0) > MAX_WAIT_STEPS) {
+        currentState = {
+          ...currentState,
+          waitingProcesses: new Set([...currentState.waitingProcesses].filter(id => id !== waitingId)),
+        };
+        completedProcesses.add(waitingId);
+        waitingSince.delete(waitingId);
+        continue;
+      }
+      const precond = evaluatePrecondition(kernel, currentState, waitingId);
+      if (precond.satisfied) {
+        waitingSince.delete(waitingId);
+        const unblocked: ModelState = {
+          ...currentState,
+          objects: new Map(currentState.objects),
+          waitingProcesses: new Set([...currentState.waitingProcesses].filter(id => id !== waitingId)),
+        };
+        const event: SimulationEvent = { kind: "manual", targetId: waitingId };
+        const stepResult = simulationStep(kernel, unblocked, event, rng);
+        if (!stepResult.skipped) {
+          enrichStep(stepResult, waitingId);
+          steps.push(stepResult);
+          currentState = stepResult.newState;
+          completedProcesses.add(waitingId);
+          processInvocations(waitingId);
+          executed = true;
+          currentWaveOrder = null;
+          waveSnapshot = null;
+          break;
+        }
+      }
+    }
+
+    if (executed) continue;
+
+    // Phase 2: Wave-based execution (semantic order, not Y)
+    for (const ep of executableProcesses) {
+      if (currentState.waitingProcesses.has(ep.id)) continue;
+      if (completedProcesses.has(ep.id)) continue;
+
+      if (currentWaveOrder === null || ep.order !== currentWaveOrder) {
+        currentWaveOrder = ep.order;
+        const snapshotObjects = new Map<string, ObjectState>();
+        for (const [id, objState] of currentState.objects) {
+          snapshotObjects.set(id, { ...objState });
+        }
+        waveSnapshot = {
+          ...currentState,
+          objects: snapshotObjects,
+          waitingProcesses: new Set(currentState.waitingProcesses),
+        };
+      }
+
+      const precond = evaluatePrecondition(kernel, waveSnapshot!, ep.id);
+      if (!precond.satisfied) {
+        if (precond.response === "wait") {
+          currentState = {
+            ...currentState,
+            objects: new Map(currentState.objects),
+            waitingProcesses: new Set([...currentState.waitingProcesses, ep.id]),
+          };
+        } else {
+          completedProcesses.add(ep.id);
+        }
+        continue;
+      }
+
+      const event: SimulationEvent = { kind: "manual", targetId: ep.id };
+      const stepResult = simulationStep(kernel, currentState, event, rng);
+
+      if (!stepResult.skipped) {
+        enrichStep(stepResult, ep.id);
+        steps.push(stepResult);
+        currentState = stepResult.newState;
+        completedProcesses.add(ep.id);
+        const invoked = processInvocations(ep.id);
+
+        // Exception handling
+        if (stepResult.exceptionTriggered && stepResult.processId) {
+          for (const link of kernel.links.values()) {
+            if (link.type !== "exception" || link.source !== stepResult.processId) continue;
+            const linkType = link.exception_type ?? "overtime";
+            if (linkType === stepResult.exceptionTriggered) {
+              completedProcesses.delete(link.target);
+              pendingInvocations.set(link.target, stepResult.processId);
+            }
+          }
+        }
+
+        // Event triggers
+        for (const sc of stepResult.stateChanges) {
+          if (!sc.toState) continue;
+          for (const link of kernel.links.values()) {
+            const mod = [...kernel.modifiers.values()].find(m => m.over === link.id && m.type === "event");
+            if (!mod) continue;
+            if (link.source !== sc.objectId) continue;
+            const targetProc = kernel.things.get(link.target);
+            if (targetProc?.kind === "process" && allowedProcessIds.has(link.target)) {
+              completedProcesses.delete(link.target);
+              pendingInvocations.set(link.target, stepResult.processId ?? "");
+            }
+          }
+        }
+
+        if (invoked) {
+          currentWaveOrder = null;
+          waveSnapshot = null;
+        }
+        executed = true;
+        break;
+      } else {
+        if (ep.parentProcessId && stepResult.processId) {
+          completedProcesses.add(ep.id);
+          const siblingIdx = executableProcesses.findIndex(p => p.id === ep.id);
+          if (siblingIdx >= 0 && siblingIdx < executableProcesses.length - 1) {
+            const next = executableProcesses[siblingIdx + 1];
+            if (next?.parentProcessId === ep.parentProcessId) {
+              completedProcesses.delete(next.id);
+            }
+          }
+        }
+        completedProcesses.add(ep.id);
+        if (stepResult.processId && stepResult.newState.waitingProcesses.has(stepResult.processId)) {
+          currentState = stepResult.newState;
+        }
+      }
+    }
+
+    if (!executed) {
+      if (currentState.waitingProcesses.size > 0) {
+        return {
+          steps, finalState: currentState, completed: false, deadlocked: true,
+          assertionResults: verifyAssertions(kernel, currentState, steps).length > 0 ? verifyAssertions(kernel, currentState, steps) : undefined,
+        };
+      }
+      break;
+    }
+  }
+
+  const assertionResults = verifyAssertions(kernel, currentState, steps);
+  const totalDuration = currentState.timestamp - state.timestamp;
+
+  return {
+    steps,
+    finalState: currentState,
+    completed: steps.length < maxSteps,
+    deadlocked: false,
+    assertionResults: assertionResults.length > 0 ? assertionResults : undefined,
+    totalDuration: totalDuration > 0 ? totalDuration : undefined,
+  };
+}
+
+/**
+ * Kernel-native Monte Carlo simulation.
+ * Delegates to runSimulationFromKernel instead of runSimulation.
+ */
+export function runMonteCarloSimulationFromKernel(
+  kernel: SemanticKernel,
+  runs: number = 100,
+  maxSteps: number = 100,
+): MonteCarloResult {
+  let completedCount = 0;
+  let deadlockedCount = 0;
+  let totalSteps = 0;
+  let totalDuration = 0;
+  let durationCount = 0;
+  const assertionPassCounts: Record<string, number> = {};
+  const assertionTotalCounts: Record<string, number> = {};
+  const exceptionCounts: Record<string, number> = {};
+
+  function makeRng(seed: number): () => number {
+    let s = seed;
+    return () => {
+      s |= 0; s = s + 0x6D2B79F5 | 0;
+      let t = Math.imul(s ^ s >>> 15, 1 | s);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  for (let i = 0; i < runs; i++) {
+    const rng = makeRng(i * 31337 + 42);
+    const trace = runSimulationFromKernel(kernel, undefined, maxSteps, rng);
+
+    totalSteps += trace.steps.length;
+    if (trace.completed) completedCount++;
+    if (trace.deadlocked) deadlockedCount++;
+    if (trace.totalDuration != null) {
+      totalDuration += trace.totalDuration;
+      durationCount++;
+    }
+    if (trace.assertionResults) {
+      for (const ar of trace.assertionResults) {
+        assertionTotalCounts[ar.assertionId] = (assertionTotalCounts[ar.assertionId] ?? 0) + 1;
+        if (ar.passed) assertionPassCounts[ar.assertionId] = (assertionPassCounts[ar.assertionId] ?? 0) + 1;
+      }
+    }
+    for (const step of trace.steps) {
+      if (step.exceptionTriggered && step.processName) {
+        const key = `${step.processName} (${step.exceptionTriggered})`;
+        exceptionCounts[key] = (exceptionCounts[key] ?? 0) + 1;
+      }
+    }
+  }
+
+  const assertionPassRate: Record<string, number> = {};
+  for (const [id, total] of Object.entries(assertionTotalCounts)) {
+    assertionPassRate[id] = (assertionPassCounts[id] ?? 0) / total;
+  }
+  const exceptionRate: Record<string, number> = {};
+  for (const [key, count] of Object.entries(exceptionCounts)) {
+    exceptionRate[key] = count / runs;
+  }
+
+  return {
+    runs, completedCount, deadlockedCount,
+    avgSteps: totalSteps / runs,
+    avgDuration: durationCount > 0 ? totalDuration / durationCount : null,
+    assertionPassRate, exceptionRate,
+  };
 }
