@@ -886,7 +886,7 @@ export function compileOplDocuments(docs: OplDocument[], options: OplCompileOpti
     }
   }
 
-  // Pass 16: in-zoom sequences — create implicit invocation links between sequential subprocesses.
+  // Pass 16: in-zoom sequences — auto-create sub-OPD when missing, then create implicit invocation links.
   for (const doc of docs) {
     for (const s of doc.sentences) {
       if (s.kind !== "in-zoom-sequence") continue;
@@ -896,6 +896,70 @@ export function compileOplDocuments(docs: OplDocument[], options: OplCompileOpti
       if (!parentRef) {
         pushIssue(issues, `Could not resolve parent thing for in-zoom sequence: ${s.parentName}`, s, doc.opdName);
         continue;
+      }
+
+      // Auto-create sub-OPD for in-zoom when the sentence appears in a doc without
+      // a refinementEdge (i.e., root or non-refinement OPD) and no OPD already refines this thing.
+      const currentOpdId = actualOpdIdByName.get(doc.opdName) ?? "opd-sd";
+      const alreadyRefined = doc.refinementEdge || [...model.opds.values()].some(
+        opd => opd.refines === parentRef.thingId,
+      );
+      if (!alreadyRefined) {
+        const subOpdId = uniqueId(`opd-${oplSlug(s.parentName)}`, model);
+        const subOpd: OPD = {
+          id: subOpdId,
+          name: `SD-${s.parentName}`,
+          opd_type: "hierarchical",
+          parent_opd: currentOpdId,
+          refines: parentRef.thingId,
+          refinement_type: "in-zoom",
+        };
+        const rOpd = addOPD(model, subOpd);
+        if (rOpd.ok) {
+          model = rOpd.value;
+          actualOpdIdByName.set(subOpd.name, subOpdId);
+
+          // Place sub-processes as appearances inside the new sub-OPD
+          let yPos = 80;
+          for (const step of s.steps) {
+            for (const name of step.thingNames) {
+              const cleanName = stripParallelPrefix(name, doc.renderSettings.locale);
+              const ref = resolveThingRef(cleanName, undefined, thingRefByDisplayName, thingIdsByActualName, doc.renderSettings.locale);
+              if (!ref) continue;
+              const app: Appearance = {
+                thing: ref.thingId,
+                opd: subOpdId,
+                x: 120,
+                y: yPos,
+                w: 120,
+                h: 60,
+                internal: true,
+              };
+              const rApp = addAppearance(model, app);
+              if (rApp.ok) model = rApp.value;
+              yPos += 100;
+            }
+          }
+          // Also place internal objects
+          if (s.internalObjects) {
+            for (const obj of s.internalObjects) {
+              const ref = resolveThingRef(obj.name, undefined, thingRefByDisplayName, thingIdsByActualName, doc.renderSettings.locale);
+              if (!ref) continue;
+              const app: Appearance = {
+                thing: ref.thingId,
+                opd: subOpdId,
+                x: 350,
+                y: yPos,
+                w: 120,
+                h: 60,
+                internal: true,
+              };
+              const rApp = addAppearance(model, app);
+              if (rApp.ok) model = rApp.value;
+              yPos += 100;
+            }
+          }
+        }
       }
 
       for (const step of s.steps) {
