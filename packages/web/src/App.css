@@ -3300,6 +3300,12 @@ button.header__pill:hover {
 }
 .opl-line-number {
   padding-right: 6px;
+  transition: color 0.12s ease, background 0.12s ease;
+}
+
+.opl-line-number--active {
+  background: rgba(124, 92, 255, 0.08);
+  border-radius: 4px;
 }
 .opl-autocomplete {
   z-index: 300;

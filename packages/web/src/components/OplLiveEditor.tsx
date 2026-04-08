@@ -55,6 +55,17 @@ export function OplLiveEditor({ model, opdId, selectedThing, selectedLink, dispa
   const currentOpdName = model.opds.get(opdId)?.name ?? "SD";
   const sentenceRefs = useMemo(() => parseSentenceRefs(text, currentOpdName), [text, currentOpdName]);
 
+  const activeSentenceRef = useMemo(
+    () => findSentenceForSelection(sentenceRefs, model, selectedThing ?? null, selectedLink ?? null, opdId),
+    [sentenceRefs, model, selectedThing, selectedLink, opdId],
+  );
+
+  const activeSentenceText = useMemo(() => {
+    if (!activeSentenceRef) return null;
+    const lines = text.split("\n");
+    return lines.slice(activeSentenceRef.span.line - 1, activeSentenceRef.span.endLine).join("\n").trim() || null;
+  }, [activeSentenceRef, text]);
+
   const issueCounts = useMemo(() => {
     const issues = validationResult?.issues ?? [];
     return {
@@ -320,7 +331,7 @@ export function OplLiveEditor({ model, opdId, selectedThing, selectedLink, dispa
         </button>
       </div>
 
-      <div style={{ display: "flex", gap: 8, fontSize: 11, color: "var(--text-muted)", marginBottom: 6 }}>
+      <div style={{ display: "flex", gap: 8, fontSize: 11, color: "var(--text-muted)", marginBottom: 6, flexWrap: "wrap" }}>
         <span>Click an issue to jump to the exact source span.</span>
         {validationResult && validationResult.issues.length > 0 && (
           <span>
@@ -329,18 +340,60 @@ export function OplLiveEditor({ model, opdId, selectedThing, selectedLink, dispa
         )}
       </div>
 
+      {activeSentenceRef && activeSentenceText && (
+        <div
+          className="opl-editor-focus-card"
+          style={{
+            marginBottom: 8,
+            padding: "8px 10px",
+            border: "1px solid rgba(124, 92, 255, 0.35)",
+            background: "rgba(124, 92, 255, 0.07)",
+            borderRadius: 6,
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center", marginBottom: 4 }}>
+            <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em", color: "rgba(124, 92, 255, 0.95)", fontWeight: 700 }}>
+              Current focus
+            </div>
+            <button
+              type="button"
+              onClick={() => revealSelection(selectedThing, selectedLink)}
+              style={{
+                border: "1px solid var(--border)",
+                background: "var(--bg-panel)",
+                color: "var(--text-secondary)",
+                borderRadius: 4,
+                fontSize: 11,
+                padding: "2px 6px",
+                cursor: "pointer",
+              }}
+            >
+              Reveal
+            </button>
+          </div>
+          <div style={{ fontSize: 12, color: "var(--text-primary)", fontFamily: "var(--font-mono)", whiteSpace: "pre-wrap" }}>
+            {activeSentenceText}
+          </div>
+          <div style={{ marginTop: 4, fontSize: 10, color: "var(--text-muted)" }}>
+            L{activeSentenceRef.span.line}:{activeSentenceRef.span.column}
+            {activeSentenceRef.doc.opdName ? ` • ${activeSentenceRef.doc.opdName}` : ""}
+          </div>
+        </div>
+      )}
+
       <div className="opl-editor-wrapper" style={{ flex: 1, display: "flex", minHeight: 200, position: "relative" }}>
         <div ref={lineNumbersRef} className="opl-line-numbers" aria-hidden="true">
           {Array.from({ length: lineCount }, (_, i) => {
             const lineNumber = i + 1;
             const severity = lineIssueSeverity.get(lineNumber);
+            const isActiveLine = activeSentenceRef && lineNumber >= activeSentenceRef.span.line && lineNumber <= activeSentenceRef.span.endLine;
             return (
               <div
                 key={i}
-                className="opl-line-number"
+                className={`opl-line-number${isActiveLine ? " opl-line-number--active" : ""}`}
                 style={{
-                  color: severity === "error" ? "#d9534f" : severity === "warning" ? "#f0ad4e" : undefined,
-                  fontWeight: severity ? 700 : undefined,
+                  color: severity === "error" ? "#d9534f" : severity === "warning" ? "#f0ad4e" : isActiveLine ? "rgba(124, 92, 255, 0.95)" : undefined,
+                  fontWeight: severity || isActiveLine ? 700 : undefined,
                 }}
               >
                 {lineNumber}
