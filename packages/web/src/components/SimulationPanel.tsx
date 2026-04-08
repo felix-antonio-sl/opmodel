@@ -44,17 +44,79 @@ export function SimulationPanel({ model, simulation, dispatch }: Props) {
     return step ? step.newState : createInitialState(model);
   }, [simulation, simulation?.currentStepIndex, model]);
 
-  /* ─── Inactive: show start button ─── */
+  // Initial state overrides (pre-simulation configuration)
+  const [showConfig, setShowConfig] = useState(false);
+  const [stateOverrides, setStateOverrides] = useState<Map<string, string>>(new Map());
+
+  // Stateful objects for config
+  const statefulObjects = useMemo(() => {
+    const result: Array<{ id: string; name: string; states: Array<{ id: string; name: string; initial: boolean }> }> = [];
+    for (const [id, thing] of model.things) {
+      if (thing.kind !== "object") continue;
+      const states = [...model.states.values()].filter(s => s.parent === id);
+      if (states.length > 0) {
+        result.push({ id, name: thing.name, states: states.map(s => ({ id: s.id, name: s.name, initial: s.initial })) });
+      }
+    }
+    return result.sort((a, b) => a.name.localeCompare(b.name));
+  }, [model]);
+
+  /* ─── Inactive: show start button + config ─── */
 
   if (!simulation) {
     return (
       <div className="sim-panel">
         <button
           className="sim-panel__start-btn"
-          onClick={() => dispatch({ tag: "startSimulation" })}
+          onClick={() => dispatch({ tag: "startSimulation", initialStateOverrides: stateOverrides.size > 0 ? stateOverrides : undefined })}
         >
           Start Simulation
         </button>
+        {statefulObjects.length > 0 && (
+          <>
+            <button
+              style={{ display: "block", margin: "8px auto 0", fontSize: 10, background: "none", border: "none", color: "var(--accent)", cursor: "pointer" }}
+              onClick={() => setShowConfig(v => !v)}
+            >
+              {showConfig ? "Hide" : "Configure"} Initial States
+            </button>
+            {showConfig && (
+              <div style={{ marginTop: 8, maxHeight: 200, overflowY: "auto" }}>
+                {statefulObjects.map(obj => {
+                  const defaultState = obj.states.find(s => s.initial) ?? obj.states[0];
+                  const currentOverride = stateOverrides.get(obj.id);
+                  return (
+                    <div key={obj.id} style={{ display: "flex", gap: 4, alignItems: "center", marginBottom: 4, fontSize: 11 }}>
+                      <span style={{ flex: 1, minWidth: 60, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={obj.name}>{obj.name}</span>
+                      <select
+                        style={{ fontSize: 10, maxWidth: 90 }}
+                        value={currentOverride ?? defaultState?.id ?? ""}
+                        onChange={(e) => {
+                          const next = new Map(stateOverrides);
+                          if (e.target.value === defaultState?.id) next.delete(obj.id);
+                          else next.set(obj.id, e.target.value);
+                          setStateOverrides(next);
+                        }}
+                      >
+                        {obj.states.map(s => (
+                          <option key={s.id} value={s.id}>{s.name}{s.initial ? " (initial)" : ""}</option>
+                        ))}
+                      </select>
+                    </div>
+                  );
+                })}
+                {stateOverrides.size > 0 && (
+                  <button
+                    style={{ fontSize: 9, margin: "4px 0", color: "var(--text-muted)", background: "none", border: "none", cursor: "pointer" }}
+                    onClick={() => setStateOverrides(new Map())}
+                  >
+                    Reset to defaults
+                  </button>
+                )}
+              </div>
+            )}
+          </>
+        )}
       </div>
     );
   }

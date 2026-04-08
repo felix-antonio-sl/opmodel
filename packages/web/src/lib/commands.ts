@@ -127,7 +127,7 @@ export type Command =
   | { tag: "removeSubModel"; subModelId: string }
   | { tag: "updateSubModel"; subModelId: string; patch: Partial<Omit<SubModel, "id">> }
   /* ─── Simulation Commands ─── */
-  | { tag: "startSimulation" }
+  | { tag: "startSimulation"; initialStateOverrides?: Map<string, string> }
   | { tag: "stepSimulation"; direction: 1 | -1 }
   | { tag: "resetSimulation" }
   | { tag: "setSimulationStep"; index: number }
@@ -453,7 +453,7 @@ export function interpret(cmd: Command): Effect {
     /* ─── Simulation ─── */
 
     case "startSimulation":
-      return { type: "simulationEffect", action: "start" };
+      return { type: "simulationEffect", action: "start", payload: cmd.initialStateOverrides as any };
 
     case "stepSimulation":
       return { type: "simulationEffect", action: "step", payload: cmd.direction };

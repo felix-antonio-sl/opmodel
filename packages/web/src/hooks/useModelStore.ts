@@ -20,6 +20,7 @@ import {
   isOk,
   saveModel,
   runSimulation,
+  createInitialState,
   projectLegacyModel,
 } from "@opmodel/core";
 import { type Command, interpret } from "../lib/commands";
@@ -146,7 +147,18 @@ export function useModelStore(initialModel: Model): ModelStore {
           case "start": {
             // Read current model from history ref
             const model = historyRef.current.present;
-            const trace = runSimulation(model);
+            // Build custom initial state if overrides provided
+            const overrides = effect.payload as Map<string, string> | undefined;
+            let customInitial = undefined;
+            if (overrides && overrides.size > 0) {
+              const initial = createInitialState(model);
+              for (const [objId, stateId] of overrides) {
+                const obj = initial.objects.get(objId);
+                if (obj) initial.objects.set(objId, { ...obj, currentState: stateId });
+              }
+              customInitial = initial;
+            }
+            const trace = runSimulation(model, customInitial);
             if (trace.steps.length === 0) {
               setLastError("No executable processes found");
               return prev;
