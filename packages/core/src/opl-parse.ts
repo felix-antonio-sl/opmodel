@@ -992,8 +992,8 @@ function parseInZoomSequence(line: string, span: OplSourceSpan, ctx: ParseContex
   if (!rawBody || !parentName) {
     // Try refinement pattern: "SD is refined by in-zooming Process in SD1."
     const refineMatch = isES
-      ? line.match(/^(.*?) se refina por descomposici[óo]n de (.*?) en (.*?)\.$/)
-      : line.match(/^(.*?) is refined by in-zooming (.*?) in (.*?)\.$/);
+      ? line.match(/^(.*?) se refina por descomposici[óo]n de (.*) en (SD\S*)\.$/)
+      : line.match(/^(.*?) is refined by in-zooming (.*) in (SD\S*)\.$/);
     if (refineMatch) return null;
     return null;
   }
@@ -1784,16 +1784,20 @@ function parseSentence(line: string, span: OplSourceSpan, ctx: ParseContext): Pa
 function parseRefinementEdge(line: string): { parentOpdName: string; refinementType: "in-zoom" | "unfold"; refinedThingName: string; childOpdName: string } | null {
   // EN: "SD is refined by in-zooming Coffee Making in SD1."
   // EN: "SD1 is refined by unfolding AEV Fleet Operating in SD1.1."
-  let m = line.match(/^(.*?) is refined by in-zooming (.*?) in (.*?)\.$/);
+  // OPD names follow pattern: SD, SD1, SD1.2, SD1.2.1, etc.
+  // Use greedy capture for thing name + specific OPD pattern to avoid
+  // truncating thing names containing "in"/"en" (e.g., "Hospitalizar en Domicilio").
+  let m = line.match(/^(.*?) is refined by in-zooming (.*) in (SD\S*)\.$/);
   if (m) return { parentOpdName: m[1]!.trim(), refinementType: "in-zoom", refinedThingName: m[2]!.trim(), childOpdName: m[3]!.trim() };
-  m = line.match(/^(.*?) is refined by unfolding (.*?) in (.*?)\.$/);
+  m = line.match(/^(.*?) is refined by unfolding (.*) in (SD\S*)\.$/);
   if (m) return { parentOpdName: m[1]!.trim(), refinementType: "unfold", refinedThingName: m[2]!.trim(), childOpdName: m[3]!.trim() };
 
   // ES: "SD se refina por descomposición de Proceso en SD1."
-  m = line.match(/^(.*?) se refina por descomposici[óo]n de (.*?) en (.*?)\.$/);
+  // Greedy thing name + specific OPD pattern (SD\S*) to handle names with "en"
+  m = line.match(/^(.*?) se refina por descomposici[óo]n de (.*) en (SD\S*)\.$/);
   if (m) return { parentOpdName: m[1]!.trim(), refinementType: "in-zoom", refinedThingName: m[2]!.trim(), childOpdName: m[3]!.trim() };
   // ES: "SD se refina por despliegue de Proceso en SD1."
-  m = line.match(/^(.*?) se refina por despliegue de (.*?) en (.*?)\.$/);
+  m = line.match(/^(.*?) se refina por despliegue de (.*) en (SD\S*)\.$/);
   if (m) return { parentOpdName: m[1]!.trim(), refinementType: "unfold", refinedThingName: m[2]!.trim(), childOpdName: m[3]!.trim() };
 
   return null;

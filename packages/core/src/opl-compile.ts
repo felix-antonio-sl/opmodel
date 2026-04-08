@@ -905,10 +905,14 @@ export function compileOplDocuments(docs: OplDocument[], options: OplCompileOpti
         opd => opd.refines === parentRef.thingId,
       );
       if (!alreadyRefined) {
-        const subOpdId = uniqueId(`opd-${oplSlug(s.parentName)}`, model);
+        const slug = oplSlug(s.parentName);
+        const subOpdId = uniqueId(`opd-${slug}`, model);
+        // Use next available SDn name to follow OPM convention and avoid spaces in OPD names
+        const existingCount = [...model.opds.values()].filter(o => o.parent_opd === currentOpdId).length;
+        const subOpdName = `SD${existingCount + 1}`;
         const subOpd: OPD = {
           id: subOpdId,
-          name: `SD-${s.parentName}`,
+          name: subOpdName,
           opd_type: "hierarchical",
           parent_opd: currentOpdId,
           refines: parentRef.thingId,
@@ -917,7 +921,7 @@ export function compileOplDocuments(docs: OplDocument[], options: OplCompileOpti
         const rOpd = addOPD(model, subOpd);
         if (rOpd.ok) {
           model = rOpd.value;
-          actualOpdIdByName.set(subOpd.name, subOpdId);
+          actualOpdIdByName.set(subOpdName, subOpdId);
 
           // Place sub-processes as appearances inside the new sub-OPD
           let yPos = 80;
