@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import type { Model } from "@opmodel/core";
 import { semanticKernelFromModel, exposeSemanticKernel, exposeFromKernel, render, renderAllFromKernelNative } from "@opmodel/core";
 import type { Command } from "../lib/commands";
-import { findLinkIdByNames, findOpdIdByName, findSentenceAtLine, findThingIdByName, parseSentenceRefs } from "../lib/opl-navigation";
+import { findLinkIdByNames, findOpdIdByName, findSentenceAtLine, findSentenceForSelection, findThingIdByName, parseSentenceRefs } from "../lib/opl-navigation";
 
 interface Props {
   model: Model;
@@ -22,6 +22,10 @@ export function OplTextView({ model, opdId, highlightThingId, highlightLinkId, d
   const text = showAll ? renderAllFromKernelNative(kernel, atlas) : render(doc);
   const lines = text.split("\n");
   const sentenceRefs = useMemo(() => parseSentenceRefs(text, doc.opdName), [text, doc.opdName]);
+  const activeSentenceRef = useMemo(
+    () => findSentenceForSelection(sentenceRefs, model, highlightThingId ?? null, highlightLinkId ?? null, opdId),
+    [sentenceRefs, model, highlightThingId, highlightLinkId, opdId],
+  );
 
   const highlightNames = useCallback((): string[] => {
     const names = new Set<string>();
@@ -56,17 +60,22 @@ export function OplTextView({ model, opdId, highlightThingId, highlightLinkId, d
 
   const hlNames = highlightNames();
 
-  const isHighlighted = (line: string): boolean => {
-    if (hlNames.length === 0) return false;
-    return hlNames.some((name) => line.includes(name));
+  const lineState = (line: string, lineNumber: number): "active" | "related" | "plain" => {
+    if (activeSentenceRef && lineNumber >= activeSentenceRef.span.line && lineNumber <= activeSentenceRef.span.endLine) {
+      return "active";
+    }
+    if (hlNames.length > 0 && hlNames.some((name) => line.includes(name))) {
+      return "related";
+    }
+    return "plain";
   };
 
   useEffect(() => {
-    if (hlNames.length > 0 && containerRef.current) {
-      const first = containerRef.current.querySelector(".opl-text__line--highlight");
+    if (containerRef.current) {
+      const first = containerRef.current.querySelector(".opl-text__line--active, .opl-text__line--highlight");
       if (first) first.scrollIntoView({ behavior: "smooth", block: "center" });
     }
-  }, [highlightThingId, highlightLinkId, hlNames.length]);
+  }, [activeSentenceRef, highlightThingId, highlightLinkId]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(text).then(() => {
@@ -102,9 +111,12 @@ export function OplTextView({ model, opdId, highlightThingId, highlightLinkId, d
         else dispatch({ tag: "selectThing", thingId: findThingIdByName(model, ref.sentence.sourceName) });
         return;
       }
-      case "modifier":
-        dispatch({ tag: "selectThing", thingId: findThingIdByName(model, ref.sentence.sourceName) });
+      case "modifier": {
+        const linkId = findLinkIdByNames(model, ref.sentence.sourceName, ref.sentence.targetName);
+        if (linkId) dispatch({ tag: "selectLink", linkId });
+        else dispatch({ tag: "selectThing", thingId: findThingIdByName(model, ref.sentence.sourceName) });
         return;
+      }
       case "grouped-structural":
       case "in-zoom-sequence":
         dispatch({ tag: "selectThing", thingId: findThingIdByName(model, ref.sentence.parentName) });
@@ -137,13 +149,21 @@ export function OplTextView({ model, opdId, highlightThingId, highlightLinkId, d
       </div>
       <div ref={containerRef} className="opl-text__lines">
         {lines.map((line, i) => {
-          const highlighted = isHighlighted(line);
+          const state = lineState(line, i + 1);
+          const active = state === "active";
+          const highlighted = state !== "plain";
           return (
             <div
               key={i}
-              className={`opl-text__line${highlighted ? " opl-text__line--highlight" : ""}`}
+              className={`opl-text__line${highlighted ? " opl-text__line--highlight" : ""}${active ? " opl-text__line--active" : ""}`}
               onClick={() => handleLineClick(i)}
-              style={highlighted ? {
+              style={active ? {
+                background: "rgba(124, 92, 255, 0.16)",
+                borderLeft: "3px solid rgba(124, 92, 255, 0.85)",
+                paddingLeft: 9,
+                cursor: "pointer",
+                fontWeight: 600,
+              } : highlighted ? {
                 background: "rgba(88, 166, 255, 0.12)",
                 borderLeft: "3px solid rgba(88, 166, 255, 0.6)",
                 paddingLeft: 9,

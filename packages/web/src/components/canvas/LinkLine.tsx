@@ -24,6 +24,7 @@ export function LinkLine({
   isOutputHalf,
   isError,
   isSelected,
+  isAttention,
   hideLabel,
   edgePath,
   onClick,
@@ -40,6 +41,7 @@ export function LinkLine({
   isOutputHalf?: boolean;
   isError?: boolean;
   isSelected?: boolean;
+  isAttention?: boolean;
   hideLabel?: boolean;
   edgePath?: EdgePath;
   onClick?: (e: React.MouseEvent) => void;
@@ -191,10 +193,10 @@ export function LinkLine({
   return (
     <g>
       {hitArea}
-      {isSelected && !isLightning && (
+      {(isSelected || isAttention) && !isLightning && (
         edgePath
-          ? <path d={edgePath.d} fill="none" stroke="var(--accent, #3182ce)" strokeWidth={4} opacity={0.4} />
-          : <line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="var(--accent, #3182ce)" strokeWidth={4} opacity={0.4} />
+          ? <path d={edgePath.d} fill="none" stroke={isSelected ? "var(--accent, #3182ce)" : "rgba(124, 92, 255, 0.95)"} strokeWidth={isSelected ? 4 : 6} opacity={isSelected ? 0.4 : 0.22} />
+          : <line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke={isSelected ? "var(--accent, #3182ce)" : "rgba(124, 92, 255, 0.95)"} strokeWidth={isSelected ? 4 : 6} opacity={isSelected ? 0.4 : 0.22} />
       )}
       {linkElement}
       {!hideLabel && (

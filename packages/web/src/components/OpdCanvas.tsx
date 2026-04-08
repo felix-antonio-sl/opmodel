@@ -59,6 +59,7 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, select
   const [hideLinkLabels, setHideLinkLabels] = useState(false);
   const [showGhosts, setShowGhosts] = useState(false);
   const [attentionThingId, setAttentionThingId] = useState<string | null>(null);
+  const [attentionLinkId, setAttentionLinkId] = useState<string | null>(null);
 
   const toggleLinkCategory = (category: string) => {
     setHiddenLinkTypes(prev => {
@@ -116,6 +117,16 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, select
     const timer = window.setTimeout(() => setAttentionThingId((current) => current === selectedThing ? null : current), 1400);
     return () => window.clearTimeout(timer);
   }, [selectedThing, opdId]);
+
+  useEffect(() => {
+    if (!selectedLink) {
+      setAttentionLinkId(null);
+      return;
+    }
+    setAttentionLinkId(selectedLink);
+    const timer = window.setTimeout(() => setAttentionLinkId((current) => current === selectedLink ? null : current), 1400);
+    return () => window.clearTimeout(timer);
+  }, [selectedLink, opdId]);
 
   // Batch delete for multi-select
   useEffect(() => {
@@ -1199,6 +1210,7 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, select
                   isOutputHalf={isOutputHalf}
                   isError={errorEntities?.has(link.id)}
                   isSelected={selectedLink === link.id}
+                  isAttention={attentionLinkId === link.id}
                   hideLabel={hideLinkLabels}
                   edgePath={edgeRoutes.get(isInputHalf ? `${link.id}__in` : isOutputHalf ? `${link.id}__out` : link.id)}
                   onClick={simulation ? undefined : (e) => { e.stopPropagation(); dispatch({ tag: "selectLink", linkId: link.id }); }}
