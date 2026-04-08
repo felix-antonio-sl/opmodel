@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef, Component, type ErrorInfo, type ReactNode } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, Component, Suspense, lazy, type ErrorInfo, type ReactNode } from "react";
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
   state = { error: null as Error | null };
@@ -21,21 +21,23 @@ import { useModelStore } from "./hooks/useModelStore";
 import { OpdTree } from "./components/OpdTree";
 import { OpdCanvas } from "./components/OpdCanvas";
 import { OplPanel } from "./components/OplPanel";
-import { OplImportPanel } from "./components/OplImportPanel";
 import { PropertiesPanel, LinkPropertiesPanel } from "./components/PropertiesPanel";
 import { Toolbar } from "./components/Toolbar";
 import { SimulationPanel } from "./components/SimulationPanel";
-import { ValidationPanel, type ValidationTab } from "./components/ValidationPanel";
+import type { ValidationTab } from "./components/ValidationPanel";
 import { auditVisualOpd, computeVisualQuality } from "./lib/visual-lint";
 import { suggestLayoutForOpd } from "./lib/spatial-layout";
 import { buildPatchableOpdProjectionSliceFromProjection } from "./lib/projection-view";
-import { BugCapture } from "./components/BugCapture";
-import { SettingsPanel } from "./components/SettingsPanel";
-import { VerificationChecklist } from "./components/VerificationChecklist";
-import { SdWizard } from "./components/SdWizard";
 import { buildSearchResults } from "./lib/search";
 
 const STORAGE_KEY = "opmodel:current";
+
+const ValidationPanel = lazy(() => import("./components/ValidationPanel").then((m) => ({ default: m.ValidationPanel })));
+const BugCapture = lazy(() => import("./components/BugCapture").then((m) => ({ default: m.BugCapture })));
+const SettingsPanel = lazy(() => import("./components/SettingsPanel").then((m) => ({ default: m.SettingsPanel })));
+const VerificationChecklist = lazy(() => import("./components/VerificationChecklist").then((m) => ({ default: m.VerificationChecklist })));
+const SdWizard = lazy(() => import("./components/SdWizard").then((m) => ({ default: m.SdWizard })));
+const OplImportPanel = lazy(() => import("./components/OplImportPanel").then((m) => ({ default: m.OplImportPanel })));
 
 export const EXAMPLES = [
   { name: "HODOM HSC — Hospitalización Domiciliaria", file: "hodom-hsc.opmodel" },
@@ -726,15 +728,17 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
 
       {/* Validation Panel (floating, above status bar) */}
       {showValidation && (
-        <ValidationPanel
-          model={model}
-          currentOpd={ui.currentOpd}
-          errors={errors}
-          visualFindings={visualFindings}
-          dispatch={dispatch}
-          initialTab={validationTab}
-          onClose={() => setShowValidation(false)}
-        />
+        <Suspense fallback={null}>
+          <ValidationPanel
+            model={model}
+            currentOpd={ui.currentOpd}
+            errors={errors}
+            visualFindings={visualFindings}
+            dispatch={dispatch}
+            initialTab={validationTab}
+            onClose={() => setShowValidation(false)}
+          />
+        </Suspense>
       )}
 
       {/* Status Bar */}
@@ -814,7 +818,9 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
         <div className="status-bar__sep" />
         <span className="status-bar__version">opmodel {model.opmodel}</span>
       </footer>
-      <BugCapture model={model} opdId={ui.currentOpd} selectedThing={ui.selectedThing} errors={errors} />
+      <Suspense fallback={null}>
+        <BugCapture model={model} opdId={ui.currentOpd} selectedThing={ui.selectedThing} errors={errors} />
+      </Suspense>
       {showHelp && (
         <div className="help-overlay" onClick={() => setShowHelp(false)} onKeyDown={(e) => { if (e.key === "Escape") setShowHelp(false); }}>
           <div className="help-dialog" onClick={(e) => e.stopPropagation()} tabIndex={-1} ref={(el) => el?.focus()}>
@@ -850,29 +856,37 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
         </div>
       )}
       {showWizard && (
-        <SdWizard
-          onComplete={(newModel) => {
-            setShowWizard(false);
-            onImport(newModel);
-          }}
-          onCancel={() => setShowWizard(false)}
-        />
+        <Suspense fallback={null}>
+          <SdWizard
+            onComplete={(newModel) => {
+              setShowWizard(false);
+              onImport(newModel);
+            }}
+            onCancel={() => setShowWizard(false)}
+          />
+        </Suspense>
       )}
       {showVerification && (
-        <VerificationChecklist model={model} onClose={() => setShowVerification(false)} />
+        <Suspense fallback={null}>
+          <VerificationChecklist model={model} onClose={() => setShowVerification(false)} />
+        </Suspense>
       )}
       {showSettings && (
-        <SettingsPanel model={model} dispatch={dispatch} onClose={() => setShowSettings(false)} />
+        <Suspense fallback={null}>
+          <SettingsPanel model={model} dispatch={dispatch} onClose={() => setShowSettings(false)} />
+        </Suspense>
       )}
       {showImportOpl && (
-        <OplImportPanel
-          model={model}
-          onClose={() => setShowImportOpl(false)}
-          onApply={(newModel) => {
-            dispatch({ tag: "importOpl", model: newModel });
-            setShowImportOpl(false);
-          }}
-        />
+        <Suspense fallback={null}>
+          <OplImportPanel
+            model={model}
+            onClose={() => setShowImportOpl(false)}
+            onApply={(newModel) => {
+              dispatch({ tag: "importOpl", model: newModel });
+              setShowImportOpl(false);
+            }}
+          />
+        </Suspense>
       )}
     </div>
   );

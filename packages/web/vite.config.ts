@@ -70,4 +70,15 @@ export default defineConfig({
     port: 5173,
     allowedHosts: true,
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules/react") || id.includes("node_modules/react-dom")) return "react-vendor";
+          if (id.includes("@opmodel/core")) return "opmodel-core";
+          if (id.includes("src/components/OpdCanvas") || id.includes("src/components/canvas/") || id.includes("src/lib/edge-router") || id.includes("src/lib/spatial-layout")) return "canvas";
+        },
+      },
+    },
+  },
 });
