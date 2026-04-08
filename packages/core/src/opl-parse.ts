@@ -1371,8 +1371,8 @@ function parseScenario(line: string, span: OplSourceSpan, ctx: ParseContext): Op
   const isES = ctx.locale === "es";
   // "[scenario: Name] 5 links on path \"label\"" / "[escenario: Nombre] 5 enlaces en ruta \"etiqueta\""
   const match = isES
-    ? line.match(/^\[escenario:\s*(.*?)\]\s*(\d+) enlaces en ruta \"(.*?)\"$/)
-    : line.match(/^\[scenario:\s*(.*?)\]\s*(\d+) links on path \"(.*?)\"$/);
+    ? line.match(/^\[escenario:\s*(.*?)\]\s*(\d+) enlaces en ruta \"(.*?)\"\.?$/)
+    : line.match(/^\[scenario:\s*(.*?)\]\s*(\d+) links on path \"(.*?)\"\.?$/);
   if (!match) return null;
   return {
     kind: "scenario",

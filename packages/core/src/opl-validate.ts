@@ -582,11 +582,11 @@ function collectCanonicalIssues(docs: OplDocument[]): ValidationIssue[] {
             ...location,
           });
         }
-        if (sentence.thingKind === "process" && !/ing$/i.test(sentence.name.trim())) {
+        if (sentence.thingKind === "process" && !/ing\b/i.test(sentence.name.trim())) {
           issues.push({
             phase: "V4-canonical",
             severity: "warning",
-            message: `Process names should end with -ing: ${sentence.name}`,
+            message: `Process names should contain a gerund (-ing): ${sentence.name}`,
             ...location,
           });
         }
@@ -607,7 +607,7 @@ function collectCanonicalIssues(docs: OplDocument[]): ValidationIssue[] {
         }
       }
 
-      if (sentence.sourceSpan) {
+      if (sentence.sourceSpan && sentence.kind !== "scenario") {
         const lineText = lines[sentence.sourceSpan.line - doc.sourceSpan!.line] ?? "";
         if (lineText.trim() && !lineText.trim().endsWith(".")) {
           issues.push({

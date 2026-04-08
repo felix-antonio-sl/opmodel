@@ -1,0 +1,284 @@
+=== SD ===
+Emergency Department is an object, physical, environmental.
+Hospital Information System is an object, informatical.
+Patient is an object, physical.
+Patient can be incoming, triaged, under treatment, stabilized, discharged, or deceased.
+State incoming of Patient is initial and default.
+State discharged of Patient is final.
+State deceased of Patient is final.
+Triage Nurse is an object, physical.
+Emergency Physician is an object, physical.
+Ambulance is an object, physical.
+Ambulance can be available, dispatched, or returning.
+State available of Ambulance is initial and default.
+Medical Record of Patient is an object, informatical.
+Medical Record of Patient can be incomplete, complete, or archived.
+State incomplete of Medical Record of Patient is initial and default.
+State archived of Medical Record of Patient is final.
+Vital Status of Patient is an object, informatical.
+Vital Status of Patient can be normal, abnormal, or critical.
+State normal of Vital Status of Patient is default.
+Treatment Protocol is an object, informatical.
+Medication Inventory is an object, physical.
+Medication Inventory can be stocked, low, or depleted.
+State stocked of Medication Inventory is initial and default.
+Blood Bank is an object, physical.
+Blood Bank can be sufficient or insufficient.
+State sufficient of Blood Bank is initial and default.
+Laboratory is an object, physical, environmental.
+Imaging Suite is an object, physical, environmental.
+Operating Room is an object, physical, environmental.
+Operating Room can be free, occupied, or under maintenance.
+State free of Operating Room is initial and default.
+Insurance Policy of Patient is an object, informatical.
+Trauma Alert Level is an object, informatical.
+Trauma Alert Level can be green, yellow, red, or black.
+State green of Trauma Alert Level is initial and default.
+Bed is an object, physical.
+Bed can be empty, occupied by patient, or reserved.
+State empty of Bed is initial and default.
+Regulatory Compliance is an object, informatical, environmental.
+Hospital Network is an object, informatical, environmental.
+Vehicle is an object, physical.
+Medical Device is an object, physical.
+Healthcare Worker is an object, physical.
+Nurse Station is an object, physical.
+Defibrillator is an object, physical.
+Ventilator is an object, physical.
+Infection Control Protocol is an object, informatical.
+Managing Emergency Care is a process, informatical.
+Dispatching Ambulance is a process, physical.
+Triaging Patient is a process, informatical.
+Diagnosing Condition is a process, informatical.
+Treating Patient is a process, physical.
+Performing Surgery is a process, physical.
+Discharging Patient is a process, informatical.
+Ordering Lab Work is a process, informatical.
+Processing Lab Report is a process, informatical.
+Administering Medication is a process, physical.
+Monitoring Vital Status is a process, informatical.
+Transferring Patient is a process, physical.
+Processing Bill is a process, informatical.
+Documenting Visit is a process, informatical.
+Handling Mass Casualty is a process, physical.
+Managing Emergency Care requires 10-30-60min.
+Dispatching Ambulance requires 5-15min.
+Triaging Patient requires 2-5-10min.
+Diagnosing Condition requires 15-30-60min.
+Treating Patient requires 30-120min.
+Performing Surgery requires 60-180-480min.
+Administering Medication requires 5-15-30min.
+Ordering Lab Work requires 5-15-30min.
+Emergency Department exhibits Managing Emergency Care.
+Hospital Information System exhibits Medical Record, Vital Status, and Insurance Policy.
+Patient exhibits Medical Record, Vital Status, and Insurance Policy.
+Emergency Department consists of Laboratory, Imaging Suite, Operating Room, Nurse Station, and Bed.
+Ambulance is a Vehicle.
+Defibrillator is a Medical Device.
+Ventilator is a Medical Device.
+Triage Nurse is a Healthcare Worker.
+Emergency Physician is a Healthcare Worker.
+Triage Nurse handles Triaging Patient.
+Emergency Physician handles Diagnosing Condition.
+Emergency Physician handles Treating Patient.
+Emergency Physician handles Performing Surgery.
+Triage Nurse handles Monitoring Vital Status.
+Ambulance handles Dispatching Ambulance.
+Triaging Patient requires Patient.
+Diagnosing Condition requires Medical Record of Patient.
+Treating Patient requires Treatment Protocol.
+Performing Surgery requires Operating Room.
+Administering Medication requires Medication Inventory.
+Ordering Lab Work requires Laboratory.
+Monitoring Vital Status requires Vital Status of Patient.
+Processing Bill requires Insurance Policy of Patient.
+Performing Surgery consumes Blood Bank.
+Dispatching Ambulance changes Ambulance from available to dispatched.
+Triaging Patient changes Patient from incoming to triaged.
+Diagnosing Condition changes Medical Record of Patient from incomplete to complete.
+Treating Patient changes Patient from triaged to under treatment.
+Treating Patient changes Vital Status of Patient from abnormal to normal.
+Performing Surgery changes Operating Room from free to occupied.
+Discharging Patient changes Patient from stabilized to discharged.
+Discharging Patient changes Bed from occupied by patient to empty.
+Monitoring Vital Status affects Vital Status of Patient.
+Administering Medication affects Patient.
+Documenting Visit yields Medical Record of Patient.
+Transferring Patient affects Patient.
+Processing Bill affects Insurance Policy of Patient.
+Managing Emergency Care affects Patient.
+Handling Mass Casualty affects Patient.
+Managing Emergency Care requires Blood Bank.
+Managing Emergency Care requires Medication Inventory.
+Handling Mass Casualty requires Trauma Alert Level.
+Documenting Visit invokes Processing Lab Report.
+Diagnosing Condition invokes Ordering Lab Work.
+Ordering Lab Work invokes Processing Lab Report.
+Treating Patient invokes Administering Medication.
+Managing Emergency Care invokes Handling Mass Casualty.
+Triaging Patient changes Trauma Alert Level from green to yellow.
+Processing Lab Report handles exception from Ordering Lab Work.
+Handling Mass Casualty handles overtime exception from Managing Emergency Care.
+Transferring Patient handles exception from Treating Patient.
+Diagnosing Condition occurs if Medical Record of Patient exists, in which case Medical Record of Patient is consumed, otherwise Diagnosing Condition is skipped.
+Performing Surgery occurs if Operating Room is free, in which case Operating Room is consumed, otherwise Performing Surgery is skipped.
+Triage Nurse handles Monitoring Vital Status if Triage Nurse exists, else Monitoring Vital Status is skipped.
+critical Vital Status of Patient triggers Handling Mass Casualty.
+Trauma Alert Level triggers Treating Patient.
+Regulatory Compliance governs Treatment Protocol.
+Hospital Network interconnects Hospital Information System.
+Infection Control Protocol constrains Emergency Department.
+Treating Patient requires at least one of Medication Inventory, Blood Bank or Defibrillator.
+Exactly one of Triage Nurse or Emergency Physician handles Triaging Patient.
+Diagnosing Condition requires exactly one of Laboratory or Imaging Suite.
+Managing Emergency Care zooms into Dispatching Ambulance, Triaging Patient, Diagnosing Condition, Treating Patient, and Discharging Patient, in that sequence.
+[R-01] Patient Safety: all treatments must follow verified protocols (applies to Treating Patient).
+[R-02] Triage Compliance: triage must be completed within 10 minutes (applies to Triaging Patient).
+[R-03] Documentation: all visits must be fully documented before discharge (applies to Documenting Visit).
+[safety] Patient must not be in deceased state after Treating Patient completes.
+[liveness] Every incoming Patient eventually reaches discharged or deceased state.
+[correctness] Medical Record of Patient must be complete before Discharging Patient.
+[scenario: Normal Emergency] 4 links on path "standard"
+[scenario: Mass Casualty Event] 1 links on path "mass-casualty"
+[scenario: Surgical Emergency] 2 links on path "surgical"
+Following path standard, Triage Nurse handles Triaging Patient.
+Following path standard, Emergency Physician handles Diagnosing Condition.
+Following path standard, Emergency Physician handles Treating Patient.
+Following path standard, Treating Patient requires Bed.
+Following path surgical, Emergency Physician handles Performing Surgery.
+Following path surgical, Performing Surgery requires Ventilator.
+Following path mass-casualty, Handling Mass Casualty requires Bed.
+
+=== SD1 ===
+SD is refined by in-zooming Managing Emergency Care in SD1.
+Emergency Department is an object, physical, environmental.
+Hospital Information System is an object, informatical.
+Patient is an object, physical.
+Patient can be incoming, triaged, under treatment, stabilized, discharged, or deceased.
+State incoming of Patient is initial and default.
+State discharged of Patient is final.
+State deceased of Patient is final.
+Medical Record of Patient is an object, informatical.
+Medical Record of Patient can be incomplete, complete, or archived.
+State incomplete of Medical Record of Patient is initial and default.
+State archived of Medical Record of Patient is final.
+Vital Status of Patient is an object, informatical.
+Vital Status of Patient can be normal, abnormal, or critical.
+State normal of Vital Status of Patient is default.
+Triage Nurse is an object, physical.
+Emergency Physician is an object, physical.
+Ambulance is an object, physical.
+Treatment Protocol is an object, informatical.
+Medication Inventory is an object, physical.
+Blood Bank is an object, physical.
+Laboratory is an object, physical, environmental.
+Imaging Suite is an object, physical, environmental.
+Operating Room is an object, physical, environmental.
+Bed is an object, physical.
+Trauma Alert Level is an object, informatical.
+Insurance Policy of Patient is an object, informatical.
+Dispatching Ambulance is a process, physical.
+Triaging Patient is a process, informatical.
+Diagnosing Condition is a process, informatical.
+Treating Patient is a process, physical.
+Discharging Patient is a process, informatical.
+Managing Emergency Care is a process, informatical.
+Managing Emergency Care zooms into Dispatching Ambulance, Triaging Patient, Diagnosing Condition, Treating Patient, and Discharging Patient, in that sequence.
+Emergency Department exhibits Managing Emergency Care.
+Triage Nurse handles Triaging Patient.
+Emergency Physician handles Diagnosing Condition.
+Emergency Physician handles Treating Patient.
+Ambulance handles Dispatching Ambulance.
+Dispatching Ambulance changes Ambulance from available to dispatched.
+Triaging Patient changes Patient from incoming to triaged.
+Diagnosing Condition changes Medical Record of Patient from incomplete to complete.
+Treating Patient changes Patient from triaged to under treatment.
+Discharging Patient changes Patient from stabilized to discharged.
+Discharging Patient changes Bed from occupied by patient to empty.
+
+=== SD1.1 ===
+SD1 is refined by in-zooming Treating Patient in SD1.1.
+Patient is an object, physical.
+Patient can be incoming, triaged, under treatment, stabilized, discharged, or deceased.
+Emergency Physician is an object, physical.
+Treatment Protocol is an object, informatical.
+Medication Inventory is an object, physical.
+Blood Bank is an object, physical.
+Operating Room is an object, physical, environmental.
+Vital Status of Patient is an object, informatical.
+Vital Status of Patient can be normal, abnormal, or critical.
+Defibrillator is an object, physical.
+Ventilator is an object, physical.
+Assessing Severity is a process, informatical.
+Administering Medication is a process, physical.
+Performing Surgery is a process, physical.
+Monitoring Vital Status is a process, informatical.
+Stabilizing Patient is a process, physical.
+Treating Patient is a process, physical.
+Treating Patient zooms into Assessing Severity, parallel Administering Medication and Performing Surgery, Monitoring Vital Status, and Stabilizing Patient, as well as Vital Status of Patient, in that sequence.
+Emergency Physician handles Assessing Severity.
+Emergency Physician handles Performing Surgery.
+Assessing Severity requires Treatment Protocol.
+Assessing Severity affects Treatment Protocol.
+Administering Medication consumes Medication Inventory.
+Performing Surgery consumes Blood Bank.
+Performing Surgery requires Operating Room.
+Monitoring Vital Status requires Vital Status of Patient.
+Stabilizing Patient changes Patient from under treatment to stabilized.
+Stabilizing Patient changes Vital Status of Patient from abnormal to normal.
+Administering Medication requires Defibrillator.
+Performing Surgery requires Ventilator.
+
+=== SD2 ===
+SD is refined by in-zooming Diagnosing Condition in SD2.
+Patient is an object, physical.
+Medical Record of Patient is an object, informatical.
+Medical Record of Patient can be incomplete, complete, or archived.
+Emergency Physician is an object, physical.
+Laboratory is an object, physical, environmental.
+Imaging Suite is an object, physical, environmental.
+Lab Sample is an object, physical.
+Lab Report is an object, informatical.
+Lab Report can be pending or finalized.
+State pending of Lab Report is initial and default.
+State finalized of Lab Report is final.
+Imaging Report is an object, informatical.
+Imaging Report can be pending or finalized.
+State pending of Imaging Report is initial and default.
+State finalized of Imaging Report is final.
+Collecting Sample is a process, physical.
+Ordering Lab Work is a process, informatical.
+Processing Lab Report is a process, informatical.
+Performing Imaging is a process, physical.
+Interpreting Finding is a process, informatical.
+Updating Medical Record is a process, informatical.
+Diagnosing Condition is a process, informatical.
+Diagnosing Condition zooms into Collecting Sample, parallel Ordering Lab Work and Performing Imaging, Interpreting Finding, and Updating Medical Record, as well as Lab Sample and Lab Report and Imaging Report, in that sequence.
+Emergency Physician handles Interpreting Finding.
+Collecting Sample yields Lab Sample.
+Ordering Lab Work requires Lab Sample.
+Ordering Lab Work requires Laboratory.
+Ordering Lab Work affects Lab Report.
+Processing Lab Report handles exception from Ordering Lab Work.
+Processing Lab Report changes Lab Report from pending to finalized.
+Performing Imaging requires Imaging Suite.
+Performing Imaging changes Imaging Report from pending to finalized.
+Interpreting Finding requires Lab Report.
+Interpreting Finding requires Imaging Report.
+Interpreting Finding affects Medical Record of Patient.
+Updating Medical Record changes Medical Record of Patient from incomplete to complete.
+
+=== SD3 ===
+SD is refined by unfolding Trauma Alert Level in SD3.
+Trauma Alert Level is an object, informatical.
+Trauma Alert Level can be green, yellow, red, or black.
+State green of Trauma Alert Level is initial and default.
+Activating Alert is a process, informatical.
+Escalating Alert is a process, informatical.
+Declaring Mass Casualty is a process, informatical.
+Deactivating Alert is a process, informatical.
+Trauma Alert Level unfolds in SD3 into Activating Alert, Escalating Alert, Declaring Mass Casualty, and Deactivating Alert.
+Activating Alert changes Trauma Alert Level from green to yellow.
+Escalating Alert changes Trauma Alert Level from yellow to red.
+Declaring Mass Casualty changes Trauma Alert Level from red to black.
+Deactivating Alert changes Trauma Alert Level to green.
