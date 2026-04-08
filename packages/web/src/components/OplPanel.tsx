@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Model } from "@opmodel/core";
 import type { Command } from "../lib/commands";
 import { OplSentencesView } from "./OplSentencesView";
@@ -19,6 +19,20 @@ export function OplPanel({ model, opdId, selectedThing, selectedLink, dispatch }
   const [activeTab, setActiveTab] = useState<OplTab>("edit");
   const opd = model.opds.get(opdId);
   const currentLang = model.settings.opl_language === "es" ? "es" : "en";
+  const previousSelectionRef = useRef<string>("");
+
+  useEffect(() => {
+    const currentSelection = `${selectedThing ?? ""}|${selectedLink ?? ""}`;
+    if (previousSelectionRef.current && currentSelection !== previousSelectionRef.current && (selectedThing || selectedLink)) {
+      setActiveTab("edit");
+    }
+    previousSelectionRef.current = currentSelection;
+  }, [selectedThing, selectedLink]);
+
+  const handleStructuredSelect = (cmd: Command) => {
+    dispatch(cmd);
+    setActiveTab("edit");
+  };
 
   return (
     <aside className="opl-panel">
@@ -69,8 +83,13 @@ export function OplPanel({ model, opdId, selectedThing, selectedLink, dispatch }
         />
       )}
       {activeTab === "sentences" && (
-        <OplSentencesView model={model} opdId={opdId} selectedThing={selectedThing}
-          onSelectThing={(id) => id && dispatch({ tag: "selectThing", thingId: id })} />
+        <OplSentencesView
+          model={model}
+          opdId={opdId}
+          selectedThing={selectedThing}
+          selectedLink={selectedLink}
+          onSelectEntity={handleStructuredSelect}
+        />
       )}
     </aside>
   );

@@ -1,8 +1,21 @@
 // @vitest-environment happy-dom
-import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
-import { createModel } from "@opmodel/core";
+import React from "react";
+import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { createModel, addThing, addAppearance, addLink } from "@opmodel/core";
 import { OplPanel } from "../src/components/OplPanel";
+
+function buildSimpleModel() {
+  let model = createModel("Test");
+  const water = { id: "thing-water", name: "Water", kind: "object", essence: "physical", affiliation: "system" } as const;
+  const boiling = { id: "thing-boiling", name: "Boiling", kind: "process", essence: "physical", affiliation: "system" } as const;
+  let r = addThing(model, water); if (!r.ok) throw new Error(r.error.message); model = r.value;
+  r = addThing(model, boiling); if (!r.ok) throw new Error(r.error.message); model = r.value;
+  let a = addAppearance(model, { thing: water.id, opd: "opd-sd", x: 40, y: 40, w: 120, h: 60 }); if (!a.ok) throw new Error(a.error.message); model = a.value;
+  a = addAppearance(model, { thing: boiling.id, opd: "opd-sd", x: 220, y: 40, w: 140, h: 60 }); if (!a.ok) throw new Error(a.error.message); model = a.value;
+  const l = addLink(model, { id: "link-consumes", type: "consumption", source: water.id, target: boiling.id }); if (!l.ok) throw new Error(l.error.message); model = l.value;
+  return model;
+}
 
 describe("OplPanel", () => {
   it("defaults to OPL authoring and hides the NL Assist tab", () => {
@@ -19,5 +32,53 @@ describe("OplPanel", () => {
     expect(screen.getByRole("button", { name: "Author" })).toBeTruthy();
     expect(screen.getByText("Author OPL directly, then apply back to the model.")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "NL Assist" })).toBeNull();
+  });
+
+  it("returns to Author when the external selection changes", () => {
+    const model = buildSimpleModel();
+    const { rerender } = render(
+      React.createElement(OplPanel, {
+        model,
+        opdId: "opd-sd",
+        selectedThing: null,
+        selectedLink: null,
+        dispatch: () => true,
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Structured" }));
+    expect(screen.getByText("Browse generated OPL sentences by entity.")).toBeTruthy();
+
+    rerender(
+      React.createElement(OplPanel, {
+        model,
+        opdId: "opd-sd",
+        selectedThing: "thing-boiling",
+        selectedLink: null,
+        dispatch: () => true,
+      }),
+    );
+
+    expect(screen.getByText("Author OPL directly, then apply back to the model.")).toBeTruthy();
+  });
+
+  it("lets structured sentences select links and returns to Author", () => {
+    const model = buildSimpleModel();
+    const dispatch = vi.fn(() => true);
+    render(
+      React.createElement(OplPanel, {
+        model,
+        opdId: "opd-sd",
+        selectedThing: null,
+        selectedLink: null,
+        dispatch,
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Structured" }));
+    fireEvent.click(screen.getByText(/Boiling consumes Water\./i));
+
+    expect(dispatch).toHaveBeenCalledWith({ tag: "selectLink", linkId: "link-consumes" });
+    expect(screen.getByText("Author OPL directly, then apply back to the model.")).toBeTruthy();
   });
 });

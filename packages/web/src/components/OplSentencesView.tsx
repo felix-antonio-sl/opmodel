@@ -1,11 +1,13 @@
 import type { Model } from "@opmodel/core";
 import { semanticKernelFromModel, exposeSemanticKernel, exposeFromKernel, render, type OplSentence, type OplDocument } from "@opmodel/core";
+import type { Command } from "../lib/commands";
 
 interface Props {
   model: Model;
   opdId: string;
   selectedThing: string | null;
-  onSelectThing?: (thingId: string | null) => void;
+  selectedLink: string | null;
+  onSelectEntity?: (cmd: Command) => void;
 }
 
 function getEntityIds(sentence: OplSentence): string[] {
@@ -25,7 +27,7 @@ function getEntityIds(sentence: OplSentence): string[] {
     case "grouped-structural":
       return [sentence.parentId, ...sentence.childIds];
     case "in-zoom-sequence":
-      return [sentence.parentId, ...sentence.steps.flatMap(s => s.thingIds)];
+      return [sentence.parentId, ...sentence.steps.flatMap((s) => s.thingIds)];
     case "attribute-value":
       return [sentence.thingId, sentence.exhibitorId];
     case "fan":
@@ -62,22 +64,49 @@ function sentenceCategory(sentence: OplSentence): "thing" | "link" | "modifier" 
 }
 
 function renderSentence(sentence: OplSentence, doc: OplDocument): string {
-  // Strip refinementEdge to avoid prepending it to every individual sentence
   const { refinementEdge, ...rest } = doc;
   return render({ ...rest, sentences: [sentence] });
 }
 
-function sentenceClass(sentence: OplSentence, selectedThing: string | null): string {
+function isHighlighted(sentence: OplSentence, selectedThing: string | null, selectedLink: string | null): boolean {
   const ids = getEntityIds(sentence);
+  return Boolean((selectedThing && ids.includes(selectedThing)) || (selectedLink && ids.includes(selectedLink)));
+}
+
+function sentenceClass(sentence: OplSentence, selectedThing: string | null, selectedLink: string | null): string {
   const category = sentenceCategory(sentence);
   const base = `opl-sentence opl-sentence--${category}`;
-  if (selectedThing && ids.includes(selectedThing)) {
+  if (isHighlighted(sentence, selectedThing, selectedLink)) {
     return `${base} opl-sentence--highlighted`;
   }
   return base;
 }
 
-export function OplSentencesView({ model, opdId, selectedThing, onSelectThing }: Props) {
+function commandForSentence(sentence: OplSentence): Command | null {
+  switch (sentence.kind) {
+    case "thing-declaration":
+    case "state-enumeration":
+    case "duration":
+    case "state-description":
+    case "attribute-value":
+      return { tag: "selectThing", thingId: sentence.thingId };
+    case "link":
+      return { tag: "selectLink", linkId: sentence.linkId };
+    case "modifier":
+      return { tag: "selectLink", linkId: sentence.linkId };
+    case "grouped-structural":
+    case "in-zoom-sequence":
+      return { tag: "selectThing", thingId: sentence.parentId };
+    case "fan":
+      return null;
+    case "requirement":
+    case "assertion":
+    case "scenario":
+      return null;
+  }
+}
+
+export function OplSentencesView({ model, opdId, selectedThing, selectedLink, onSelectEntity }: Props) {
   const kernel = semanticKernelFromModel(model);
   const atlas = exposeSemanticKernel(kernel);
   const doc = exposeFromKernel(kernel, atlas, opdId);
@@ -88,7 +117,7 @@ export function OplSentencesView({ model, opdId, selectedThing, onSelectThing }:
       s.kind === "state-enumeration" ||
       s.kind === "duration" ||
       s.kind === "state-description" ||
-      s.kind === "attribute-value"
+      s.kind === "attribute-value",
   );
   const linkSentences = doc.sentences.filter(
     (s): s is OplSentence =>
@@ -96,17 +125,15 @@ export function OplSentencesView({ model, opdId, selectedThing, onSelectThing }:
       s.kind === "modifier" ||
       s.kind === "grouped-structural" ||
       s.kind === "in-zoom-sequence" ||
-      s.kind === "fan"
+      s.kind === "fan",
   );
   const metaSentences = doc.sentences.filter(
     (s): s is OplSentence =>
       s.kind === "requirement" ||
       s.kind === "assertion" ||
-      s.kind === "scenario"
+      s.kind === "scenario",
   );
 
-  // R-OPL-3: Refinement edge label (once at top, not per sentence)
-  // Delegate to core render() for locale-aware output (DRY with opl.ts)
   const edgeLabel = doc.refinementEdge
     ? render({ ...doc, sentences: [] }).trim()
     : null;
@@ -119,12 +146,13 @@ export function OplSentencesView({ model, opdId, selectedThing, onSelectThing }:
         </div>
       )}
       {thingSentences.map((sentence, i) => {
-        const ids = getEntityIds(sentence);
-        const primaryId = ids[0];
+        const cmd = commandForSentence(sentence);
         return (
-          <div key={`t-${i}`} className={sentenceClass(sentence, selectedThing)}
-            onClick={onSelectThing ? () => onSelectThing(primaryId ?? null) : undefined}
-            style={onSelectThing ? { cursor: "pointer" } : undefined}
+          <div
+            key={`t-${i}`}
+            className={sentenceClass(sentence, selectedThing, selectedLink)}
+            onClick={cmd && onSelectEntity ? () => onSelectEntity(cmd) : undefined}
+            style={cmd && onSelectEntity ? { cursor: "pointer" } : undefined}
           >
             {renderSentence(sentence, doc)}
           </div>
@@ -132,12 +160,13 @@ export function OplSentencesView({ model, opdId, selectedThing, onSelectThing }:
       })}
       {thingSentences.length > 0 && linkSentences.length > 0 && <div className="opl-divider" />}
       {linkSentences.map((sentence, i) => {
-        const ids = getEntityIds(sentence);
-        const primaryId = ids[0];
+        const cmd = commandForSentence(sentence);
         return (
-          <div key={`l-${i}`} className={sentenceClass(sentence, selectedThing)}
-            onClick={onSelectThing ? () => onSelectThing(primaryId ?? null) : undefined}
-            style={onSelectThing ? { cursor: "pointer" } : undefined}
+          <div
+            key={`l-${i}`}
+            className={sentenceClass(sentence, selectedThing, selectedLink)}
+            onClick={cmd && onSelectEntity ? () => onSelectEntity(cmd) : undefined}
+            style={cmd && onSelectEntity ? { cursor: "pointer" } : undefined}
           >
             {renderSentence(sentence, doc)}
           </div>
