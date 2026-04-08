@@ -267,7 +267,7 @@ export function compileOplDocuments(docs: OplDocument[], options: OplCompileOpti
   for (const doc of docs) {
     let yBase = 120;
     for (const s of doc.sentences) {
-      if (s.kind !== "in-zoom-sequence" || s.refinementType === "unfold") continue;
+      if (s.kind !== "in-zoom-sequence") continue;
       for (const step of s.steps) {
         if (step.parallel) {
           for (const name of step.thingNames) {
@@ -890,11 +890,91 @@ export function compileOplDocuments(docs: OplDocument[], options: OplCompileOpti
   for (const doc of docs) {
     for (const s of doc.sentences) {
       if (s.kind !== "in-zoom-sequence") continue;
-      if (s.refinementType === "unfold") continue;
-
       const parentRef = resolveThingRef(s.parentName, undefined, thingRefByDisplayName, thingIdsByActualName, doc.renderSettings.locale);
       if (!parentRef) {
-        pushIssue(issues, `Could not resolve parent thing for in-zoom sequence: ${s.parentName}`, s, doc.opdName);
+        pushIssue(issues, `Could not resolve parent thing for ${s.refinementType ?? "in-zoom"} sequence: ${s.parentName}`, s, doc.opdName);
+        continue;
+      }
+
+      // Unfold: auto-create sub-OPD, place children, create aggregation links. No invocation links.
+      if (s.refinementType === "unfold") {
+        const currentOpdId = actualOpdIdByName.get(doc.opdName) ?? "opd-sd";
+        const alreadyRefined = doc.refinementEdge || [...model.opds.values()].some(
+          opd => opd.refines === parentRef.thingId && opd.refinement_type === "unfold",
+        );
+
+        let targetOpdId: string | undefined;
+
+        if (!alreadyRefined) {
+          const slug = oplSlug(s.parentName);
+          const subOpdId = uniqueId(`opd-${slug}`, model);
+          const existingCount = [...model.opds.values()].filter(o => o.parent_opd === currentOpdId).length;
+          const subOpdName = `SD${existingCount + 1}`;
+          const subOpd: OPD = {
+            id: subOpdId,
+            name: subOpdName,
+            opd_type: "hierarchical",
+            parent_opd: currentOpdId,
+            refines: parentRef.thingId,
+            refinement_type: "unfold",
+          };
+          const rOpd = addOPD(model, subOpd);
+          if (rOpd.ok) {
+            model = rOpd.value;
+            actualOpdIdByName.set(subOpdName, subOpdId);
+            targetOpdId = subOpdId;
+
+            // Place parent thing as container appearance in the sub-OPD
+            const parentAppKey = appearanceKey(parentRef.thingId, subOpdId);
+            if (!model.appearances.has(parentAppKey)) {
+              const rParentApp = addAppearance(model, {
+                thing: parentRef.thingId, opd: subOpdId,
+                x: 100, y: 30, w: 300, h: 400, internal: true,
+              });
+              if (rParentApp.ok) model = rParentApp.value;
+            }
+          }
+        } else {
+          targetOpdId = [...model.opds.values()].find(
+            opd => opd.refines === parentRef.thingId && opd.refinement_type === "unfold",
+          )?.id;
+        }
+
+        if (targetOpdId) {
+          let yPos = 80;
+          for (const step of s.steps) {
+            for (const name of step.thingNames) {
+              const cleanName = stripParallelPrefix(name, doc.renderSettings.locale);
+              const ref = resolveThingRef(cleanName, undefined, thingRefByDisplayName, thingIdsByActualName, doc.renderSettings.locale);
+              if (!ref) continue;
+
+              // Add appearance if not already present
+              const appKey = appearanceKey(ref.thingId, targetOpdId);
+              if (!model.appearances.has(appKey)) {
+                const rApp = addAppearance(model, {
+                  thing: ref.thingId, opd: targetOpdId,
+                  x: 120, y: yPos, w: 120, h: 60, internal: true,
+                });
+                if (rApp.ok) model = rApp.value;
+              }
+              yPos += 100;
+
+              // Create aggregation link parent→child if not already present
+              const linkExists = [...model.links.values()].some(l =>
+                l.type === "aggregation" && l.source === parentRef.thingId && l.target === ref.thingId,
+              );
+              if (!linkExists) {
+                const rLink = addLink(model, {
+                  id: uniqueId(`lnk-${oplSlug(parentRef.displayName)}-aggregation-${oplSlug(ref.displayName)}`, model),
+                  type: "aggregation",
+                  source: parentRef.thingId,
+                  target: ref.thingId,
+                });
+                if (rLink.ok) model = rLink.value;
+              }
+            }
+          }
+        }
         continue;
       }
 

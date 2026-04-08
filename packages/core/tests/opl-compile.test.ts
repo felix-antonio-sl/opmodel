@@ -369,6 +369,121 @@ describe("compileOplDocument", () => {
     expect(invocationLinks).toHaveLength(0);
   });
 
+  it("compiles unfold with sub-OPD, appearances and aggregation links", () => {
+    const parsed = parseOplDocument(UNFOLD_WITHOUT_INVOCATIONS, "SD", "opd-sd");
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+
+    const compiled = compileOplDocument(parsed.value);
+    expect(compiled.ok).toBe(true);
+    if (!compiled.ok) return;
+
+    const model = compiled.value;
+
+    // Sub-OPD should be auto-created with unfold type
+    expect(model.opds.size).toBe(2);
+    const subOpd = [...model.opds.values()].find(o => o.id !== "opd-sd");
+    expect(subOpd).toBeDefined();
+    expect(subOpd?.refinement_type).toBe("unfold");
+
+    const vehicle = [...model.things.values()].find(t => t.name === "Vehicle");
+    expect(subOpd?.refines).toBe(vehicle?.id);
+
+    // Children should have internal appearances in the sub-OPD
+    const door = [...model.things.values()].find(t => t.name === "Door");
+    const window = [...model.things.values()].find(t => t.name === "Window");
+    const mirror = [...model.things.values()].find(t => t.name === "Mirror");
+
+    for (const child of [door, window, mirror]) {
+      expect(child).toBeDefined();
+      const app = model.appearances.get(`${child!.id}::${subOpd!.id}`);
+      expect(app).toBeDefined();
+      expect(app?.internal).toBe(true);
+    }
+
+    // Aggregation links should be created
+    const aggLinks = [...model.links.values()].filter(l => l.type === "aggregation");
+    expect(aggLinks).toHaveLength(3);
+    for (const link of aggLinks) {
+      expect(link.source).toBe(vehicle?.id);
+    }
+
+    // No invocation links
+    const invLinks = [...model.links.values()].filter(l => l.type === "invocation");
+    expect(invLinks).toHaveLength(0);
+  });
+
+  it("does not duplicate aggregation links when unfold and grouped-structural coexist", () => {
+    const opl = [
+      "Car is an object, physical.",
+      "Wheel is an object, physical.",
+      "Engine is an object, physical.",
+      "Body is an object, physical.",
+      "Car consists of Wheel, Engine and Body.",
+      "Car unfolds in SD1 into Wheel, Engine and Body.",
+    ].join("\n");
+    const parsed = parseOplDocument(opl, "SD", "opd-sd");
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+
+    const compiled = compileOplDocument(parsed.value);
+    expect(compiled.ok).toBe(true);
+    if (!compiled.ok) return;
+
+    // Should have exactly 3 aggregation links, not 6
+    const aggLinks = [...compiled.value.links.values()].filter(l => l.type === "aggregation");
+    expect(aggLinks).toHaveLength(3);
+  });
+
+  it("unfold does not duplicate sub-OPD when refinement edge exists", () => {
+    const parsed = parseOplDocuments([
+      "=== SD ===",
+      "Car is an object, physical.",
+      "Wheel is an object, physical.",
+      "Engine is an object, physical.",
+      "",
+      "=== SD1 ===",
+      "SD is refined by unfolding Car in SD1.",
+      "Car unfolds in SD1 into Wheel and Engine.",
+    ].join("\n"));
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+
+    const compiled = compileOplDocuments(parsed.value);
+    expect(compiled.ok).toBe(true);
+    if (!compiled.ok) return;
+
+    const model = compiled.value;
+    // Only 2 OPDs (root + SD1), not 3
+    expect(model.opds.size).toBe(2);
+
+    // Children should have internal appearances
+    const sd1 = [...model.opds.values()].find(o => o.name === "SD1");
+    const wheel = [...model.things.values()].find(t => t.name === "Wheel");
+    const engine = [...model.things.values()].find(t => t.name === "Engine");
+
+    expect(model.appearances.has(`${wheel!.id}::${sd1!.id}`)).toBe(true);
+    expect(model.appearances.has(`${engine!.id}::${sd1!.id}`)).toBe(true);
+  });
+
+  it("parent has container appearance in auto-created unfold sub-OPD", () => {
+    const parsed = parseOplDocument(UNFOLD_WITHOUT_INVOCATIONS, "SD", "opd-sd");
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+
+    const compiled = compileOplDocument(parsed.value);
+    expect(compiled.ok).toBe(true);
+    if (!compiled.ok) return;
+
+    const model = compiled.value;
+    const vehicle = [...model.things.values()].find(t => t.name === "Vehicle");
+    const subOpd = [...model.opds.values()].find(o => o.id !== "opd-sd");
+
+    const parentApp = model.appearances.get(`${vehicle!.id}::${subOpd!.id}`);
+    expect(parentApp).toBeDefined();
+    expect(parentApp?.internal).toBe(true);
+  });
+
   it("compiles OR converging fan", () => {
     const parsed = parseOplDocument(FAN_OR_CONVERGING, "SD", "opd-sd");
     expect(parsed.ok).toBe(true);
