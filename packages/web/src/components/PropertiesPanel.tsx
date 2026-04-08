@@ -102,6 +102,55 @@ function DurationSection({
           ))}
         </select>
       </div>
+      {/* Distribution (ISO §9.5.4.1) */}
+      <div style={{ display: "flex", gap: 4, alignItems: "center", marginTop: 4 }}>
+        <span style={{ fontSize: 8, color: "var(--text-muted)" }}>dist</span>
+        <select
+          className="props-panel__select"
+          style={{ fontSize: 10, flex: 1 }}
+          value={dur.distribution?.name ?? "none"}
+          onChange={(e) => {
+            const name = e.target.value;
+            if (name === "none") {
+              setDuration({ distribution: undefined });
+            } else {
+              const defaults: Record<string, Record<string, number>> = {
+                normal: { mean: dur.nominal, sd: 1 },
+                uniform: { min: dur.min ?? 0, max: dur.max ?? dur.nominal * 2 },
+                exponential: { rate: 1 / dur.nominal },
+                triangular: { min: dur.min ?? 0, mode: dur.nominal, max: dur.max ?? dur.nominal * 2 },
+              };
+              setDuration({ distribution: { name, params: defaults[name] ?? {} } });
+            }
+          }}
+        >
+          <option value="none">(none)</option>
+          <option value="normal">normal</option>
+          <option value="uniform">uniform</option>
+          <option value="exponential">exponential</option>
+          <option value="triangular">triangular</option>
+        </select>
+      </div>
+      {dur.distribution && (
+        <div style={{ display: "flex", gap: 3, flexWrap: "wrap", marginTop: 2 }}>
+          {Object.entries(dur.distribution.params).map(([key, val]) => (
+            <div key={key} style={{ display: "flex", gap: 2, alignItems: "center" }}>
+              <span style={{ fontSize: 8, color: "var(--text-muted)" }}>{key}</span>
+              <input
+                className="props-panel__input"
+                style={{ width: 40, fontSize: 9 }}
+                type="number"
+                step="any"
+                value={val}
+                onChange={(e) => {
+                  const params = { ...dur.distribution!.params, [key]: Number(e.target.value) };
+                  setDuration({ distribution: { name: dur.distribution!.name, params } });
+                }}
+              />
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

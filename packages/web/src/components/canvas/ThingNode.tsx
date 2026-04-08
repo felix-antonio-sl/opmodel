@@ -32,6 +32,7 @@ export function ThingNode({
   onContextMenu,
   onSelect,
   onDoubleClick,
+  onStatePillClick,
 }: {
   thing: Thing;
   appearance: Appearance;
@@ -59,6 +60,7 @@ export function ThingNode({
   onContextMenu?: (e: React.MouseEvent) => void;
   onSelect: () => void;
   onDoubleClick: () => void;
+  onStatePillClick?: (stateId: string) => void;
 }) {
   const ox = isDragging ? dragDelta.x : 0;
   const oy = isDragging ? dragDelta.y : 0;
@@ -251,7 +253,10 @@ export function ThingNode({
             const isSimCurrent = simStatePillOverride ? pill.state.id === simStatePillOverride : false;
 
             return (
-              <g key={pill.state.id}>
+              <g key={pill.state.id}
+                onClick={onStatePillClick ? (e) => { e.stopPropagation(); onStatePillClick(pill.state.id); } : undefined}
+                style={onStatePillClick ? { cursor: "crosshair" } : undefined}
+              >
                 <rect
                   className={`state-pill${isSimCurrent ? " state-pill--sim-current" : ""}`}
                   x={pill.x}

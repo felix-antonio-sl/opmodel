@@ -174,7 +174,7 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, select
   const [renaming, setRenaming] = useState<string | null>(null);
 
   // Link creation state
-  const [linkSource, setLinkSource] = useState<string | null>(null);
+  const [linkSource, setLinkSource] = useState<{ thingId: string; stateId?: string } | null>(null);
 
   // Reset linkSource when mode changes away from addLink
   useEffect(() => {
@@ -1399,7 +1399,7 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, select
             const allStates = statesForThing(model, thingId);
             const states = projectedThing?.visibleStates ?? visibleStatesFor(allStates, thingId);
             const isDragging = draggedThings.has(thingId);
-            const isLinkSource = linkSource === thingId;
+            const isLinkSource = linkSource?.thingId === thingId;
             const isAppExternal = app.internal === false;
             const isAppContainer = projectedThing?.isContainer ?? (app.internal === true && opd?.refines === thingId);
 
@@ -1462,12 +1462,12 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, select
                   onSelect={() => {
                     if (mode === "addLink") {
                       if (!linkSource) {
-                        setLinkSource(thingId);
+                        setLinkSource({ thingId });
                         dispatch({ tag: "selectThing", thingId });
-                      } else if (linkSource !== thingId || linkType === "invocation") {
+                      } else if (linkSource.thingId !== thingId || linkType === "invocation") {
                         let resolvedType: string;
                         if (linkType === "auto") {
-                          const srcThing = model.things.get(linkSource);
+                          const srcThing = model.things.get(linkSource.thingId);
                           const tgtThing = model.things.get(thingId);
                           resolvedType = "agent";
                           if (srcThing?.kind === "process") resolvedType = "effect";
@@ -1480,8 +1480,9 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, select
                           link: {
                             id: genId("lnk"),
                             type: resolvedType as any,
-                            source: linkSource,
+                            source: linkSource.thingId,
                             target: thingId,
+                            ...(linkSource.stateId ? { source_state: linkSource.stateId } : {}),
                             ...(resolvedType === "tagged" ? { tag: "relates to" } : {}),
                           },
                         });
@@ -1493,6 +1494,37 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, select
                     dispatch({ tag: "selectThing", thingId });
                   }}
                   onDoubleClick={() => onThingDoubleClick(thingId)}
+                  onStatePillClick={mode === "addLink" ? (stateId) => {
+                    if (!linkSource) {
+                      setLinkSource({ thingId, stateId });
+                      dispatch({ tag: "selectThing", thingId });
+                    } else if (linkSource.thingId !== thingId || linkType === "invocation") {
+                      let resolvedType: string;
+                      if (linkType === "auto") {
+                        const srcThing = model.things.get(linkSource.thingId);
+                        const tgtThing = model.things.get(thingId);
+                        resolvedType = "agent";
+                        if (srcThing?.kind === "process") resolvedType = "effect";
+                        if (srcThing?.kind === "object" && tgtThing?.kind === "object") resolvedType = "aggregation";
+                      } else {
+                        resolvedType = linkType;
+                      }
+                      dispatch({
+                        tag: "addLink",
+                        link: {
+                          id: genId("lnk"),
+                          type: resolvedType as any,
+                          source: linkSource.thingId,
+                          target: thingId,
+                          ...(linkSource.stateId ? { source_state: linkSource.stateId } : {}),
+                          target_state: stateId,
+                          ...(resolvedType === "tagged" ? { tag: "relates to" } : {}),
+                        },
+                      });
+                      setLinkSource(null);
+                      dispatch({ tag: "setMode", mode: "select" });
+                    }
+                  } : undefined}
                 />
               </g>
             );
