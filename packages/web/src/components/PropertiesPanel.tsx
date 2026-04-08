@@ -955,6 +955,14 @@ export function PropertiesPanel({ model, thingId, opdId, dispatch }: Props) {
                     ordered
                   </label>
                 )}
+                {/* Distributed flag (ISO §14.2.2.4.1) */}
+                {(["agent", "instrument", "effect", "consumption", "result", "input", "output"].includes(l.type)) && (
+                  <label style={{ display: "flex", gap: 4, fontSize: 9, marginTop: 2, alignItems: "center" }}>
+                    <input type="checkbox" checked={l.distributed ?? false}
+                      onChange={(e) => dispatch({ tag: "updateLink", linkId: l.id, patch: { distributed: e.target.checked || undefined } })} />
+                    distributed
+                  </label>
+                )}
                 {/* Modifiers (event/condition) */}
                 {(() => {
                   const mods = [...model.modifiers.values()].filter(m => m.over === l.id);
