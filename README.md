@@ -12,7 +12,7 @@ Current repo status: **OPL-first pipeline completo (Fases 1-3), web integration 
 - Fixture-driven real-case modeling
 - Visual audit / visual correctness checks
 - OPL-first pipeline: parse → compile → validate → model (Fases 1-3 completadas)
-- Live OPL editor with Ctrl+S, inline validation, layout preservation
+- Live OPL authoring workspace with Ctrl+S, inline validation, layout preservation
 - Canonical real fixtures including HODOM HSC
 
 ## Canonical commands
@@ -77,7 +77,7 @@ Use OPModel today as:
 - a fixture-driven modeling environment for real cases
 - a validated baseline for HODOM / HODOM V2 / EV-AMS / HODOM HSC
 - an OPL-first tool: OPL text → parse → compile → model → validate → visual render
-- a live OPL editor with inline validation and layout preservation
+- an OPL-first authoring workspace with inline validation and layout preservation
 
 Do **not** treat it yet as:
 
@@ -123,7 +123,7 @@ Short version:
 
 - **today**: OPL-first pipeline completo — `OPL text → parse → compile → Model → validate → visual render` funciona para 6 fixtures
 - **target**: OPL como superficie principal de autoría, visual derivado
-- **current gap**: source mapping bidireccional (click OPL ↔ visual), editor OPL como panel principal (no solo tab)
+- **current gap**: source mapping bidireccional (click OPL ↔ visual), richer diagnostics and project persistence for day-to-day use
 
 ## Notes
 

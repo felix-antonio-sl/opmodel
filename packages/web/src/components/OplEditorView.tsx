@@ -1,14 +1,12 @@
 import { useState, useMemo } from "react";
 import type { Model, OplEdit, Link, LinkType, ModifierType, Essence, Affiliation } from "@opmodel/core";
 import { semanticKernelFromModel, exposeSemanticKernel, exposeFromKernel, render, type OplDocument } from "@opmodel/core";
-import type { NlPipeline, NlResult } from "@opmodel/nl";
 import type { Command } from "../lib/commands";
 
 interface Props {
   model: Model;
   opdId: string;
   dispatch: (cmd: Command) => boolean;
-  nlPipeline?: NlPipeline;
   lastError?: string | null;
 }
 
@@ -121,6 +119,7 @@ function buildEdit(form: EditorFormState, opdId: string): OplEdit | null {
       if (!form.selectedModifier) return null;
       return { kind: "remove-modifier", modifierId: form.selectedModifier };
   }
+  return null;
 }
 
 function getPreviewText(form: EditorFormState, model: Model, doc: OplDocument): string {
@@ -207,49 +206,9 @@ function getPreviewText(form: EditorFormState, model: Model, doc: OplDocument): 
   return "";
 }
 
-export function OplEditorView({ model, opdId, dispatch, nlPipeline, lastError: storeError }: Props) {
+export function OplEditorView({ model, opdId, dispatch, lastError: storeError }: Props) {
   const [form, setForm] = useState<EditorFormState>(INITIAL_FORM);
   const [error, setError] = useState<string | null>(null);
-
-  // NL generation state
-  const [nlText, setNlText] = useState("");
-  const [nlResult, setNlResult] = useState<NlResult | null>(null);
-  const [nlLoading, setNlLoading] = useState(false);
-  const [nlError, setNlError] = useState<string | null>(null);
-
-  const handleGenerate = async () => {
-    if (!nlPipeline || !nlText.trim()) return;
-    setNlLoading(true);
-    setNlError(null);
-    setNlResult(null);
-    try {
-      const result = await nlPipeline.generate(nlText, { model, opdId });
-      setNlResult(result);
-    } catch (e) {
-      setNlError(e instanceof Error ? e.message : "Generation failed");
-    } finally {
-      setNlLoading(false);
-    }
-  };
-
-  const handleApplyAll = () => {
-    if (!nlResult) return;
-    for (const edit of nlResult.edits) {
-      if (!dispatch({ tag: "applyOplEdit", edit })) {
-        setNlError("Edit rejected by model invariants");
-        return;
-      }
-    }
-    setNlText("");
-    setNlResult(null);
-    setNlError(null);
-  };
-
-  const handleClearNl = () => {
-    setNlText("");
-    setNlResult(null);
-    setNlError(null);
-  };
 
   const doc = useMemo(() => {
     const kernel = semanticKernelFromModel(model);
@@ -293,38 +252,10 @@ export function OplEditorView({ model, opdId, dispatch, nlPipeline, lastError: s
 
   return (
     <div className="opl-panel__content opl-editor">
-      {nlPipeline && (
-        <>
-          <div className="opl-editor__nl-section">
-            <textarea
-              className="opl-editor__nl-textarea"
-              value={nlText}
-              onChange={(e) => setNlText(e.target.value)}
-              placeholder="Describe your model changes in natural language..."
-              rows={3}
-            />
-            <button
-              className={`opl-editor__nl-generate${nlLoading ? " opl-editor__nl-generate--loading" : ""}`}
-              onClick={handleGenerate}
-              disabled={nlLoading || !nlText.trim()}
-            >
-              {nlLoading ? "Generating..." : "Generate"}
-            </button>
-            {nlResult && (
-              <div className="opl-editor__nl-preview">
-                <label className="opl-editor__label">Preview ({nlResult.edits.length} edits)</label>
-                <pre className="opl-editor__preview-text">{nlResult.preview}</pre>
-                <div className="opl-editor__nl-actions">
-                  <button className="opl-editor__apply" onClick={handleApplyAll}>Apply All</button>
-                  <button className="opl-editor__nl-clear" onClick={handleClearNl}>Clear</button>
-                </div>
-              </div>
-            )}
-            {nlError && <div className="opl-editor__error">{nlError}</div>}
-          </div>
-          <div className="opl-editor__nl-divider">or use structured form</div>
-        </>
-      )}
+      <div className="opl-editor__preview" style={{ marginBottom: 12 }}>
+        <label className="opl-editor__label">Structured edit helper</label>
+        <div className="opl-editor__preview-text">Use this form for small targeted edits. For primary authoring, use the Author tab.</div>
+      </div>
       <div className="opl-editor__field">
         <label className="opl-editor__label">Action</label>
         <select

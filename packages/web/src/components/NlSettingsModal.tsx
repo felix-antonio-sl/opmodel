@@ -1,5 +1,10 @@
 import { useState } from "react";
-import type { NlConfig } from "@opmodel/nl";
+
+type NlConfig = {
+  provider: "claude" | "openai";
+  apiKey: string;
+  model?: string;
+};
 
 interface Props {
   config: NlConfig | null;

@@ -1,13 +1,11 @@
 import { useState } from "react";
 import type { Model } from "@opmodel/core";
-import type { NlPipeline } from "@opmodel/nl";
 import type { Command } from "../lib/commands";
 import { OplSentencesView } from "./OplSentencesView";
 import { OplTextView } from "./OplTextView";
 import { OplLiveEditor } from "./OplLiveEditor";
-import { OplEditorView } from "./OplEditorView";
 
-type OplTab = "sentences" | "text" | "edit" | "editor";
+type OplTab = "edit" | "text" | "sentences";
 
 interface Props {
   model: Model;
@@ -15,19 +13,17 @@ interface Props {
   selectedThing: string | null;
   selectedLink: string | null;
   dispatch: (cmd: Command) => boolean;
-  nlPipeline?: NlPipeline;
-  lastError?: string | null;
 }
 
-export function OplPanel({ model, opdId, selectedThing, selectedLink, dispatch, nlPipeline, lastError }: Props) {
-  const [activeTab, setActiveTab] = useState<OplTab>("sentences");
+export function OplPanel({ model, opdId, selectedThing, selectedLink, dispatch }: Props) {
+  const [activeTab, setActiveTab] = useState<OplTab>("edit");
   const opd = model.opds.get(opdId);
   const currentLang = model.settings.opl_language === "es" ? "es" : "en";
 
   return (
     <aside className="opl-panel">
       <div className="opl-panel__title">
-        <span>OPL — {opd?.name ?? opdId}</span>
+        <span>OPL Workspace — {opd?.name ?? opdId}</span>
         <button
           className="opl-lang-toggle"
           onClick={() => dispatch({ tag: "updateSettings", patch: { opl_language: currentLang === "en" ? "es" : "en" } })}
@@ -37,19 +33,25 @@ export function OplPanel({ model, opdId, selectedThing, selectedLink, dispatch, 
         </button>
       </div>
       <div className="opl-tabs">
-        {(["sentences", "text", "edit", "editor"] as const).map((tab) => (
+        {(["edit", "text", "sentences"] as const).map((tab) => (
           <button
             key={tab}
             className={`opl-tab${activeTab === tab ? " opl-tab--active" : ""}`}
             onClick={() => setActiveTab(tab)}
           >
-            {tab === "sentences" ? "Structured" : tab === "text" ? "Read" : tab === "edit" ? "Live Edit" : "NL Assist"}
+            {tab === "edit" ? "Author" : tab === "text" ? "Read" : "Structured"}
           </button>
         ))}
       </div>
-      {activeTab === "sentences" && (
-        <OplSentencesView model={model} opdId={opdId} selectedThing={selectedThing}
-          onSelectThing={(id) => id && dispatch({ tag: "selectThing", thingId: id })} />
+      <div className="opl-panel__subtitle" style={{ padding: "0 12px 8px", fontSize: 12, color: "var(--text-muted)" }}>
+        {activeTab === "edit"
+          ? "Author OPL directly, then apply back to the model."
+          : activeTab === "text"
+            ? "Inspect the current canonical OPL for this OPD."
+            : "Browse generated OPL sentences by entity."}
+      </div>
+      {activeTab === "edit" && (
+        <OplLiveEditor model={model} opdId={opdId} dispatch={dispatch} />
       )}
       {activeTab === "text" && (
         <OplTextView
@@ -60,11 +62,9 @@ export function OplPanel({ model, opdId, selectedThing, selectedLink, dispatch, 
           onSelectThing={(id) => dispatch({ tag: "selectThing", thingId: id })}
         />
       )}
-      {activeTab === "editor" && (
-        <OplEditorView model={model} opdId={opdId} dispatch={dispatch} nlPipeline={nlPipeline} lastError={lastError} />
-      )}
-      {activeTab === "edit" && (
-        <OplLiveEditor model={model} opdId={opdId} dispatch={dispatch} />
+      {activeTab === "sentences" && (
+        <OplSentencesView model={model} opdId={opdId} selectedThing={selectedThing}
+          onSelectThing={(id) => id && dispatch({ tag: "selectThing", thingId: id })} />
       )}
     </aside>
   );

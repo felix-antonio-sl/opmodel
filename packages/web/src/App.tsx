@@ -30,9 +30,6 @@ import { auditVisualOpd, computeVisualQuality } from "./lib/visual-lint";
 import { suggestLayoutForOpd } from "./lib/spatial-layout";
 import { buildPatchableOpdProjectionSliceFromProjection } from "./lib/projection-view";
 import { BugCapture } from "./components/BugCapture";
-import type { NlConfig } from "@opmodel/nl";
-import { createProvider, createPipeline } from "@opmodel/nl";
-import { NlSettingsModal } from "./components/NlSettingsModal";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { VerificationChecklist } from "./components/VerificationChecklist";
 import { SdWizard } from "./components/SdWizard";
@@ -264,17 +261,6 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
   const store = useModelStore(initialModel);
   const { model, projection, currentProjectionSlice, ui, dispatch, doUndo, doRedo, canUndo, canRedo, isDirty, lastError, save, saveStatus } = store;
 
-  // NL pipeline
-  const [nlConfig, setNlConfig] = useState<NlConfig | null>(() => {
-    const stored = localStorage.getItem("opmodel:nl-config");
-    if (stored) {
-      try { return JSON.parse(stored) as NlConfig; } catch { /* ignore */ }
-    }
-    const key = import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined;
-    if (key) return { provider: "claude" as const, apiKey: key };
-    return null;
-  });
-  const [showNlSettings, setShowNlSettings] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [showValidation, setShowValidation] = useState(false);
   const [validationTab, setValidationTab] = useState<ValidationTab>("issues");
@@ -286,12 +272,6 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
   (window as any).__openWizard = () => setShowWizard(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeSearchIndex, setActiveSearchIndex] = useState(0);
-
-  const nlPipeline = useMemo(() => {
-    if (!nlConfig) return undefined;
-    const provider = createProvider(nlConfig);
-    return createPipeline({ provider });
-  }, [nlConfig]);
 
   // Keyboard shortcuts
   const handleKeyDown = useCallback(
@@ -571,7 +551,6 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
           {ui.simulation ? "Exit Sim" : "Simulate"}
         </button>
         <button onClick={() => setShowSettings(true)} title="Model Settings" aria-label="Model Settings">⚙</button>
-        <button onClick={() => setShowNlSettings(true)} title="NL Settings" aria-label="NL Settings" style={{ fontSize: "11px" }}>NL</button>
       </header>
 
       {/* Toolbar */}
@@ -742,7 +721,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
         ) : ui.selectedLink ? (
           <LinkPropertiesPanel model={model} linkId={ui.selectedLink} dispatch={dispatch} />
         ) : null}
-        <OplPanel model={model} opdId={ui.currentOpd} selectedThing={ui.selectedThing} selectedLink={ui.selectedLink} dispatch={dispatch} nlPipeline={nlPipeline} lastError={lastError} />
+        <OplPanel model={model} opdId={ui.currentOpd} selectedThing={ui.selectedThing} selectedLink={ui.selectedLink} dispatch={dispatch} />
       </aside>
 
       {/* Validation Panel (floating, above status bar) */}
@@ -835,13 +814,6 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
         <div className="status-bar__sep" />
         <span className="status-bar__version">opmodel {model.opmodel}</span>
       </footer>
-      {showNlSettings && (
-        <NlSettingsModal
-          config={nlConfig}
-          onSave={setNlConfig}
-          onClose={() => setShowNlSettings(false)}
-        />
-      )}
       <BugCapture model={model} opdId={ui.currentOpd} selectedThing={ui.selectedThing} errors={errors} />
       {showHelp && (
         <div className="help-overlay" onClick={() => setShowHelp(false)} onKeyDown={(e) => { if (e.key === "Escape") setShowHelp(false); }}>
