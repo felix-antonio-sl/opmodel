@@ -92,57 +92,23 @@ export function OplImportPanel({ model, onClose, onApply }: OplImportPanelProps)
       : `✗ ${validation.issues.filter(i => i.severity === "error").length} error(s)`;
 
   return (
-    <div style={{
-      position: "fixed",
-      top: 0,
-      right: 0,
-      width: 620,
-      height: "100vh",
-      background: "#1a1a2e",
-      borderLeft: "1px solid #333",
-      display: "flex",
-      flexDirection: "column",
-      zIndex: 1000,
-      padding: 16,
-      boxSizing: "border-box",
-    }}>
+    <div className="opl-import-panel">
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-        <h3 style={{ margin: 0, color: "#eee", fontSize: 16 }}>Import OPL</h3>
-        <button onClick={onClose} style={{ background: "none", border: "none", color: "#999", cursor: "pointer", fontSize: 18 }}>✕</button>
+        <h3 style={{ margin: 0, color: "var(--code-text)", fontSize: 16 }}>Import OPL</h3>
+        <button onClick={onClose} style={{ background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer", fontSize: 18 }}>✕</button>
       </div>
 
       <textarea
+        className="code-editor"
         value={text}
         onChange={handleTextChange}
         placeholder={"Coffee Making is a process, physical.\nWater is an object, physical.\nBarista handles Coffee Making."}
         spellCheck={false}
-        style={{
-          flex: 1,
-          fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-          fontSize: 13,
-          lineHeight: 1.5,
-          background: "#0d0d1a",
-          color: "#ddd",
-          border: "1px solid #333",
-          borderRadius: 4,
-          padding: 12,
-          resize: "none",
-          outline: "none",
-          minHeight: 300,
-        }}
+        style={{ flex: 1, fontSize: 13, minHeight: 300 }}
       />
 
       {/* Validation status bar */}
-      <div style={{
-        marginTop: 8,
-        padding: "8px 12px",
-        background: "#0d0d1a",
-        border: "1px solid #333",
-        borderRadius: 4,
-        color: statusColor,
-        fontSize: 13,
-        fontFamily: "monospace",
-      }}>
+      <div className="opl-status-bar" style={{ color: statusColor }}>
         <div>{statusText}</div>
         {validation && validation.issues.length > 0 && (
           <div style={{ marginTop: 4, maxHeight: 120, overflowY: "auto", fontSize: 12 }}>
@@ -161,7 +127,7 @@ export function OplImportPanel({ model, onClose, onApply }: OplImportPanelProps)
 
       {/* Phase indicators */}
       {validation && (
-        <div style={{ display: "flex", gap: 8, marginTop: 6, fontSize: 11 }}>
+        <div className="opl-status-bar__phases">
           {(["syntax", "binding", "semantic", "canonical"] as const).map(phase => {
             const s = validation.phases[phase];
             const color = s === "pass" ? "#5cb85c" : s === "fail" ? "#d9534f" : "#666";
@@ -178,8 +144,8 @@ export function OplImportPanel({ model, onClose, onApply }: OplImportPanelProps)
           style={{
             flex: 1,
             padding: "8px 16px",
-            background: canApply ? "#5cb85c" : "#333",
-            color: canApply ? "#fff" : "#666",
+            background: canApply ? "var(--success)" : "var(--code-border)",
+            color: canApply ? "#fff" : "var(--text-muted)",
             border: "none",
             borderRadius: 4,
             cursor: canApply ? "pointer" : "not-allowed",

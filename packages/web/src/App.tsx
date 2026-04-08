@@ -115,6 +115,7 @@ function FileMenu({ model, onNew, onLoadExample, onImport, onSave, onAutoLayoutA
   onShowVisualReport?: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [openError, setOpenError] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -141,7 +142,7 @@ function FileMenu({ model, onNew, onLoadExample, onImport, onSave, onAutoLayoutA
     file.text().then((json) => {
       const result = loadModel(json);
       if (isOk(result)) onImport(result.value);
-      else alert(`Open failed: ${result.error.message}`);
+      else setOpenError(result.error.message);
     });
     e.target.value = "";
   };
@@ -245,6 +246,12 @@ function FileMenu({ model, onNew, onLoadExample, onImport, onSave, onAutoLayoutA
               <button className="file-menu__item" onClick={() => { onAutoLayoutAll(); setOpen(false); }}>⇄ Auto Layout All OPDs</button>
             </>
           )}
+        </div>
+      )}
+      {openError && (
+        <div style={{ position: "absolute", top: "100%", left: 0, zIndex: 101, background: "var(--bg-panel)", border: "1px solid var(--danger)", borderRadius: 4, padding: "8px 12px", fontSize: 12, color: "var(--danger)", maxWidth: 300, marginTop: 4 }}>
+          {openError}
+          <button onClick={() => setOpenError(null)} style={{ marginLeft: 8, background: "none", border: "none", cursor: "pointer", color: "var(--danger)" }}>✕</button>
         </div>
       )}
     </div>
@@ -415,7 +422,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
     document.title = `${model.meta.name} — OPModeling`;
   }, [model.meta.name]);
 
-  const errors = validate(model);
+  const errors = useMemo(() => validate(model), [model]);
   const hardErrors = errors.filter(e => !e.severity || e.severity === "error");
   const isValid = hardErrors.length === 0;
   const errorEntities = useMemo(() => {
@@ -479,9 +486,9 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
   }, [model, dispatch]);
 
   return (
-    <div className="app">
+    <div className="app" role="application">
       {/* Header */}
-      <header className="header">
+      <header className="header" role="banner">
         <div className="header__logo">
           <div className="header__logo-diamond" />
           OPModeling
@@ -495,6 +502,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
           <button
             className={`header__action${canUndo ? "" : " header__action--disabled"}`}
             onClick={doUndo}
+            aria-label="Undo"
             title="Undo (Ctrl+Z)"
           >
             ↶
@@ -502,6 +510,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
           <button
             className={`header__action${canRedo ? "" : " header__action--disabled"}`}
             onClick={doRedo}
+            aria-label="Redo"
             title="Redo (Ctrl+Shift+Z)"
           >
             ↷
@@ -549,12 +558,13 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
         <button
           className={`header__action${ui.simulation ? " header__action--active" : ""}`}
           onClick={() => dispatch({ tag: ui.simulation ? "resetSimulation" : "startSimulation" })}
+          aria-label={ui.simulation ? "Exit Simulation" : "Start Simulation"}
           title="Toggle Simulation (S)"
         >
           {ui.simulation ? "Exit Sim" : "Simulate"}
         </button>
-        <button onClick={() => setShowSettings(true)} title="Model Settings">⚙</button>
-        <button onClick={() => setShowNlSettings(true)} title="NL Settings" style={{ fontSize: "11px" }}>NL</button>
+        <button onClick={() => setShowSettings(true)} title="Model Settings" aria-label="Model Settings">⚙</button>
+        <button onClick={() => setShowNlSettings(true)} title="NL Settings" aria-label="NL Settings" style={{ fontSize: "11px" }}>NL</button>
       </header>
 
       {/* Toolbar */}
@@ -632,12 +642,30 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
         simulation={ui.simulation}
         errorEntities={errorEntities}
       />
+      {model.things.size === 0 && !ui.simulation && (
+        <div className="welcome-state">
+          <div className="welcome-state__title">Welcome to OPModeling</div>
+          <div>Start building your OPM model</div>
+          <div className="welcome-state__actions">
+            <button className="welcome-state__btn welcome-state__btn--primary" onClick={() => setShowWizard(true)}>
+              SD Wizard
+            </button>
+            <button className="welcome-state__btn" onClick={() => setShowImportOpl(true)}>
+              Import OPL
+            </button>
+            <button className="welcome-state__btn" onClick={() => onLoadExample("coffee-making.opmodel")}>
+              Load Example
+            </button>
+          </div>
+        </div>
+      )}
       {/* Search panel — floating over canvas */}
       {showSearch && (
-        <div className="search-panel">
+        <div className="search-panel" role="search">
           <div className="search-panel__header">
             <input
               className="search-panel__input"
+              aria-label="Search things, states, notes"
               placeholder="Search things, states, notes..."
               value={searchQuery}
               onChange={(e) => {
@@ -723,7 +751,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
       )}
 
       {/* Status Bar */}
-      <footer className="status-bar">
+      <footer className="status-bar" role="status">
         <div
           className="status-bar__indicator status-bar__indicator--clickable"
           onClick={() => { setValidationTab("issues"); setShowValidation(v => !v); }}
@@ -808,8 +836,8 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
       )}
       <BugCapture model={model} opdId={ui.currentOpd} selectedThing={ui.selectedThing} errors={errors} />
       {showHelp && (
-        <div className="help-overlay" onClick={() => setShowHelp(false)}>
-          <div className="help-dialog" onClick={(e) => e.stopPropagation()}>
+        <div className="help-overlay" onClick={() => setShowHelp(false)} onKeyDown={(e) => { if (e.key === "Escape") setShowHelp(false); }}>
+          <div className="help-dialog" onClick={(e) => e.stopPropagation()} tabIndex={-1} ref={(el) => el?.focus()}>
             <div className="help-dialog__title">Keyboard Shortcuts</div>
             <div className="help-dialog__grid">
               <kbd>O</kbd><span>Add Object</span>
@@ -840,9 +868,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
         <SdWizard
           onComplete={(newModel) => {
             setShowWizard(false);
-            // Replace current model with wizard output
-            localStorage.setItem("opmodel:current", saveModel(newModel));
-            location.reload();
+            onImport(newModel);
           }}
           onCancel={() => setShowWizard(false)}
         />
@@ -942,6 +968,7 @@ export function App() {
     return (
       <div className="loading">
         <div className="loading__spinner" />
+        <span>Loading model...</span>
       </div>
     );
   }

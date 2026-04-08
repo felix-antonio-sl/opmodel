@@ -43,7 +43,7 @@ export function OplPanel({ model, opdId, selectedThing, selectedLink, dispatch, 
             className={`opl-tab${activeTab === tab ? " opl-tab--active" : ""}`}
             onClick={() => setActiveTab(tab)}
           >
-            {tab === "sentences" ? "Sentences" : tab === "text" ? "Text" : tab === "edit" ? "Edit" : "Editor"}
+            {tab === "sentences" ? "Structured" : tab === "text" ? "Read" : tab === "edit" ? "Live Edit" : "NL Assist"}
           </button>
         ))}
       </div>

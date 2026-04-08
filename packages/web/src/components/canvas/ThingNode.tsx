@@ -106,6 +106,9 @@ export function ThingNode({
     <g
       className={className}
       filter={filterStr}
+      role="button"
+      aria-label={thing.name}
+      tabIndex={-1}
       onMouseDown={(e) => {
         e.stopPropagation();
         onMouseDown(e);

@@ -107,7 +107,12 @@ function TreeNodeItem({
       <div
         className={`opd-tree__node${isActive ? " opd-tree__node--active" : ""}${depth > 0 ? " opd-tree__node--child" : ""}`}
         style={{ paddingLeft: `${14 + depth * 18}px` }}
+        role="treeitem"
+        tabIndex={0}
+        aria-selected={isActive}
+        aria-expanded={hasChildren ? true : undefined}
         onClick={() => onSelectOpd(node.opd.id)}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelectOpd(node.opd.id); } }}
         onDoubleClick={(e) => { e.stopPropagation(); setEditName(node.opd.name); setEditing(true); }}
       >
         <span className="opd-tree__icon">{hasChildren ? "▾" : "◇"}</span>
@@ -162,7 +167,7 @@ export function OpdTree({ model, currentOpd, selectedThing, onSelectOpd, onSelec
   const isViewOpd = currentOpdObj?.opd_type === "view";
 
   return (
-    <aside className="opd-tree">
+    <aside className="opd-tree" role="navigation" aria-label="OPD tree navigation">
       <div className="opd-tree__title">OPD TREE</div>
       {tree.map((node) => (
         <TreeNodeItem
@@ -276,7 +281,11 @@ export function OpdTree({ model, currentOpd, selectedThing, onSelectOpd, onSelec
         <div
           key={t.id}
           className={`opd-tree__thing${selectedThing === t.id ? " opd-tree__thing--selected" : ""}`}
+          role="option"
+          tabIndex={0}
+          aria-selected={selectedThing === t.id}
           onClick={() => onSelectThing(selectedThing === t.id ? null : t.id)}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelectThing(selectedThing === t.id ? null : t.id); } }}
         >
           <div className={`opd-tree__thing-dot opd-tree__thing-dot--${t.kind}`} />
           <span>{t.name}</span>

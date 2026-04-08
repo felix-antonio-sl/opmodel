@@ -84,11 +84,12 @@ export function OplLiveEditor({ model, opdId, dispatch }: Props) {
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "s") {
         e.preventDefault();
+        e.stopImmediatePropagation();
         handleApply();
       }
     };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    window.addEventListener("keydown", handler, true);  // capture phase
+    return () => window.removeEventListener("keydown", handler, true);
   }, [handleApply]);
 
   const statusColor = status === "valid" ? "#5cb85c" : status === "error" ? "#d9534f" : status === "dirty" ? "#f0ad4e" : "#666";
@@ -97,14 +98,14 @@ export function OplLiveEditor({ model, opdId, dispatch }: Props) {
   return (
     <div className="opl-panel__content" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-        <span style={{ color: statusColor, fontSize: 11, fontFamily: "monospace" }}>{statusText}</span>
+        <span style={{ color: statusColor }} className="opl-status-bar__text">{statusText}</span>
         <button
           onClick={handleApply}
           disabled={status === "idle"}
           style={{
             padding: "4px 12px",
-            background: status === "idle" ? "#333" : "#5cb85c",
-            color: status === "idle" ? "#666" : "#fff",
+            background: status === "idle" ? "var(--bg-active)" : "var(--success)",
+            color: status === "idle" ? "var(--text-muted)" : "#fff",
             border: "none",
             borderRadius: 3,
             cursor: status === "idle" ? "default" : "pointer",
@@ -117,23 +118,11 @@ export function OplLiveEditor({ model, opdId, dispatch }: Props) {
       </div>
 
       <textarea
+        className="code-editor"
         value={text}
         onChange={handleChange}
         spellCheck={false}
-        style={{
-          flex: 1,
-          fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-          fontSize: 11,
-          lineHeight: 1.6,
-          background: "#0d0d1a",
-          color: "#ddd",
-          border: "1px solid #333",
-          borderRadius: 4,
-          padding: 10,
-          resize: "none",
-          outline: "none",
-          minHeight: 200,
-        }}
+        style={{ flex: 1, minHeight: 200 }}
       />
 
       {errorMsg && (

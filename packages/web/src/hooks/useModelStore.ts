@@ -233,10 +233,12 @@ export function useModelStore(initialModel: Model): ModelStore {
     setHistory((h) => {
       const result = effect.apply(h.present);
       if (isOk(result)) {
+
         setLastError(null);
         success = true;
         return pushHistory(h, result.value);
       } else {
+
         setLastError(`${result.error.code}: ${result.error.message}`);
         return h;
       }

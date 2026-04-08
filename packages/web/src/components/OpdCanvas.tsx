@@ -205,6 +205,7 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, mode, 
         if (entry.implicit) continue;
         map.set(thingId, entry.appearance);
       }
+
       return map;
     }
 
@@ -213,6 +214,7 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, mode, 
       if (entry.implicit) continue;
       map.set(id, projectedSlice.appearancesByThing.get(id) ?? entry.appearance);
     }
+
     return map;
   }, [fiber, projectedSlice]);
 
@@ -567,7 +569,13 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, mode, 
         } else {
           const app = appearances.get(dragTarget);
           if (app) {
-            dispatch({ tag: "moveThing", thingId: dragTarget, opdId, x: snap(app.x + dragDelta.x), y: snap(app.y + dragDelta.y) });
+            const newX = snap(app.x + dragDelta.x);
+            const newY = snap(app.y + dragDelta.y);
+
+            const ok = dispatch({ tag: "moveThing", thingId: dragTarget, opdId, x: newX, y: newY });
+
+          } else {
+
           }
         }
       }
@@ -667,14 +675,17 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, mode, 
     }
   }, [model, opdId, dispatch, fitToContent]);
 
-  const onWheel = useCallback(
-    (e: React.WheelEvent) => {
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const handler = (e: WheelEvent) => {
       e.preventDefault();
       const delta = e.deltaY > 0 ? 0.92 : 1.08;
       setZoom((z) => Math.min(3, Math.max(0.3, z * delta)));
-    },
-    [],
-  );
+    };
+    svg.addEventListener("wheel", handler, { passive: false });
+    return () => svg.removeEventListener("wheel", handler);
+  }, []);
 
   const onCanvasClick = useCallback(
     (e: React.MouseEvent) => {
@@ -832,7 +843,7 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, mode, 
         : "";
 
   return (
-    <div className={`opd-canvas ${cursorClass}`}>
+    <div className={`opd-canvas ${cursorClass}`} role="application" aria-label="OPM diagram canvas">
       {multiSelect.size >= 2 && (
         <div className="canvas-align-toolbar">
           <button title="Align Left" onClick={() => {
@@ -982,7 +993,7 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, mode, 
         onMouseMove={onMouseMove}
         onMouseUp={onMouseUp}
         onMouseLeave={onMouseUp}
-        onWheel={onWheel}
+
         onClick={(e) => { setContextMenu(null); onCanvasClick(e); }}
       >
         <SvgDefs />

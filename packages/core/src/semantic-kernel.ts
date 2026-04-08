@@ -154,7 +154,7 @@ export interface ViewOccurrence {
   id: ViewId;
   thingId: ThingId;
   opdId: OpdId;
-  role: "context" | "internal" | "duplicate" | "refinee" | "refiner";
+  role: "primary" | "context" | "internal" | "duplicate" | "refinee" | "refiner";
   scope?: "inner" | "outer";
   semanticRank?: number;
   parallelClass?: ParallelClassId;
@@ -332,11 +332,75 @@ export function semanticKernelFromModel(model: Model): SemanticKernel {
  * Sin atlas/layout, la reconstrucción es semánticamente útil pero visualmente mínima:
  * no materializa appearances. Con atlas+layout, reconstruye appearances explícitas.
  */
+function defaultLayoutFromAtlas(atlas: OpdAtlas, kernel: SemanticKernel): LayoutModel {
+  const opdLayouts = new Map<OpdId, OpdLayout>();
+
+  // Group occurrences by OPD
+  const byOpd = new Map<OpdId, ViewOccurrence[]>();
+  for (const occ of atlas.occurrences.values()) {
+    const list = byOpd.get(occ.opdId) ?? [];
+    list.push(occ);
+    byOpd.set(occ.opdId, list);
+  }
+
+  for (const [opdId, occs] of byOpd) {
+    const nodes = new Map<ViewId, LayoutNode>();
+    const processes = occs.filter(o => kernel.things.get(o.thingId)?.kind === "process");
+    const objects = occs.filter(o => kernel.things.get(o.thingId)?.kind !== "process");
+
+    const colWidth = 180;
+    const rowHeight = 100;
+    const cols = Math.max(3, Math.ceil(Math.sqrt(occs.length)));
+    const startX = 60;
+    const startY = 60;
+
+    // Place processes first (center area)
+    for (let i = 0; i < processes.length; i++) {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const w = 160;
+      const h = 70;
+      nodes.set(processes[i].id, {
+        viewId: processes[i].id,
+        x: startX + col * colWidth + (colWidth - w) / 2,
+        y: startY + row * rowHeight + (rowHeight - h) / 2,
+        w, h,
+      });
+    }
+
+    // Place objects below processes
+    const objStartY = startY + (Math.ceil(processes.length / cols) || 1) * rowHeight + 40;
+    for (let i = 0; i < objects.length; i++) {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const w = 140;
+      const h = 50;
+      nodes.set(objects[i].id, {
+        viewId: objects[i].id,
+        x: startX + col * colWidth + (colWidth - w) / 2,
+        y: objStartY + row * rowHeight + (rowHeight - h) / 2,
+        w, h,
+      });
+    }
+
+    opdLayouts.set(opdId, {
+      opdId,
+      nodes,
+      edges: new Map(),
+      meta: { algorithm: "auto-grid", version: "1.0" },
+    });
+  }
+
+  return { opdLayouts };
+}
+
 export function legacyModelFromSemanticKernel(kernel: SemanticKernel, atlas?: OpdAtlas, layout?: LayoutModel): Model {
   const model = createModel(kernel.meta.name, kernel.meta.system_type);
 
-  const appearances = atlas && layout
-    ? buildAppearanceMapFromAtlas(atlas, layout)
+  // When atlas exists but no layout, generate a default grid layout so appearances are materialized
+  const effectiveLayout = layout ?? (atlas ? defaultLayoutFromAtlas(atlas, kernel) : undefined);
+  const appearances = atlas && effectiveLayout
+    ? buildAppearanceMapFromAtlas(atlas, effectiveLayout)
     : new Map<string, Appearance>();
 
   return {
@@ -524,7 +588,7 @@ export function exposeSemanticKernel(kernel: SemanticKernel): OpdAtlas {
 
     if (!refinement) {
       for (const thingId of slice.visibleThings) {
-        const occurrence = createOccurrence(kernel, opd.id, thingId, { role: "internal" });
+        const occurrence = createOccurrence(kernel, opd.id, thingId, { role: "primary" });
         occurrences.set(occurrence.id, occurrence);
       }
     } else if (refinement.kind === "in-zoom") {

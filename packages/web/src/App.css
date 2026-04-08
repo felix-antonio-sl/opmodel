@@ -64,6 +64,12 @@
   --status-h: 28px;
   --sidebar-w: 220px;
   --opl-w: 290px;
+
+  /* ── Code Editor (dark) ── */
+  --code-bg: #0d0d1a;
+  --code-text: #ddd;
+  --code-border: #333;
+  --code-panel-bg: #1a1a2e;
 }
 
 /* ── Reset ── */
@@ -118,6 +124,48 @@ body,
     "status  status  status";
   height: 100vh;
   gap: 0;
+}
+
+/* ── Responsive: collapse sidebar, stack OPL below canvas ── */
+@media (max-width: 1023px) {
+  .app {
+    grid-template-columns: 1fr;
+    grid-template-rows: var(--header-h) 32px 1fr auto var(--status-h);
+    grid-template-areas:
+      "header"
+      "toolbar"
+      "canvas"
+      "opl"
+      "status";
+  }
+
+  .app > .tree-panel {
+    display: none;
+  }
+
+  .sidebar-toggle {
+    display: flex;
+  }
+}
+
+.sidebar-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-panel);
+  color: var(--text-secondary);
+  font-size: 16px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.sidebar-toggle:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
 }
 
 /* ═══════════════════
@@ -3200,3 +3248,174 @@ button.header__pill:hover {
 .wizard-btn--primary { background: var(--accent); color: white; border-color: var(--accent); }
 .wizard-btn--primary:disabled { opacity: 0.5; cursor: not-allowed; }
 .wizard-btn--secondary { background: transparent; color: var(--text-secondary); }
+
+/* ═══════════════════
+   Code Editor
+   ═══════════════════ */
+
+.code-editor {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  background: var(--code-bg);
+  color: var(--code-text);
+  border: 1px solid var(--code-border);
+  border-radius: 4px;
+  padding: 10px;
+  resize: none;
+  outline: none;
+}
+
+/* ═══════════════════
+   OPL Import Panel
+   ═══════════════════ */
+
+.opl-import-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(620px, 100vw - 32px);
+  height: 100vh;
+  background: var(--code-panel-bg);
+  border-left: 1px solid var(--code-border);
+  display: flex;
+  flex-direction: column;
+  z-index: 1000;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+/* ═══════════════════
+   Modal
+   ═══════════════════ */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-dialog {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+/* ═══════════════════
+   Welcome State
+   ═══════════════════ */
+
+.welcome-state {
+  grid-area: canvas;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: var(--text-muted);
+  font-size: 14px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.welcome-state > * {
+  pointer-events: auto;
+}
+
+.welcome-state__title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.welcome-state__actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.welcome-state__btn {
+  padding: 8px 20px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-panel);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.welcome-state__btn:hover {
+  background: var(--accent-glow);
+  border-color: var(--accent);
+}
+
+.welcome-state__btn--primary {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.welcome-state__btn--primary:hover {
+  opacity: 0.9;
+}
+
+/* ═══════════════════
+   Loading Spinner
+   ═══════════════════ */
+
+.loading-spinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  color: var(--text-muted);
+  font-size: 14px;
+  gap: 12px;
+}
+
+.loading-spinner::before {
+  content: "";
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ═══════════════════
+   OPL Status Bar
+   ═══════════════════ */
+
+.opl-status-bar {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: var(--code-bg);
+  border: 1px solid var(--code-border);
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: var(--font-mono);
+}
+
+.opl-status-bar__phases {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+}

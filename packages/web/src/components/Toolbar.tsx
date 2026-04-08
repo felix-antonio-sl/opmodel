@@ -29,6 +29,8 @@ export function Toolbar({ mode, linkType, dispatch }: Props) {
       className={`toolbar__btn${mode === m ? " toolbar__btn--active" : ""}`}
       onClick={() => dispatch({ tag: "setMode", mode: mode === m ? "select" : m })}
       title={title}
+      aria-label={title}
+      aria-pressed={mode === m}
     >
       {label}
     </button>
@@ -47,6 +49,7 @@ export function Toolbar({ mode, linkType, dispatch }: Props) {
           <select
             className="toolbar__link-select"
             value={linkType}
+            aria-label="Link type selector"
             onChange={(e) => dispatch({ tag: "setLinkType", linkType: e.target.value as LinkTypeChoice })}
           >
             {LINK_TYPES.map((lt) => (
