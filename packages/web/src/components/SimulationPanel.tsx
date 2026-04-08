@@ -295,6 +295,28 @@ export function SimulationPanel({ model, simulation, dispatch }: Props) {
                     ))}
                   </div>
                 )}
+                <button
+                  style={{ marginTop: 6, fontSize: 9, cursor: "pointer" }}
+                  onClick={() => {
+                    const lines = [
+                      `Monte Carlo Results (${mcResult.runs} runs)`,
+                      `Completed: ${mcResult.completedCount}/${mcResult.runs} (${Math.round(mcResult.completedCount/mcResult.runs*100)}%)`,
+                      `Deadlocked: ${mcResult.deadlockedCount}/${mcResult.runs}`,
+                      `Avg steps: ${mcResult.avgSteps.toFixed(1)}`,
+                      ...(mcResult.avgDuration != null ? [`Avg duration: ${mcResult.avgDuration.toFixed(1)}`] : []),
+                      ...Object.entries(mcResult.assertionPassRate).map(([id, rate]) => {
+                        const a = model.assertions.get(id);
+                        return `Assertion ${Math.round(rate*100)}%: ${a?.predicate ?? id}`;
+                      }),
+                      ...Object.entries(mcResult.exceptionRate).map(([key, rate]) =>
+                        `Exception ${Math.round(rate*100)}%: ${key}`
+                      ),
+                    ];
+                    navigator.clipboard.writeText(lines.join("\n"));
+                  }}
+                >
+                  Copy to clipboard
+                </button>
               </div>
             )}
           </div>
