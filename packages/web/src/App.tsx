@@ -408,6 +408,11 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
         if (e.key === "o") dispatch({ tag: "setMode", mode: "addObject" });
         if (e.key === "p") dispatch({ tag: "setMode", mode: "addProcess" });
         if (e.key === "l") dispatch({ tag: "setMode", mode: "addLink" });
+        if (e.key === "a") { dispatch({ tag: "setMode", mode: "addLink" }); dispatch({ tag: "setLinkType", linkType: "agent" }); }
+        if (e.key === "e") { dispatch({ tag: "setMode", mode: "addLink" }); dispatch({ tag: "setLinkType", linkType: "effect" }); }
+        if (e.key === "i") { dispatch({ tag: "setMode", mode: "addLink" }); dispatch({ tag: "setLinkType", linkType: "instrument" }); }
+        if (e.key === "g") { dispatch({ tag: "setMode", mode: "addLink" }); dispatch({ tag: "setLinkType", linkType: "aggregation" }); }
+        if (e.key === "x") { dispatch({ tag: "setMode", mode: "addLink" }); dispatch({ tag: "setLinkType", linkType: "exhibition" }); }
         if (e.key === "?") setShowHelp(v => !v);
       }
     },
@@ -844,7 +849,12 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
             <div className="help-dialog__grid">
               <kbd>O</kbd><span>Add Object</span>
               <kbd>P</kbd><span>Add Process</span>
-              <kbd>L</kbd><span>Add Link</span>
+              <kbd>L</kbd><span>Add Link (auto)</span>
+              <kbd>A</kbd><span>Agent Link</span>
+              <kbd>E</kbd><span>Effect Link</span>
+              <kbd>I</kbd><span>Instrument Link</span>
+              <kbd>G</kbd><span>Aggregation Link</span>
+              <kbd>X</kbd><span>Exhibition Link</span>
               <kbd>Esc</kbd><span>Select Mode</span>
               <kbd>Del</kbd><span>Delete Selected</span>
               <kbd>⌘Z</kbd><span>Undo</span>
