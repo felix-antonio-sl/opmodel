@@ -3273,6 +3273,57 @@ button.header__pill:hover {
   outline: none;
 }
 
+/* ── OPL Editor: Line Numbers + Autocomplete ── */
+.opl-editor-wrapper {
+  border: 1px solid var(--code-border);
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--code-bg);
+}
+.opl-editor-wrapper .opl-editor-textarea {
+  border: none;
+  border-radius: 0;
+}
+.opl-line-numbers {
+  width: 36px;
+  min-width: 36px;
+  padding: 10px 4px 10px 0;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  background: var(--code-bg);
+  border-right: 1px solid var(--code-border);
+  overflow: hidden;
+  user-select: none;
+}
+.opl-line-number {
+  padding-right: 6px;
+}
+.opl-autocomplete {
+  z-index: 300;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  min-width: 140px;
+  max-height: 180px;
+  overflow-y: auto;
+  padding: 2px 0;
+}
+.opl-autocomplete__item {
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+}
+.opl-autocomplete__item:hover,
+.opl-autocomplete__item--active {
+  background: var(--bg-hover);
+  color: var(--accent);
+}
+
 /* ═══════════════════
    OPL Import Panel
    ═══════════════════ */
