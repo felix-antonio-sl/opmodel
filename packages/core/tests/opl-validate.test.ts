@@ -92,6 +92,8 @@ describe("validateOpl", () => {
       column: 1,
       sentenceKind: "thing-declaration",
       opdName: "SD",
+      entity: expect.any(String),
+      focusThingName: "Water",
     });
   });
 

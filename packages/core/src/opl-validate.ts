@@ -29,6 +29,8 @@ export interface ValidationIssue {
   sentenceKind?: string;
   opdName?: string;
   code?: string;
+  entity?: string;
+  focusThingName?: string;
 }
 
 export interface ValidationResult {
@@ -44,7 +46,7 @@ export interface ValidationResult {
 
 type LocationInfo = Pick<
   ValidationIssue,
-  "line" | "column" | "endLine" | "endColumn" | "sentenceKind" | "opdName"
+  "line" | "column" | "endLine" | "endColumn" | "sentenceKind" | "opdName" | "focusThingName"
 >;
 
 type ParsedSection = {
@@ -256,27 +258,28 @@ function registerSentenceLocations(
   sentence: OplSentence,
 ) {
   const location = locationForSentence(doc, sentence);
+  const withFocus = (focusThingName?: string): LocationInfo => ({ ...location, ...(focusThingName ? { focusThingName } : {}) });
 
   switch (sentence.kind) {
     case "thing-declaration": {
       const thingId = resolveThingId(ctx, sentence.name, sentence.exhibitorName, sentence.thingKind);
-      if (thingId) map.set(thingId, location);
+      if (thingId) map.set(thingId, withFocus(sentence.name));
       break;
     }
     case "state-enumeration":
       for (const stateName of sentence.stateNames) {
         const stateId = resolveStateId(ctx, sentence.thingName, sentence.exhibitorName, stateName);
-        if (stateId) map.set(stateId, location);
+        if (stateId) map.set(stateId, withFocus(sentence.thingName));
       }
       break;
     case "state-description": {
       const stateId = resolveStateId(ctx, sentence.thingName, sentence.exhibitorName, sentence.stateName);
-      if (stateId) map.set(stateId, location);
+      if (stateId) map.set(stateId, withFocus(sentence.thingName));
       break;
     }
     case "attribute-value": {
       const stateId = resolveStateId(ctx, sentence.thingName, sentence.exhibitorName, sentence.valueName);
-      if (stateId) map.set(stateId, location);
+      if (stateId) map.set(stateId, withFocus(sentence.exhibitorName));
       break;
     }
     case "grouped-structural": {
@@ -289,23 +292,23 @@ function registerSentenceLocations(
           source: parentId,
           target: childId,
         });
-        if (link) map.set(link.id, location);
+        if (link) map.set(link.id, withFocus(sentence.parentName));
       }
       break;
     }
     case "link": {
       const link = resolveLinkFromSentence(ctx, sentence);
-      if (link) map.set(link.id, location);
+      if (link) map.set(link.id, withFocus(sentence.sourceName));
       break;
     }
     case "modifier": {
       const modifier = resolveModifierFromSentence(ctx, sentence);
-      if (modifier) map.set(modifier.id, location);
+      if (modifier) map.set(modifier.id, withFocus(sentence.sourceName));
       break;
     }
     case "fan": {
       const fan = resolveFanFromSentence(ctx, sentence);
-      if (fan) map.set(fan.id, location);
+      if (fan) map.set(fan.id, withFocus(sentence.sharedEndpointName));
       break;
     }
     case "requirement": {
@@ -314,7 +317,7 @@ function registerSentenceLocations(
         candidate.name === sentence.name &&
         candidate.description === sentence.description,
       );
-      if (requirement) map.set(requirement.id, location);
+      if (requirement) map.set(requirement.id, withFocus(sentence.targetName));
       break;
     }
     case "assertion": {
@@ -323,7 +326,7 @@ function registerSentenceLocations(
         candidate.category === sentence.category &&
         candidate.enabled,
       );
-      if (assertion) map.set(assertion.id, location);
+      if (assertion) map.set(assertion.id, withFocus(sentence.targetName));
       break;
     }
     case "scenario": {
@@ -343,7 +346,7 @@ function registerSentenceLocations(
           const targetId = resolveThingId(ctx, step.thingNames[i + 1]!);
           if (!sourceId || !targetId) continue;
           const link = findLink(ctx.model, { type: "invocation", source: sourceId, target: targetId });
-          if (link) map.set(link.id, location);
+          if (link) map.set(link.id, withFocus(step.thingNames[i]!));
         }
       }
       break;
@@ -560,6 +563,7 @@ function mapInvariantIssue(issue: InvariantError, sourceMap: Map<string, Locatio
     severity: issue.severity === "warning" || issue.severity === "info" ? "warning" : "error",
     message: issue.message,
     code: issue.code,
+    entity: issue.entity,
     ...location,
   };
 }

@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
-import type { Model } from "@opmodel/core";
+import type { Model, ValidationIssue } from "@opmodel/core";
 import { renderAll, parseOplDocuments, compileToKernel, legacyModelFromSemanticKernel, exposeSemanticKernel, validateOpl } from "@opmodel/core";
 import type { Command } from "../lib/commands";
 
@@ -9,25 +9,46 @@ interface Props {
   dispatch: (cmd: Command) => boolean;
 }
 
+function lineColumnToOffset(text: string, line?: number, column?: number) {
+  if (line == null || column == null) return null;
+  const lines = text.split("\n");
+  if (line < 1 || line > lines.length) return null;
+  let offset = 0;
+  for (let i = 0; i < line - 1; i++) offset += lines[i]!.length + 1;
+  return offset + Math.max(0, column - 1);
+}
+
+function findThingIdByName(model: Model, name?: string) {
+  if (!name) return null;
+  return [...model.things.values()].find((thing) => thing.name === name)?.id ?? null;
+}
+
+function findOpdIdByName(model: Model, name?: string) {
+  if (!name) return null;
+  return [...model.opds.values()].find((opd) => opd.name === name)?.id ?? null;
+}
+
+function issueKey(issue: ValidationIssue, index: number) {
+  return `${index}:${issue.phase}:${issue.line ?? 0}:${issue.column ?? 0}:${issue.message}`;
+}
+
 export function OplLiveEditor({ model, opdId, dispatch }: Props) {
   const initialText = renderAll(model);
   const [text, setText] = useState(initialText);
   const [status, setStatus] = useState<"idle" | "dirty" | "valid" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [validationResult, setValidationResult] = useState<ReturnType<typeof validateOpl> | null>(null);
+  const [activeIssueKey, setActiveIssueKey] = useState<string | null>(null);
   const textRef = useRef(text);
   textRef.current = text;
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lineNumbersRef = useRef<HTMLDivElement>(null);
 
-  // Autocomplete state
   const [acVisible, setAcVisible] = useState(false);
   const [acItems, setAcItems] = useState<string[]>([]);
   const [acIndex, setAcIndex] = useState(0);
   const [acPos, setAcPos] = useState({ top: 0, left: 0 });
-  const [acPrefix, setAcPrefix] = useState("");
 
-  // Build vocabulary from model
   const vocabulary = useMemo(() => {
     const names: string[] = [];
     for (const t of model.things.values()) names.push(t.name);
@@ -35,13 +56,11 @@ export function OplLiveEditor({ model, opdId, dispatch }: Props) {
     return [...new Set(names)].sort();
   }, [model]);
 
-  // Sync text when model changes externally
   useEffect(() => {
     const newText = renderAll(model);
     if (status === "idle") setText(newText);
   }, [model, status]);
 
-  // Sync line numbers scroll
   const syncScroll = useCallback(() => {
     if (textareaRef.current && lineNumbersRef.current) {
       lineNumbersRef.current.scrollTop = textareaRef.current.scrollTop;
@@ -50,13 +69,55 @@ export function OplLiveEditor({ model, opdId, dispatch }: Props) {
 
   const lineCount = text.split("\n").length;
 
-  // Get word being typed at cursor
+  const issueCounts = useMemo(() => {
+    const issues = validationResult?.issues ?? [];
+    return {
+      errors: issues.filter((issue) => issue.severity === "error").length,
+      warnings: issues.filter((issue) => issue.severity === "warning").length,
+    };
+  }, [validationResult]);
+
+  const lineIssueSeverity = useMemo(() => {
+    const map = new Map<number, "error" | "warning">();
+    for (const issue of validationResult?.issues ?? []) {
+      if (issue.line == null) continue;
+      const prev = map.get(issue.line);
+      if (!prev || issue.severity === "error") map.set(issue.line, issue.severity);
+    }
+    return map;
+  }, [validationResult]);
+
+  const focusIssue = useCallback((issue: ValidationIssue, key?: string | null) => {
+    if (key) setActiveIssueKey(key);
+
+    const opdMatch = findOpdIdByName(model, issue.opdName);
+    if (opdMatch && opdMatch !== opdId) dispatch({ tag: "selectOpd", opdId: opdMatch });
+
+    const thingMatch = findThingIdByName(model, issue.focusThingName);
+    if (thingMatch) dispatch({ tag: "selectThing", thingId: thingMatch });
+
+    const start = lineColumnToOffset(textRef.current, issue.line, issue.column);
+    const end = lineColumnToOffset(textRef.current, issue.endLine ?? issue.line, issue.endColumn ?? issue.column);
+    if (start == null) return;
+
+    requestAnimationFrame(() => {
+      const ta = textareaRef.current;
+      if (!ta) return;
+      ta.focus();
+      ta.setSelectionRange(start, end != null && end > start ? end : start);
+      const lineIndex = Math.max(0, (issue.line ?? 1) - 1);
+      const lineHeight = 16;
+      const targetScroll = Math.max(0, lineIndex * lineHeight - ta.clientHeight / 3);
+      ta.scrollTop = targetScroll;
+      if (lineNumbersRef.current) lineNumbersRef.current.scrollTop = targetScroll;
+    });
+  }, [dispatch, model, opdId]);
+
   const getWordAtCursor = useCallback((): { word: string; start: number; end: number } | null => {
     const ta = textareaRef.current;
     if (!ta) return null;
     const pos = ta.selectionStart;
     const before = text.substring(0, pos);
-    // Find word boundary (letters, digits, spaces in names, hyphens)
     const match = before.match(/[A-Za-z][\w\s-]*$/);
     if (!match) return null;
     return { word: match[0], start: pos - match[0].length, end: pos };
@@ -69,21 +130,18 @@ export function OplLiveEditor({ model, opdId, dispatch }: Props) {
       return;
     }
     const prefix = wordInfo.word.toLowerCase();
-    const matches = vocabulary.filter(name =>
-      name.toLowerCase().startsWith(prefix) && name.toLowerCase() !== prefix
+    const matches = vocabulary.filter((name) =>
+      name.toLowerCase().startsWith(prefix) && name.toLowerCase() !== prefix,
     ).slice(0, 8);
     if (matches.length === 0) {
       setAcVisible(false);
       return;
     }
     setAcItems(matches);
-    setAcPrefix(wordInfo.word);
     setAcIndex(0);
-    // Position near cursor
     const ta = textareaRef.current;
     if (ta) {
       const rect = ta.getBoundingClientRect();
-      // Approximate position from text content
       const lines = text.substring(0, ta.selectionStart).split("\n");
       const lineIdx = lines.length - 1;
       const lineHeight = 16;
@@ -102,7 +160,6 @@ export function OplLiveEditor({ model, opdId, dispatch }: Props) {
     setText(newText);
     setAcVisible(false);
     setStatus("dirty");
-    // Restore cursor position
     const newPos = wordInfo.start + name.length;
     requestAnimationFrame(() => {
       if (textareaRef.current) {
@@ -113,17 +170,22 @@ export function OplLiveEditor({ model, opdId, dispatch }: Props) {
   }, [text, getWordAtCursor]);
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setText(e.target.value);
+    const nextText = e.target.value;
+    setText(nextText);
     setStatus("dirty");
     setErrorMsg(null);
+    setActiveIssueKey(null);
 
-    if (!e.target.value.trim()) return;
-    const result = validateOpl(e.target.value);
+    if (!nextText.trim()) {
+      setValidationResult(null);
+      return;
+    }
+
+    const result = validateOpl(nextText);
     setValidationResult(result);
     setStatus(result.ok ? "valid" : "error");
   }, []);
 
-  // Trigger autocomplete after change
   useEffect(() => {
     if (status !== "idle") {
       const timer = setTimeout(updateAutocomplete, 150);
@@ -133,14 +195,13 @@ export function OplLiveEditor({ model, opdId, dispatch }: Props) {
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (acVisible) {
-      if (e.key === "ArrowDown") { e.preventDefault(); setAcIndex(i => Math.min(i + 1, acItems.length - 1)); return; }
-      if (e.key === "ArrowUp") { e.preventDefault(); setAcIndex(i => Math.max(i - 1, 0)); return; }
+      if (e.key === "ArrowDown") { e.preventDefault(); setAcIndex((i) => Math.min(i + 1, acItems.length - 1)); return; }
+      if (e.key === "ArrowUp") { e.preventDefault(); setAcIndex((i) => Math.max(i - 1, 0)); return; }
       if (e.key === "Enter" || e.key === "Tab") {
-        if (acItems[acIndex]) { e.preventDefault(); applyAutocomplete(acItems[acIndex]); return; }
+        if (acItems[acIndex]) { e.preventDefault(); applyAutocomplete(acItems[acIndex]!); return; }
       }
       if (e.key === "Escape") { e.preventDefault(); setAcVisible(false); return; }
     }
-    // Tab inserts 2 spaces
     if (e.key === "Tab" && !acVisible) {
       e.preventDefault();
       const ta = e.currentTarget;
@@ -157,6 +218,16 @@ export function OplLiveEditor({ model, opdId, dispatch }: Props) {
     const t = textRef.current;
     if (!t.trim()) return;
 
+    const validation = validateOpl(t);
+    setValidationResult(validation);
+    if (!validation.ok) {
+      setStatus("error");
+      setErrorMsg("Fix the highlighted OPL issues before applying.");
+      const firstError = validation.issues.find((issue) => issue.severity === "error") ?? validation.issues[0];
+      if (firstError) focusIssue(firstError);
+      return;
+    }
+
     try {
       const parsed = parseOplDocuments(t);
       if (!parsed.ok) {
@@ -167,9 +238,7 @@ export function OplLiveEditor({ model, opdId, dispatch }: Props) {
       const layoutHints = new Map<string, { x: number; y: number; w: number; h: number }>();
       for (const [, app] of model.appearances) {
         const thing = model.things.get(app.thing);
-        if (thing) {
-          layoutHints.set(thing.name, { x: app.x, y: app.y, w: app.w, h: app.h });
-        }
+        if (thing) layoutHints.set(thing.name, { x: app.x, y: app.y, w: app.w, h: app.h });
       }
       const compiled = compileToKernel(parsed.value, {
         ignoreUnsupported: true,
@@ -186,14 +255,15 @@ export function OplLiveEditor({ model, opdId, dispatch }: Props) {
       dispatch({ tag: "importOpl", model: legacyModelFromSemanticKernel(kernel, atlas) });
       setStatus("idle");
       setErrorMsg(null);
+      setValidationResult(null);
+      setActiveIssueKey(null);
       setAcVisible(false);
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : String(e));
       setStatus("error");
     }
-  }, [dispatch, model]);
+  }, [dispatch, focusIssue, model]);
 
-  // Ctrl+S / Cmd+S to apply
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "s") {
@@ -207,7 +277,13 @@ export function OplLiveEditor({ model, opdId, dispatch }: Props) {
   }, [handleApply]);
 
   const statusColor = status === "valid" ? "#5cb85c" : status === "error" ? "#d9534f" : status === "dirty" ? "#f0ad4e" : "#666";
-  const statusText = status === "idle" ? "Synced" : status === "dirty" ? "Modified (Ctrl+S to apply)" : status === "valid" ? "Valid — press Apply" : "Error";
+  const statusText = status === "idle"
+    ? "Synced"
+    : status === "dirty"
+      ? "Modified (Ctrl+S to apply)"
+      : status === "valid"
+        ? "Valid, ready to apply"
+        : "Issues found";
 
   return (
     <div className="opl-panel__content" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
@@ -231,16 +307,33 @@ export function OplLiveEditor({ model, opdId, dispatch }: Props) {
         </button>
       </div>
 
-      {/* Editor with line numbers */}
+      <div style={{ display: "flex", gap: 8, fontSize: 11, color: "var(--text-muted)", marginBottom: 6 }}>
+        <span>Click an issue to jump to the exact source span.</span>
+        {validationResult && validationResult.issues.length > 0 && (
+          <span>
+            {issueCounts.errors} error(s), {issueCounts.warnings} warning(s)
+          </span>
+        )}
+      </div>
+
       <div className="opl-editor-wrapper" style={{ flex: 1, display: "flex", minHeight: 200, position: "relative" }}>
-        <div
-          ref={lineNumbersRef}
-          className="opl-line-numbers"
-          aria-hidden="true"
-        >
-          {Array.from({ length: lineCount }, (_, i) => (
-            <div key={i} className="opl-line-number">{i + 1}</div>
-          ))}
+        <div ref={lineNumbersRef} className="opl-line-numbers" aria-hidden="true">
+          {Array.from({ length: lineCount }, (_, i) => {
+            const lineNumber = i + 1;
+            const severity = lineIssueSeverity.get(lineNumber);
+            return (
+              <div
+                key={i}
+                className="opl-line-number"
+                style={{
+                  color: severity === "error" ? "#d9534f" : severity === "warning" ? "#f0ad4e" : undefined,
+                  fontWeight: severity ? 700 : undefined,
+                }}
+              >
+                {lineNumber}
+              </div>
+            );
+          })}
         </div>
         <textarea
           ref={textareaRef}
@@ -252,12 +345,8 @@ export function OplLiveEditor({ model, opdId, dispatch }: Props) {
           spellCheck={false}
           style={{ flex: 1, paddingLeft: 4 }}
         />
-        {/* Autocomplete dropdown */}
         {acVisible && acItems.length > 0 && (
-          <div
-            className="opl-autocomplete"
-            style={{ position: "fixed", top: acPos.top, left: acPos.left }}
-          >
+          <div className="opl-autocomplete" style={{ position: "fixed", top: acPos.top, left: acPos.left }}>
             {acItems.map((item, i) => (
               <div
                 key={item}
@@ -272,21 +361,45 @@ export function OplLiveEditor({ model, opdId, dispatch }: Props) {
       </div>
 
       {errorMsg && (
-        <div style={{ color: "#d9534f", fontSize: 11, fontFamily: "monospace", marginTop: 4, maxHeight: 60, overflowY: "auto" }}>
+        <div style={{ color: "#d9534f", fontSize: 11, fontFamily: "monospace", marginTop: 4 }}>
           {errorMsg}
         </div>
       )}
 
       {validationResult && validationResult.issues.length > 0 && status !== "idle" && (
-        <div style={{ maxHeight: 80, overflowY: "auto", marginTop: 4 }}>
-          {validationResult.issues.slice(0, 5).map((issue, i) => (
-            <div key={i} style={{ color: issue.severity === "error" ? "#d9534f" : "#f0ad4e", fontSize: 10, fontFamily: "monospace" }}>
-              {issue.line != null && <span style={{ color: "#888" }}>L{issue.line}: </span>}
-              {issue.message}
-            </div>
-          ))}
-          {validationResult.issues.length > 5 && (
-            <div style={{ color: "#666", fontSize: 10 }}>...+{validationResult.issues.length - 5} more</div>
+        <div style={{ maxHeight: 140, overflowY: "auto", marginTop: 6, display: "flex", flexDirection: "column", gap: 4 }}>
+          {validationResult.issues.slice(0, 8).map((issue, i) => {
+            const key = issueKey(issue, i);
+            const active = activeIssueKey === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => focusIssue(issue, key)}
+                style={{
+                  textAlign: "left",
+                  border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
+                  background: active ? "rgba(124, 92, 255, 0.08)" : "var(--bg-panel)",
+                  color: issue.severity === "error" ? "#f38b8b" : "#f3c96b",
+                  borderRadius: 4,
+                  padding: "6px 8px",
+                  cursor: "pointer",
+                  fontSize: 11,
+                }}
+                title="Jump to source"
+              >
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 2, color: "var(--text-muted)" }}>
+                  <span>{issue.phase}</span>
+                  {issue.code && <span>{issue.code}</span>}
+                  {issue.opdName && <span>{issue.opdName}</span>}
+                  {issue.line != null && <span>L{issue.line}:{issue.column ?? 1}</span>}
+                </div>
+                <div>{issue.message}</div>
+              </button>
+            );
+          })}
+          {validationResult.issues.length > 8 && (
+            <div style={{ color: "#666", fontSize: 10 }}>...+{validationResult.issues.length - 8} more</div>
           )}
         </div>
       )}
