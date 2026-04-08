@@ -262,7 +262,7 @@ function FileMenu({ model, onNew, onLoadExample, onImport, onSave, onAutoLayoutA
 
 function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel: Model; onNew: () => void; onLoadExample: (file: string) => void; onImport: (model: Model) => void }) {
   const store = useModelStore(initialModel);
-  const { model, projection, currentProjectionSlice, ui, dispatch, doUndo, doRedo, canUndo, canRedo, lastError, save, saveStatus } = store;
+  const { model, projection, currentProjectionSlice, ui, dispatch, doUndo, doRedo, canUndo, canRedo, isDirty, lastError, save, saveStatus } = store;
 
   // NL pipeline
   const [nlConfig, setNlConfig] = useState<NlConfig | null>(() => {
@@ -532,12 +532,12 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
         >
           📝 OPL
         </button>
-        <QuickOpen onLoadExample={onLoadExample} />
+        <QuickOpen onLoadExample={(f) => { if (!isDirty || confirm("You have unsaved changes. Continue?")) onLoadExample(f); }} />
         <FileMenu
           model={model}
-          onNew={onNew}
-          onLoadExample={onLoadExample}
-          onImport={onImport}
+          onNew={() => { if (!isDirty || confirm("You have unsaved changes. Create new model?")) onNew(); }}
+          onLoadExample={(f) => { if (!isDirty || confirm("You have unsaved changes. Continue?")) onLoadExample(f); }}
+          onImport={(m) => { if (!isDirty || confirm("You have unsaved changes. Import?")) onImport(m); }}
           onSave={save}
           onAutoLayoutAll={autoLayoutAll}
           onShowVisualReport={() => { setValidationTab("visual-report"); setShowValidation(true); }}

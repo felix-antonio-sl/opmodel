@@ -882,6 +882,18 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, mode, 
             const moves = apps.slice(1, -1).map((e, i) => ({ thingId: e.id, opdId, x: snap(first + step * (i + 1)), y: e.app!.y }));
             if (moves.length > 0) dispatch({ tag: "moveThings", moves });
           }}>⫴</button>
+          <button title="Distribute Vertically" onClick={() => {
+            const apps = [...multiSelect].map(id => ({ id, app: appearances.get(id) })).filter(e => e.app).sort((a, b) => a.app!.y - b.app!.y);
+            if (apps.length < 3) return;
+            const firstApp = apps[0]?.app;
+            const lastApp = apps[apps.length - 1]?.app;
+            if (!firstApp || !lastApp) return;
+            const first = firstApp.y;
+            const last = lastApp.y;
+            const step = (last - first) / (apps.length - 1);
+            const moves = apps.slice(1, -1).map((e, i) => ({ thingId: e.id, opdId, x: e.app!.x, y: snap(first + step * (i + 1)) }));
+            if (moves.length > 0) dispatch({ tag: "moveThings", moves });
+          }}>⫼</button>
           <span className="canvas-align-toolbar__count">{multiSelect.size}</span>
         </div>
       )}
@@ -939,30 +951,117 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, mode, 
         const app = [...model.appearances.values()].find((a) => a.thing === contextMenu.thingId && a.opd === opdId);
         const thing = model.things.get(contextMenu.thingId);
         if (!app || !thing) return null;
+        const parentOpd = model.opds.get(opdId);
+        const isHierarchical = parentOpd?.opd_type === "hierarchical";
+        const existingRefinements = [...model.opds.values()].filter(o => o.refines === contextMenu.thingId && o.parent_opd === opdId);
+        const hasInZoom = existingRefinements.some(o => o.refinement_type === "in-zoom");
+        const hasUnfold = existingRefinements.some(o => o.refinement_type === "unfold");
+        const canRefine = isHierarchical && !app.internal === false;
+        const connectedCount = [...model.links.values()].filter(l => {
+          const other = l.source === contextMenu.thingId ? l.target : l.target === contextMenu.thingId ? l.source : null;
+          return other && ![...model.appearances.values()].some(a => a.thing === other && a.opd === opdId);
+        }).length;
         return (
           <div
             className="canvas-context-menu"
             style={{ position: "fixed", left: contextMenu.x, top: contextMenu.y, zIndex: 200 }}
             onMouseDown={(e) => e.stopPropagation()}
           >
-            <div className="canvas-context-menu__title">{thing.name}</div>
-            <button
-              className="canvas-context-menu__item"
-              onClick={() => {
-                dispatch({ tag: "updateAppearance", thingId: contextMenu.thingId, opdId, patch: { pinned: !app.pinned } });
-                setContextMenu(null);
-              }}
-            >
-              {app.pinned ? "📌 Unpin" : "📌 Pin position"}
+            <div className="canvas-context-menu__title">{thing.name} ({thing.kind})</div>
+            <button className="canvas-context-menu__item" onClick={() => { setRenaming(contextMenu.thingId); setContextMenu(null); }}>
+              Rename
             </button>
-            <button
-              className="canvas-context-menu__item"
-              onClick={() => {
-                dispatch({ tag: "updateAppearance", thingId: contextMenu.thingId, opdId, patch: { auto_sizing: app.auto_sizing === false ? undefined : false } });
+            <button className="canvas-context-menu__item" onClick={() => {
+              dispatch({ tag: "updateThingProps", thingId: contextMenu.thingId, patch: { essence: thing.essence === "physical" ? "informatical" : "physical" } });
+              setContextMenu(null);
+            }}>
+              Essence: {thing.essence === "physical" ? "informatical" : "physical"}
+            </button>
+            <button className="canvas-context-menu__item" onClick={() => {
+              dispatch({ tag: "updateThingProps", thingId: contextMenu.thingId, patch: { affiliation: thing.affiliation === "systemic" ? "environmental" : "systemic" } });
+              setContextMenu(null);
+            }}>
+              {thing.affiliation === "systemic" ? "Make Environmental" : "Make Systemic"}
+            </button>
+            {thing.kind === "object" && (
+              <button className="canvas-context-menu__item" onClick={() => {
+                dispatch({ tag: "addState", state: { id: genId("state"), parent: contextMenu.thingId, name: `state${[...model.states.values()].filter(s => s.parent === contextMenu.thingId).length + 1}`, initial: false, final: false, default: false } });
                 setContextMenu(null);
-              }}
-            >
-              {app.auto_sizing === false ? "📐 Enable auto-sizing" : "📐 Lock size"}
+              }}>
+                + Add State
+              </button>
+            )}
+            <div className="canvas-context-menu__sep" />
+            <button className="canvas-context-menu__item" onClick={() => {
+              dispatch({ tag: "updateAppearance", thingId: contextMenu.thingId, opdId, patch: { pinned: !app.pinned } });
+              setContextMenu(null);
+            }}>
+              {app.pinned ? "Unpin" : "Pin position"}
+            </button>
+            <button className="canvas-context-menu__item" onClick={() => {
+              dispatch({ tag: "updateAppearance", thingId: contextMenu.thingId, opdId, patch: { auto_sizing: app.auto_sizing === false ? undefined : false } });
+              setContextMenu(null);
+            }}>
+              {app.auto_sizing === false ? "Enable auto-sizing" : "Lock size"}
+            </button>
+            {connectedCount > 0 && (
+              <button className="canvas-context-menu__item" onClick={() => {
+                dispatch({ tag: "bringConnected", thingId: contextMenu.thingId, opdId, filter: "all" });
+                setContextMenu(null);
+              }}>
+                Bring Connected ({connectedCount})
+              </button>
+            )}
+            {canRefine && (
+              <>
+                <div className="canvas-context-menu__sep" />
+                {!hasInZoom && (
+                  <button className="canvas-context-menu__item" onClick={() => {
+                    const childOpdId = genId("opd");
+                    const childIdx = [...model.opds.values()].filter(o => o.parent_opd === opdId).length + 1;
+                    if (dispatch({ tag: "refineThing", thingId: contextMenu.thingId, opdId, refinementType: "in-zoom", childOpdId, childOpdName: `SD${childIdx}` })) {
+                      dispatch({ tag: "selectOpd", opdId: childOpdId });
+                    }
+                    setContextMenu(null);
+                  }}>
+                    In-zoom
+                  </button>
+                )}
+                {thing.kind === "object" && !hasUnfold && (
+                  <button className="canvas-context-menu__item" onClick={() => {
+                    const childOpdId = genId("opd");
+                    const childIdx = [...model.opds.values()].filter(o => o.parent_opd === opdId).length + 1;
+                    if (dispatch({ tag: "refineThing", thingId: contextMenu.thingId, opdId, refinementType: "unfold", childOpdId, childOpdName: `SD${childIdx}` })) {
+                      dispatch({ tag: "selectOpd", opdId: childOpdId });
+                    }
+                    setContextMenu(null);
+                  }}>
+                    Unfold
+                  </button>
+                )}
+                {existingRefinements.length > 0 && existingRefinements.map(r => (
+                  <button key={r.id} className="canvas-context-menu__item" onClick={() => {
+                    dispatch({ tag: "selectOpd", opdId: r.id });
+                    setContextMenu(null);
+                  }}>
+                    Go to {r.refinement_type}: {r.name}
+                  </button>
+                ))}
+              </>
+            )}
+            <div className="canvas-context-menu__sep" />
+            <button className="canvas-context-menu__item" onClick={() => {
+              const newId = genId("thing");
+              dispatch({ tag: "duplicateThing", sourceThingId: contextMenu.thingId, newThingId: newId, opdId });
+              setContextMenu(null);
+            }}>
+              Duplicate
+            </button>
+            <button className="canvas-context-menu__item canvas-context-menu__item--danger" onClick={() => {
+              dispatch({ tag: "removeThing", thingId: contextMenu.thingId });
+              setContextMenu(null);
+            }}>
+              Delete
             </button>
           </div>
         );

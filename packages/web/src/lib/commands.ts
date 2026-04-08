@@ -133,7 +133,8 @@ export type Command =
   | { tag: "setSimulationStep"; index: number }
   | { tag: "setSimulationSpeed"; speed: number }
   | { tag: "importOpl"; model: Model }
-  | { tag: "toggleSimulationAutoRun" };
+  | { tag: "toggleSimulationAutoRun" }
+  | { tag: "duplicateThing"; sourceThingId: string; newThingId: string; opdId: string };
 
 /* ─── Effect Coproduct ─── */
 
@@ -471,5 +472,32 @@ export function interpret(cmd: Command): Effect {
 
     case "importOpl":
       return { type: "replaceModel", model: cmd.model };
+
+    case "duplicateThing":
+      return {
+        type: "modelMutation",
+        apply: (m) => {
+          const src = m.things.get(cmd.sourceThingId);
+          if (!src) return { ok: false, error: { code: "NOT_FOUND", message: `Thing ${cmd.sourceThingId} not found`, entity: cmd.sourceThingId } } as Result<Model, InvariantError>;
+          const newThing: Thing = { ...src, id: cmd.newThingId, name: `${src.name} (copy)` };
+          const r1 = addThing(m, newThing);
+          if (!isOk(r1)) return r1;
+          let current = r1.value;
+          // Copy states
+          const srcStates = [...m.states.values()].filter(s => s.parent === cmd.sourceThingId);
+          for (const s of srcStates) {
+            const newStateId = `${cmd.newThingId}-${s.id}`;
+            const r = addState(current, { ...s, id: newStateId, parent: cmd.newThingId });
+            if (isOk(r)) current = r.value;
+          }
+          // Place in same OPD offset by 30px
+          const srcApp = [...m.appearances.values()].find(a => a.thing === cmd.sourceThingId && a.opd === cmd.opdId);
+          if (srcApp) {
+            const r2 = addAppearance(current, { thing: cmd.newThingId, opd: cmd.opdId, x: srcApp.x + 30, y: srcApp.y + 30, w: srcApp.w, h: srcApp.h });
+            if (isOk(r2)) current = r2.value;
+          }
+          return { value: current, ok: true } as Result<Model, InvariantError>;
+        },
+      };
   }
 }

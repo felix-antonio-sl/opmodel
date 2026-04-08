@@ -53,6 +53,8 @@ export interface ModelStore {
   canUndo: boolean;
   /** Can redo? */
   canRedo: boolean;
+  /** Has unsaved model mutations? */
+  isDirty: boolean;
   /** Dispatch a Command through η: Command → Effect. Returns true if successful. */
   dispatch: (cmd: Command) => boolean;
   /** Undo last model mutation */
@@ -269,6 +271,17 @@ export function useModelStore(initialModel: Model): ModelStore {
     URL.revokeObjectURL(url);
   }, [history]);
 
+  // G-16: Track whether model has unsaved changes (dirty = past exists)
+  const isDirty = history.past.length > 0;
+
+  // G-16: beforeunload warning when model has changes
+  useEffect(() => {
+    if (!isDirty) return;
+    const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDirty]);
+
   return {
     model: history.present,
     projection,
@@ -276,6 +289,7 @@ export function useModelStore(initialModel: Model): ModelStore {
     ui,
     canUndo: history.past.length > 0,
     canRedo: history.future.length > 0,
+    isDirty,
     dispatch,
     doUndo,
     doRedo,

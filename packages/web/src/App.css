@@ -2533,6 +2533,13 @@ button.header__pill:hover {
 .canvas-context-menu__item:hover {
   background: var(--bg-hover);
 }
+.canvas-context-menu__item--danger {
+  color: var(--danger);
+}
+.canvas-context-menu__sep {
+  border-top: 1px solid var(--border);
+  margin: 3px 0;
+}
 
 /* ── Layout Toast ── */
 .layout-toast {
