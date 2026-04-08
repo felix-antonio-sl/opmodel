@@ -55,7 +55,7 @@ export function LinkLine({
       <g>
         <path className="link-line" d={d} fill="none" stroke={color} markerEnd="url(#arrow-control)" />
         <text className="link-label" x={cx} y={topY - loopH * 1.6} textAnchor="middle">
-          self-invocation
+          auto-invocación
         </text>
       </g>
     );

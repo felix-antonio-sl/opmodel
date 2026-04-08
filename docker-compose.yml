@@ -13,6 +13,13 @@ services:
       - "traefik.http.routers.opmodel.entrypoints=websecure"
       - "traefik.http.routers.opmodel.tls.certresolver=myresolver"
       - "traefik.http.services.opmodel.loadbalancer.server.port=5173"
+      - "traefik.http.routers.opmodel.middlewares=security-headers@docker"
+      - "traefik.http.middlewares.security-headers.headers.customResponseHeaders.Strict-Transport-Security=max-age=63072000; includeSubDomains; preload"
+      - "traefik.http.middlewares.security-headers.headers.customResponseHeaders.X-Frame-Options=DENY"
+      - "traefik.http.middlewares.security-headers.headers.customResponseHeaders.X-Content-Type-Options=nosniff"
+      - "traefik.http.middlewares.security-headers.headers.customResponseHeaders.Content-Security-Policy=default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' ws: wss:"
+      - "traefik.http.middlewares.security-headers.headers.customResponseHeaders.Referrer-Policy=strict-origin-when-cross-origin"
+      - "traefik.http.middlewares.security-headers.headers.customResponseHeaders.Permissions-Policy=camera=(), microphone=(), geolocation=()"
 
 networks:
   web:

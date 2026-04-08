@@ -85,13 +85,14 @@ describe("C-01: Link Distribution (derived via resolveLinksForOpd)", () => {
     for (const a of agents) expect(a.visualSource).toBe("obj-tool");
   });
 
-  it("effect distributes to all subprocesses", () => {
+  it("effect distributes to first+last subprocesses (R-LD-4 / R-ES)", () => {
     const m = buildDistributionModel();
     const resolved = resolveLinksForOpd(m, "opd-sd1");
     const effects = resolved.filter(r => r.link.id === "lnk-effect");
-    expect(effects.length).toBe(3);
+    expect(effects.length).toBe(2); // first + last (not all)
+    // Split: input half (obj-affected→first), output half (last→obj-affected)
     const targets = effects.map(e => e.visualTarget).sort();
-    expect(targets).toEqual(["proc-p1", "proc-p2", "proc-p3"]);
+    expect(targets).toEqual(["obj-affected", "proc-p1"]);
   });
 
   it("without subprocesses, links to container remain visible", () => {
@@ -190,7 +191,7 @@ describe("R-ES: Effect Split in in-zoom distribution", () => {
     expect(outputHalf!.visualTarget).toBe("obj-x");
   });
 
-  it("basic effect (no states) still distributes to all subprocesses", () => {
+  it("basic effect (no states) distributes to first+last (R-LD-4)", () => {
     let m = buildEffectSplitModel();
     // Replace state-specified effect with basic effect
     const links = new Map(m.links);
@@ -202,7 +203,9 @@ describe("R-ES: Effect Split in in-zoom distribution", () => {
     m = { ...m, links };
     const resolved = resolveLinksForOpd(m, "opd-sd1");
     const effects = resolved.filter(r => r.link.id === "lnk-effect-basic");
-    expect(effects).toHaveLength(3); // all subprocesses
+    expect(effects).toHaveLength(2); // first + last, same as state-specified
+    // No splitHalf labels on basic effect (no states to label)
+    expect(effects.every(e => !e.splitHalf)).toBe(true);
   });
 
   it("split halves are marked with splitHalf field", () => {

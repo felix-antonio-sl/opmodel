@@ -45,7 +45,7 @@ Rules:
 - Links require both source and target to exist or be created earlier in the array.
 - Order matters: create things BEFORE referencing them in links or states.
 - Preserve the user's language for entity names (do not translate names).
-- Respond ONLY with the JSON array. No prose, no markdown fences.`;
+- Respond with the JSON array. You may optionally wrap it in \`\`\`json fences.`;
 }
 
 export function buildContextMessage(model: Model, opdId: string): string {

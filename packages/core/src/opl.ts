@@ -817,8 +817,8 @@ function renderLinkSentence(s: OplLinkSentence, v: OplVocab): string {
       // RF3/RF3b
       if (s.incomplete) {
         return isES
-          ? `${s.sourceName}, ${s.targetName} ${v.and} ${v.atLeastOneOtherSpecialization} son generales.`
-          : `${s.sourceName}, ${s.targetName} and other specializations are general.`;
+          ? `${s.targetName}, ${v.and} ${v.atLeastOneOtherSpecialization} son ${v.isAn(s.sourceName)} ${s.sourceName}.`
+          : `${s.targetName}, and at least one other specialization are ${s.targetKind === "object" ? aOrAn(s.sourceName) : s.sourceName}.`;
       }
       if (s.targetKind === "object") {
         return isES
@@ -1600,7 +1600,11 @@ export function editsFrom(doc: OplDocument): OplEdit[] {
       case "in-zoom-sequence":
       case "attribute-value":
       case "fan":
-        break; // Stub — implemented in subsequent tasks
+        // These sentence types are parsed and compiled but applyOplEdit
+        // does not yet generate model edits for them. This means round-trip
+        // OPL->Model->OPL may lose these constructs (PutGet lens violation).
+        // Tracked for future implementation.
+        break;
       case "grouped-structural": {
         const directionMap: Record<string, "source" | "target"> = {
           aggregation: "source",

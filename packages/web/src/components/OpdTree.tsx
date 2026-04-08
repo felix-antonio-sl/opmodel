@@ -169,6 +169,7 @@ export function OpdTree({ model, currentOpd, selectedThing, onSelectOpd, onSelec
   return (
     <aside className="opd-tree" role="navigation" aria-label="OPD tree navigation">
       <div className="opd-tree__title">OPD TREE</div>
+      <div role="tree" aria-label="OPD hierarchy">
       {tree.map((node) => (
         <TreeNodeItem
           key={node.opd.id}
@@ -180,6 +181,7 @@ export function OpdTree({ model, currentOpd, selectedThing, onSelectOpd, onSelec
           onRenameOpd={onRenameOpd}
         />
       ))}
+      </div>
 
       {/* R-NT-2: Object Tree (ISO §3.44) — OPDs that refine objects */}
       {objectTree.size > 0 && (

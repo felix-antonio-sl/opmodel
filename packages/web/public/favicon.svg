@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect x="2" y="2" width="28" height="28" rx="4" fill="#16794a" stroke="#0d4f2f" stroke-width="2"/>
+  <ellipse cx="16" cy="16" rx="10" ry="7" fill="#2b6cb0" stroke="#1a4971" stroke-width="1.5"/>
+  <text x="16" y="20" text-anchor="middle" fill="white" font-size="12" font-family="sans-serif" font-weight="bold">OP</text>
+</svg>

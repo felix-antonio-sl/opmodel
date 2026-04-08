@@ -240,6 +240,8 @@ export interface OpdFiber {
  * Implements the pullback π* of I-LINK-VISIBILITY (ISO §14.2.2.4.1).
  * Only processes participate in subprocess-to-parent resolution; objects need direct appearances.
  */
+// TODO R-LV-5: Support user-driven link visibility override in child OPDs.
+// Currently all resolved links are shown; no per-link hide/show mechanism.
 export function resolveLinksForOpd(model: Model, opdId: string): ResolvedLink[] {
   // 1. Appearances in this OPD
   const appearances = new Set<string>();
@@ -364,12 +366,12 @@ export function resolveLinksForOpd(model: Model, opdId: string): ResolvedLink[] 
             const dvs = vs === containerThingId ? last : vs;
             const dvt = vt === containerThingId ? last : vt;
             result.push({ link, visualSource: dvs, visualTarget: dvt, aggregated: true });
-          } else if (link.type === "effect" && (link.source_state || link.target_state)) {
-            // R-ES: State-specified effect → split into input half (→first) + output half (last→)
-            // Input half: object(source_state) → first subprocess
-            result.push({ link, visualSource: otherEnd, visualTarget: first, aggregated: true, splitHalf: "input" });
-            // Output half: last subprocess → object(target_state)
-            result.push({ link, visualSource: last, visualTarget: otherEnd, aggregated: true, splitHalf: "output" });
+          } else if (link.type === "effect") {
+            // R-ES / R-LD-4: ALL effect links → split into input half (→first) + output half (last→)
+            // State-specified: splitHalf labels for state rendering; plain: same distribution, no labels.
+            const hasStates = !!(link.source_state || link.target_state);
+            result.push({ link, visualSource: otherEnd, visualTarget: first, aggregated: true, ...(hasStates ? { splitHalf: "input" as const } : {}) });
+            result.push({ link, visualSource: last, visualTarget: otherEnd, aggregated: true, ...(hasStates ? { splitHalf: "output" as const } : {}) });
           } else if (link.type === "invocation" || link.type === "exception") {
             // Invocation/exception: resolve to nearest visible internal subprocess, not all.
             // Find which internal subprocess contains each endpoint.
@@ -402,7 +404,7 @@ export function resolveLinksForOpd(model: Model, opdId: string): ResolvedLink[] 
               result.push({ link, visualSource: finalVs, visualTarget: finalVt, aggregated: true });
             }
           } else {
-            // Agent/instrument/basic effect → all subprocesses
+            // Agent/instrument → all subprocesses
             for (const spId of subprocessesByY) {
               const dvs = vs === containerThingId ? spId : vs;
               const dvt = vt === containerThingId ? spId : vt;
@@ -483,7 +485,7 @@ export function resolveLinksForOpd(model: Model, opdId: string): ResolvedLink[] 
 
   const afterVisual03 = result.filter(rl => {
     if (!rl.aggregated) return true;
-    if (!["instrument", "agent"].includes(rl.link.type)) return true;
+    if (!["instrument", "agent", "effect"].includes(rl.link.type)) return true;
     // Rule 1: source is part of whole that already has direct link of same type
     const whole = partToWhole.get(rl.visualSource);
     if (whole && directLinkKeys.has(`${rl.link.type}|${whole}|${rl.visualTarget}`)) return false;
@@ -575,12 +577,20 @@ export function resolveOpdFiber(model: Model, opdId: string): OpdFiber {
   //    Only 1-hop from explicit — no cascading.
   //    Exclude things that are internal to a child refinement OPD (inside objects — R-IE-8).
   const explicitIds = new Set(things.keys());
-  const childOpdIds = new Set(
-    [...model.opds.values()].filter(o => o.parent_opd === opdId).map(o => o.id)
-  );
+  // Collect ALL descendant OPD ids (recursive), not just direct children
+  const descendantOpdIds = new Set<string>();
+  const collectDescendantOpds = (parentId: string) => {
+    for (const o of model.opds.values()) {
+      if (o.parent_opd === parentId && !descendantOpdIds.has(o.id)) {
+        descendantOpdIds.add(o.id);
+        collectDescendantOpds(o.id);
+      }
+    }
+  };
+  collectDescendantOpds(opdId);
   const internalToChildOpd = new Set<string>();
   for (const app of model.appearances.values()) {
-    if (childOpdIds.has(app.opd) && app.internal === true) {
+    if (descendantOpdIds.has(app.opd) && app.internal === true) {
       internalToChildOpd.add(app.thing);
     }
   }
@@ -668,10 +678,19 @@ function computeStateSuppression(
 
       const extThingId = app.thing;
 
+      // R-SS-1: Collect internal things in this child OPD (subprocesses + internal objects)
+      const childInternalIds = new Set<string>();
+      childInternalIds.add(refinedThingId); // container itself
+      for (const childApp of model.appearances.values()) {
+        if (childApp.opd !== opd.id) continue;
+        if (childApp.internal) childInternalIds.add(childApp.thing);
+      }
+
       for (const link of model.links.values()) {
+        // R-SS-1: Suppression fires when link connects external thing to container OR any internal thing
         const connects =
-          (link.source === extThingId && link.target === refinedThingId) ||
-          (link.target === extThingId && link.source === refinedThingId);
+          (link.source === extThingId && childInternalIds.has(link.target)) ||
+          (link.target === extThingId && childInternalIds.has(link.source));
         if (!connects) continue;
 
         if (link.source_state) {
@@ -895,9 +914,11 @@ export function resolveLinksForOpdNative(
             result.push({ link, visualSource: vs === containerThingId ? first : vs, visualTarget: vt === containerThingId ? first : vt, aggregated: true });
           } else if (link.type === "result" || link.type === "output") {
             result.push({ link, visualSource: vs === containerThingId ? last : vs, visualTarget: vt === containerThingId ? last : vt, aggregated: true });
-          } else if (link.type === "effect" && (link.source_state || link.target_state)) {
-            result.push({ link, visualSource: otherEnd, visualTarget: first, aggregated: true, splitHalf: "input" });
-            result.push({ link, visualSource: last, visualTarget: otherEnd, aggregated: true, splitHalf: "output" });
+          } else if (link.type === "effect") {
+            // R-ES / R-LD-4: ALL effect links → split to first+last
+            const hasStates = !!(link.source_state || link.target_state);
+            result.push({ link, visualSource: otherEnd, visualTarget: first, aggregated: true, ...(hasStates ? { splitHalf: "input" as const } : {}) });
+            result.push({ link, visualSource: last, visualTarget: otherEnd, aggregated: true, ...(hasStates ? { splitHalf: "output" as const } : {}) });
           } else if (link.type === "invocation" || link.type === "exception") {
             // Simplified: resolve to first internal subprocess
             const targetSp = internalThings.has(link.target) ? link.target : (internalThings.has(link.source) ? link.source : first);
@@ -907,7 +928,7 @@ export function resolveLinksForOpdNative(
               result.push({ link, visualSource: finalVs, visualTarget: finalVt, aggregated: true });
             }
           } else {
-            // Agent/instrument → all subprocesses
+            // Agent/instrument only → all subprocesses
             for (const spId of subprocessesByOrder) {
               const dvs = vs === containerThingId ? spId : vs;
               const dvt = vt === containerThingId ? spId : vt;
@@ -973,7 +994,7 @@ export function resolveLinksForOpdNative(
 
   const afterVisual03 = result.filter(rl => {
     if (!rl.aggregated) return true;
-    if (!["instrument", "agent"].includes(rl.link.type)) return true;
+    if (!["instrument", "agent", "effect"].includes(rl.link.type)) return true;
     const whole = partToWhole.get(rl.visualSource);
     if (whole && directLinkKeys.has(`${rl.link.type}|${whole}|${rl.visualTarget}`)) return false;
     if (directParticipants.has(`${rl.visualSource}|${rl.visualTarget}`)) return false;
@@ -1665,7 +1686,9 @@ export function runSimulation(
         selfInvocationCount.delete(targetId);
       }
 
-      // Re-enable target (override SIM-BUG-01 guard for invoked processes)
+      // Re-enable target: invocation resets a process's "completed" status so it can
+      // fire again. Without this, an invoked process that already ran in this wave
+      // would be skipped by the completedProcesses guard (SIM-BUG-01).
       completedProcesses.delete(targetId);
       if (++totalInvocations > MAX_INVOCATION_CHAIN_DEPTH) continue;
       pendingInvocations.set(targetId, justCompleted);
@@ -1690,6 +1713,13 @@ export function runSimulation(
   // Wave state for parallel subprocess semantics (ISO §14.2.2.2)
   // Processes at the same Y-level form a wave; preconditions are evaluated
   // against a snapshot taken when the wave starts (parallel pre-image).
+  //
+  // R-TI-4 Barrier semantics: The wave snapshot ensures all processes at the same
+  // Y-level evaluate preconditions against the pre-image (state before any of them
+  // executed). A waiting process at Y=N does NOT block advancement to Y=N+1 — ISO
+  // parallel semantics allow independent branches to proceed. The barrier is about
+  // evaluation consistency (snapshot), not execution blocking. Waiting processes
+  // are re-evaluated each iteration in Phase 1.
   let currentWaveOrder: number | null = null;
   let waveSnapshot: ModelState | null = null;
 

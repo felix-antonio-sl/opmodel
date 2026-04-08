@@ -47,7 +47,8 @@
     {"id": "lnk-boiling-effect-water", "source": "proc-boiling", "target": "obj-water", "source_state": "state-water-cold", "target_state": "state-water-hot", "type": "effect"},
     {"id": "lnk-brewing-consumes-water", "source": "obj-water", "source_state": "state-water-hot", "target": "proc-brewing", "type": "consumption"},
     {"id": "lnk-brewing-consumes-ground", "source": "obj-ground-coffee", "target": "proc-brewing", "type": "consumption"},
-    {"id": "lnk-brewing-yields-coffee", "source": "proc-brewing", "target": "obj-coffee", "target_state": "state-coffee-ready", "type": "result"}
+    {"id": "lnk-brewing-yields-coffee", "source": "proc-brewing", "target": "obj-coffee", "target_state": "state-coffee-ready", "type": "result"},
+    {"id": "lnk-coffee-making-effect-coffee", "source": "proc-coffee-making", "source_state": "state-coffee-unmade", "target": "obj-coffee", "target_state": "state-coffee-ready", "type": "effect"}
   ],
   "modifiers": [],
   "appearances": [

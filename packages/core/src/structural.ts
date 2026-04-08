@@ -1,15 +1,16 @@
 /**
  * Centralized structural link utilities.
  *
- * INVARIANT: For structural links, source = parent, target = child.
+ * CONVENTION: For structural links, source = parent, target = child.
  *   - Aggregation:     source = whole,      target = part
  *   - Exhibition:      source = exhibitor,  target = feature
  *   - Generalization:  source = general,    target = specialization
  *   - Classification:  source = class,      target = instance
  *
- * The canvas enforces this: first click = source = parent.
- * Hub detection (structuralParentEnd) handles legacy models where the
- * convention may differ; default is always "source".
+ * NOTE: OPL compile follows this convention, but build scripts and fixtures
+ * may use the opposite (source = child). All direction-dependent code MUST
+ * use structuralParentEnd() hub detection instead of hardcoding direction.
+ * Hub detection returns the side where one endpoint appears in 2+ links.
  */
 
 import type { Model, Link, OpmDataView } from "./types";
@@ -109,12 +110,14 @@ export function getInheritedLinks(model: OpmDataView, thingId: string): Link[] {
     if (visited.has(currentId)) return;
     visited.add(currentId);
 
-    // Find generalizations where currentId is a specialization
+    // Find generalizations where currentId is a specialization (child end)
+    // Invariant: source=general, target=specialization
+    const parentEnd = structuralParentEnd(model.links.values(), "generalization");
     for (const link of model.links.values()) {
       if (link.type !== "generalization") continue;
-      // In generalization: source=specialization, target=general (parent end)
-      if (link.source !== currentId) continue;
-      const generalId = link.target;
+      const childEnd = parentEnd === "source" ? "target" : "source";
+      if (link[childEnd] !== currentId) continue;
+      const generalId = link[parentEnd];
 
       // Collect all procedural/enabling links of the general
       for (const l of model.links.values()) {
@@ -130,5 +133,26 @@ export function getInheritedLinks(model: OpmDataView, thingId: string): Link[] {
   }
 
   walk(thingId);
-  return inherited;
+
+  // R-IH-5: Override — if specialization has its own link of same type+endpoint, skip inherited
+  const ownSignatures = new Set<string>();
+  for (const l of model.links.values()) {
+    if (l.source === thingId || l.target === thingId) {
+      const other = l.source === thingId ? l.target : l.source;
+      ownSignatures.add(`${l.type}::${other}`);
+    }
+  }
+  // Inherited links have the general as endpoint; remap to check against specialization's own
+  return inherited.filter(l => {
+    const generalEnd = l.source === thingId ? l.target : (l.target === thingId ? l.source : null);
+    // If inherited link doesn't touch the specialization directly, keep it
+    // (it connects to the general which will be remapped at render time)
+    if (!generalEnd) return true;
+    return !ownSignatures.has(`${l.type}::${generalEnd}`);
+  });
+
+  // TODO R-IH-4: Environmental affiliation should propagate down generalization chain.
+  // Attributes of environmental objects are automatically environmental (ISO line 302).
+  // TODO R-IH-7: When multiple specializations share the same link (same type+endpoint),
+  // suggest migrating that link to the general. Not yet implemented.
 }

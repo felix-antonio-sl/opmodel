@@ -1350,12 +1350,13 @@ function parseAssertion(line: string, span: OplSourceSpan, ctx: ParseContext): O
   const scenarioPrefix = isES ? "escenario: " : "scenario: ";
   if (categoryRaw.toLowerCase().startsWith(scenarioPrefix.trim())) return null;
   // Normalize category
-  const categoryMap: Record<string, string> = {
+  type AssertCat = "safety" | "liveness" | "correctness";
+  const categoryMap: Record<string, AssertCat> = {
     "correctness": "correctness", "correctitud": "correctness",
     "safety": "safety", "seguridad": "safety",
     "liveness": "liveness", "vivacidad": "liveness",
   };
-  const category = categoryMap[categoryRaw.toLowerCase()] ?? categoryRaw;
+  const category: AssertCat = categoryMap[categoryRaw.toLowerCase()] ?? "correctness";
   return {
     kind: "assertion",
     assertionId: `assertion-${++ctx.linkCounter}`,

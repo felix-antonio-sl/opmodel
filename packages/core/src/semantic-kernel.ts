@@ -278,18 +278,38 @@ export function semanticKernelFromModel(model: Model): SemanticKernel {
 
     const refinementId = `refinement-${opd.id}`;
     if (opd.refinement_type === "in-zoom") {
+      // Reconstruct steps/internalObjects from Model appearances
+      const parentOpdId = opd.parent_opd ?? "opd-sd";
+      const parentThingIds = new Set(
+        [...model.appearances.values()].filter(a => a.opd === parentOpdId).map(a => a.thing)
+      );
+      const childApps = [...model.appearances.values()]
+        .filter(a => a.opd === opd.id && a.internal === true && a.thing !== opd.refines);
+      const stepProcesses = childApps
+        .filter(a => model.things.get(a.thing)?.kind === "process")
+        .sort((a, b) => a.y - b.y)
+        .map(a => a.thing);
+      // Only truly internal objects (not present in parent OPD) — externals appear in both
+      const internalObjs = childApps
+        .filter(a => model.things.get(a.thing)?.kind === "object" && !parentThingIds.has(a.thing))
+        .map(a => a.thing);
+
       refinements.set(refinementId, {
         id: refinementId,
         kind: "in-zoom",
         parentThing: opd.refines,
         childOpd: opd.id,
         parentOpd: opd.parent_opd ?? "opd-sd",
-        steps: [],
-        internalObjects: [],
-        completeness: "partial",
-        note: "Legacy Model does not preserve in-zoom step ordering explicitly; reconstruct from OPL or atlas.",
+        steps: stepProcesses.length > 0
+          ? [{ id: `step-${refinementId}-0`, thingIds: stepProcesses, execution: "sequential" as const }]
+          : [],
+        internalObjects: internalObjs,
+        completeness: stepProcesses.length > 0 ? "complete" as const : "partial" as const,
       });
     } else {
+      // Reconstruct refineeThings from Model appearances
+      const refineeApps = [...model.appearances.values()]
+        .filter(a => a.opd === opd.id && a.internal === true && a.thing !== opd.refines);
       refinements.set(refinementId, {
         id: refinementId,
         kind: "unfold",
@@ -297,9 +317,8 @@ export function semanticKernelFromModel(model: Model): SemanticKernel {
         childOpd: opd.id,
         parentOpd: opd.parent_opd ?? "opd-sd",
         relation: "aggregation",
-        refineeThings: [],
-        completeness: "partial",
-        note: "Legacy Model does not preserve unfold relation/refinees explicitly enough for exact recovery.",
+        refineeThings: refineeApps.map(a => a.thing),
+        completeness: refineeApps.length > 0 ? "complete" as const : "partial" as const,
       });
     }
   }
@@ -414,7 +433,14 @@ export function legacyModelFromSemanticKernel(kernel: SemanticKernel, atlas?: Op
     things: new Map([...kernel.things.entries()].map(([id, thing]) => [id, legacyThingFromSemantic(thing)])),
     states: new Map([...kernel.states.entries()].map(([id, state]) => [id, legacyStateFromSemantic(state)])),
     links: new Map([...kernel.links.entries()].map(([id, link]) => [id, legacyLinkFromSemantic(link)])),
-    opds: new Map([...kernel.opds.entries()].map(([id, opd]) => [id, { ...opd }])),
+    opds: new Map([...kernel.opds.entries()].map(([id, opd]) => {
+      // Reconstruct refines/refinement_type from kernel.refinements
+      const refinement = [...kernel.refinements.values()].find(r => r.childOpd === id);
+      return [id, {
+        ...opd,
+        ...(refinement ? { refines: refinement.parentThing, refinement_type: refinement.kind } : {}),
+      }];
+    })),
     scenarios: new Map([...kernel.scenarios.entries()].map(([id, s]) => [id, legacyScenarioFromSemantic(s)])),
     assertions: new Map([...kernel.assertions.entries()].map(([id, a]) => [id, legacyAssertionFromSemantic(a)])),
     requirements: new Map([...kernel.requirements.entries()].map(([id, r]) => [id, legacyRequirementFromSemantic(r)])),
@@ -538,7 +564,28 @@ export function exposeSemanticKernel(kernel: SemanticKernel): OpdAtlas {
     const visibleLinks = new Set<LinkId>();
 
     if (!refinement) {
-      for (const thingId of kernel.things.keys()) visibleThings.add(thingId);
+      // Exclude things internal to ALL descendant refinements (recursive)
+      const internalToChild = new Set<ThingId>();
+      const collectInternals = (parentOpdId: OpdId) => {
+        for (const ref of kernel.refinements.values()) {
+          if (ref.parentOpd === parentOpdId || (!ref.parentOpd && parentOpdId === rootOpd)) {
+            if (ref.kind === "in-zoom") {
+              for (const step of ref.steps) {
+                for (const tid of step.thingIds) internalToChild.add(tid);
+              }
+              for (const tid of ref.internalObjects) internalToChild.add(tid);
+            } else {
+              for (const tid of ref.refineeThings) internalToChild.add(tid);
+            }
+            // Recurse into the child OPD
+            collectInternals(ref.childOpd);
+          }
+        }
+      };
+      collectInternals(opd.id);
+      for (const thingId of kernel.things.keys()) {
+        if (!internalToChild.has(thingId)) visibleThings.add(thingId);
+      }
       for (const link of kernel.links.values()) {
         if (shouldHideLinkInSlice(link, rules)) continue;
         visibleLinks.add(link.id);
@@ -678,7 +725,12 @@ function buildAppearanceMapFromAtlas(atlas: OpdAtlas, layout: LayoutModel): Map<
       y: node.y,
       w: node.w,
       h: node.h,
-      ...(occurrence.role === "internal" ? { internal: true } : {}),
+      // Container and internal things: internal=true. Externals (duplicates): internal=false.
+      ...(occurrence.role === "context" || occurrence.role === "internal"
+        ? { internal: true }
+        : occurrence.role === "duplicate"
+          ? { internal: false }
+          : {}),
       ...(node.pinned !== undefined ? { pinned: node.pinned } : {}),
       ...(node.autoSizing !== undefined ? { auto_sizing: node.autoSizing } : {}),
       ...(node.stateAlignment ? { state_alignment: node.stateAlignment } : {}),

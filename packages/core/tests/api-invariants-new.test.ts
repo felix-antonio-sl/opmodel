@@ -109,9 +109,9 @@ describe("I-22: generalization perseverance", () => {
     let m = createModel("Test");
     m = (addThing(m, obj("obj-vehicle", "Vehicle")) as any).value;
     m = (addThing(m, proc("proc-car", "Car")) as any).value;
-    // Manually add link to bypass addLink guards
+    // Manually add link to bypass addLink guards (source=general, target=specialization per invariant)
     m = { ...m, links: new Map(m.links).set("lnk-gen", {
-      id: "lnk-gen", type: "generalization", source: "proc-car", target: "obj-vehicle",
+      id: "lnk-gen", type: "generalization", source: "obj-vehicle", target: "proc-car",
     }) };
     const errors = errorsOf(m, "I-22");
     expect(errors.length).toBeGreaterThanOrEqual(1);
@@ -121,7 +121,7 @@ describe("I-22: generalization perseverance", () => {
     let m = createModel("Test");
     m = (addThing(m, obj("obj-vehicle", "Vehicle")) as any).value;
     m = (addThing(m, obj("obj-car", "Car")) as any).value;
-    m = (addLink(m, { id: "lnk-gen", type: "generalization", source: "obj-car", target: "obj-vehicle" }) as any).value;
+    m = (addLink(m, { id: "lnk-gen", type: "generalization", source: "obj-vehicle", target: "obj-car" }) as any).value;
     const errors = errorsOf(m, "I-22");
     expect(errors).toHaveLength(0);
   });
@@ -134,8 +134,9 @@ describe("I-23: classification perseverance", () => {
     let m = createModel("Test");
     m = (addThing(m, obj("obj-class", "VehicleClass")) as any).value;
     m = (addThing(m, proc("proc-inst", "CarInstance")) as any).value;
+    // source=class, target=instance per invariant
     m = { ...m, links: new Map(m.links).set("lnk-cls", {
-      id: "lnk-cls", type: "classification", source: "proc-inst", target: "obj-class",
+      id: "lnk-cls", type: "classification", source: "obj-class", target: "proc-inst",
     }) };
     const errors = errorsOf(m, "I-23");
     expect(errors.length).toBeGreaterThanOrEqual(1);
@@ -145,7 +146,7 @@ describe("I-23: classification perseverance", () => {
     let m = createModel("Test");
     m = (addThing(m, obj("obj-class", "VehicleClass")) as any).value;
     m = (addThing(m, obj("obj-inst", "MyCar")) as any).value;
-    m = (addLink(m, { id: "lnk-cls", type: "classification", source: "obj-inst", target: "obj-class" }) as any).value;
+    m = (addLink(m, { id: "lnk-cls", type: "classification", source: "obj-class", target: "obj-inst" }) as any).value;
     const errors = errorsOf(m, "I-23");
     expect(errors).toHaveLength(0);
   });

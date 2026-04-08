@@ -503,7 +503,9 @@ export function refineThing(
   if (thingApp.internal === false) {
     return err({ code: "INVALID_REFINEMENT", message: `Cannot refine external appearance of ${thingId} — refine from its home OPD`, entity: thingId });
   }
-  // I-REFINE-CYCLE: cannot refine a thing from within its own refinement tree
+  // I-REFINE-CYCLE (R-RC-1/2): cannot refine a thing from within its own refinement tree.
+  // Transitive: walks the entire ancestor chain via parent_opd. If ANY ancestor OPD
+  // already refines this thing, the request is inside that thing's subtree → cycle.
   let ancestorId: string | null = parentOpdId;
   while (ancestorId) {
     const ancestor = model.opds.get(ancestorId);
@@ -1209,6 +1211,9 @@ export function getSemiFoldedParts(
 // ── Batch Validate ─────────────────────────────────────────────────────
 
 export function validate(model: Model): InvariantError[] {
+  // TODO R-PI-4: Cross-level fact consistency validation.
+  // Ensure facts asserted at one refinement level don't contradict facts at another.
+  // Currently not enforced — would require comparing link/state assertions across OPD levels.
   const errors: InvariantError[] = [];
 
   // I-01
@@ -1482,10 +1487,11 @@ export function validate(model: Model): InvariantError[] {
       }
       if (discStates.size === 0) continue;
 
-      // Generalization links pointing to the general
+      // Generalization links pointing to the general (direction-agnostic via hub detection)
+      const genParentEnd = structuralParentEnd(model.links.values(), "generalization");
       const specLinks: Link[] = [];
       for (const l of model.links.values()) {
-        if (l.type === "generalization" && l.target === generalId) {
+        if (l.type === "generalization" && l[genParentEnd] === generalId) {
           specLinks.push(l);
         }
       }
@@ -1575,22 +1581,24 @@ export function validate(model: Model): InvariantError[] {
   }
 
   // I-22: Generalization - specialization consistency (same perseverance)
+  // Check is symmetric (kind ≠ kind) — direction-agnostic
   for (const [id, link] of model.links) {
     if (link.type === "generalization") {
-      const general = model.things.get(link.target);
-      const spec = model.things.get(link.source);
-      if (general && spec && general.kind !== spec.kind) {
+      const source = model.things.get(link.source);
+      const target = model.things.get(link.target);
+      if (source && target && source.kind !== target.kind) {
         errors.push({ code: "I-22", message: `Generalization ${id}: general and specialization must have same perseverance`, entity: id });
       }
     }
   }
 
   // I-23: Classification - instances must match class perseverance
+  // Check is symmetric (kind ≠ kind) — direction-agnostic
   for (const [id, link] of model.links) {
     if (link.type === "classification") {
-      const classThing = model.things.get(link.target);
-      const instance = model.things.get(link.source);
-      if (classThing && instance && classThing.kind !== instance.kind) {
+      const source = model.things.get(link.source);
+      const target = model.things.get(link.target);
+      if (source && target && source.kind !== target.kind) {
         errors.push({ code: "I-23", message: `Classification ${id}: class and instance must have same perseverance`, entity: id });
       }
     }
@@ -1761,6 +1769,34 @@ export function validate(model: Model): InvariantError[] {
           entity: modId,
         });
         break;
+      }
+    }
+  }
+
+  // R-RS-1 through R-RS-5: Role shift (instrument→affectee across refinement) is permitted
+  // naturally by the model — link types are per-link, not per-thing. No additional guards needed.
+
+  // R-OZ-4: consumption+result to same object is suspect (ISO §14 line 784)
+  const consumeByProc = new Map<string, Set<string>>();
+  const resultByProc = new Map<string, Set<string>>();
+  for (const link of model.links.values()) {
+    if (link.type === "consumption") {
+      const set = consumeByProc.get(link.target) ?? new Set();
+      set.add(link.source);
+      consumeByProc.set(link.target, set);
+    }
+    if (link.type === "result") {
+      const set = resultByProc.get(link.source) ?? new Set();
+      set.add(link.target);
+      resultByProc.set(link.source, set);
+    }
+  }
+  for (const [processId, consumed] of consumeByProc) {
+    const produced = resultByProc.get(processId);
+    if (!produced) continue;
+    for (const objId of consumed) {
+      if (produced.has(objId)) {
+        errors.push({ code: "R-OZ-4", message: `Process consumes and produces same object ${objId}`, entity: processId, severity: "warning" });
       }
     }
   }

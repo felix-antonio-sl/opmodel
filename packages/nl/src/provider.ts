@@ -1,7 +1,7 @@
 import type { LLMProvider, LLMMessage, LLMOptions, NlConfig } from "./types";
 
 export class ClaudeProvider implements LLMProvider {
-  constructor(private apiKey: string, private model = "claude-sonnet-4-20250514") {}
+  constructor(private apiKey: string, private model = "claude-sonnet-4-6") {}
 
   async complete(messages: LLMMessage[], options?: LLMOptions): Promise<string> {
     const systemMsg = messages.find(m => m.role === "system");

@@ -298,8 +298,8 @@ describe("resolveOpdFiber", () => {
       const explicits = [...fiber.things.values()].filter(e => !e.implicit);
       expect(explicits.length).toBeGreaterThanOrEqual(4); // at least Coffee Making + objects
 
-      // Links should match resolveLinksForOpd (5 visible)
-      expect(fiber.links).toHaveLength(5);
+      // Links should match resolveLinksForOpd (6 visible: 5 original + 1 Coffee Making effect)
+      expect(fiber.links).toHaveLength(6);
     });
 
     it("produces correct fiber for SD1 (in-zoom OPD)", () => {

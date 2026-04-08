@@ -178,7 +178,7 @@ const SD1_PROCS: Array<{ id: string; name: string; y: number; h?: number; durati
   { id: "proc-escalamiento", name: "Escalamiento Clínico", y: 840 },
   { id: "proc-rescate", name: "Rescate y Derivación", y: 920 },
   // Egreso
-  { id: "proc-alta", name: "Alta Formal y Contrarreferencia APS", y: 1020 },
+  { id: "proc-alta", name: "Otorgando Alta Formal y Contrarreferencia APS", y: 1020 },
   { id: "proc-seguimiento", name: "Seguimiento Post-Alta 48h", y: 1100 },
 ];
 

@@ -112,6 +112,7 @@ Baseline fixtures currently expected to load, validate, and export:
 - `tests/hodom-v2.opmodel`
 - `tests/ev-ams.opmodel`
 - `tests/hodom-hsc-v0.opmodel`
+- `tests/hodom-hsc.opmodel`
 
 ## Do Not Modify
 

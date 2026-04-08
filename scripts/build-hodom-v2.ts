@@ -170,7 +170,7 @@ const SD1_PROCS = [
   { id: "proc-evaluacion", name: "Evaluación de Elegibilidad", y: 80 },
   { id: "proc-admision", name: "Admisión", y: 200 },
   { id: "proc-atencion-clinica", name: "Atención Clínica", y: 340, h: 80, duration: { nominal: 14, min: 3, max: 90, unit: "d" as const } },
-  { id: "proc-egreso", name: "Egreso", y: 480 },
+  { id: "proc-egreso", name: "Egresando", y: 480 },
 ];
 
 for (const sp of SD1_PROCS) {

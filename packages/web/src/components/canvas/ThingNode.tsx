@@ -88,7 +88,8 @@ export function ThingNode({
   // ISO §14.2: refined things show thick contour in both parent and child OPD
   const baseStroke = isPhysical ? 3.5 : 1.2;
   const strokeWidth = isContainer ? 2.5 : isExternal ? 1.0 : isRefined ? Math.max(baseStroke, 2.5) : baseStroke;
-  const strokeDash = isImplicit ? "4,3" : thing.affiliation === "environmental" ? "6,3" : undefined;
+  const strokeDash = thing.affiliation === "environmental" ? "6,3" : undefined;
+  const groupOpacity = isImplicit ? 0.55 : 1;
 
   const filterStr = isDragging
     ? "url(#glow-drag)"
@@ -106,6 +107,7 @@ export function ThingNode({
     <g
       className={className}
       filter={filterStr}
+      opacity={groupOpacity}
       role="button"
       aria-label={thing.name}
       tabIndex={-1}
@@ -215,7 +217,7 @@ export function ThingNode({
             <text key={i} x={x + 14} y={y + h + 12 + i * 16}
               fontSize={9} fill="var(--text-secondary)" textAnchor="start" dominantBaseline="middle"
               style={{ cursor: onExtractPart ? "pointer" : undefined }}
-              onClick={onExtractPart ? (e) => { e.stopPropagation(); onExtractPart(entry.thingId); } : undefined}>
+              onDoubleClick={onExtractPart ? (e) => { e.stopPropagation(); onExtractPart(entry.thingId); } : undefined}>
               {entry.linkType === "aggregation" ? "◇ " : "◈ "}{entry.name}
             </text>
           ))}

@@ -46,6 +46,7 @@ export interface NlResult {
   edits: OplEdit[];
   descriptors: NlEditDescriptor[];
   preview: string;
+  warnings: string[];
 }
 
 export interface NlPipeline {

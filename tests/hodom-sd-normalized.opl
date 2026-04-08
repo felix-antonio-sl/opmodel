@@ -1,0 +1,52 @@
+=== SD ===
+Condición Clínica de Grupo de Pacientes es un objeto, informático.
+Condición Clínica de Grupo de Pacientes puede estar agudo/reagudizado o recuperado.
+Estado agudo/reagudizado de Condición Clínica de Grupo de Pacientes es inicial y por defecto.
+Estado recuperado de Condición Clínica de Grupo de Pacientes es final.
+Domicilio del Paciente es un objeto, físico, ambiental.
+Equipamiento Médico es un objeto, físico.
+Equipo de Salud es un objeto, físico.
+Establecimiento de Atención Cerrada es un objeto, físico, ambiental.
+Grupo de Pacientes es un objeto, físico.
+Infraestructura Administrativa es un objeto, físico.
+Normativa Vigente es un objeto, informático, ambiental.
+Sistema de Comunicación es un objeto, físico.
+Sistema de Hospitalización Domiciliaria es un objeto, físico.
+Vehículo de Transporte es un objeto, físico.
+Hospitalizando en Domicilio de Sistema de Hospitalización Domiciliaria es un proceso, informático.
+Ocupando Cama Hospitalaria es un proceso, físico, ambiental.
+Grupo de Pacientes exhibe Condición Clínica.
+Sistema de Hospitalización Domiciliaria exhibe Hospitalizando en Domicilio.
+Domicilio del Paciente aloja Grupo de Pacientes.
+Domicilio del Paciente aloja Hospitalizando en Domicilio.
+Equipo de Salud maneja Hospitalizando en Domicilio.
+Establecimiento de Atención Cerrada refiere Grupo de Pacientes.
+Establecimiento de Atención Cerrada refiere Hospitalizando en Domicilio.
+Hospitalizando en Domicilio cambia Condición Clínica de agudo/reagudizado a recuperado.
+Hospitalizando en Domicilio requiere Equipamiento Médico.
+Hospitalizando en Domicilio requiere Infraestructura Administrativa.
+Hospitalizando en Domicilio requiere Sistema de Comunicación.
+Hospitalizando en Domicilio requiere Vehículo de Transporte.
+Normativa Vigente regula Sistema de Hospitalización Domiciliaria.
+Ocupando Cama Hospitalaria cambia Condición Clínica a agudo/reagudizado.
+
+=== SD2 ===
+SD se refina por descomposición de Hospitalizando en Domicilio en SD2.
+Condición Clínica de Grupo de Pacientes es un objeto, informático.
+Condición Clínica de Grupo de Pacientes puede estar agudo/reagudizado o recuperado.
+Estado agudo/reagudizado de Condición Clínica de Grupo de Pacientes es inicial y por defecto.
+Estado recuperado de Condición Clínica de Grupo de Pacientes es final.
+Domicilio del Paciente es un objeto, físico, ambiental.
+Equipamiento Médico es un objeto, físico.
+Equipo de Salud es un objeto, físico.
+Establecimiento de Atención Cerrada es un objeto, físico, ambiental.
+Infraestructura Administrativa es un objeto, físico.
+Sistema de Comunicación es un objeto, físico.
+Sistema de Hospitalización Domiciliaria es un objeto, físico.
+Vehículo de Transporte es un objeto, físico.
+Hospitalizando en Domicilio 1 es un proceso, informático.
+Hospitalizando en Domicilio 2 es un proceso, informático.
+Hospitalizando en Domicilio 3 es un proceso, informático.
+Hospitalizando en Domicilio de Sistema de Hospitalización Domiciliaria es un proceso, informático.
+Hospitalizando en Domicilio se descompone en Hospitalizando en Domicilio 1, Hospitalizando en Domicilio 2, y Hospitalizando en Domicilio 3, en esa secuencia.
+Sistema de Hospitalización Domiciliaria exhibe Hospitalizando en Domicilio.

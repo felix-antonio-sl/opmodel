@@ -163,7 +163,7 @@ export interface OplAssertionSentence extends OplSourceNode {
   assertionId: string;
   predicate: string;
   targetName: string;
-  category: string;
+  category: "safety" | "liveness" | "correctness";
 }
 
 export interface OplScenarioSentence extends OplSourceNode {

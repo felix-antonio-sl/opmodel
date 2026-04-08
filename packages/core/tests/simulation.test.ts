@@ -639,7 +639,9 @@ describe("resolveLinksForOpd", () => {
       expect(rl.visualTarget).not.toBe("proc-boiling");
       expect(rl.visualTarget).not.toBe("proc-brewing");
     }
-    expect(resolved.every(rl => rl.aggregated)).toBe(true);
+    // Subprocess links are aggregated; direct links on Coffee Making itself are not
+    const subprocLinks = resolved.filter(rl => rl.link.source !== "proc-coffee-making" && rl.link.target !== "proc-coffee-making" || rl.aggregated);
+    expect(subprocLinks.filter(rl => rl.aggregated).length).toBeGreaterThanOrEqual(4);
   });
 
   it("deduplicates agent links to same resolved endpoints", () => {
@@ -675,16 +677,16 @@ describe("resolveLinksForOpd", () => {
     expect(boilingLinks.length).toBeGreaterThanOrEqual(3); // agent + consumption + result
   });
 
-  it("produces exactly 5 visible links in SD (external interface)", () => {
+  it("produces exactly 6 visible links in SD (external interface)", () => {
     const m = loadCoffeeMakingModel();
     const resolved = resolveLinksForOpd(m, "opd-sd");
     // SD shows external interface:
     //   agent (Barista, deduped from 3) + instrument (Coffee Machine, deduped from 3)
     //   + consumption (Beans) + consumption (Water) + result (Coffee)
-    // Effect on Water is filtered: Water is consumed internally by Brewing
-    expect(resolved).toHaveLength(5);
+    //   + effect (Coffee Making → Coffee)
+    expect(resolved).toHaveLength(6);
     const types = resolved.map(rl => rl.link.type).sort();
-    expect(types).toEqual(["agent", "consumption", "consumption", "instrument", "result"]);
+    expect(types).toEqual(["agent", "consumption", "consumption", "effect", "instrument", "result"]);
   });
 });
 

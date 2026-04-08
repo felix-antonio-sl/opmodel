@@ -1,10 +1,18 @@
 import { ok, err, type Result, type Model, type OplEdit, type Link, applyOplEdit } from "@opmodel/core";
 import type { NlEditDescriptor, ResolveError } from "./types";
 
-// O(n) linear scan — acceptable for typical model sizes (<500 things)
-function findThingByName(model: Model, name: string) {
-  const lower = name.toLowerCase();
-  return [...model.things.values()].find(t => t.name.toLowerCase() === lower);
+/** Build name→thingId index for O(1) lookups */
+function buildNameIndex(model: Model): Map<string, string> {
+  const idx = new Map<string, string>();
+  for (const [id, t] of model.things) {
+    idx.set(t.name.toLowerCase(), id);
+  }
+  return idx;
+}
+
+function findThingByName(model: Model, name: string, nameIndex: Map<string, string>) {
+  const id = nameIndex.get(name.toLowerCase());
+  return id ? model.things.get(id) : undefined;
 }
 
 function findStateByName(model: Model, parentId: string, stateName: string) {
@@ -26,11 +34,38 @@ function findModifier(model: Model, linkId: string, modifierType: string) {
   );
 }
 
+/** OPM semantic pre-validation warnings (non-blocking) */
+function checkSemantics(
+  desc: NlEditDescriptor,
+  model: Model,
+  nameIndex: Map<string, string>,
+): string[] {
+  const warns: string[] = [];
+  if (desc.kind === "add-link") {
+    // For agent/instrument links, source should typically be an object
+    if (desc.linkType === "agent" || desc.linkType === "instrument") {
+      const source = findThingByName(model, desc.sourceName, nameIndex);
+      if (source && source.kind === "process") {
+        warns.push(`OPM warning: ${desc.linkType} link source "${desc.sourceName}" is a process — typically should be an object`);
+      }
+    }
+  }
+  if (desc.kind === "add-states") {
+    // States are typically on objects, not processes in standard OPM
+    const parent = findThingByName(model, desc.thingName, nameIndex);
+    if (parent && parent.kind === "process") {
+      warns.push(`OPM warning: adding states to process "${desc.thingName}" — states are typically on objects`);
+    }
+  }
+  return warns;
+}
+
 function resolveOne(
   desc: NlEditDescriptor,
   model: Model,
   opdId: string,
   addThingCount: number,
+  nameIndex: Map<string, string>,
 ): Result<OplEdit, Omit<ResolveError, "index">> {
   const mkErr = (message: string) => err({ descriptor: desc, message });
 
@@ -45,17 +80,20 @@ function resolveOne(
           essence: desc.essence ?? "informatical",
           affiliation: desc.affiliation ?? "systemic",
         },
-        position: { x: 100 + addThingCount * 150, y: 100 },
+        position: {
+          x: 100 + (addThingCount % 4) * 180,
+          y: 100 + Math.floor(addThingCount / 4) * 150,
+        },
       });
 
     case "remove-thing": {
-      const thing = findThingByName(model, desc.name);
+      const thing = findThingByName(model, desc.name, nameIndex);
       if (!thing) return mkErr(`Thing not found: "${desc.name}"`);
       return ok({ kind: "remove-thing", thingId: thing.id });
     }
 
     case "add-states": {
-      const thing = findThingByName(model, desc.thingName);
+      const thing = findThingByName(model, desc.thingName, nameIndex);
       if (!thing) return mkErr(`Thing not found: "${desc.thingName}"`);
       return ok({
         kind: "add-states",
@@ -67,7 +105,7 @@ function resolveOne(
     }
 
     case "remove-state": {
-      const thing = findThingByName(model, desc.thingName);
+      const thing = findThingByName(model, desc.thingName, nameIndex);
       if (!thing) return mkErr(`Thing not found: "${desc.thingName}"`);
       const state = findStateByName(model, thing.id, desc.stateName);
       if (!state) return mkErr(`State "${desc.stateName}" not found on thing "${desc.thingName}"`);
@@ -75,9 +113,9 @@ function resolveOne(
     }
 
     case "add-link": {
-      const source = findThingByName(model, desc.sourceName);
+      const source = findThingByName(model, desc.sourceName, nameIndex);
       if (!source) return mkErr(`Source thing not found: "${desc.sourceName}"`);
-      const target = findThingByName(model, desc.targetName);
+      const target = findThingByName(model, desc.targetName, nameIndex);
       if (!target) return mkErr(`Target thing not found: "${desc.targetName}"`);
       const linkData: Omit<Link, "id"> = {
         source: source.id,
@@ -98,9 +136,9 @@ function resolveOne(
     }
 
     case "remove-link": {
-      const source = findThingByName(model, desc.sourceName);
+      const source = findThingByName(model, desc.sourceName, nameIndex);
       if (!source) return mkErr(`Source thing not found: "${desc.sourceName}"`);
-      const target = findThingByName(model, desc.targetName);
+      const target = findThingByName(model, desc.targetName, nameIndex);
       if (!target) return mkErr(`Target thing not found: "${desc.targetName}"`);
       const link = findLinkByEndpoints(model, source.id, target.id, desc.linkType);
       if (!link) return mkErr(`Link not found: ${desc.sourceName} → ${desc.targetName} (${desc.linkType})`);
@@ -108,9 +146,9 @@ function resolveOne(
     }
 
     case "add-modifier": {
-      const source = findThingByName(model, desc.sourceName);
+      const source = findThingByName(model, desc.sourceName, nameIndex);
       if (!source) return mkErr(`Source thing not found: "${desc.sourceName}"`);
-      const target = findThingByName(model, desc.targetName);
+      const target = findThingByName(model, desc.targetName, nameIndex);
       if (!target) return mkErr(`Target thing not found: "${desc.targetName}"`);
       const link = findLinkByEndpoints(model, source.id, target.id, desc.linkType);
       if (!link) return mkErr(`Link not found: ${desc.sourceName} → ${desc.targetName} (${desc.linkType})`);
@@ -121,9 +159,9 @@ function resolveOne(
     }
 
     case "remove-modifier": {
-      const source = findThingByName(model, desc.sourceName);
+      const source = findThingByName(model, desc.sourceName, nameIndex);
       if (!source) return mkErr(`Source thing not found: "${desc.sourceName}"`);
-      const target = findThingByName(model, desc.targetName);
+      const target = findThingByName(model, desc.targetName, nameIndex);
       if (!target) return mkErr(`Target thing not found: "${desc.targetName}"`);
       const link = findLinkByEndpoints(model, source.id, target.id, desc.linkType);
       if (!link) return mkErr(`Link not found: ${desc.sourceName} → ${desc.targetName} (${desc.linkType})`);
@@ -142,11 +180,12 @@ export function resolve(
   const edits: OplEdit[] = [];
   let current = model;
   let addThingCount = 0;
+  let nameIndex = buildNameIndex(model);
 
   for (let i = 0; i < descriptors.length; i++) {
     const desc = descriptors[i]!;
 
-    const editResult = resolveOne(desc, current, opdId, addThingCount);
+    const editResult = resolveOne(desc, current, opdId, addThingCount, nameIndex);
     if (!editResult.ok) return err({ ...editResult.error, index: i });
 
     const edit = editResult.value;
@@ -159,6 +198,7 @@ export function resolve(
     });
     current = nextModel.value;
     if (desc.kind === "add-thing") addThingCount++;
+    nameIndex = buildNameIndex(current);
   }
 
   return ok(edits);

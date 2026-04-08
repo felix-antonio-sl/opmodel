@@ -79,7 +79,7 @@ describe("resolve", () => {
     const e1 = result.value[0] as Extract<typeof result.value[0], { kind: "add-thing" }>;
     const e2 = result.value[1] as Extract<typeof result.value[1], { kind: "add-thing" }>;
     expect(e1.position.x).toBe(100);
-    expect(e2.position.x).toBe(250); // 100 + 1*150
+    expect(e2.position.x).toBe(280); // 100 + 1*180 (grid layout)
   });
 
   // --- remove-thing (name resolution) ---

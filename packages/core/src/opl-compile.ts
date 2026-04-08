@@ -857,7 +857,7 @@ export function compileOplDocuments(docs: OplDocument[], options: OplCompileOpti
         id: uniqueId(`assertion-${oplSlug(s.category)}`, model),
         target: targetId,
         predicate: s.predicate,
-        category: s.category as any,
+        category: s.category,
         enabled: true,
       });
       if (!r.ok) {
