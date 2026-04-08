@@ -1,6 +1,7 @@
 import type { Model } from "@opmodel/core";
 import { semanticKernelFromModel, exposeSemanticKernel, exposeFromKernel, render, type OplSentence, type OplDocument } from "@opmodel/core";
 import type { Command } from "../lib/commands";
+import { findFirstLinkIdByPathLabels, findThingIdByName, findThingOrLinkTarget } from "../lib/opl-navigation";
 
 interface Props {
   model: Model;
@@ -8,37 +9,6 @@ interface Props {
   selectedThing: string | null;
   selectedLink: string | null;
   onSelectEntity?: (cmd: Command) => void;
-}
-
-function getEntityIds(sentence: OplSentence): string[] {
-  switch (sentence.kind) {
-    case "thing-declaration":
-      return [sentence.thingId];
-    case "state-enumeration":
-      return [sentence.thingId];
-    case "duration":
-      return [sentence.thingId];
-    case "link":
-      return [sentence.linkId, sentence.sourceId, sentence.targetId];
-    case "modifier":
-      return [sentence.modifierId, sentence.linkId];
-    case "state-description":
-      return [sentence.thingId, sentence.stateId];
-    case "grouped-structural":
-      return [sentence.parentId, ...sentence.childIds];
-    case "in-zoom-sequence":
-      return [sentence.parentId, ...sentence.steps.flatMap((s) => s.thingIds)];
-    case "attribute-value":
-      return [sentence.thingId, sentence.exhibitorId];
-    case "fan":
-      return [sentence.fanId];
-    case "requirement":
-      return [sentence.reqId];
-    case "assertion":
-      return [sentence.assertionId];
-    case "scenario":
-      return [sentence.scenarioId];
-  }
 }
 
 function sentenceCategory(sentence: OplSentence): "thing" | "link" | "modifier" | "meta" {
@@ -68,21 +38,49 @@ function renderSentence(sentence: OplSentence, doc: OplDocument): string {
   return render({ ...rest, sentences: [sentence] });
 }
 
-function isHighlighted(sentence: OplSentence, selectedThing: string | null, selectedLink: string | null): boolean {
-  const ids = getEntityIds(sentence);
-  return Boolean((selectedThing && ids.includes(selectedThing)) || (selectedLink && ids.includes(selectedLink)));
+function matchesSelection(model: Model, sentence: OplSentence, selectedThing: string | null, selectedLink: string | null): boolean {
+  switch (sentence.kind) {
+    case "thing-declaration":
+    case "state-enumeration":
+    case "duration":
+    case "state-description":
+    case "attribute-value":
+      return selectedThing === sentence.thingId;
+    case "link":
+      return selectedLink === sentence.linkId || selectedThing === sentence.sourceId || selectedThing === sentence.targetId;
+    case "modifier":
+      return selectedLink === sentence.linkId;
+    case "grouped-structural":
+      return selectedThing === sentence.parentId || sentence.childIds.includes(selectedThing ?? "");
+    case "in-zoom-sequence":
+      return selectedThing === sentence.parentId || sentence.steps.some((step) => step.thingIds.includes(selectedThing ?? ""));
+    case "fan":
+      return selectedThing === findThingIdByName(model, sentence.sharedEndpointName);
+    case "requirement": {
+      const target = findThingOrLinkTarget(model, sentence.targetName);
+      return (target?.kind === "thing" && selectedThing === target.id) || (target?.kind === "link" && selectedLink === target.id);
+    }
+    case "assertion": {
+      const target = findThingOrLinkTarget(model, sentence.targetName);
+      return (target?.kind === "thing" && selectedThing === target.id) || (target?.kind === "link" && selectedLink === target.id);
+    }
+    case "scenario": {
+      const linkId = findFirstLinkIdByPathLabels(model, sentence.pathLabels);
+      return Boolean(linkId && selectedLink === linkId);
+    }
+  }
 }
 
-function sentenceClass(sentence: OplSentence, selectedThing: string | null, selectedLink: string | null): string {
+function sentenceClass(model: Model, sentence: OplSentence, selectedThing: string | null, selectedLink: string | null): string {
   const category = sentenceCategory(sentence);
   const base = `opl-sentence opl-sentence--${category}`;
-  if (isHighlighted(sentence, selectedThing, selectedLink)) {
+  if (matchesSelection(model, sentence, selectedThing, selectedLink)) {
     return `${base} opl-sentence--highlighted`;
   }
   return base;
 }
 
-function commandForSentence(sentence: OplSentence): Command | null {
+function commandForSentence(model: Model, sentence: OplSentence): Command | null {
   switch (sentence.kind) {
     case "thing-declaration":
     case "state-enumeration":
@@ -97,12 +95,20 @@ function commandForSentence(sentence: OplSentence): Command | null {
     case "grouped-structural":
     case "in-zoom-sequence":
       return { tag: "selectThing", thingId: sentence.parentId };
-    case "fan":
-      return null;
+    case "fan": {
+      const thingId = findThingIdByName(model, sentence.sharedEndpointName);
+      return thingId ? { tag: "selectThing", thingId } : null;
+    }
     case "requirement":
-    case "assertion":
-    case "scenario":
-      return null;
+    case "assertion": {
+      const target = findThingOrLinkTarget(model, sentence.targetName);
+      if (!target) return null;
+      return target.kind === "thing" ? { tag: "selectThing", thingId: target.id } : { tag: "selectLink", linkId: target.id };
+    }
+    case "scenario": {
+      const linkId = findFirstLinkIdByPathLabels(model, sentence.pathLabels);
+      return linkId ? { tag: "selectLink", linkId } : null;
+    }
   }
 }
 
@@ -146,11 +152,11 @@ export function OplSentencesView({ model, opdId, selectedThing, selectedLink, on
         </div>
       )}
       {thingSentences.map((sentence, i) => {
-        const cmd = commandForSentence(sentence);
+        const cmd = commandForSentence(model, sentence);
         return (
           <div
             key={`t-${i}`}
-            className={sentenceClass(sentence, selectedThing, selectedLink)}
+            className={sentenceClass(model, sentence, selectedThing, selectedLink)}
             onClick={cmd && onSelectEntity ? () => onSelectEntity(cmd) : undefined}
             style={cmd && onSelectEntity ? { cursor: "pointer" } : undefined}
           >
@@ -160,11 +166,11 @@ export function OplSentencesView({ model, opdId, selectedThing, selectedLink, on
       })}
       {thingSentences.length > 0 && linkSentences.length > 0 && <div className="opl-divider" />}
       {linkSentences.map((sentence, i) => {
-        const cmd = commandForSentence(sentence);
+        const cmd = commandForSentence(model, sentence);
         return (
           <div
             key={`l-${i}`}
-            className={sentenceClass(sentence, selectedThing, selectedLink)}
+            className={sentenceClass(model, sentence, selectedThing, selectedLink)}
             onClick={cmd && onSelectEntity ? () => onSelectEntity(cmd) : undefined}
             style={cmd && onSelectEntity ? { cursor: "pointer" } : undefined}
           >
@@ -173,11 +179,19 @@ export function OplSentencesView({ model, opdId, selectedThing, selectedLink, on
         );
       })}
       {metaSentences.length > 0 && <div className="opl-divider" />}
-      {metaSentences.map((sentence, i) => (
-        <div key={`m-${i}`} className="opl-sentence opl-sentence--meta" style={{ fontSize: "0.85em", opacity: 0.8 }}>
-          {renderSentence(sentence, doc)}
-        </div>
-      ))}
+      {metaSentences.map((sentence, i) => {
+        const cmd = commandForSentence(model, sentence);
+        return (
+          <div
+            key={`m-${i}`}
+            className={sentenceClass(model, sentence, selectedThing, selectedLink)}
+            style={cmd && onSelectEntity ? { fontSize: "0.85em", opacity: 0.8, cursor: "pointer" } : { fontSize: "0.85em", opacity: 0.8 }}
+            onClick={cmd && onSelectEntity ? () => onSelectEntity(cmd) : undefined}
+          >
+            {renderSentence(sentence, doc)}
+          </div>
+        );
+      })}
     </div>
   );
 }

@@ -77,6 +77,26 @@ export function findLinkIdByNames(model: Model, sourceName?: string | null, targ
   return [...model.links.values()].find((link) => link.source === sourceId && link.target === targetId)?.id ?? null;
 }
 
+export function findLinkIdByDisplayName(model: Model, displayName?: string | null) {
+  if (!displayName) return null;
+  const parts = displayName.split("→").map((part) => part.trim()).filter(Boolean);
+  if (parts.length !== 2) return null;
+  return findLinkIdByNames(model, parts[0], parts[1]);
+}
+
+export function findThingOrLinkTarget(model: Model, targetName?: string | null) {
+  const thingId = findThingIdByName(model, targetName);
+  if (thingId) return { kind: "thing" as const, id: thingId };
+  const linkId = findLinkIdByDisplayName(model, targetName);
+  if (linkId) return { kind: "link" as const, id: linkId };
+  return null;
+}
+
+export function findFirstLinkIdByPathLabels(model: Model, pathLabels?: string[] | null) {
+  if (!pathLabels?.length) return null;
+  return [...model.links.values()].find((link) => link.path_label && pathLabels.includes(link.path_label))?.id ?? null;
+}
+
 export function findOpdIdByName(model: Model, name?: string | null) {
   if (!name) return null;
   return [...model.opds.values()].find((opd) => opd.name === name)?.id ?? null;

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import type { Model } from "@opmodel/core";
 import { semanticKernelFromModel, exposeSemanticKernel, exposeFromKernel, render, renderAllFromKernelNative } from "@opmodel/core";
 import type { Command } from "../lib/commands";
-import { findLinkIdByNames, findOpdIdByName, findSentenceAtLine, findSentenceForSelection, findThingIdByName, parseSentenceRefs } from "../lib/opl-navigation";
+import { findFirstLinkIdByPathLabels, findLinkIdByNames, findOpdIdByName, findSentenceAtLine, findSentenceForSelection, findThingIdByName, findThingOrLinkTarget, parseSentenceRefs } from "../lib/opl-navigation";
 
 interface Props {
   model: Model;
@@ -125,11 +125,17 @@ export function OplTextView({ model, opdId, highlightThingId, highlightLinkId, d
         dispatch({ tag: "selectThing", thingId: findThingIdByName(model, ref.sentence.sharedEndpointName) });
         return;
       case "requirement":
-      case "assertion":
-        dispatch({ tag: "selectThing", thingId: findThingIdByName(model, ref.sentence.targetName) });
+      case "assertion": {
+        const target = findThingOrLinkTarget(model, ref.sentence.targetName);
+        if (target?.kind === "link") dispatch({ tag: "selectLink", linkId: target.id });
+        else dispatch({ tag: "selectThing", thingId: target?.id ?? findThingIdByName(model, ref.sentence.targetName) });
         return;
-      case "scenario":
+      }
+      case "scenario": {
+        const linkId = findFirstLinkIdByPathLabels(model, ref.sentence.pathLabels);
+        if (linkId) dispatch({ tag: "selectLink", linkId });
         return;
+      }
     }
   };
 
