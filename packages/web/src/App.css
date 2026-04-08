@@ -1326,6 +1326,56 @@ button.header__pill:hover {
   border-bottom-color: var(--accent);
 }
 
+.opl-focus-trail {
+  padding: 8px 12px 10px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.opl-focus-trail__label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.opl-focus-trail__items {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.opl-focus-trail__item {
+  max-width: 100%;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.2;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.opl-focus-trail__item:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
+}
+
+.opl-focus-trail__item--thing {
+  color: var(--object-stroke);
+}
+
+.opl-focus-trail__item--link {
+  color: var(--link-procedural);
+}
+
 .opl-text__header {
   display: flex;
   justify-content: flex-end;

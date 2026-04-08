@@ -62,6 +62,37 @@ describe("OplPanel", () => {
     expect(screen.getByText("Author OPL directly, then apply back to the model.")).toBeTruthy();
   });
 
+  it("keeps a recent focus trail and lets you jump back", () => {
+    const model = buildSimpleModel();
+    const dispatch = vi.fn(() => true);
+    const { rerender } = render(
+      React.createElement(OplPanel, {
+        model,
+        opdId: "opd-sd",
+        selectedThing: "thing-water",
+        selectedLink: null,
+        dispatch,
+      }),
+    );
+
+    expect(screen.getByText("Recent focus")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Water" })).toBeTruthy();
+
+    rerender(
+      React.createElement(OplPanel, {
+        model,
+        opdId: "opd-sd",
+        selectedThing: null,
+        selectedLink: "link-consumes",
+        dispatch,
+      }),
+    );
+
+    expect(screen.getByRole("button", { name: "Water → Boiling" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Water" }));
+    expect(dispatch).toHaveBeenCalledWith({ tag: "selectThing", thingId: "thing-water" });
+  });
+
   it("lets structured sentences select links and returns to Author", () => {
     const model = buildSimpleModel();
     const dispatch = vi.fn(() => true);

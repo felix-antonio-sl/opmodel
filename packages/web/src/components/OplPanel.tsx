@@ -7,6 +7,8 @@ import { OplLiveEditor } from "./OplLiveEditor";
 
 type OplTab = "edit" | "text" | "sentences";
 
+type FocusEntry = { key: string; label: string; cmd: Command; kind: "thing" | "link" };
+
 interface Props {
   model: Model;
   opdId: string;
@@ -17,6 +19,7 @@ interface Props {
 
 export function OplPanel({ model, opdId, selectedThing, selectedLink, dispatch }: Props) {
   const [activeTab, setActiveTab] = useState<OplTab>("edit");
+  const [focusTrail, setFocusTrail] = useState<FocusEntry[]>([]);
   const opd = model.opds.get(opdId);
   const currentLang = model.settings.opl_language === "es" ? "es" : "en";
   const previousSelectionRef = useRef<string>("");
@@ -29,7 +32,41 @@ export function OplPanel({ model, opdId, selectedThing, selectedLink, dispatch }
     previousSelectionRef.current = currentSelection;
   }, [selectedThing, selectedLink]);
 
+  useEffect(() => {
+    let entry: FocusEntry | null = null;
+    if (selectedThing) {
+      const thing = model.things.get(selectedThing);
+      if (thing) {
+        entry = {
+          key: `thing:${thing.id}`,
+          label: thing.name,
+          cmd: { tag: "selectThing", thingId: thing.id },
+          kind: "thing",
+        };
+      }
+    } else if (selectedLink) {
+      const link = model.links.get(selectedLink);
+      if (link) {
+        const src = model.things.get(link.source)?.name ?? link.source;
+        const tgt = model.things.get(link.target)?.name ?? link.target;
+        entry = {
+          key: `link:${link.id}`,
+          label: `${src} → ${tgt}`,
+          cmd: { tag: "selectLink", linkId: link.id },
+          kind: "link",
+        };
+      }
+    }
+    if (!entry) return;
+    setFocusTrail((current) => [entry!, ...current.filter((item) => item.key !== entry!.key)].slice(0, 6));
+  }, [model, selectedThing, selectedLink]);
+
   const handleStructuredSelect = (cmd: Command) => {
+    dispatch(cmd);
+    setActiveTab("edit");
+  };
+
+  const handleTrailSelect = (cmd: Command) => {
     dispatch(cmd);
     setActiveTab("edit");
   };
@@ -64,6 +101,24 @@ export function OplPanel({ model, opdId, selectedThing, selectedLink, dispatch }
             ? "Inspect the current canonical OPL for this OPD."
             : "Browse generated OPL sentences by entity."}
       </div>
+      {focusTrail.length > 0 && (
+        <div className="opl-focus-trail">
+          <div className="opl-focus-trail__label">Recent focus</div>
+          <div className="opl-focus-trail__items">
+            {focusTrail.map((entry) => (
+              <button
+                key={entry.key}
+                type="button"
+                className={`opl-focus-trail__item opl-focus-trail__item--${entry.kind}`}
+                onClick={() => handleTrailSelect(entry.cmd)}
+                title={entry.label}
+              >
+                {entry.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       {activeTab === "edit" && (
         <OplLiveEditor
           model={model}
