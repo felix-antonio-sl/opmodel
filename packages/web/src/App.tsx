@@ -16,7 +16,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
     return this.props.children;
   }
 }
-import { loadModel, createModel, isOk, validate, saveModel, expose, render, renderAll, exportMarkdown, type Model, type Thing } from "@opmodel/core";
+import { loadModel, createModel, isOk, validate, saveModel, expose, render, exportMarkdown, semanticKernelFromModel, exposeSemanticKernel, renderAllFromKernelNative, type Model, type Thing } from "@opmodel/core";
 import { useModelStore } from "./hooks/useModelStore";
 import { OpdTree } from "./components/OpdTree";
 import { OpdCanvas } from "./components/OpdCanvas";
@@ -148,7 +148,9 @@ function FileMenu({ model, onNew, onLoadExample, onImport, onSave, onAutoLayoutA
   };
 
   const exportOpl = () => {
-    downloadBlob(new Blob([renderAll(model)], { type: "text/plain" }), `${baseName}.opl.txt`);
+    const kernel = semanticKernelFromModel(model);
+    const atlas = exposeSemanticKernel(kernel);
+    downloadBlob(new Blob([renderAllFromKernelNative(kernel, atlas)], { type: "text/plain" }), `${baseName}.opl.txt`);
     setOpen(false);
   };
 

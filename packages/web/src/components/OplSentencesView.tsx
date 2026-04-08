@@ -1,5 +1,5 @@
 import type { Model } from "@opmodel/core";
-import { expose, render, type OplSentence, type OplDocument } from "@opmodel/core";
+import { semanticKernelFromModel, exposeSemanticKernel, exposeFromKernel, render, type OplSentence, type OplDocument } from "@opmodel/core";
 
 interface Props {
   model: Model;
@@ -78,7 +78,9 @@ function sentenceClass(sentence: OplSentence, selectedThing: string | null): str
 }
 
 export function OplSentencesView({ model, opdId, selectedThing, onSelectThing }: Props) {
-  const doc = expose(model, opdId);
+  const kernel = semanticKernelFromModel(model);
+  const atlas = exposeSemanticKernel(kernel);
+  const doc = exposeFromKernel(kernel, atlas, opdId);
 
   const thingSentences = doc.sentences.filter(
     (s): s is OplSentence =>

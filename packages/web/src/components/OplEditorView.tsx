@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import type { Model, OplEdit, Link, LinkType, ModifierType, Essence, Affiliation } from "@opmodel/core";
-import { expose, render, type OplDocument } from "@opmodel/core";
+import { semanticKernelFromModel, exposeSemanticKernel, exposeFromKernel, render, type OplDocument } from "@opmodel/core";
 import type { NlPipeline, NlResult } from "@opmodel/nl";
 import type { Command } from "../lib/commands";
 
@@ -251,7 +251,11 @@ export function OplEditorView({ model, opdId, dispatch, nlPipeline, lastError: s
     setNlError(null);
   };
 
-  const doc = useMemo(() => expose(model, opdId), [model, opdId]);
+  const doc = useMemo(() => {
+    const kernel = semanticKernelFromModel(model);
+    const atlas = exposeSemanticKernel(kernel);
+    return exposeFromKernel(kernel, atlas, opdId);
+  }, [model, opdId]);
   const things = useMemo(() => [...model.things.values()], [model.things]);
   const objects = useMemo(() => things.filter(t => t.kind === "object"), [things]);
   const links = useMemo(() => [...model.links.values()], [model.links]);

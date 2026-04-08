@@ -356,12 +356,14 @@ function defaultLayoutFromAtlas(atlas: OpdAtlas, kernel: SemanticKernel): Layout
 
     // Place processes first (center area)
     for (let i = 0; i < processes.length; i++) {
+      const proc = processes[i];
+      if (!proc) continue;
       const col = i % cols;
       const row = Math.floor(i / cols);
       const w = 160;
       const h = 70;
-      nodes.set(processes[i].id, {
-        viewId: processes[i].id,
+      nodes.set(proc.id, {
+        viewId: proc.id,
         x: startX + col * colWidth + (colWidth - w) / 2,
         y: startY + row * rowHeight + (rowHeight - h) / 2,
         w, h,
@@ -371,12 +373,14 @@ function defaultLayoutFromAtlas(atlas: OpdAtlas, kernel: SemanticKernel): Layout
     // Place objects below processes
     const objStartY = startY + (Math.ceil(processes.length / cols) || 1) * rowHeight + 40;
     for (let i = 0; i < objects.length; i++) {
+      const obj = objects[i];
+      if (!obj) continue;
       const col = i % cols;
       const row = Math.floor(i / cols);
       const w = 140;
       const h = 50;
-      nodes.set(objects[i].id, {
-        viewId: objects[i].id,
+      nodes.set(obj.id, {
+        viewId: obj.id,
         x: startX + col * colWidth + (colWidth - w) / 2,
         y: objStartY + row * rowHeight + (rowHeight - h) / 2,
         w, h,

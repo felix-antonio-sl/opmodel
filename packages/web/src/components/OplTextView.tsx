@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import type { Model } from "@opmodel/core";
-import { expose, render, renderAll } from "@opmodel/core";
+import { semanticKernelFromModel, exposeSemanticKernel, exposeFromKernel, render, renderAllFromKernelNative } from "@opmodel/core";
 
 interface Props {
   model: Model;
@@ -14,8 +14,10 @@ export function OplTextView({ model, opdId, highlightThingId, highlightLinkId, o
   const [copied, setCopied] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const doc = expose(model, opdId);
-  const text = showAll ? renderAll(model) : render(doc);
+  const kernel = semanticKernelFromModel(model);
+  const atlas = exposeSemanticKernel(kernel);
+  const doc = exposeFromKernel(kernel, atlas, opdId);
+  const text = showAll ? renderAllFromKernelNative(kernel, atlas) : render(doc);
   const lines = text.split("\n");
 
   // Build highlight names
