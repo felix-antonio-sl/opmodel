@@ -1224,16 +1224,56 @@ export function PropertiesPanel({ model, thingId, opdId, dispatch }: Props) {
                 <button className="props-panel__remove-btn" onClick={() => dispatch({ tag: "removeStereotype", stereotypeId: s.id })}>✕</button>
               </div>
             ))}
-            <button
-              className="props-panel__add-btn"
-              onClick={() => {
-                const id = `stp-${Date.now().toString(36)}`;
-                const stpId = prompt("Stereotype identifier (e.g., agent, sensor, actuator):");
-                if (stpId) dispatch({ tag: "addStereotype", stereotype: { id, thing: thingId, stereotype_id: stpId, global: false } });
-              }}
-            >
-              + Stereotype
-            </button>
+            <div style={{ display: "flex", gap: 4, marginTop: 2 }}>
+              <select
+                className="props-panel__select"
+                style={{ fontSize: 9, flex: 1 }}
+                value=""
+                onChange={(e) => {
+                  if (!e.target.value) return;
+                  const id = `stp-${Date.now().toString(36)}`;
+                  dispatch({ tag: "addStereotype", stereotype: { id, thing: thingId, stereotype_id: e.target.value, global: false } });
+                  e.target.value = "";
+                }}
+              >
+                <option value="">+ Stereotype...</option>
+                <optgroup label="Common">
+                  <option value="agent">agent</option>
+                  <option value="sensor">sensor</option>
+                  <option value="actuator">actuator</option>
+                  <option value="controller">controller</option>
+                  <option value="interface">interface</option>
+                  <option value="repository">repository</option>
+                  <option value="service">service</option>
+                  <option value="resource">resource</option>
+                </optgroup>
+                <optgroup label="Healthcare">
+                  <option value="patient">patient</option>
+                  <option value="clinician">clinician</option>
+                  <option value="device">device</option>
+                  <option value="medication">medication</option>
+                  <option value="protocol">protocol</option>
+                </optgroup>
+                <optgroup label="Systems">
+                  <option value="hardware">hardware</option>
+                  <option value="software">software</option>
+                  <option value="firmware">firmware</option>
+                  <option value="network">network</option>
+                  <option value="database">database</option>
+                </optgroup>
+              </select>
+              <button
+                className="props-panel__add-btn"
+                style={{ fontSize: 8, whiteSpace: "nowrap" }}
+                onClick={() => {
+                  const id = `stp-${Date.now().toString(36)}`;
+                  const stpId = prompt("Custom stereotype identifier:");
+                  if (stpId) dispatch({ tag: "addStereotype", stereotype: { id, thing: thingId, stereotype_id: stpId, global: false } });
+                }}
+              >
+                custom
+              </button>
+            </div>
           </div>
         );
       })()}
