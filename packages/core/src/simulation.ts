@@ -20,7 +20,7 @@ import type { Model, Thing, State, Link, Modifier, OPD, Fan, Appearance, OpmData
 import type { InvariantError, Result } from "./result";
 import { ok, err } from "./result";
 import { getStructuralChildren, getInheritedLinks } from "./structural";
-import type { SemanticKernel, OpdAtlas, LayoutModel, InZoomRefinement, SemanticRefinement } from "./semantic-kernel";
+import type { SemanticKernel, OpdAtlas, LayoutModel, InZoomRefinement, UnfoldRefinement, SemanticRefinement } from "./semantic-kernel";
 import { legacyModelFromSemanticKernel, exposeSemanticKernel } from "./semantic-kernel";
 import { appearanceKey } from "./helpers";
 
@@ -114,10 +114,10 @@ export interface ExecutableProcess {
 export function getExecutableProcesses(model: Model, maxDepth: number = 10): ExecutableProcess[] {
   const result: ExecutableProcess[] = [];
 
-  // Build lookup: processId → in-zoom OPD (if any)
+  // Build lookup: processId → refinement OPD (in-zoom or unfold)
   const inZoomOpds = new Map<string, OPD>();
   for (const opd of model.opds.values()) {
-    if (opd.refines && opd.refinement_type === "in-zoom") {
+    if (opd.refines && (opd.refinement_type === "in-zoom" || opd.refinement_type === "unfold")) {
       inZoomOpds.set(opd.refines, opd);
     }
   }
@@ -268,7 +268,7 @@ export function resolveLinksForOpd(model: Model, opdId: string): ResolvedLink[] 
 
   const inZoomOpds = new Map<string, OPD>();
   for (const opd of model.opds.values()) {
-    if (opd.refines && opd.refinement_type === "in-zoom") {
+    if (opd.refines && (opd.refinement_type === "in-zoom" || opd.refinement_type === "unfold")) {
       inZoomOpds.set(opd.refines, opd);
     }
   }
@@ -378,7 +378,7 @@ export function resolveLinksForOpd(model: Model, opdId: string): ResolvedLink[] 
             function findInternalAncestor(thingId: string): string | null {
               if (internalThings!.has(thingId)) return thingId;
               for (const intId of internalThings!) {
-                const childOpd = [...model.opds.values()].find(o => o.refines === intId && o.refinement_type === "in-zoom");
+                const childOpd = [...model.opds.values()].find(o => o.refines === intId && (o.refinement_type === "in-zoom" || o.refinement_type === "unfold"));
                 if (!childOpd) continue;
                 // Check direct appearance
                 if ([...model.appearances.values()].some(a => a.opd === childOpd.id && a.thing === thingId)) return intId;
@@ -2217,11 +2217,14 @@ export function getExecutableProcessesFromRefinements(
 ): ExecutableProcess[] {
   const result: ExecutableProcess[] = [];
 
-  // Build lookup: processId → in-zoom refinement
+  // Build lookup: processId → refinement (in-zoom or unfold)
   const inZoomRefinements = new Map<string, InZoomRefinement>();
+  const unfoldRefinements = new Map<string, UnfoldRefinement>();
   for (const ref of refinements.values()) {
     if (ref.kind === "in-zoom") {
       inZoomRefinements.set(ref.parentThing, ref);
+    } else if (ref.kind === "unfold") {
+      unfoldRefinements.set(ref.parentThing, ref);
     }
   }
 
@@ -2235,42 +2238,70 @@ export function getExecutableProcessesFromRefinements(
       }
     }
   }
+  for (const ref of unfoldRefinements.values()) {
+    for (const tid of ref.refineeThings) {
+      const thing = data.things.get(tid);
+      if (thing?.kind === "process") subprocessIds.add(tid);
+    }
+  }
 
   function expand(processId: string, parentId: string | undefined, depth: number): void {
     if (depth > maxDepth) return;
     const ref = inZoomRefinements.get(processId);
-    if (!ref || ref.steps.length === 0) {
+    const unfoldRef = unfoldRefinements.get(processId);
+
+    if (!ref && !unfoldRef) {
       // Leaf process — directly executable
       const thing = data.things.get(processId);
       if (!thing) return;
+      const parentChildOpd = parentId
+        ? (inZoomRefinements.get(parentId)?.childOpd ?? unfoldRefinements.get(parentId)?.childOpd)
+        : undefined;
       result.push({
         id: processId,
         name: thing.name,
         order: 0,
         parentProcessId: parentId,
-        opdId: parentId ? inZoomRefinements.get(parentId)?.childOpd : undefined,
+        opdId: parentChildOpd,
       });
       return;
     }
 
-    // Expand subprocesses using semantic step ordering
-    let stepOrder = 0;
-    for (const step of ref.steps) {
-      const processThings = step.thingIds
-        .map(tid => ({ id: tid, thing: data.things.get(tid) }))
-        .filter((e): e is { id: string; thing: Thing } => e.thing?.kind === "process");
+    if (ref && ref.steps.length > 0) {
+      // Expand in-zoom subprocesses using semantic step ordering
+      let stepOrder = 0;
+      for (const step of ref.steps) {
+        const processThings = step.thingIds
+          .map(tid => ({ id: tid, thing: data.things.get(tid) }))
+          .filter((e): e is { id: string; thing: Thing } => e.thing?.kind === "process");
 
-      for (const { id: spId } of processThings) {
-        expand(spId, processId, depth + 1);
-        // Set order from step index (semantic) instead of Y-coordinate
+        for (const { id: spId } of processThings) {
+          expand(spId, processId, depth + 1);
+          const last = result[result.length - 1];
+          if (last && last.id === spId) {
+            last.order = stepOrder;
+            last.opdId = ref.childOpd;
+          }
+        }
+        if (step.execution === "sequential") stepOrder++;
+      }
+    } else if (unfoldRef && unfoldRef.refineeThings.length > 0) {
+      // Expand unfold subprocesses — all share same order (structural, not sequential)
+      for (const tid of unfoldRef.refineeThings) {
+        const thing = data.things.get(tid);
+        if (!thing || thing.kind !== "process") continue;
+        expand(tid, processId, depth + 1);
         const last = result[result.length - 1];
-        if (last && last.id === spId) {
-          last.order = stepOrder;
-          last.opdId = ref.childOpd;
+        if (last && last.id === tid) {
+          last.order = 0;
+          last.opdId = unfoldRef.childOpd;
         }
       }
-      // Parallel steps share the same order; sequential steps increment
-      if (step.execution === "sequential") stepOrder++;
+    } else {
+      // Refinement exists but empty — execute parent directly
+      const thing = data.things.get(processId);
+      if (!thing) return;
+      result.push({ id: processId, name: thing.name, order: 0, parentProcessId: parentId });
     }
   }
 
