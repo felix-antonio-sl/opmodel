@@ -51,7 +51,13 @@ export function OplPanel({ model, opdId, selectedThing, selectedLink, dispatch }
             : "Browse generated OPL sentences by entity."}
       </div>
       {activeTab === "edit" && (
-        <OplLiveEditor model={model} opdId={opdId} dispatch={dispatch} />
+        <OplLiveEditor
+          model={model}
+          opdId={opdId}
+          selectedThing={selectedThing}
+          selectedLink={selectedLink}
+          dispatch={dispatch}
+        />
       )}
       {activeTab === "text" && (
         <OplTextView
@@ -59,7 +65,7 @@ export function OplPanel({ model, opdId, selectedThing, selectedLink, dispatch }
           opdId={opdId}
           highlightThingId={selectedThing ?? undefined}
           highlightLinkId={selectedLink ?? undefined}
-          onSelectThing={(id) => dispatch({ tag: "selectThing", thingId: id })}
+          dispatch={dispatch}
         />
       )}
       {activeTab === "sentences" && (

@@ -2,37 +2,21 @@ import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import type { Model, ValidationIssue } from "@opmodel/core";
 import { renderAll, parseOplDocuments, compileToKernel, legacyModelFromSemanticKernel, exposeSemanticKernel, validateOpl } from "@opmodel/core";
 import type { Command } from "../lib/commands";
+import { findOpdIdByName, findSentenceForSelection, findThingIdByName, lineColumnToOffset, parseSentenceRefs } from "../lib/opl-navigation";
 
 interface Props {
   model: Model;
   opdId: string;
+  selectedThing?: string | null;
+  selectedLink?: string | null;
   dispatch: (cmd: Command) => boolean;
-}
-
-function lineColumnToOffset(text: string, line?: number, column?: number) {
-  if (line == null || column == null) return null;
-  const lines = text.split("\n");
-  if (line < 1 || line > lines.length) return null;
-  let offset = 0;
-  for (let i = 0; i < line - 1; i++) offset += lines[i]!.length + 1;
-  return offset + Math.max(0, column - 1);
-}
-
-function findThingIdByName(model: Model, name?: string) {
-  if (!name) return null;
-  return [...model.things.values()].find((thing) => thing.name === name)?.id ?? null;
-}
-
-function findOpdIdByName(model: Model, name?: string) {
-  if (!name) return null;
-  return [...model.opds.values()].find((opd) => opd.name === name)?.id ?? null;
 }
 
 function issueKey(issue: ValidationIssue, index: number) {
   return `${index}:${issue.phase}:${issue.line ?? 0}:${issue.column ?? 0}:${issue.message}`;
 }
 
-export function OplLiveEditor({ model, opdId, dispatch }: Props) {
+export function OplLiveEditor({ model, opdId, selectedThing, selectedLink, dispatch }: Props) {
   const initialText = renderAll(model);
   const [text, setText] = useState(initialText);
   const [status, setStatus] = useState<"idle" | "dirty" | "valid" | "error">("idle");
@@ -68,6 +52,8 @@ export function OplLiveEditor({ model, opdId, dispatch }: Props) {
   }, []);
 
   const lineCount = text.split("\n").length;
+  const currentOpdName = model.opds.get(opdId)?.name ?? "SD";
+  const sentenceRefs = useMemo(() => parseSentenceRefs(text, currentOpdName), [text, currentOpdName]);
 
   const issueCounts = useMemo(() => {
     const issues = validationResult?.issues ?? [];
@@ -112,6 +98,27 @@ export function OplLiveEditor({ model, opdId, dispatch }: Props) {
       if (lineNumbersRef.current) lineNumbersRef.current.scrollTop = targetScroll;
     });
   }, [dispatch, model, opdId]);
+
+  const revealSelection = useCallback((thingId?: string | null, linkId?: string | null) => {
+    const match = findSentenceForSelection(sentenceRefs, model, thingId, linkId, opdId);
+    if (!match) return;
+    const targetOpdId = findOpdIdByName(model, match.doc.opdName);
+    if (targetOpdId && targetOpdId !== opdId) dispatch({ tag: "selectOpd", opdId: targetOpdId });
+    const start = lineColumnToOffset(textRef.current, match.span.line, match.span.column);
+    const end = lineColumnToOffset(textRef.current, match.span.endLine, match.span.endColumn);
+    if (start == null) return;
+    requestAnimationFrame(() => {
+      const ta = textareaRef.current;
+      if (!ta) return;
+      ta.focus();
+      ta.setSelectionRange(start, end != null && end > start ? end : start);
+      const lineIndex = Math.max(0, match.span.line - 1);
+      const lineHeight = 16;
+      const targetScroll = Math.max(0, lineIndex * lineHeight - ta.clientHeight / 3);
+      ta.scrollTop = targetScroll;
+      if (lineNumbersRef.current) lineNumbersRef.current.scrollTop = targetScroll;
+    });
+  }, [dispatch, model, opdId, sentenceRefs]);
 
   const getWordAtCursor = useCallback((): { word: string; start: number; end: number } | null => {
     const ta = textareaRef.current;
@@ -192,6 +199,12 @@ export function OplLiveEditor({ model, opdId, dispatch }: Props) {
       return () => clearTimeout(timer);
     }
   }, [text, status, updateAutocomplete]);
+
+  useEffect(() => {
+    if (!selectedThing && !selectedLink) return;
+    if (status === "error") return;
+    revealSelection(selectedThing, selectedLink);
+  }, [selectedThing, selectedLink, revealSelection, status]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (acVisible) {

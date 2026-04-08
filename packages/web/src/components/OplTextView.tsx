@@ -1,16 +1,18 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import type { Model } from "@opmodel/core";
 import { semanticKernelFromModel, exposeSemanticKernel, exposeFromKernel, render, renderAllFromKernelNative } from "@opmodel/core";
+import type { Command } from "../lib/commands";
+import { findLinkIdByNames, findOpdIdByName, findSentenceAtLine, findThingIdByName, parseSentenceRefs } from "../lib/opl-navigation";
 
 interface Props {
   model: Model;
   opdId: string;
   highlightThingId?: string;
   highlightLinkId?: string;
-  onSelectThing?: (thingId: string) => void;
+  dispatch: (cmd: Command) => boolean;
 }
 
-export function OplTextView({ model, opdId, highlightThingId, highlightLinkId, onSelectThing }: Props) {
+export function OplTextView({ model, opdId, highlightThingId, highlightLinkId, dispatch }: Props) {
   const [copied, setCopied] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -19,17 +21,16 @@ export function OplTextView({ model, opdId, highlightThingId, highlightLinkId, o
   const doc = exposeFromKernel(kernel, atlas, opdId);
   const text = showAll ? renderAllFromKernelNative(kernel, atlas) : render(doc);
   const lines = text.split("\n");
+  const sentenceRefs = useMemo(() => parseSentenceRefs(text, doc.opdName), [text, doc.opdName]);
 
-  // Build highlight names
   const highlightNames = useCallback((): string[] => {
     const names = new Set<string>();
     if (highlightThingId) {
       const thing = model.things.get(highlightThingId);
       if (thing) {
         names.add(thing.name);
-        // Also add compound display names
         const exhibitors = [...model.links.values()].filter(
-          l => l.type === "exhibition" && (l.target === highlightThingId || l.source === highlightThingId)
+          (l) => l.type === "exhibition" && (l.target === highlightThingId || l.source === highlightThingId),
         );
         for (const ex of exhibitors) {
           const otherId = ex.source === highlightThingId ? ex.target : ex.source;
@@ -57,16 +58,15 @@ export function OplTextView({ model, opdId, highlightThingId, highlightLinkId, o
 
   const isHighlighted = (line: string): boolean => {
     if (hlNames.length === 0) return false;
-    return hlNames.some(name => line.includes(name));
+    return hlNames.some((name) => line.includes(name));
   };
 
-  // Auto-scroll to first highlighted line
   useEffect(() => {
     if (hlNames.length > 0 && containerRef.current) {
       const first = containerRef.current.querySelector(".opl-text__line--highlight");
       if (first) first.scrollIntoView({ behavior: "smooth", block: "center" });
     }
-  }, [highlightThingId, highlightLinkId]);
+  }, [highlightThingId, highlightLinkId, hlNames.length]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(text).then(() => {
@@ -77,37 +77,47 @@ export function OplTextView({ model, opdId, highlightThingId, highlightLinkId, o
     });
   };
 
-  const handleLineClick = (line: string) => {
-    if (!onSelectThing) return;
-    // Match thing declaration lines: "X is an object" or "X is a process"
-    const declMatch = line.match(/^(.+?)\s+is\s+(?:an?\s+)?(?:object|process)/i);
-    if (declMatch) {
-      const name = declMatch[1]!.trim();
-      // Find thing by name
-      for (const [id, thing] of model.things) {
-        if (thing.name === name) {
-          onSelectThing(id);
-          return;
-        }
-      }
-    }
-    // Match state enumeration: "X can be ..."
-    const stateMatch = line.match(/^(.+?)\s+(?:can be|puede estar)/i);
-    if (stateMatch) {
-      const name = stateMatch[1]!.trim();
-      for (const [id, thing] of model.things) {
-        if (thing.name === name) {
-          onSelectThing(id);
-          return;
-        }
-      }
-    }
-    // Generic: find any thing name in the line
-    for (const [id, thing] of model.things) {
-      if (line.includes(thing.name)) {
-        onSelectThing(id);
+  const handleLineClick = (lineIndex: number) => {
+    const ref = findSentenceAtLine(sentenceRefs, lineIndex + 1);
+    if (!ref) return;
+
+    const targetOpdId = findOpdIdByName(model, ref.doc.opdName);
+    if (targetOpdId && targetOpdId !== opdId) dispatch({ tag: "selectOpd", opdId: targetOpdId });
+
+    switch (ref.sentence.kind) {
+      case "thing-declaration":
+        dispatch({ tag: "selectThing", thingId: findThingIdByName(model, ref.sentence.name) });
+        return;
+      case "state-enumeration":
+      case "state-description":
+      case "duration":
+        dispatch({ tag: "selectThing", thingId: findThingIdByName(model, ref.sentence.thingName) });
+        return;
+      case "attribute-value":
+        dispatch({ tag: "selectThing", thingId: findThingIdByName(model, ref.sentence.thingName) });
+        return;
+      case "link": {
+        const linkId = findLinkIdByNames(model, ref.sentence.sourceName, ref.sentence.targetName);
+        if (linkId) dispatch({ tag: "selectLink", linkId });
+        else dispatch({ tag: "selectThing", thingId: findThingIdByName(model, ref.sentence.sourceName) });
         return;
       }
+      case "modifier":
+        dispatch({ tag: "selectThing", thingId: findThingIdByName(model, ref.sentence.sourceName) });
+        return;
+      case "grouped-structural":
+      case "in-zoom-sequence":
+        dispatch({ tag: "selectThing", thingId: findThingIdByName(model, ref.sentence.parentName) });
+        return;
+      case "fan":
+        dispatch({ tag: "selectThing", thingId: findThingIdByName(model, ref.sentence.sharedEndpointName) });
+        return;
+      case "requirement":
+      case "assertion":
+        dispatch({ tag: "selectThing", thingId: findThingIdByName(model, ref.sentence.targetName) });
+        return;
+      case "scenario":
+        return;
     }
   };
 
@@ -132,16 +142,16 @@ export function OplTextView({ model, opdId, highlightThingId, highlightLinkId, o
             <div
               key={i}
               className={`opl-text__line${highlighted ? " opl-text__line--highlight" : ""}`}
-              onClick={() => handleLineClick(line)}
+              onClick={() => handleLineClick(i)}
               style={highlighted ? {
                 background: "rgba(88, 166, 255, 0.12)",
                 borderLeft: "3px solid rgba(88, 166, 255, 0.6)",
                 paddingLeft: 9,
-                cursor: onSelectThing ? "pointer" : "default",
+                cursor: "pointer",
               } : {
                 borderLeft: "3px solid transparent",
                 paddingLeft: 9,
-                cursor: onSelectThing ? "pointer" : "default",
+                cursor: "pointer",
               }}
             >
               {line}
