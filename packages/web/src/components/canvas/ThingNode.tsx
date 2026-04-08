@@ -101,7 +101,7 @@ export function ThingNode({
 
   const className = `thing-group${isSelected ? " thing-group--selected" : ""}${isAttention ? " thing-group--attention" : ""}${isDragging ? " thing-group--dragging" : ""}${isLinkSource ? " thing-group--link-source" : ""}`;
 
-  const tooltip = `${thing.name} (${thing.kind}, ${thing.essence}${thing.affiliation === "environmental" ? ", environmental" : ""})${thing.duration ? ` — ${thing.duration.nominal}${thing.duration.unit}` : ""}`;
+  const tooltip = `${thing.name} (${thing.kind}, ${thing.essence}${thing.affiliation === "environmental" ? ", environmental" : ""})${thing.duration ? ` — ${thing.duration.nominal}${thing.duration.unit}` : ""}${thing.notes ? `\n\n${thing.notes}` : ""}`;
 
   return (
     <g
