@@ -1,12 +1,12 @@
 // packages/core/src/opl.ts
-import type { Model, ComputationalObject, Thing, State, Link, Modifier, Appearance, OpmDataView, Settings } from "./types";
+import type { Model, ComputationalObject, Thing, State, Link, Modifier, Fan, Requirement, Assertion, Scenario, Appearance, OpmDataView, Settings } from "./types";
 import type { LayoutModel, OpdAtlas, SemanticKernel } from "./semantic-kernel";
 import type { InvariantError, Result } from "./result";
 import type {
   OplDocument, OplEdit, OplSentence,
   OplThingDeclaration, OplLinkSentence, OplModifierSentence, OplRenderSettings,
   OplStateDescription, OplGroupedStructuralSentence, OplInZoomSequence, OplAttributeValue,
-  OplFanSentence,
+  OplFanSentence, OplRequirementSentence, OplAssertionSentence, OplScenarioSentence,
 } from "./opl-types";
 import { ok, err, isOk } from "./result";
 import { STRUCTURAL_TYPES, structuralParentEnd } from "./structural";
@@ -14,6 +14,8 @@ import { collectAllIds } from "./helpers";
 import {
   addThing, removeThing, addState, removeState,
   addLink, removeLink, addModifier, removeModifier,
+  addFan, removeFan, addRequirement, removeRequirement,
+  addAssertion, removeAssertion, addScenario, removeScenario,
   addAppearance,
 } from "./api";
 import { legacyModelFromSemanticKernel } from "./semantic-kernel";
@@ -1486,6 +1488,34 @@ export function applyOplEdit(model: Model, edit: OplEdit): Result<Model, Invaria
     }
     case "remove-modifier":
       return removeModifier(model, edit.modifierId);
+    case "add-fan": {
+      const id = uniqueId("fan", model);
+      const fan: Fan = { id, ...edit.fan };
+      return addFan(model, fan);
+    }
+    case "remove-fan":
+      return removeFan(model, edit.fanId);
+    case "add-requirement": {
+      const id = uniqueId("req", model);
+      const req: Requirement = { id, ...edit.requirement };
+      return addRequirement(model, req);
+    }
+    case "remove-requirement":
+      return removeRequirement(model, edit.requirementId);
+    case "add-assertion": {
+      const id = uniqueId("assert", model);
+      const assertion: Assertion = { id, ...edit.assertion };
+      return addAssertion(model, assertion);
+    }
+    case "remove-assertion":
+      return removeAssertion(model, edit.assertionId);
+    case "add-scenario": {
+      const id = uniqueId("scn", model);
+      const scenario: Scenario = { id, ...edit.scenario };
+      return addScenario(model, scenario);
+    }
+    case "remove-scenario":
+      return removeScenario(model, edit.scenarioId);
     default: {
       const _exhaustive: never = edit;
       return err({ code: "UNKNOWN_EDIT", message: `Unknown edit kind`, entity: "" });
@@ -1501,6 +1531,10 @@ export function editsFrom(doc: OplDocument): OplEdit[] {
   const stateEdits: OplEdit[] = [];
   const linkEdits: OplEdit[] = [];
   const modifierEdits: OplEdit[] = [];
+  const fanEdits: OplEdit[] = [];
+  const requirementEdits: OplEdit[] = [];
+  const assertionEdits: OplEdit[] = [];
+  const scenarioEdits: OplEdit[] = [];
 
   // Build state name -> stateId lookup from state-enumeration sentences
   // Map key: "thingId::stateName" -> stateId
@@ -1596,14 +1630,59 @@ export function editsFrom(doc: OplDocument): OplEdit[] {
           },
         });
         break;
+      case "fan": {
+        const fanSentence = s as OplFanSentence;
+        fanEdits.push({
+          kind: "add-fan",
+          fan: {
+            type: fanSentence.fanType,
+            direction: fanSentence.direction,
+            members: [], // Members resolved at compile time from link IDs
+          },
+        });
+        break;
+      }
+      case "requirement": {
+        const reqSentence = s as OplRequirementSentence;
+        requirementEdits.push({
+          kind: "add-requirement",
+          requirement: {
+            target: reqSentence.reqId, // Will be resolved to thing ID at compile
+            name: reqSentence.name,
+            description: reqSentence.description,
+            req_id: reqSentence.reqCode,
+          },
+        });
+        break;
+      }
+      case "assertion": {
+        const assertSentence = s as OplAssertionSentence;
+        assertionEdits.push({
+          kind: "add-assertion",
+          assertion: {
+            predicate: assertSentence.predicate,
+            category: assertSentence.category,
+            enabled: true,
+            ...(assertSentence.targetName ? { target: assertSentence.assertionId } : {}),
+          },
+        });
+        break;
+      }
+      case "scenario": {
+        const scnSentence = s as OplScenarioSentence;
+        scenarioEdits.push({
+          kind: "add-scenario",
+          scenario: {
+            name: scnSentence.name,
+            path_labels: scnSentence.pathLabels,
+          },
+        });
+        break;
+      }
       case "state-description":
       case "in-zoom-sequence":
       case "attribute-value":
-      case "fan":
-        // These sentence types are parsed and compiled but applyOplEdit
-        // does not yet generate model edits for them. This means round-trip
-        // OPL->Model->OPL may lose these constructs (PutGet lens violation).
-        // Tracked for future implementation.
+        // These sentence types are handled by compile pipeline, not editsFrom
         break;
       case "grouped-structural": {
         const directionMap: Record<string, "source" | "target"> = {
@@ -1627,6 +1706,7 @@ export function editsFrom(doc: OplDocument): OplEdit[] {
     }
   }
 
-  // Things first, then states, then links, then modifiers (order matters for ID references)
-  return [...thingEdits.values(), ...stateEdits, ...linkEdits, ...modifierEdits];
+  // Things first, then states, then links, then modifiers, then fans/requirements/assertions/scenarios
+  return [...thingEdits.values(), ...stateEdits, ...linkEdits, ...modifierEdits,
+    ...fanEdits, ...requirementEdits, ...assertionEdits, ...scenarioEdits];
 }

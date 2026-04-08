@@ -2,7 +2,7 @@
 import type {
   Kind, Essence, Affiliation, TimeUnit, LinkType, ModifierType, FanType,
   OplEssenceVisibility, OplUnitsVisibility,
-  Thing, State, Link, Modifier, Position,
+  Thing, State, Link, Modifier, Fan, Requirement, Assertion, Scenario, Position,
 } from "./types";
 
 export interface OplSourceSpan {
@@ -225,4 +225,12 @@ export type OplEdit =
   | { kind: "add-link"; link: Omit<Link, "id"> }
   | { kind: "remove-link"; linkId: string }
   | { kind: "add-modifier"; modifier: Omit<Modifier, "id"> }
-  | { kind: "remove-modifier"; modifierId: string };
+  | { kind: "remove-modifier"; modifierId: string }
+  | { kind: "add-fan"; fan: Omit<Fan, "id"> }
+  | { kind: "remove-fan"; fanId: string }
+  | { kind: "add-requirement"; requirement: Omit<Requirement, "id"> }
+  | { kind: "remove-requirement"; requirementId: string }
+  | { kind: "add-assertion"; assertion: Omit<Assertion, "id"> }
+  | { kind: "remove-assertion"; assertionId: string }
+  | { kind: "add-scenario"; scenario: Omit<Scenario, "id"> }
+  | { kind: "remove-scenario"; scenarioId: string };
