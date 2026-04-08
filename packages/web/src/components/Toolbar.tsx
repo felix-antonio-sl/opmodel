@@ -15,6 +15,7 @@ const LINK_TYPES: { value: LinkTypeChoice; label: string; group: string }[] = [
   { value: "classification", label: "Classification", group: "Structural" },
   { value: "invocation", label: "Invocation", group: "Control" },
   { value: "exception", label: "Exception", group: "Control" },
+  { value: "tagged", label: "Tagged", group: "Ad-hoc" },
 ];
 
 interface Props {

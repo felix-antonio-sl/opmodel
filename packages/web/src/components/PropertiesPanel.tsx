@@ -919,18 +919,33 @@ export function PropertiesPanel({ model, thingId, opdId, dispatch }: Props) {
                     </select>
                   </div>
                 )}
-                {/* Tagged link: tag editor */}
+                {/* Tagged link: tag + direction editor */}
                 {l.type === "tagged" && (
-                  <div style={{ display: "flex", gap: 4, marginTop: 2, alignItems: "center" }}>
-                    <span style={{ fontSize: 9, color: "var(--text-muted)" }}>tag:</span>
-                    <input
-                      className="props-panel__input props-panel__input--sm"
-                      value={l.tag ?? ""}
-                      onChange={(e) => dispatch({ tag: "updateLink", linkId: l.id, patch: { tag: e.target.value || undefined } })}
-                      placeholder="e.g. represents, connected to"
-                      style={{ flex: 1 }}
-                    />
-                  </div>
+                  <>
+                    <div style={{ display: "flex", gap: 4, marginTop: 2, alignItems: "center" }}>
+                      <span style={{ fontSize: 9, color: "var(--text-muted)" }}>tag:</span>
+                      <input
+                        className="props-panel__input props-panel__input--sm"
+                        value={l.tag ?? ""}
+                        onChange={(e) => dispatch({ tag: "updateLink", linkId: l.id, patch: { tag: e.target.value || undefined } })}
+                        placeholder="e.g. represents, connected to"
+                        style={{ flex: 1 }}
+                      />
+                    </div>
+                    <div style={{ display: "flex", gap: 4, marginTop: 2, alignItems: "center" }}>
+                      <span style={{ fontSize: 9, color: "var(--text-muted)" }}>dir:</span>
+                      <select
+                        className="props-panel__select"
+                        style={{ fontSize: 10, flex: 1 }}
+                        value={l.direction ?? "unidirectional"}
+                        onChange={(e) => dispatch({ tag: "updateLink", linkId: l.id, patch: { direction: e.target.value as "unidirectional" | "bidirectional" | "reciprocal" } })}
+                      >
+                        <option value="unidirectional">unidirectional</option>
+                        <option value="bidirectional">bidirectional</option>
+                        <option value="reciprocal">reciprocal</option>
+                      </select>
+                    </div>
+                  </>
                 )}
                 {/* Ordered aggregation flag */}
                 {(l.type === "aggregation") && (

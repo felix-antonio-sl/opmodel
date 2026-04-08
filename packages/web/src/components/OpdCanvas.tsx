@@ -1380,6 +1380,7 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, mode, 
                             type: resolvedType as any,
                             source: linkSource,
                             target: thingId,
+                            ...(resolvedType === "tagged" ? { tag: "relates to" } : {}),
                           },
                         });
                         setLinkSource(null);
