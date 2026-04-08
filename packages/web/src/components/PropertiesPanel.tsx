@@ -864,6 +864,34 @@ export function PropertiesPanel({ model, thingId, opdId, dispatch }: Props) {
                     }
                   />
                 </div>
+                {/* Path label & probability */}
+                <div style={{ display: "flex", gap: 4, marginTop: 2, alignItems: "center" }}>
+                  <span style={{ fontSize: 9, color: "var(--text-muted)" }}>path</span>
+                  <input
+                    className="props-panel__input"
+                    style={{ width: 50, fontSize: 9 }}
+                    placeholder="label"
+                    title="Path label (for scenarios)"
+                    value={l.path_label ?? ""}
+                    onChange={(e) => dispatch({ tag: "updateLink", linkId: l.id, patch: { path_label: e.target.value || undefined } })}
+                  />
+                  <span style={{ fontSize: 9, color: "var(--text-muted)" }}>prob</span>
+                  <input
+                    className="props-panel__input"
+                    style={{ width: 40, fontSize: 9 }}
+                    type="number"
+                    step="0.01"
+                    min={0}
+                    max={1}
+                    placeholder="0-1"
+                    title="Probability (0-1)"
+                    value={l.probability ?? ""}
+                    onChange={(e) => {
+                      const val = e.target.value ? Number(e.target.value) : undefined;
+                      dispatch({ tag: "updateLink", linkId: l.id, patch: { probability: val } });
+                    }}
+                  />
+                </div>
                 {/* Rate — for procedural links */}
                 {["consumption", "result", "effect", "input", "output", "agent", "instrument"].includes(l.type) && (
                   <div style={{ display: "flex", gap: 4, marginTop: 2, alignItems: "center" }}>
