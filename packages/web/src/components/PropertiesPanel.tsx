@@ -1,4 +1,4 @@
-import type { Model, Thing, State, Link, LinkType, FanType, ModifierType, RefinementType, OPD, Duration, TimeUnit, ValueType, FunctionType, ComputationalObject, ComputationalProcess } from "@opmodel/core";
+import type { Model, Thing, State, Link, LinkType, FanType, ModifierType, RefinementType, OPD, Duration, TimeUnit, ValueType, FunctionType, ComputationalObject, ComputationalProcess, Range } from "@opmodel/core";
 import { getCompoundStates } from "@opmodel/core";
 import type { Command } from "../lib/commands";
 import { genId } from "../lib/ids";
@@ -207,6 +207,33 @@ function ComputationalSection({
             value={co.alias ?? ""}
             onChange={(e) => setComputational({ ...co, alias: e.target.value || undefined })}
           />
+        </div>
+        {/* Ranges (ISO §3.12) */}
+        <div style={{ marginTop: 4 }}>
+          <span style={{ fontSize: 9, color: "var(--text-muted)" }}>Ranges</span>
+          {(co.ranges ?? []).map((r, i) => (
+            <div key={i} style={{ display: "flex", gap: 2, alignItems: "center", marginTop: 2 }}>
+              <select className="props-panel__select" style={{ fontSize: 9, width: 24 }} value={r.min_inclusive ? "[" : "("} onChange={(e) => {
+                const ranges = [...(co.ranges ?? [])]; ranges[i] = { ...r, min_inclusive: e.target.value === "[" }; setComputational({ ...co, ranges });
+              }}><option value="[">[</option><option value="(">(</option></select>
+              <input className="props-panel__input" style={{ width: 36, fontSize: 9 }} type="number" step="any" value={r.min} onChange={(e) => {
+                const ranges = [...(co.ranges ?? [])]; ranges[i] = { ...r, min: Number(e.target.value) }; setComputational({ ...co, ranges });
+              }} />
+              <span style={{ fontSize: 9 }}>..</span>
+              <input className="props-panel__input" style={{ width: 36, fontSize: 9 }} type="number" step="any" value={r.max} onChange={(e) => {
+                const ranges = [...(co.ranges ?? [])]; ranges[i] = { ...r, max: Number(e.target.value) }; setComputational({ ...co, ranges });
+              }} />
+              <select className="props-panel__select" style={{ fontSize: 9, width: 24 }} value={r.max_inclusive ? "]" : ")"} onChange={(e) => {
+                const ranges = [...(co.ranges ?? [])]; ranges[i] = { ...r, max_inclusive: e.target.value === "]" }; setComputational({ ...co, ranges });
+              }}><option value="]">]</option><option value=")">)</option></select>
+              <button className="props-panel__remove-btn" onClick={() => {
+                const ranges = (co.ranges ?? []).filter((_, j) => j !== i); setComputational({ ...co, ranges: ranges.length > 0 ? ranges : undefined });
+              }}>×</button>
+            </div>
+          ))}
+          <button className="props-panel__add-btn" style={{ fontSize: 9, marginTop: 2 }} onClick={() => {
+            setComputational({ ...co, ranges: [...(co.ranges ?? []), { min: 0, max: 100, min_inclusive: true, max_inclusive: true }] });
+          }}>+ Range</button>
         </div>
       </div>
     );
@@ -627,7 +654,21 @@ export function PropertiesPanel({ model, thingId, opdId, dispatch }: Props) {
       <div className="props-panel__row">
         <div className="props-panel__section">
           <label className="props-panel__label">Kind</label>
-          <div className="props-panel__value">{thing.kind}</div>
+          <select
+            className="props-panel__select"
+            value={thing.kind}
+            onChange={(e) => {
+              const newKind = e.target.value as "object" | "process";
+              if (newKind === thing.kind) return;
+              const patch: Partial<Omit<Thing, "id">> = { kind: newKind };
+              if (newKind === "process") patch.perseverance = undefined;
+              if (newKind === "object") patch.duration = undefined as any;
+              dispatch({ tag: "updateThingProps", thingId, patch });
+            }}
+          >
+            <option value="object">object</option>
+            <option value="process">process</option>
+          </select>
         </div>
         <div className="props-panel__section">
           <label className="props-panel__label">Essence</label>
@@ -697,6 +738,34 @@ export function PropertiesPanel({ model, thingId, opdId, dispatch }: Props) {
           placeholder="Add notes..."
           rows={2}
         />
+      </div>
+
+      {/* Hyperlinks (ISO §3.72) */}
+      <div className="props-panel__section">
+        <label className="props-panel__label">Hyperlinks ({(thing.hyperlinks ?? []).length})</label>
+        {(thing.hyperlinks ?? []).map((url, i) => (
+          <div key={i} style={{ display: "flex", gap: 4, marginBottom: 2, alignItems: "center" }}>
+            <input
+              className="props-panel__input"
+              style={{ flex: 1, fontSize: 10 }}
+              value={url}
+              placeholder="https://..."
+              onChange={(e) => {
+                const links = [...(thing.hyperlinks ?? [])];
+                links[i] = e.target.value;
+                dispatch({ tag: "updateThingProps", thingId, patch: { hyperlinks: links } });
+              }}
+            />
+            <a href={url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, color: "var(--accent)" }} title="Open">↗</a>
+            <button className="props-panel__remove-btn" onClick={() => {
+              const links = (thing.hyperlinks ?? []).filter((_, j) => j !== i);
+              dispatch({ tag: "updateThingProps", thingId, patch: { hyperlinks: links.length > 0 ? links : undefined } });
+            }}>×</button>
+          </div>
+        ))}
+        <button className="props-panel__add-btn" onClick={() => {
+          dispatch({ tag: "updateThingProps", thingId, patch: { hyperlinks: [...(thing.hyperlinks ?? []), ""] } });
+        }}>+ Hyperlink</button>
       </div>
 
       {/* Duration — only for processes */}
