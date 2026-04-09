@@ -66,6 +66,33 @@ export function OplLiveEditor({ model, opdId, selectedThing, selectedLink, dispa
     return lines.slice(activeSentenceRef.span.line - 1, activeSentenceRef.span.endLine).join("\n").trim() || null;
   }, [activeSentenceRef, text]);
 
+  const refinementGuidance = useMemo(() => {
+    const opd = model.opds.get(opdId);
+    if (!opd?.refines || !opd.refinement_type) return null;
+    const refinee = model.things.get(opd.refines);
+    if (!refinee) return null;
+    const internalThings = [...model.appearances.values()]
+      .filter((app) => app.opd === opdId && app.internal === true && app.thing !== opd.refines)
+      .map((app) => model.things.get(app.thing))
+      .filter((thing): thing is NonNullable<typeof thing> => Boolean(thing));
+    if (internalThings.length > 1) return null;
+
+    const isES = model.settings.opl_language === "es";
+    const template = opd.refinement_type === "in-zoom"
+      ? (isES
+        ? `${refinee.name} se descompone en Subproceso 1 y Subproceso 2, en esa secuencia.`
+        : `${refinee.name} zooms into Subprocess 1 and Subprocess 2, in that sequence.`)
+      : (isES
+        ? `${refinee.name} se despliega en ${opd.name} en Parte 1 y Parte 2.`
+        : `${refinee.name} unfolds in ${opd.name} into Part 1 and Part 2.`);
+
+    const hint = opd.refinement_type === "in-zoom"
+      ? (isES ? "Empieza declarando los subprocesses principales del refinement." : "Start by declaring the main subprocesses of this refinement.")
+      : (isES ? "Empieza declarando las partes principales del objeto refinado." : "Start by declaring the main parts of the refined object.");
+
+    return { template, hint, refineeName: refinee.name, type: opd.refinement_type };
+  }, [model, opdId]);
+
   const issueCounts = useMemo(() => {
     const issues = validationResult?.issues ?? [];
     return {
@@ -238,6 +265,24 @@ export function OplLiveEditor({ model, opdId, selectedThing, selectedLink, dispa
     }
   }, [acVisible, acItems, acIndex, applyAutocomplete, text]);
 
+  const insertRefinementTemplate = useCallback(() => {
+    if (!refinementGuidance) return;
+    const trimmed = textRef.current.trimEnd();
+    const nextText = trimmed.includes(refinementGuidance.template)
+      ? textRef.current
+      : `${trimmed}${trimmed ? "\n" : ""}${refinementGuidance.template}\n`;
+    setText(nextText);
+    setStatus("dirty");
+    setErrorMsg(null);
+    requestAnimationFrame(() => {
+      const ta = textareaRef.current;
+      if (!ta) return;
+      ta.focus();
+      const start = nextText.lastIndexOf(refinementGuidance.template);
+      ta.setSelectionRange(start, start + refinementGuidance.template.length);
+    });
+  }, [refinementGuidance]);
+
   const handleApply = useCallback(() => {
     const t = textRef.current;
     if (!t.trim()) return;
@@ -339,6 +384,46 @@ export function OplLiveEditor({ model, opdId, selectedThing, selectedLink, dispa
           </span>
         )}
       </div>
+
+      {refinementGuidance && (
+        <div
+          className="opl-editor-refinement-card"
+          style={{
+            marginBottom: 8,
+            padding: "8px 10px",
+            border: "1px solid rgba(92, 184, 92, 0.35)",
+            background: "rgba(92, 184, 92, 0.08)",
+            borderRadius: 6,
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center", marginBottom: 4 }}>
+            <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em", color: "rgba(92, 184, 92, 0.95)", fontWeight: 700 }}>
+              Next OPL step
+            </div>
+            <button
+              type="button"
+              onClick={insertRefinementTemplate}
+              style={{
+                border: "1px solid var(--border)",
+                background: "var(--bg-panel)",
+                color: "var(--text-secondary)",
+                borderRadius: 4,
+                fontSize: 11,
+                padding: "2px 6px",
+                cursor: "pointer",
+              }}
+            >
+              Insert template
+            </button>
+          </div>
+          <div style={{ fontSize: 12, color: "var(--text-primary)", marginBottom: 4 }}>
+            {refinementGuidance.hint}
+          </div>
+          <div style={{ fontSize: 12, color: "var(--text-primary)", fontFamily: "var(--font-mono)", whiteSpace: "pre-wrap" }}>
+            {refinementGuidance.template}
+          </div>
+        </div>
+      )}
 
       {activeSentenceRef && activeSentenceText && (
         <div
