@@ -29,7 +29,7 @@ import { auditVisualOpd, computeVisualQuality } from "./lib/visual-lint";
 import { suggestLayoutForOpd } from "./lib/spatial-layout";
 import { buildPatchableOpdProjectionSliceFromProjection } from "./lib/projection-view";
 import { buildSearchResults } from "./lib/search";
-import { clearLocalSnapshots, listBackups, loadRecoveryInfo, restoreSnapshot, type LocalRecoveryInfo, type LocalSnapshot } from "./lib/local-persistence";
+import { clearLocalSnapshots, listBackups, loadRecoveryInfo, loadRecoveryInfoAsync, restoreSnapshot, type LocalRecoveryInfo, type LocalSnapshot } from "./lib/local-persistence";
 
 const STORAGE_KEY = "opmodel:current";
 
@@ -40,15 +40,6 @@ const VerificationChecklist = lazy(() => import("./components/VerificationCheckl
 const SdWizard = lazy(() => import("./components/SdWizard").then((m) => ({ default: m.SdWizard })));
 const OplImportPanel = lazy(() => import("./components/OplImportPanel").then((m) => ({ default: m.OplImportPanel })));
 
-export const EXAMPLES = [
-  { name: "HODOM HSC — Hospitalización Domiciliaria", file: "hodom-hsc.opmodel" },
-  { name: "Coffee Making", file: "coffee-making.opmodel" },
-  { name: "OnStar Driver Rescuing", file: "driver-rescuing.opmodel" },
-  { name: "Hospitalización Domiciliaria (legacy)", file: "hospitalizacion-domiciliaria.opmodel" },
-  { name: "HODOM V2 (Metodología OPM)", file: "hodom-v2.opmodel" },
-  { name: "HODOM HSC v0 (Hospital de San Carlos)", file: "hodom-hsc-v0.opmodel" },
-  { name: "EV-AMS (Canonical)", file: "ev-ams.opmodel" },
-];
 
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
@@ -82,33 +73,10 @@ function inlineSvgStyles(source: SVGSVGElement, clone: SVGSVGElement) {
   }
 }
 
-function QuickOpen({ onLoadExample }: { onLoadExample: (file: string) => void }) {
-  return (
-    <label className="header__quickopen" title="Load example fixture">
-      <span className="header__quickopen-label">Example</span>
-      <select
-        className="header__quickopen-select"
-        defaultValue=""
-        onChange={(e) => {
-          const file = e.target.value;
-          if (!file) return;
-          onLoadExample(file);
-          e.currentTarget.value = "";
-        }}
-      >
-        <option value="">Quick open…</option>
-        {EXAMPLES.map((ex) => (
-          <option key={ex.file} value={ex.file}>{ex.name}</option>
-        ))}
-      </select>
-    </label>
-  );
-}
 
-function FileMenu({ model, onNew, onLoadExample, onImport, onSave, onAutoLayoutAll, onShowVisualReport }: {
+function FileMenu({ model, onNew, onImport, onSave, onAutoLayoutAll, onShowVisualReport }: {
   model: Model;
   onNew: () => void;
-  onLoadExample: (file: string) => void;
   onImport: (model: Model) => void;
   onSave: () => void;
   onAutoLayoutAll?: () => void;
@@ -260,12 +228,6 @@ function FileMenu({ model, onNew, onLoadExample, onImport, onSave, onAutoLayoutA
             </>
           )}
           <div style={{ borderTop: "1px solid var(--border)", margin: "4px 0" }} />
-          {EXAMPLES.map(ex => (
-            <button key={ex.file} className="file-menu__item" onClick={() => { onLoadExample(ex.file); setOpen(false); }}>
-              {ex.name}
-            </button>
-          ))}
-          <div style={{ borderTop: "1px solid var(--border)", margin: "4px 0" }} />
           <button className="file-menu__item" onClick={exportOpl}>Export OPL text</button>
           <button className="file-menu__item" onClick={exportMd}>Export Markdown</button>
           <button className="file-menu__item" onClick={exportSvg}>Export SVG</button>
@@ -289,9 +251,9 @@ function FileMenu({ model, onNew, onLoadExample, onImport, onSave, onAutoLayoutA
   );
 }
 
-function Editor({ initialModel, recoveryInfo, onNew, onLoadExample, onImport }: { initialModel: Model; recoveryInfo: LocalRecoveryInfo | null; onNew: () => void; onLoadExample: (file: string) => void; onImport: (model: Model) => void }) {
+function Editor({ initialModel, recoveryInfo, onNew, onImport }: { initialModel: Model; recoveryInfo: LocalRecoveryInfo | null; onNew: () => void; onImport: (model: Model) => void }) {
   const store = useModelStore(initialModel);
-  const { model, projection, currentProjectionSlice, ui, dispatch, doUndo, doRedo, canUndo, canRedo, isDirty, lastError, save, saveStatus, localSnapshotInfo } = store;
+  const { model, projection, currentProjectionSlice, ui, dispatch, doUndo, doRedo, canUndo, canRedo, isDirty, lastError, save, saveStatus, saveError, localSnapshotInfo } = store;
 
   const [showSearch, setShowSearch] = useState(false);
   const [showRecoveryBanner, setShowRecoveryBanner] = useState(Boolean(recoveryInfo));
@@ -468,7 +430,7 @@ function Editor({ initialModel, recoveryInfo, onNew, onLoadExample, onImport }: 
   const validationLabel = isValid
     ? (errors.length > 0 ? `${errors.length} hints` : "Valid")
     : `${hardErrors.length} errors`;
-  const saveLabel = saveStatus === "saved" ? "Saved" : saveStatus === "saving" ? "Saving..." : "Storage full";
+  const saveLabel = saveStatus === "saved" ? "Saved" : saveStatus === "saving" ? "Saving..." : (saveError ?? "Storage full");
   const saveDetail = localSnapshotInfo.lastSavedAt
     ? `${new Date(localSnapshotInfo.lastSavedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · ${localSnapshotInfo.snapshotCount} local snapshot${localSnapshotInfo.snapshotCount === 1 ? "" : "s"}`
     : "No local snapshot yet";
@@ -557,11 +519,9 @@ function Editor({ initialModel, recoveryInfo, onNew, onLoadExample, onImport }: 
         >
           📝 OPL
         </button>
-        <QuickOpen onLoadExample={(f) => { if (!isDirty || confirm("You have unsaved changes. Continue?")) onLoadExample(f); }} />
         <FileMenu
           model={model}
           onNew={() => { if (!isDirty || confirm("You have unsaved changes. Create new model?")) onNew(); }}
-          onLoadExample={(f) => { if (!isDirty || confirm("You have unsaved changes. Continue?")) onLoadExample(f); }}
           onImport={(m) => { if (!isDirty || confirm("You have unsaved changes. Import?")) onImport(m); }}
           onSave={save}
           onAutoLayoutAll={autoLayoutAll}
@@ -684,9 +644,6 @@ function Editor({ initialModel, recoveryInfo, onNew, onLoadExample, onImport }: 
             </button>
             <button className="welcome-state__btn" onClick={() => setShowImportOpl(true)}>
               Import OPL
-            </button>
-            <button className="welcome-state__btn" onClick={() => onLoadExample("coffee-making.opmodel")}>
-              Load Example
             </button>
           </div>
         </div>
@@ -936,22 +893,7 @@ function Editor({ initialModel, recoveryInfo, onNew, onLoadExample, onImport }: 
   );
 }
 
-function loadFromStorage(): LocalRecoveryInfo | null {
-  return loadRecoveryInfo();
-}
 
-function loadExample(file = "coffee-making.opmodel"): Promise<Model> {
-  return fetch(`/${file}`)
-    .then((r) => {
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      return r.text();
-    })
-    .then((json) => {
-      const result = loadModel(json);
-      if (isOk(result)) return result.value;
-      throw new Error(`Load error: ${result.error.message}`);
-    });
-}
 
 export function App() {
   const [initialModel, setInitialModel] = useState<Model | null>(null);
@@ -961,16 +903,23 @@ export function App() {
   const [editorKey, setEditorKey] = useState(0);
 
   useEffect(() => {
-    // Try localStorage first, fallback to example
-    const stored = loadFromStorage();
+    // Try localStorage first (sync), then IndexedDB (async), fallback to new model
+    const stored = loadRecoveryInfo();
     if (stored) {
       setInitialModel(stored.model);
       setRecoveryInfo(stored);
       return;
     }
-    loadExample()
-      .then(setInitialModel)
-      .catch((e) => setError(e.message));
+    loadRecoveryInfoAsync()
+      .then((info) => {
+        if (info) {
+          setInitialModel(info.model);
+          setRecoveryInfo(info);
+        } else {
+          setInitialModel(createModel("New Model"));
+        }
+      })
+      .catch(() => setInitialModel(createModel("New Model")));
   }, []);
 
   const handleNew = useCallback(() => {
@@ -979,16 +928,6 @@ export function App() {
     setInitialModel(m);
     setRecoveryInfo(null);
     setEditorKey((k) => k + 1);
-  }, []);
-
-  const handleLoadExample = useCallback((file: string) => {
-    loadExample(file)
-      .then((m) => {
-        setInitialModel(m);
-        setRecoveryInfo(null);
-        setEditorKey((k) => k + 1);
-      })
-      .catch((e) => setError(e.message));
   }, []);
 
   const handleImport = useCallback((m: Model) => {
@@ -1014,5 +953,5 @@ export function App() {
     );
   }
 
-  return <ErrorBoundary><Editor key={editorKey} initialModel={initialModel} recoveryInfo={recoveryInfo} onNew={handleNew} onLoadExample={handleLoadExample} onImport={handleImport} /></ErrorBoundary>;
+  return <ErrorBoundary><Editor key={editorKey} initialModel={initialModel} recoveryInfo={recoveryInfo} onNew={handleNew} onImport={handleImport} /></ErrorBoundary>;
 }
