@@ -24,6 +24,19 @@ export function nextChildOpdName(model: Model, parentOpdId: string): string {
   return `${parentName}${sep}${maxN + 1}`;
 }
 
+function compactThingLabel(name: string): string {
+  return name
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 36);
+}
+
+export function nextChildOpdDisplayName(model: Model, parentOpdId: string, thing: Thing, type: RefinementType): string {
+  const serial = nextChildOpdName(model, parentOpdId);
+  const prefix = type === "in-zoom" ? "In-zoom" : "Unfold";
+  return `${serial} · ${prefix} · ${compactThingLabel(thing.name)}`;
+}
+
 export function isInOwnRefinementTree(model: Model, thingId: string, opdId: string): boolean {
   let id: string | null = opdId;
   while (id) {

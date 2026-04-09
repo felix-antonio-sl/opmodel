@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createModel, addThing, addAppearance, addOPD } from "@opmodel/core";
-import { canCreateRefinement, getRefinementContext, nextChildOpdName } from "../src/lib/refinement-navigation";
+import { canCreateRefinement, getRefinementContext, nextChildOpdDisplayName, nextChildOpdName } from "../src/lib/refinement-navigation";
 
 function buildRefinementModel() {
   let model = createModel("Test");
@@ -37,6 +37,8 @@ describe("getRefinementContext", () => {
     const model = buildRefinementModel();
     expect(nextChildOpdName(model, "opd-sd")).toBe("SD4");
     const coffee = model.things.get("thing-coffee") ?? null;
+    expect(coffee).toBeTruthy();
+    expect(nextChildOpdDisplayName(model, "opd-sd", coffee!, "in-zoom")).toBe("SD4 · In-zoom · Coffee Making");
     const grinding = model.things.get("thing-grinding") ?? null;
     const coffeeChildren = getRefinementContext(model, "opd-sd", "thing-coffee").selectedThingChildRefinements;
     const grindingChildren = getRefinementContext(model, "opd-sd", "thing-grinding").selectedThingChildRefinements;

@@ -17,7 +17,7 @@ import { LINK_COLORS, paddedBounds } from "../lib/visual-rules";
 import { suggestLayoutForOpd } from "../lib/spatial-layout";
 import { auditVisualOpd, computeVisualQuality } from "../lib/visual-lint";
 import { routeEdges, type EdgePath } from "../lib/edge-router";
-import { getRefinementActionState, getRefinementContext, nextChildOpdName } from "../lib/refinement-navigation";
+import { getRefinementActionState, getRefinementContext, nextChildOpdDisplayName } from "../lib/refinement-navigation";
 
 import { ThingNode } from "./canvas/ThingNode";
 import { LinkLine } from "./canvas/LinkLine";
@@ -1036,8 +1036,8 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, select
                 {!hasInZoom && (
                   <button className="canvas-context-menu__item" onClick={() => {
                     const childOpdId = genId("opd");
-                    const childIdx = [...model.opds.values()].filter(o => o.parent_opd === opdId).length + 1;
-                    if (dispatch({ tag: "refineThing", thingId: contextMenu.thingId, opdId, refinementType: "in-zoom", childOpdId, childOpdName: `SD${childIdx}` })) {
+                    const childOpdName = nextChildOpdDisplayName(model, opdId, thing, "in-zoom");
+                    if (dispatch({ tag: "refineThing", thingId: contextMenu.thingId, opdId, refinementType: "in-zoom", childOpdId, childOpdName })) {
                       dispatch({ tag: "selectOpd", opdId: childOpdId });
                     }
                     setContextMenu(null);
@@ -1048,8 +1048,8 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, select
                 {thing.kind === "object" && !hasUnfold && (
                   <button className="canvas-context-menu__item" onClick={() => {
                     const childOpdId = genId("opd");
-                    const childIdx = [...model.opds.values()].filter(o => o.parent_opd === opdId).length + 1;
-                    if (dispatch({ tag: "refineThing", thingId: contextMenu.thingId, opdId, refinementType: "unfold", childOpdId, childOpdName: `SD${childIdx}` })) {
+                    const childOpdName = nextChildOpdDisplayName(model, opdId, thing, "unfold");
+                    if (dispatch({ tag: "refineThing", thingId: contextMenu.thingId, opdId, refinementType: "unfold", childOpdId, childOpdName })) {
                       dispatch({ tag: "selectOpd", opdId: childOpdId });
                     }
                     setContextMenu(null);
@@ -1145,7 +1145,7 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, select
                 onClick={() => {
                   if (!inZoomAction.enabled) return;
                   const childOpdId = genId("opd");
-                  const childOpdName = nextChildOpdName(model, opdId);
+                  const childOpdName = nextChildOpdDisplayName(model, opdId, selectedThingEntity, "in-zoom");
                   if (dispatch({ tag: "refineThing", thingId: selectedThingEntity.id, opdId, refinementType: "in-zoom", childOpdId, childOpdName })) {
                     dispatch({ tag: "selectOpd", opdId: childOpdId });
                   }
@@ -1163,7 +1163,7 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, select
                 onClick={() => {
                   if (!unfoldAction.enabled) return;
                   const childOpdId = genId("opd");
-                  const childOpdName = nextChildOpdName(model, opdId);
+                  const childOpdName = nextChildOpdDisplayName(model, opdId, selectedThingEntity, "unfold");
                   if (dispatch({ tag: "refineThing", thingId: selectedThingEntity.id, opdId, refinementType: "unfold", childOpdId, childOpdName })) {
                     dispatch({ tag: "selectOpd", opdId: childOpdId });
                   }

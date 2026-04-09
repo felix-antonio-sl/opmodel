@@ -2,7 +2,7 @@ import type { Model, Thing, State, Link, LinkType, FanType, ModifierType, Refine
 import { getCompoundStates } from "@opmodel/core";
 import type { Command } from "../lib/commands";
 import { genId } from "../lib/ids";
-import { getRefinementActionState, nextChildOpdName } from "../lib/refinement-navigation";
+import { getRefinementActionState, nextChildOpdDisplayName } from "../lib/refinement-navigation";
 
 const TIME_UNITS: TimeUnit[] = ["ms", "s", "min", "h", "d"];
 
@@ -587,7 +587,7 @@ function RefineSection({
 
   const handleRefine = (refinementType: RefinementType) => {
     const childOpdId = genId("opd");
-    const childOpdName = nextChildOpdName(model, opdId);
+    const childOpdName = nextChildOpdDisplayName(model, opdId, thing, refinementType);
     const ok = dispatch({
       tag: "refineThing", thingId, opdId,
       refinementType, childOpdId, childOpdName,
