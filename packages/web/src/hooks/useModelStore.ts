@@ -40,6 +40,11 @@ export interface UIState {
 
 export type SaveStatus = "saved" | "saving" | "error";
 
+export interface LocalSnapshotInfo {
+  lastSavedAt: string | null;
+  snapshotCount: number;
+}
+
 export interface ModelStore {
   /** Current model — extract from History comonad */
   model: Model;
@@ -67,6 +72,8 @@ export interface ModelStore {
   save: () => void;
   /** Autosave status: saved | saving | error */
   saveStatus: SaveStatus;
+  /** Local persistence metadata for UI trust cues */
+  localSnapshotInfo: LocalSnapshotInfo;
 }
 
 export function useModelStore(initialModel: Model): ModelStore {
@@ -84,6 +91,7 @@ export function useModelStore(initialModel: Model): ModelStore {
   });
   const [lastError, setLastError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
+  const [localSnapshotInfo, setLocalSnapshotInfo] = useState<LocalSnapshotInfo>({ lastSavedAt: null, snapshotCount: 0 });
 
   const projection = useMemo(() => projectLegacyModel(history.present), [history.present]);
   const currentProjectionSlice = useMemo(
@@ -105,7 +113,8 @@ export function useModelStore(initialModel: Model): ModelStore {
     const intervalMs = (history.present.settings.autosave_interval_s ?? 0.3) * 1000;
     saveTimer.current = setTimeout(() => {
       try {
-        saveToLocalSnapshots(history.present);
+        const { current, backups } = saveToLocalSnapshots(history.present);
+        setLocalSnapshotInfo({ lastSavedAt: current.savedAt, snapshotCount: backups.length });
         setSaveStatus("saved");
       } catch {
         setSaveStatus("error");
@@ -315,5 +324,6 @@ export function useModelStore(initialModel: Model): ModelStore {
     lastError,
     save,
     saveStatus,
+    localSnapshotInfo,
   };
 }

@@ -291,7 +291,7 @@ function FileMenu({ model, onNew, onLoadExample, onImport, onSave, onAutoLayoutA
 
 function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel: Model; onNew: () => void; onLoadExample: (file: string) => void; onImport: (model: Model) => void }) {
   const store = useModelStore(initialModel);
-  const { model, projection, currentProjectionSlice, ui, dispatch, doUndo, doRedo, canUndo, canRedo, isDirty, lastError, save, saveStatus } = store;
+  const { model, projection, currentProjectionSlice, ui, dispatch, doUndo, doRedo, canUndo, canRedo, isDirty, lastError, save, saveStatus, localSnapshotInfo } = store;
 
   const [showSearch, setShowSearch] = useState(false);
   const [showValidation, setShowValidation] = useState(false);
@@ -468,6 +468,9 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
     ? (errors.length > 0 ? `${errors.length} hints` : "Valid")
     : `${hardErrors.length} errors`;
   const saveLabel = saveStatus === "saved" ? "Saved" : saveStatus === "saving" ? "Saving..." : "Storage full";
+  const saveDetail = localSnapshotInfo.lastSavedAt
+    ? `${new Date(localSnapshotInfo.lastSavedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · ${localSnapshotInfo.snapshotCount} local snapshot${localSnapshotInfo.snapshotCount === 1 ? "" : "s"}`
+    : "No local snapshot yet";
 
   const [layoutAllToast, setLayoutAllToast] = useState<string | null>(null);
   const autoLayoutAll = useCallback(() => {
@@ -570,7 +573,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
         >
           Visual {visualQuality.grade} {visualQuality.score}
         </button>
-        <div className={`header__pill header__pill--save header__pill--save-${saveStatus}`} title="Autosave status">
+        <div className={`header__pill header__pill--save header__pill--save-${saveStatus}`} title={`Autosave status • ${saveDetail}`}>
           {saveLabel}
         </div>
         <div className="header__badge">v{model.opmodel}</div>
@@ -842,9 +845,10 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
             <div className="status-bar__sep" />
           </>
         )}
-        <span className={`status-bar__save status-bar__save--${saveStatus}`}>
+        <span className={`status-bar__save status-bar__save--${saveStatus}`} title={saveDetail}>
           {saveLabel}
         </span>
+        <span className="status-bar__save-detail">{saveDetail}</span>
         <div className="status-bar__sep" />
         <span className="status-bar__version">opmodel {model.opmodel}</span>
       </footer>

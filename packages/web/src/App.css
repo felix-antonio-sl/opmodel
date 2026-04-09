@@ -1898,6 +1898,11 @@ button.header__pill:hover {
   font-weight: 500;
 }
 
+.status-bar__save-detail {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
 .status-bar__version {
   color: var(--text-muted);
   font-size: 10px;
