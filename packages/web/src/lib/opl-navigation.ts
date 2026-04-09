@@ -161,13 +161,7 @@ function sentenceScore(sentence: OplSentence, thingName: string, linkNames?: { s
   }
 }
 
-export function findSentenceForSelection(
-  refs: ParsedSentenceRef[],
-  model: Model,
-  selectedThingId?: string | null,
-  selectedLinkId?: string | null,
-  preferredOpdId?: string | null,
-): ParsedSentenceRef | null {
+function selectionContext(model: Model, selectedThingId?: string | null, selectedLinkId?: string | null) {
   const selectedThing = selectedThingId ? model.things.get(selectedThingId) : null;
   const selectedLink = selectedLinkId ? model.links.get(selectedLinkId) : null;
   const linkNames = selectedLink
@@ -177,19 +171,41 @@ export function findSentenceForSelection(
       }
     : undefined;
   const thingName = selectedThing?.name ?? linkNames?.source;
-  if (!thingName && !linkNames) return null;
+  return { thingName, linkNames };
+}
 
+export function findRelatedSentenceRefs(
+  refs: ParsedSentenceRef[],
+  model: Model,
+  selectedThingId?: string | null,
+  selectedLinkId?: string | null,
+  preferredOpdId?: string | null,
+): ParsedSentenceRef[] {
+  const { thingName, linkNames } = selectionContext(model, selectedThingId, selectedLinkId);
+  if (!thingName && !linkNames) return [];
   const preferredOpdName = preferredOpdId ? model.opds.get(preferredOpdId)?.name : null;
-  let best: { ref: ParsedSentenceRef; score: number } | null = null;
+  return refs
+    .map((ref) => ({
+      ref,
+      score: sentenceScore(ref.sentence, thingName ?? "", linkNames) + (preferredOpdName && ref.doc.opdName === preferredOpdName ? 10 : 0),
+    }))
+    .filter((entry) => entry.score > 0)
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      if (a.ref.span.line !== b.ref.span.line) return a.ref.span.line - b.ref.span.line;
+      return a.ref.span.column - b.ref.span.column;
+    })
+    .map((entry) => entry.ref);
+}
 
-  for (const ref of refs) {
-    let score = sentenceScore(ref.sentence, thingName ?? "", linkNames);
-    if (score === 0) continue;
-    if (preferredOpdName && ref.doc.opdName === preferredOpdName) score += 10;
-    if (!best || score > best.score) best = { ref, score };
-  }
-
-  return best?.ref ?? null;
+export function findSentenceForSelection(
+  refs: ParsedSentenceRef[],
+  model: Model,
+  selectedThingId?: string | null,
+  selectedLinkId?: string | null,
+  preferredOpdId?: string | null,
+): ParsedSentenceRef | null {
+  return findRelatedSentenceRefs(refs, model, selectedThingId, selectedLinkId, preferredOpdId)[0] ?? null;
 }
 
 export function findSentenceAtLine(refs: ParsedSentenceRef[], line: number) {

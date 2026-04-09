@@ -11,11 +11,15 @@ interface Props {
   activeSentenceRef?: ParsedSentenceRef | null;
   activeSentenceText?: string | null;
   guidance?: Guidance | null;
+  relatedIndex?: number;
+  relatedCount?: number;
+  onPrev?: () => void;
+  onNext?: () => void;
   onReveal?: () => void;
   onInsertTemplate?: () => void;
 }
 
-export function OplContextCard({ activeSentenceRef, activeSentenceText, guidance, onReveal, onInsertTemplate }: Props) {
+export function OplContextCard({ activeSentenceRef, activeSentenceText, guidance, relatedIndex = 0, relatedCount = 0, onPrev, onNext, onReveal, onInsertTemplate }: Props) {
   if (!activeSentenceRef && !guidance) return null;
 
   return (
@@ -42,23 +46,32 @@ export function OplContextCard({ activeSentenceRef, activeSentenceText, guidance
             <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em", color: "rgba(124, 92, 255, 0.95)", fontWeight: 700 }}>
               Current focus
             </div>
-            {onReveal && (
-              <button
-                type="button"
-                onClick={onReveal}
-                style={{
-                  border: "1px solid var(--border)",
-                  background: "var(--bg-panel)",
-                  color: "var(--text-secondary)",
-                  borderRadius: 4,
-                  fontSize: 11,
-                  padding: "2px 6px",
-                  cursor: "pointer",
-                }}
-              >
-                Reveal
-              </button>
-            )}
+            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              {relatedCount > 1 && (
+                <>
+                  <button type="button" onClick={onPrev} style={{ border: "1px solid var(--border)", background: "var(--bg-panel)", color: "var(--text-secondary)", borderRadius: 4, fontSize: 11, padding: "2px 6px", cursor: "pointer" }}>←</button>
+                  <span style={{ fontSize: 10, color: "var(--text-muted)", minWidth: 34, textAlign: "center" }}>{relatedIndex + 1}/{relatedCount}</span>
+                  <button type="button" onClick={onNext} style={{ border: "1px solid var(--border)", background: "var(--bg-panel)", color: "var(--text-secondary)", borderRadius: 4, fontSize: 11, padding: "2px 6px", cursor: "pointer" }}>→</button>
+                </>
+              )}
+              {onReveal && (
+                <button
+                  type="button"
+                  onClick={onReveal}
+                  style={{
+                    border: "1px solid var(--border)",
+                    background: "var(--bg-panel)",
+                    color: "var(--text-secondary)",
+                    borderRadius: 4,
+                    fontSize: 11,
+                    padding: "2px 6px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Reveal
+                </button>
+              )}
+            </div>
           </div>
           <div style={{ fontSize: 12, color: "var(--text-primary)", fontFamily: "var(--font-mono)", whiteSpace: "pre-wrap" }}>
             {activeSentenceText}

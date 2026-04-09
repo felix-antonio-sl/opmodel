@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import type { Model } from "@opmodel/core";
-import { findSentenceForSelection, getActiveSentenceText, getRelatedHighlightNames, parseSentenceRefs } from "../lib/opl-navigation";
+import { findRelatedSentenceRefs, findSentenceForSelection, getActiveSentenceText, getRelatedHighlightNames, parseSentenceRefs } from "../lib/opl-navigation";
 
 interface UseOplContextOptions {
   model: Model;
@@ -15,9 +15,13 @@ export function useOplContext({ model, opdId, text, selectedThing, selectedLink,
   const currentOpdName = fallbackOpdName ?? model.opds.get(opdId)?.name ?? "SD";
 
   const sentenceRefs = useMemo(() => parseSentenceRefs(text, currentOpdName), [text, currentOpdName]);
-  const activeSentenceRef = useMemo(
-    () => findSentenceForSelection(sentenceRefs, model, selectedThing ?? null, selectedLink ?? null, opdId),
+  const relatedSentenceRefs = useMemo(
+    () => findRelatedSentenceRefs(sentenceRefs, model, selectedThing ?? null, selectedLink ?? null, opdId),
     [sentenceRefs, model, selectedThing, selectedLink, opdId],
+  );
+  const activeSentenceRef = useMemo(
+    () => relatedSentenceRefs[0] ?? findSentenceForSelection(sentenceRefs, model, selectedThing ?? null, selectedLink ?? null, opdId),
+    [relatedSentenceRefs, sentenceRefs, model, selectedThing, selectedLink, opdId],
   );
   const activeSentenceText = useMemo(() => getActiveSentenceText(text, activeSentenceRef), [text, activeSentenceRef]);
   const relatedHighlightNames = useMemo(
@@ -30,6 +34,7 @@ export function useOplContext({ model, opdId, text, selectedThing, selectedLink,
     sentenceRefs,
     activeSentenceRef,
     activeSentenceText,
+    relatedSentenceRefs,
     relatedHighlightNames,
   };
 }

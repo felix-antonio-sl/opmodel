@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { createModel, addThing, addAppearance, addLink } from "@opmodel/core";
 import { OplLiveEditor } from "../src/components/OplLiveEditor";
 
@@ -35,5 +35,29 @@ describe("OplLiveEditor focus card", () => {
     expect(card).toBeTruthy();
     expect(within(card).getByText(/Boiling consumes Water\./i)).toBeTruthy();
     expect(within(card).getByText(/L4:1/i)).toBeTruthy();
+  });
+
+  it("can move through related sentences for the current selection", () => {
+    const model = buildSimpleModel();
+    render(
+      React.createElement(OplLiveEditor, {
+        model,
+        opdId: "opd-sd",
+        selectedThing: "thing-water",
+        selectedLink: null,
+        dispatch: vi.fn(() => true),
+      }),
+    );
+
+    const card = document.querySelector(".opl-editor-context-card") as HTMLElement;
+    expect(within(card).getByText(/Water is an object, physical, system\./i)).toBeTruthy();
+    expect(within(card).getByText("1/3")).toBeTruthy();
+
+    fireEvent.click(within(card).getByRole("button", { name: "→" }));
+    expect(within(card).getByText(/Boiling consumes Water\./i)).toBeTruthy();
+    expect(within(card).getByText("2/3")).toBeTruthy();
+
+    fireEvent.click(within(card).getByRole("button", { name: "←" }));
+    expect(within(card).getByText(/Water is an object, physical, system\./i)).toBeTruthy();
   });
 });

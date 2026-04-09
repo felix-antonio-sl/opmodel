@@ -85,13 +85,22 @@ export function OplLiveEditor({ model, opdId, selectedThing, selectedLink, dispa
   }, []);
 
   const lineCount = text.split("\n").length;
-  const { sentenceRefs, activeSentenceRef, activeSentenceText } = useOplContext({
+  const { sentenceRefs, activeSentenceRef, activeSentenceText, relatedSentenceRefs } = useOplContext({
     model,
     opdId,
     text,
     selectedThing,
     selectedLink,
   });
+  const [contextIndex, setContextIndex] = useState(0);
+  useEffect(() => {
+    setContextIndex(0);
+  }, [text, opdId, selectedThing, selectedLink]);
+  const displayedSentenceRef = relatedSentenceRefs[contextIndex] ?? activeSentenceRef;
+  const displayedSentenceText = useMemo(
+    () => (displayedSentenceRef ? text.split("\n").slice(displayedSentenceRef.span.line - 1, displayedSentenceRef.span.endLine).join("\n").trim() : null),
+    [displayedSentenceRef, text],
+  );
 
   const refinementGuidance = useMemo(() => {
     const opd = model.opds.get(opdId);
@@ -369,10 +378,14 @@ export function OplLiveEditor({ model, opdId, selectedThing, selectedLink, dispa
       </div>
 
       <OplContextCard
-        activeSentenceRef={activeSentenceRef}
-        activeSentenceText={activeSentenceText}
+        activeSentenceRef={displayedSentenceRef}
+        activeSentenceText={displayedSentenceText ?? activeSentenceText}
         guidance={refinementGuidance}
-        onReveal={() => revealSelection(selectedThing, selectedLink)}
+        relatedIndex={contextIndex}
+        relatedCount={relatedSentenceRefs.length}
+        onPrev={() => setContextIndex((i) => (i - 1 + relatedSentenceRefs.length) % relatedSentenceRefs.length)}
+        onNext={() => setContextIndex((i) => (i + 1) % relatedSentenceRefs.length)}
+        onReveal={() => displayedSentenceRef ? focusIssue({ phase: "V3-semantic", severity: "warning", message: displayedSentenceText ?? "", line: displayedSentenceRef.span.line, column: displayedSentenceRef.span.column, endLine: displayedSentenceRef.span.endLine, endColumn: displayedSentenceRef.span.endColumn }, null) : revealSelection(selectedThing, selectedLink)}
         onInsertTemplate={insertRefinementTemplate}
       />
 
@@ -381,7 +394,7 @@ export function OplLiveEditor({ model, opdId, selectedThing, selectedLink, dispa
           {Array.from({ length: lineCount }, (_, i) => {
             const lineNumber = i + 1;
             const severity = lineIssueSeverity.get(lineNumber);
-            const isActiveLine = activeSentenceRef && lineNumber >= activeSentenceRef.span.line && lineNumber <= activeSentenceRef.span.endLine;
+            const isActiveLine = displayedSentenceRef && lineNumber >= displayedSentenceRef.span.line && lineNumber <= displayedSentenceRef.span.endLine;
             return (
               <div
                 key={i}
