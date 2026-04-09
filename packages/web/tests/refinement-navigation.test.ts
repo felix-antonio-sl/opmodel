@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createModel, addThing, addAppearance, addOPD } from "@opmodel/core";
-import { getRefinementContext } from "../src/lib/refinement-navigation";
+import { canCreateRefinement, getRefinementContext, nextChildOpdName } from "../src/lib/refinement-navigation";
 
 function buildRefinementModel() {
   let model = createModel("Test");
@@ -31,5 +31,26 @@ describe("getRefinementContext", () => {
     const model = buildRefinementModel();
     const ctx = getRefinementContext(model, "opd-sd", "thing-coffee");
     expect(ctx.selectedThingChildRefinements.map((opd) => opd.id)).toEqual(["opd-sd1", "opd-sd1b"]);
+  });
+
+  it("provides naming and creation helpers for new refinements", () => {
+    const model = buildRefinementModel();
+    expect(nextChildOpdName(model, "opd-sd")).toBe("SD4");
+    const coffee = model.things.get("thing-coffee") ?? null;
+    const grinding = model.things.get("thing-grinding") ?? null;
+    const coffeeChildren = getRefinementContext(model, "opd-sd", "thing-coffee").selectedThingChildRefinements;
+    const grindingChildren = getRefinementContext(model, "opd-sd", "thing-grinding").selectedThingChildRefinements;
+    expect(canCreateRefinement(coffee, coffeeChildren, "in-zoom")).toBe(false);
+    expect(canCreateRefinement(coffee, coffeeChildren, "unfold")).toBe(false);
+    expect(canCreateRefinement(grinding, grindingChildren, "in-zoom")).toBe(false);
+    expect(canCreateRefinement(grinding, grindingChildren, "unfold")).toBe(false);
+  });
+
+  it("allows create actions only when that refinement does not yet exist", () => {
+    const model = buildRefinementModel();
+    const grinding = model.things.get("thing-grinding") ?? null;
+    const grindingChildren = getRefinementContext(model, "opd-sd", "thing-grinding").selectedThingChildRefinements;
+    expect(canCreateRefinement(grinding, grindingChildren, "unfold")).toBe(false);
+    expect(canCreateRefinement(null, [], "in-zoom")).toBe(false);
   });
 });

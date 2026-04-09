@@ -1,4 +1,4 @@
-import type { Model, OPD, Thing } from "@opmodel/core";
+import type { Model, OPD, Thing, RefinementType } from "@opmodel/core";
 
 export interface RefinementContext {
   currentOpd: OPD | null;
@@ -6,6 +6,23 @@ export interface RefinementContext {
   refinedThing: Thing | null;
   siblingRefinements: OPD[];
   selectedThingChildRefinements: OPD[];
+}
+
+export function nextChildOpdName(model: Model, parentOpdId: string): string {
+  const parentOpd = model.opds.get(parentOpdId);
+  const parentName = parentOpd?.name ?? "SD";
+  let maxN = 0;
+  for (const opd of model.opds.values()) {
+    if (opd.parent_opd === parentOpdId) maxN += 1;
+  }
+  const sep = /\d$/.test(parentName) ? "." : "";
+  return `${parentName}${sep}${maxN + 1}`;
+}
+
+export function canCreateRefinement(thing: Thing | null, existing: OPD[], type: RefinementType): boolean {
+  if (!thing) return false;
+  if (type === "unfold" && thing.kind !== "object") return false;
+  return !existing.some((opd) => opd.refinement_type === type);
 }
 
 export function getRefinementContext(model: Model, opdId: string, selectedThingId?: string | null): RefinementContext {

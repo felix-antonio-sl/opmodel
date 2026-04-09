@@ -1020,6 +1020,11 @@ button.header__pill:hover {
   color: var(--success);
 }
 
+.canvas-refinement-nav__item--create {
+  color: var(--accent);
+  font-weight: 600;
+}
+
 .canvas-zoom {
   position: absolute;
   bottom: 12px;

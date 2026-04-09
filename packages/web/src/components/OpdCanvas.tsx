@@ -17,7 +17,7 @@ import { LINK_COLORS, paddedBounds } from "../lib/visual-rules";
 import { suggestLayoutForOpd } from "../lib/spatial-layout";
 import { auditVisualOpd, computeVisualQuality } from "../lib/visual-lint";
 import { routeEdges, type EdgePath } from "../lib/edge-router";
-import { getRefinementContext } from "../lib/refinement-navigation";
+import { canCreateRefinement, getRefinementContext, nextChildOpdName } from "../lib/refinement-navigation";
 
 import { ThingNode } from "./canvas/ThingNode";
 import { LinkLine } from "./canvas/LinkLine";
@@ -62,6 +62,7 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, select
   const [attentionThingId, setAttentionThingId] = useState<string | null>(null);
   const [attentionLinkId, setAttentionLinkId] = useState<string | null>(null);
   const refinementContext = useMemo(() => getRefinementContext(model, opdId, selectedThing), [model, opdId, selectedThing]);
+  const selectedThingEntity = selectedThing ? model.things.get(selectedThing) ?? null : null;
 
   const toggleLinkCategory = (category: string) => {
     setHiddenLinkTypes(prev => {
@@ -1099,7 +1100,7 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, select
             </span>
           )}
         </div>
-        {(refinementContext.parentOpd || refinementContext.siblingRefinements.length > 0 || refinementContext.selectedThingChildRefinements.length > 0) && (
+        {(refinementContext.parentOpd || refinementContext.siblingRefinements.length > 0 || refinementContext.selectedThingChildRefinements.length > 0 || selectedThingEntity) && (
           <div className="canvas-refinement-nav">
             {refinementContext.parentOpd && (
               <button
@@ -1132,6 +1133,36 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, select
                 Alternate {sibling.refinement_type}: {sibling.name}
               </button>
             ))}
+            {selectedThingEntity && canCreateRefinement(selectedThingEntity, refinementContext.selectedThingChildRefinements, "in-zoom") && (
+              <button
+                className="canvas-refinement-nav__item canvas-refinement-nav__item--create"
+                type="button"
+                onClick={() => {
+                  const childOpdId = genId("opd");
+                  const childOpdName = nextChildOpdName(model, opdId);
+                  if (dispatch({ tag: "refineThing", thingId: selectedThingEntity.id, opdId, refinementType: "in-zoom", childOpdId, childOpdName })) {
+                    dispatch({ tag: "selectOpd", opdId: childOpdId });
+                  }
+                }}
+              >
+                + In-zoom {selectedThingEntity.name}
+              </button>
+            )}
+            {selectedThingEntity && canCreateRefinement(selectedThingEntity, refinementContext.selectedThingChildRefinements, "unfold") && (
+              <button
+                className="canvas-refinement-nav__item canvas-refinement-nav__item--create"
+                type="button"
+                onClick={() => {
+                  const childOpdId = genId("opd");
+                  const childOpdName = nextChildOpdName(model, opdId);
+                  if (dispatch({ tag: "refineThing", thingId: selectedThingEntity.id, opdId, refinementType: "unfold", childOpdId, childOpdName })) {
+                    dispatch({ tag: "selectOpd", opdId: childOpdId });
+                  }
+                }}
+              >
+                + Unfold {selectedThingEntity.name}
+              </button>
+            )}
             {selectedThing && refinementContext.selectedThingChildRefinements.map((child) => (
               <button
                 key={child.id}
