@@ -26,8 +26,7 @@ import {
 import { type Command, interpret } from "../lib/commands";
 import type { EditorMode, LinkTypeChoice, SimulationUIState } from "../lib/commands";
 import { buildPatchableOpdProjectionSliceFromProjection, type PatchableOpdProjectionSlice } from "../lib/projection-view";
-
-const STORAGE_KEY = "opmodel:current";
+import { saveToLocalSnapshots } from "../lib/local-persistence";
 
 export interface UIState {
   currentOpd: string;
@@ -106,7 +105,7 @@ export function useModelStore(initialModel: Model): ModelStore {
     const intervalMs = (history.present.settings.autosave_interval_s ?? 0.3) * 1000;
     saveTimer.current = setTimeout(() => {
       try {
-        localStorage.setItem(STORAGE_KEY, saveModel(history.present));
+        saveToLocalSnapshots(history.present);
         setSaveStatus("saved");
       } catch {
         setSaveStatus("error");

@@ -29,6 +29,7 @@ import { auditVisualOpd, computeVisualQuality } from "./lib/visual-lint";
 import { suggestLayoutForOpd } from "./lib/spatial-layout";
 import { buildPatchableOpdProjectionSliceFromProjection } from "./lib/projection-view";
 import { buildSearchResults } from "./lib/search";
+import { clearLocalSnapshots, listBackups, loadCurrentFromStorage, restoreSnapshot, type LocalSnapshot } from "./lib/local-persistence";
 
 const STORAGE_KEY = "opmodel:current";
 
@@ -115,8 +116,13 @@ function FileMenu({ model, onNew, onLoadExample, onImport, onSave, onAutoLayoutA
 }) {
   const [open, setOpen] = useState(false);
   const [openError, setOpenError] = useState<string | null>(null);
+  const [backups, setBackups] = useState<LocalSnapshot[]>([]);
   const menuRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (open) setBackups(listBackups());
+  }, [open]);
 
   // Close on outside click
   useEffect(() => {
@@ -132,6 +138,16 @@ function FileMenu({ model, onNew, onLoadExample, onImport, onSave, onAutoLayoutA
 
   const handleOpen = () => {
     fileInputRef.current?.click();
+    setOpen(false);
+  };
+
+  const handleRestoreSnapshot = (snapshot: LocalSnapshot) => {
+    const restored = restoreSnapshot(snapshot);
+    if (!restored) {
+      setOpenError("Could not restore local snapshot");
+      return;
+    }
+    onImport(restored);
     setOpen(false);
   };
 
@@ -229,6 +245,20 @@ function FileMenu({ model, onNew, onLoadExample, onImport, onSave, onAutoLayoutA
           <button className="file-menu__item" onClick={() => { (window as any).__openWizard?.(); setOpen(false); }} style={{ color: "var(--accent)" }}>✨ New with SD Wizard</button>
           <button className="file-menu__item" onClick={handleOpen}>Open...</button>
           <button className="file-menu__item" onClick={() => { onSave(); setOpen(false); }}>Save .opmodel</button>
+          {backups.length > 0 && (
+            <>
+              <div style={{ borderTop: "1px solid var(--border)", margin: "4px 0" }} />
+              <div className="file-menu__section-label">Restore recent local snapshots</div>
+              {backups.slice(0, 3).map((snapshot) => (
+                <button key={snapshot.id} className="file-menu__item" onClick={() => handleRestoreSnapshot(snapshot)}>
+                  {snapshot.name} · {new Date(snapshot.savedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                </button>
+              ))}
+              <button className="file-menu__item" onClick={() => { clearLocalSnapshots(); setBackups([]); }} style={{ color: "var(--danger)" }}>
+                Clear local snapshots
+              </button>
+            </>
+          )}
           <div style={{ borderTop: "1px solid var(--border)", margin: "4px 0" }} />
           {EXAMPLES.map(ex => (
             <button key={ex.file} className="file-menu__item" onClick={() => { onLoadExample(ex.file); setOpen(false); }}>
@@ -893,14 +923,7 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
 }
 
 function loadFromStorage(): Model | null {
-  try {
-    const json = localStorage.getItem(STORAGE_KEY);
-    if (!json) return null;
-    const result = loadModel(json);
-    return isOk(result) ? result.value : null;
-  } catch {
-    return null;
-  }
+  return loadCurrentFromStorage();
 }
 
 function loadExample(file = "coffee-making.opmodel"): Promise<Model> {
@@ -936,7 +959,7 @@ export function App() {
 
   const handleNew = useCallback(() => {
     const m = createModel("New Model");
-    localStorage.setItem(STORAGE_KEY, "");
+    clearLocalSnapshots();
     setInitialModel(m);
     setEditorKey((k) => k + 1);
   }, []);
