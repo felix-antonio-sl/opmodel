@@ -1436,6 +1436,23 @@ button.header__pill:hover {
   color: var(--link-procedural);
 }
 
+.opl-focus-trail__item--disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.opl-refinement-actions {
+  padding: 0 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.opl-refinement-actions__hint {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
 .opl-text__header {
   display: flex;
   justify-content: flex-end;

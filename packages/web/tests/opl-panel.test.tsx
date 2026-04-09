@@ -93,6 +93,31 @@ describe("OplPanel", () => {
     expect(dispatch).toHaveBeenCalledWith({ tag: "selectThing", thingId: "thing-water" });
   });
 
+  it("shows refinement actions in the OPL workspace and can create them", () => {
+    const model = buildSimpleModel();
+    const dispatch = vi.fn(() => true);
+    render(
+      React.createElement(OplPanel, {
+        model,
+        opdId: "opd-sd",
+        selectedThing: "thing-water",
+        selectedLink: null,
+        dispatch,
+      }),
+    );
+
+    expect(screen.getByText("Refinement actions")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "+ In-zoom Water" }));
+    expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({
+      tag: "refineThing",
+      thingId: "thing-water",
+      opdId: "opd-sd",
+      refinementType: "in-zoom",
+      childOpdName: expect.stringContaining("Water"),
+    }));
+    expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({ tag: "selectOpd", opdId: expect.any(String) }));
+  });
+
   it("lets structured sentences select links and returns to Author", () => {
     const model = buildSimpleModel();
     const dispatch = vi.fn(() => true);

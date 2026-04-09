@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Model } from "@opmodel/core";
 import type { Command } from "../lib/commands";
+import { genId } from "../lib/ids";
+import { getRefinementActionState, getRefinementContext, nextChildOpdDisplayName } from "../lib/refinement-navigation";
 import { OplSentencesView } from "./OplSentencesView";
 import { OplTextView } from "./OplTextView";
 import { OplLiveEditor } from "./OplLiveEditor";
@@ -23,6 +25,11 @@ export function OplPanel({ model, opdId, selectedThing, selectedLink, dispatch }
   const opd = model.opds.get(opdId);
   const currentLang = model.settings.opl_language === "es" ? "es" : "en";
   const previousSelectionRef = useRef<string>("");
+  const selectedThingEntity = selectedThing ? model.things.get(selectedThing) ?? null : null;
+  const selectedThingAppearance = selectedThing ? model.appearances.get(`${selectedThing}::${opdId}`) : null;
+  const refinementContext = useMemo(() => getRefinementContext(model, opdId, selectedThing), [model, opdId, selectedThing]);
+  const inZoomAction = getRefinementActionState(model, opdId, selectedThingEntity, selectedThingAppearance, refinementContext.selectedThingChildRefinements, "in-zoom");
+  const unfoldAction = getRefinementActionState(model, opdId, selectedThingEntity, selectedThingAppearance, refinementContext.selectedThingChildRefinements, "unfold");
 
   useEffect(() => {
     const currentSelection = `${selectedThing ?? ""}|${selectedLink ?? ""}`;
@@ -71,6 +78,17 @@ export function OplPanel({ model, opdId, selectedThing, selectedLink, dispatch }
     setActiveTab("edit");
   };
 
+  const handleCreateRefinement = (type: "in-zoom" | "unfold") => {
+    if (!selectedThingEntity) return;
+    const childOpdId = genId("opd");
+    const childOpdName = nextChildOpdDisplayName(model, opdId, selectedThingEntity, type);
+    const ok = dispatch({ tag: "refineThing", thingId: selectedThingEntity.id, opdId, refinementType: type, childOpdId, childOpdName });
+    if (ok) {
+      dispatch({ tag: "selectOpd", opdId: childOpdId });
+      setActiveTab("edit");
+    }
+  };
+
   return (
     <aside className="opl-panel">
       <div className="opl-panel__title">
@@ -117,6 +135,36 @@ export function OplPanel({ model, opdId, selectedThing, selectedLink, dispatch }
               </button>
             ))}
           </div>
+        </div>
+      )}
+      {selectedThingEntity && (
+        <div className="opl-refinement-actions">
+          <div className="opl-focus-trail__label">Refinement actions</div>
+          <div className="opl-focus-trail__items">
+            <button
+              type="button"
+              className={`opl-focus-trail__item opl-focus-trail__item--thing${!inZoomAction.enabled ? " opl-focus-trail__item--disabled" : ""}`}
+              disabled={!inZoomAction.enabled}
+              title={inZoomAction.reason}
+              onClick={() => handleCreateRefinement("in-zoom")}
+            >
+              {inZoomAction.enabled ? `+ In-zoom ${selectedThingEntity.name}` : "In-zoom unavailable"}
+            </button>
+            <button
+              type="button"
+              className={`opl-focus-trail__item opl-focus-trail__item--thing${!unfoldAction.enabled ? " opl-focus-trail__item--disabled" : ""}`}
+              disabled={!unfoldAction.enabled}
+              title={unfoldAction.reason}
+              onClick={() => handleCreateRefinement("unfold")}
+            >
+              {unfoldAction.enabled ? `+ Unfold ${selectedThingEntity.name}` : "Unfold unavailable"}
+            </button>
+          </div>
+          {(!inZoomAction.enabled || !unfoldAction.enabled) && (
+            <div className="opl-refinement-actions__hint">
+              {[inZoomAction, unfoldAction].filter((action) => !action.enabled && action.reason).map((action) => action.reason).filter((value, index, arr) => arr.indexOf(value) === index).join(" • ")}
+            </div>
+          )}
         </div>
       )}
       {activeTab === "edit" && (
