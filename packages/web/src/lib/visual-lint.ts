@@ -1,5 +1,7 @@
 import type { Appearance, Link, State, Thing } from "@opmodel/core";
-import type { Rect } from "./geometry";
+import type { Rect, Point } from "./geometry";
+import { center, ellipseEdgePoint, rectEdgePoint } from "./geometry";
+import { routeEdges, type RouteInput } from "./edge-router";
 import { VISUAL_RULES, estimatedStateTextCapacity, statePillLayout } from "./visual-rules";
 
 export interface OverlapFinding {
@@ -44,7 +46,19 @@ export interface TightSpacingFinding {
   axis: "x" | "y";
 }
 
-export type VisualFinding = OverlapFinding | OrphanFinding | TruncatedStateFinding | DegenerateBoundsFinding | CrowdedDiagramFinding | TightSpacingFinding;
+export interface LinkCrossingFinding {
+  kind: "link-crossing";
+  aLink: string;
+  bLink: string;
+}
+
+export interface LabelClusterFinding {
+  kind: "label-cluster";
+  linkIds: string[];
+  clusterSize: number;
+}
+
+export type VisualFinding = OverlapFinding | OrphanFinding | TruncatedStateFinding | DegenerateBoundsFinding | CrowdedDiagramFinding | TightSpacingFinding | LinkCrossingFinding | LabelClusterFinding;
 export type VisualSeverity = "error" | "warning" | "info";
 
 function intersectionArea(a: Rect, b: Rect): number {
@@ -55,6 +69,22 @@ function intersectionArea(a: Rect, b: Rect): number {
 
 function appearanceRect(a: Pick<Appearance, "x" | "y" | "w" | "h">): Rect {
   return { x: a.x, y: a.y, w: a.w, h: a.h };
+}
+
+function edgePoint(kind: "object" | "process", rect: Rect, target: Point): Point {
+  return kind === "process" ? ellipseEdgePoint(rect, target) : rectEdgePoint(rect, target);
+}
+
+function segmentsIntersect(a1: Point, a2: Point, b1: Point, b2: Point): boolean {
+  const d1x = a2.x - a1.x;
+  const d1y = a2.y - a1.y;
+  const d2x = b2.x - b1.x;
+  const d2y = b2.y - b1.y;
+  const cross = d1x * d2y - d1y * d2x;
+  if (Math.abs(cross) < 0.001) return false;
+  const t = ((b1.x - a1.x) * d2y - (b1.y - a1.y) * d2x) / cross;
+  const u = ((b1.x - a1.x) * d1y - (b1.y - a1.y) * d1x) / cross;
+  return t > 0.05 && t < 0.95 && u > 0.05 && u < 0.95;
 }
 
 function axisGap(a: Rect, b: Rect): { axis: "x" | "y"; gap: number } | null {
@@ -155,25 +185,25 @@ export function findDegenerateBounds(appearances: Appearance[]): DegenerateBound
 }
 
 export function findCrowdedDiagrams(appearances: Appearance[]): CrowdedDiagramFinding[] {
-  const visible = appearances.filter((a) => !a.internal);
-  const bounds = contentBounds(visible);
-  if (!bounds || visible.length < VISUAL_RULES.lint.crowdedNodeCount) return [];
-  const contentArea = visible.reduce((sum, a) => sum + a.w * a.h, 0);
+  const measured = appearances;
+  const bounds = contentBounds(measured);
+  if (!bounds || measured.length < VISUAL_RULES.lint.crowdedNodeCount) return [];
+  const contentArea = measured.reduce((sum, a) => sum + a.w * a.h, 0);
   const boundsArea = Math.max(bounds.w * bounds.h, 1);
   const fillRatio = contentArea / boundsArea;
   if (fillRatio >= VISUAL_RULES.lint.crowdedFillRatio) {
-    return [{ kind: "crowded-diagram", nodeCount: visible.length, fillRatio, width: bounds.w, height: bounds.h }];
+    return [{ kind: "crowded-diagram", nodeCount: measured.length, fillRatio, width: bounds.w, height: bounds.h }];
   }
   return [];
 }
 
 export function findTightSpacing(appearances: Appearance[]): TightSpacingFinding[] {
-  const visible = appearances.filter((a) => !a.internal);
+  const measured = appearances;
   const findings: TightSpacingFinding[] = [];
-  for (let i = 0; i < visible.length; i++) {
-    for (let j = i + 1; j < visible.length; j++) {
-      const left = visible[i];
-      const right = visible[j];
+  for (let i = 0; i < measured.length; i++) {
+    for (let j = i + 1; j < measured.length; j++) {
+      const left = measured[i];
+      const right = measured[j];
       if (!left || !right) continue;
       const a = appearanceRect(left);
       const b = appearanceRect(right);
@@ -196,6 +226,8 @@ export function visualFindingSeverity(finding: VisualFinding): VisualSeverity {
     case "orphan":
     case "crowded-diagram":
     case "tight-spacing":
+    case "link-crossing":
+    case "label-cluster":
       return "warning";
     case "truncated-state":
       return "info";
@@ -215,6 +247,77 @@ export interface AuditVisualOpdArgs {
   links: Link[];
   things?: Iterable<Thing>;
   states?: Iterable<State>;
+}
+
+export function findLinkCrossings(appearances: Appearance[], links: Link[], things?: Iterable<Thing>): LinkCrossingFinding[] {
+  const visible = appearances.filter((a) => !a.internal);
+  const rects = new Map(visible.map((a) => [a.thing, appearanceRect(a)]));
+  const thingsById = things ? new Map([...things].map((t) => [t.id, t])) : undefined;
+  const routeInputs: RouteInput[] = links.flatMap((link) => {
+    const srcRect = rects.get(link.source);
+    const tgtRect = rects.get(link.target);
+    const srcThing = thingsById?.get(link.source);
+    const tgtThing = thingsById?.get(link.target);
+    if (!srcRect || !tgtRect || !srcThing || !tgtThing) return [];
+    return [{
+      id: link.id,
+      sourceId: link.source,
+      targetId: link.target,
+      p1: edgePoint(srcThing.kind, srcRect, center(tgtRect)),
+      p2: edgePoint(tgtThing.kind, tgtRect, center(srcRect)),
+    }];
+  });
+  const findings: LinkCrossingFinding[] = [];
+  for (let i = 0; i < routeInputs.length; i++) {
+    for (let j = i + 1; j < routeInputs.length; j++) {
+      const a = routeInputs[i];
+      const b = routeInputs[j];
+      if (!a || !b) continue;
+      if (a.sourceId === b.sourceId || a.sourceId === b.targetId || a.targetId === b.sourceId || a.targetId === b.targetId) continue;
+      if (segmentsIntersect(a.p1, a.p2, b.p1, b.p2)) findings.push({ kind: "link-crossing", aLink: a.id, bLink: b.id });
+    }
+  }
+  return findings;
+}
+
+export function findLabelClusters(appearances: Appearance[], links: Link[], things?: Iterable<Thing>): LabelClusterFinding[] {
+  const visible = appearances.filter((a) => !a.internal);
+  const rects = new Map(visible.map((a) => [a.thing, appearanceRect(a)]));
+  const thingsById = things ? new Map([...things].map((t) => [t.id, t])) : undefined;
+  const routeInputs: RouteInput[] = links.flatMap((link) => {
+    const srcRect = rects.get(link.source);
+    const tgtRect = rects.get(link.target);
+    const srcThing = thingsById?.get(link.source);
+    const tgtThing = thingsById?.get(link.target);
+    if (!srcRect || !tgtRect || !srcThing || !tgtThing) return [];
+    return [{
+      id: link.id,
+      sourceId: link.source,
+      targetId: link.target,
+      p1: edgePoint(srcThing.kind, srcRect, center(tgtRect)),
+      p2: edgePoint(tgtThing.kind, tgtRect, center(srcRect)),
+    }];
+  });
+  const routed = routeEdges(routeInputs);
+  const entries = Array.from(routed.entries());
+  const findings: LabelClusterFinding[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < entries.length; i++) {
+    const [idA, pathA] = entries[i]!;
+    const cluster = [idA];
+    for (let j = i + 1; j < entries.length; j++) {
+      const [idB, pathB] = entries[j]!;
+      const dx = Math.abs(pathA.labelPoint.x - pathB.labelPoint.x);
+      const dy = Math.abs(pathA.labelPoint.y - pathB.labelPoint.y);
+      if (dx < 54 && dy < 18) cluster.push(idB);
+    }
+    const key = [...cluster].sort().join("::");
+    if (cluster.length >= 3 && !seen.has(key)) {
+      seen.add(key);
+      findings.push({ kind: "label-cluster", linkIds: cluster.sort(), clusterSize: cluster.length });
+    }
+  }
+  return findings;
 }
 
 export interface VisualQualityScore {
@@ -238,7 +341,11 @@ export function computeVisualQuality(findings: VisualFinding[]): VisualQualitySc
       score -= f.kind === "overlap" ? 15 : 10;
     } else if (sev === "warning") {
       warningCount++;
-      score -= f.kind === "crowded-diagram" ? 8 : f.kind === "tight-spacing" ? 4 : f.kind === "orphan" ? 1 : 3;
+      score -= f.kind === "crowded-diagram" ? 8 :
+        f.kind === "link-crossing" ? 5 :
+        f.kind === "label-cluster" ? 6 :
+        f.kind === "tight-spacing" ? 4 :
+        f.kind === "orphan" ? 1 : 3;
     } else {
       infoCount++;
     }
@@ -272,6 +379,8 @@ export function auditVisualOpd({ appearances, links, things, states }: AuditVisu
     ...findDegenerateBounds(appearances),
     ...findCrowdedDiagrams(appearances),
     ...findTightSpacing(appearances),
+    ...findLinkCrossings(appearances, links, things),
+    ...findLabelClusters(appearances, links, things),
   ].sort((a, b) => {
     const rank = visualFindingRank(a) - visualFindingRank(b);
     if (rank !== 0) return rank;

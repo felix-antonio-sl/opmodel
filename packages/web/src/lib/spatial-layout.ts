@@ -41,7 +41,7 @@ function allowsAutoSizing(app: Appearance | undefined): boolean {
   return app?.auto_sizing !== false;
 }
 
-function resolveLaneOverlaps(entries: Array<{ thingId: string; y: number; h: number }>, minGap = VISUAL_RULES.spacing.nodeGap) {
+function resolveLaneOverlaps(entries: Array<{ thingId: string; y: number; h: number }>, minGap: number = VISUAL_RULES.spacing.nodeGap) {
   const sorted = [...entries].sort((a, b) => a.y - b.y);
   for (let i = 1; i < sorted.length; i++) {
     const prev = sorted[i - 1];
@@ -269,11 +269,15 @@ function finalizeLayout(
   };
 }
 
-function preferredWidth(model: Model, app: Appearance, thing: Thing | undefined): number {
+function naturalPreferredWidth(model: Model, app: Appearance, thing: Thing | undefined): number {
   const stateNames = [...model.states.values()].filter((s) => s.parent === app.thing).map((s) => s.name);
-  if (stateNames.length > 0) return Math.max(app.w, minimumWidthForStateNames(stateNames));
-  if (thing?.kind === "process") return Math.max(app.w, VISUAL_RULES.size.minProcessWidth);
-  return Math.max(app.w, VISUAL_RULES.size.minObjectWidth);
+  if (stateNames.length > 0) return minimumWidthForStateNames(stateNames);
+  if (thing?.kind === "process") return VISUAL_RULES.size.minProcessWidth;
+  return VISUAL_RULES.size.minObjectWidth;
+}
+
+function preferredWidth(model: Model, app: Appearance, thing: Thing | undefined): number {
+  return Math.max(app.w, naturalPreferredWidth(model, app, thing));
 }
 
 function classifyExternalLane(model: Model, app: Appearance, links: Link[]): "left" | "right" {
@@ -301,7 +305,7 @@ function layoutBranchingControl(model: Model, opdId: string, apps: Appearance[],
   const patches: AppearancePatch[] = [];
   const container = refines ? apps.find((a) => a.thing === refines) : undefined;
   const internal = apps.filter((a) => a.internal && a.thing !== refines).sort(sortByPosition);
-  const external = apps.filter((a) => !a.internal).sort(sortByPosition);
+  const external = apps.filter((a) => !a.internal && a.thing !== refines).sort(sortByPosition);
   if (!container || internal.length === 0) return { strategy: "none", patches: [], findings: [] };
 
   const internalProcessIds = new Set(internal.map((a) => a.thing));
@@ -381,41 +385,129 @@ function layoutInZoom(model: Model, opdId: string, apps: Appearance[], links: Li
   const patches: AppearancePatch[] = [];
   const container = refines ? apps.find((a) => a.thing === refines) : undefined;
   const internal = apps.filter((a) => a.internal && a.thing !== refines).sort(sortByPosition);
-  const external = apps.filter((a) => !a.internal).sort(sortByPosition);
+  const external = apps.filter((a) => !a.internal && a.thing !== refines).sort(sortByPosition);
   if (!container || internal.length === 0) return { strategy: "none", patches: [], findings: [] };
 
   const containerX = container.x;
   const containerY = container.y;
   const processW = 240;
   const processH = 60;
-  const processGap = 52;
-  const processX = containerX + 120;
-  const processStartY = containerY + 70;
+  const processGapX = 110;
+  const processGapY = 64;
+  const innerPaddingX = 48;
+  const innerPaddingY = 70;
+  const maxInternalObjectWidth = 320;
 
-  const internalProcessIds = new Set(internal.map((a) => a.thing));
-  internal.filter((app) => !isPinned(app)).forEach((app, i) => {
+  const internalProcesses = internal.filter((app) => model.things.get(app.thing)?.kind === "process");
+  const internalObjects = internal.filter((app) => model.things.get(app.thing)?.kind === "object");
+  const processSource = internalProcesses.length > 0 ? internalProcesses : internal;
+  const cols = processSource.length > 8 ? 3 : processSource.length > 4 ? 2 : 1;
+  const rowsPerCol = Math.ceil(processSource.length / cols);
+  const internalProcessIds = new Set(processSource.map((a) => a.thing));
+
+  const plannedCenters = new Map<string, number>();
+  processSource.forEach((app, i) => {
+    const row = i % rowsPerCol;
+    plannedCenters.set(app.thing, containerY + innerPaddingY + row * (processH + processGapY) + processH / 2);
+  });
+
+  const internalLeftEntries: Array<{ app: Appearance; y: number; h: number; w: number }> = [];
+  const internalRightEntries: Array<{ app: Appearance; y: number; h: number; w: number }> = [];
+  for (const app of internalObjects) {
+    const connected = linkedProcesses(app, internalProcessIds, links);
+    const centerY = average(connected.map((id) => plannedCenters.get(id) ?? containerY + 120)) || containerY + 120;
+    const thing = model.things.get(app.thing);
+    const h = Math.max(app.h, thing?.kind === "object" && [...model.states.values()].some((s) => s.parent === app.thing) ? 64 : 50);
+    const w = Math.min(naturalPreferredWidth(model, app, thing), maxInternalObjectWidth);
+    const y = centerY - h / 2;
+    const lane = classifyExternalLane(model, app, links);
+    (lane === "left" ? internalLeftEntries : internalRightEntries).push({ app, y, h, w });
+  }
+
+  const estimateLaneColumns = (entries: Array<{ app: Appearance; y: number; h: number; w: number }>) => {
+    if (entries.length <= 3) return 1;
+    const totalHeight = entries.reduce((sum, entry) => sum + entry.h, 0) + Math.max(0, entries.length - 1) * (VISUAL_RULES.spacing.nodeGap + 8);
+    return Math.max(1, Math.ceil(totalHeight / 420));
+  };
+
+  const leftInnerColumns = estimateLaneColumns(internalLeftEntries);
+  const rightInnerColumns = estimateLaneColumns(internalRightEntries);
+  const leftInnerWidth = internalLeftEntries.reduce((max, entry) => Math.max(max, entry.w), 0) * leftInnerColumns + Math.max(0, leftInnerColumns - 1) * 36;
+  const rightInnerWidth = internalRightEntries.reduce((max, entry) => Math.max(max, entry.w), 0) * rightInnerColumns + Math.max(0, rightInnerColumns - 1) * 36;
+  const processBandWidth = cols * processW + Math.max(0, cols - 1) * processGapX;
+  const processStartX = containerX + innerPaddingX + leftInnerWidth + (leftInnerWidth > 0 ? 56 : 0);
+  const processStartY = containerY + innerPaddingY;
+
+  processSource.filter((app) => !isPinned(app)).forEach((app, i) => {
+    const col = Math.floor(i / rowsPerCol);
+    const row = i % rowsPerCol;
     patches.push({
       thingId: app.thing,
       opdId,
-      patch: { x: processX, y: processStartY + i * (processH + processGap), w: Math.max(app.w, processW), h: Math.max(app.h, processH) },
+      patch: {
+        x: processStartX + col * (processW + processGapX),
+        y: processStartY + row * (processH + processGapY),
+        w: Math.max(app.w, processW),
+        h: Math.max(app.h, processH),
+      },
     });
   });
 
-  const lastInternalBottom = processStartY + (internal.length - 1) * (processH + processGap) + processH;
-  const targetContainerW = Math.max(container.w, 420);
-  const targetContainerH = Math.max(container.h, lastInternalBottom - containerY + 50);
+  const lastInternalBottom = processStartY + Math.max(0, rowsPerCol - 1) * (processH + processGapY) + processH;
+  const targetContainerW = Math.max(container.w, innerPaddingX * 2 + leftInnerWidth + (leftInnerWidth > 0 ? 56 : 0) + processBandWidth + (rightInnerWidth > 0 ? 56 : 0) + rightInnerWidth);
+  const targetContainerH = Math.max(container.h, lastInternalBottom - containerY + innerPaddingY);
   if (!isPinned(container)) patches.push({ thingId: container.thing, opdId, patch: { w: targetContainerW, h: targetContainerH } });
 
-  const processCenters = new Map(internal.map((app, i) => [app.thing, processStartY + i * (processH + processGap) + processH / 2]));
+  const processCenters = new Map(processSource.map((app, i) => {
+    const row = i % rowsPerCol;
+    return [app.thing, processStartY + row * (processH + processGapY) + processH / 2] as const;
+  }));
 
-  const laneBaseLeft = containerX - 240;
-  const laneBaseRight = containerX + targetContainerW + 70;
+  const placeInternalEntries = (
+    entries: Array<{ app: Appearance; y: number; h: number; w: number }>,
+    baseX: number,
+    direction: -1 | 1,
+  ) => {
+    if (entries.length === 0) return;
+    const resolved = resolveLaneOverlaps(entries.map((e) => ({ thingId: e.app.thing, y: e.y, h: e.h })), VISUAL_RULES.spacing.nodeGap + 8);
+    const merged = resolved.map((entry) => {
+      const full = entries.find((e) => e.app.thing === entry.thingId)!;
+      return { ...full, y: entry.y };
+    }).sort((a, b) => a.y - b.y);
+    const maxLaneHeight = Math.max(targetContainerH - 180, 360);
+    let column = 0;
+    let columnStartY = processStartY;
+    let cursorBottom = columnStartY;
+    let columnWidth = 0;
+    for (const entry of merged) {
+      if (cursorBottom > columnStartY && cursorBottom - columnStartY + entry.h > maxLaneHeight) {
+        column += 1;
+        columnStartY = processStartY;
+        cursorBottom = columnStartY;
+        columnWidth = 0;
+      }
+      const x = direction === -1
+        ? baseX + column * (Math.max(entry.w, columnWidth) + 36)
+        : baseX + column * (Math.max(entry.w, columnWidth) + 36);
+      patches.push({ thingId: entry.app.thing, opdId, patch: { x, y: cursorBottom, w: entry.w, h: entry.h } });
+      cursorBottom += entry.h + VISUAL_RULES.spacing.nodeGap + 8;
+      columnWidth = Math.max(columnWidth, entry.w);
+    }
+  };
+
+  const internalLeftX = containerX + innerPaddingX;
+  const internalRightX = processStartX + processBandWidth + (rightInnerWidth > 0 ? 56 : 0);
+  placeInternalEntries(internalLeftEntries, internalLeftX, -1);
+  placeInternalEntries(internalRightEntries, internalRightX, 1);
+
+  const laneBaseLeft = containerX - 260;
+  const laneBaseRight = containerX + targetContainerW + 90;
   const leftEntries: Array<{ app: Appearance; y: number; h: number; w: number }> = [];
   const rightEntries: Array<{ app: Appearance; y: number; h: number; w: number }> = [];
 
   for (const app of external) {
     const connected = linkedProcesses(app, internalProcessIds, links);
-    const centerY = average(connected.map((id) => processCenters.get(id) ?? containerY + 100)) || containerY + 100;
+    const centerY = average(connected.map((id) => processCenters.get(id) ?? containerY + targetContainerH / 2)) || containerY + targetContainerH / 2;
     const thing = model.things.get(app.thing);
     const h = Math.max(app.h, thing?.kind === "object" && [...model.states.values()].some((s) => s.parent === app.thing) ? 64 : 50);
     const w = preferredWidth(model, app, thing);
@@ -424,14 +516,42 @@ function layoutInZoom(model: Model, opdId: string, apps: Appearance[], links: Li
     (lane === "left" ? leftEntries : rightEntries).push({ app, y, h, w });
   }
 
-  for (const entry of resolveLaneOverlaps(leftEntries.map((e) => ({ thingId: e.app.thing, y: e.y, h: e.h })))) {
-    const full = leftEntries.find((e) => e.app.thing === entry.thingId)!;
-    patches.push({ thingId: entry.thingId, opdId, patch: { x: laneBaseLeft, y: entry.y, w: full.w, h: full.h } });
-  }
-  for (const entry of resolveLaneOverlaps(rightEntries.map((e) => ({ thingId: e.app.thing, y: e.y, h: e.h })))) {
-    const full = rightEntries.find((e) => e.app.thing === entry.thingId)!;
-    patches.push({ thingId: entry.thingId, opdId, patch: { x: laneBaseRight, y: entry.y, w: full.w, h: full.h } });
-  }
+  const placeExternalEntries = (
+    entries: Array<{ app: Appearance; y: number; h: number; w: number }>,
+    baseX: number,
+    direction: -1 | 1,
+  ) => {
+    if (entries.length === 0) return;
+    const resolved = resolveLaneOverlaps(entries.map((e) => ({ thingId: e.app.thing, y: e.y, h: e.h })));
+    const merged = resolved.map((entry) => {
+      const full = entries.find((e) => e.app.thing === entry.thingId)!;
+      return { ...full, y: entry.y };
+    }).sort((a, b) => a.y - b.y);
+
+    const maxLaneHeight = Math.max(targetContainerH + 160, 720);
+    let column = 0;
+    let columnStartY = merged[0]?.y ?? containerY;
+    let cursorBottom = columnStartY;
+    let maxWidthInColumn = 0;
+
+    for (const entry of merged) {
+      if (cursorBottom > columnStartY && cursorBottom - columnStartY + entry.h > maxLaneHeight) {
+        column += 1;
+        columnStartY = Math.max(containerY, entry.y);
+        cursorBottom = columnStartY;
+        maxWidthInColumn = 0;
+      }
+      const x = direction === -1
+        ? baseX - column * 220 - maxWidthInColumn
+        : baseX + column * 220;
+      patches.push({ thingId: entry.app.thing, opdId, patch: { x, y: cursorBottom, w: entry.w, h: entry.h } });
+      cursorBottom += entry.h + VISUAL_RULES.spacing.nodeGap;
+      maxWidthInColumn = Math.max(maxWidthInColumn, entry.w);
+    }
+  };
+
+  placeExternalEntries(leftEntries, laneBaseLeft, -1);
+  placeExternalEntries(rightEntries, laneBaseRight, 1);
 
   const finalized = finalizeLayout(model, apps, links, patches);
 
@@ -446,7 +566,7 @@ function layoutUnfold(model: Model, opdId: string, apps: Appearance[], links: Li
   const patches: AppearancePatch[] = [];
   const container = refines ? apps.find((a) => a.thing === refines) : undefined;
   const internal = apps.filter((a) => a.internal && a.thing !== refines).sort(sortByPosition);
-  const external = apps.filter((a) => !a.internal).sort(sortByPosition);
+  const external = apps.filter((a) => !a.internal && a.thing !== refines).sort(sortByPosition);
   if (!container || internal.length === 0) return { strategy: "none", patches: [], findings: [] };
 
   const cols = Math.min(2, internal.length);
@@ -564,6 +684,7 @@ function autoSizeAppearance(model: Model, app: Appearance): { w: number; h: numb
   if (stateNames.length > 0) w = Math.max(w, minimumWidthForStateNames(stateNames));
   if (thing.kind === "object" && stateNames.length > 0 && thing.computational) w += 12;
   w = Math.max(w, app.w);
+  if (app.internal && thing.kind === "object") w = Math.min(w, 320);
 
   let h = Math.max(app.h, VISUAL_RULES.size.minHeight);
   if (stateNames.length > 0) h = Math.max(h, 68);
@@ -681,13 +802,38 @@ function layoutSdBalanced(
 ): LayoutSuggestion {
   const patches: AppearancePatch[] = [];
 
+  const placeRow = (
+    rowApps: Appearance[],
+    y: number,
+    minX: number,
+    maxX: number,
+    minWidth: number,
+    minHeight: number,
+  ) => {
+    const laidOut = rowApps
+      .filter((app) => !isPinned(app))
+      .map((app) => ({
+        app,
+        size: autoSizeAppearance(model, { ...app, w: Math.max(app.w, minWidth), h: Math.max(app.h, minHeight) }),
+      }));
+    if (laidOut.length === 0) return;
+    const gap = 40;
+    const totalWidth = laidOut.reduce((sum, item) => sum + item.size.w, 0) + gap * Math.max(laidOut.length - 1, 0);
+    const available = Math.max(maxX - minX, totalWidth);
+    let cursorX = minX + Math.max(0, Math.floor((available - totalWidth) / 2));
+    for (const item of laidOut) {
+      patches.push({ thingId: item.app.thing, opdId, patch: { x: cursorX, y, ...item.size } });
+      cursorX += item.size.w + gap;
+    }
+  };
+
   // Classify things into semantic bands
   const processes = apps.filter((a) => model.things.get(a.thing)?.kind === "process");
   const objects = apps.filter((a) => model.things.get(a.thing)?.kind === "object");
   const agents = objects.filter((a) => links.some((l) => l.type === "agent" && l.source === a.thing));
   const instruments = objects.filter((a) => links.some((l) => l.type === "instrument" && l.source === a.thing) && !agents.some((ag) => ag.thing === a.thing));
-  const consumed = objects.filter((a) => links.some((l) => l.type === "consumption" && l.source === a.thing));
-  const results = objects.filter((a) => links.some((l) => l.type === "result" && l.target === a.thing));
+  const consumed = objects.filter((a) => links.some((l) => (l.type === "consumption" || l.type === "input") && l.source === a.thing));
+  const results = objects.filter((a) => links.some((l) => (l.type === "result" || l.type === "output") && l.target === a.thing));
   const exhibited = objects.filter((a) => links.some((l) => l.type === "exhibition" && (l.source === a.thing || l.target === a.thing)));
   const remaining = objects.filter((a) =>
     !agents.some((x) => x.thing === a.thing) &&
@@ -697,20 +843,31 @@ function layoutSdBalanced(
     !exhibited.some((x) => x.thing === a.thing)
   );
 
-  // Layout bands
-  const centerX = 380;
-  const centerY = 300;
+  const mainProcesses = processes.filter((proc) => links.some((l) => l.type === "exhibition" && l.target === proc.thing));
+  const secondaryProcesses = processes.filter((proc) => !mainProcesses.some((main) => main.thing === proc.thing));
 
-  // Main process center
-  for (const proc of processes) {
-    if (isPinned(proc)) continue;
-    const size = autoSizeAppearance(model, { ...proc, w: Math.max(proc.w, 300), h: Math.max(proc.h, 100) });
-    const isMain = links.some((l) => l.type === "exhibition" && l.target === proc.thing);
-    const y = isMain ? centerY : centerY + 200;
-    patches.push({ thingId: proc.thing, opdId, patch: { x: centerX, y, ...size } });
+  // Top band: exhibited attributes and descriptors.
+  let topX = 60;
+  const topY = 40;
+  for (const app of exhibited) {
+    const size = autoSizeAppearance(model, app);
+    if (!isPinned(app)) patches.push({ thingId: app.thing, opdId, patch: { x: topX, y: topY, ...size } });
+    topX += size.w + VISUAL_RULES.spacing.nodeGap;
   }
 
-  // Left band: agents + consumed
+  // Central process band: explicit rows instead of a single shared anchor that causes overlaps.
+  const mainRow = mainProcesses.length > 0 ? mainProcesses : processes.slice(0, 1);
+  const auxProcesses = mainProcesses.length > 0 ? secondaryProcesses : processes.slice(1);
+  placeRow(mainRow, 220, 260, 1080, 300, 100);
+
+  const auxRows: Appearance[][] = [];
+  const maxPerRow = 3;
+  for (let i = 0; i < auxProcesses.length; i += maxPerRow) {
+    auxRows.push(auxProcesses.slice(i, i + maxPerRow));
+  }
+  auxRows.forEach((row, rowIndex) => placeRow(row, 390 + rowIndex * 140, 220, 1120, 240, 72));
+
+  // Left band: agents + consumed inputs.
   let leftY = 180;
   for (const group of [agents, consumed]) {
     for (const app of group) {
@@ -720,31 +877,27 @@ function layoutSdBalanced(
     }
   }
 
-  // Right band: instruments
-  let rightY = 240;
+  // Right band: instruments.
+  let rightY = 180;
   for (const app of instruments) {
     const size = autoSizeAppearance(model, app);
-    if (!isPinned(app)) patches.push({ thingId: app.thing, opdId, patch: { x: 780, y: rightY, ...size } });
+    if (!isPinned(app)) patches.push({ thingId: app.thing, opdId, patch: { x: 1160, y: rightY, ...size } });
     rightY += size.h + VISUAL_RULES.spacing.nodeGap;
   }
 
-  // Top band: exhibited attributes + beneficiary
-  let topX = 50;
-  for (const app of exhibited) {
-    const size = autoSizeAppearance(model, app);
-    if (!isPinned(app)) patches.push({ thingId: app.thing, opdId, patch: { x: topX, y: 40, ...size } });
-    topX += size.w + VISUAL_RULES.spacing.nodeGap;
-  }
-
-  // Bottom band: results + remaining
-  let bottomY = centerY + 200;
-  let bottomX = 40;
+  // Bottom band: results + remaining objects.
+  const bottomBaseY = 560 + Math.max(0, auxRows.length - 1) * 140;
+  let bottomY = bottomBaseY;
+  let bottomX = 60;
   for (const group of [results, remaining]) {
     for (const app of group) {
       const size = autoSizeAppearance(model, app);
       if (!isPinned(app)) patches.push({ thingId: app.thing, opdId, patch: { x: bottomX, y: bottomY, ...size } });
       bottomX += size.w + VISUAL_RULES.spacing.nodeGap;
-      if (bottomX > 800) { bottomX = 40; bottomY += 80; }
+      if (bottomX > 1100) {
+        bottomX = 60;
+        bottomY += size.h + 36;
+      }
     }
   }
 

@@ -114,6 +114,9 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, select
   // Clear multi-select when OPD changes
   useEffect(() => { setMultiSelect(new Set()); }, [opdId]);
 
+  // Auto-layout + fit to content on OPD change (runs after appearances are computed)
+  const prevOpdRef = useRef(opdId);
+
   useEffect(() => {
     if (!selectedThing) {
       setAttentionThingId(null);
@@ -630,6 +633,31 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, select
     setPan({ x: newPanX, y: newPanY });
   }, [appearances]);
 
+  // Auto-layout stacked appearances + fit to content on OPD change
+  useEffect(() => {
+    if (prevOpdRef.current === opdId) return;
+    prevOpdRef.current = opdId;
+    const apps = [...appearances.values()];
+    if (apps.length === 0) return;
+    // Detect stacked: >60% share the same position → needs layout
+    const posCount = new Map<string, number>();
+    for (const a of apps) {
+      const key = `${Math.round(a.x / 10)},${Math.round(a.y / 10)}`;
+      posCount.set(key, (posCount.get(key) ?? 0) + 1);
+    }
+    const maxStacked = Math.max(...posCount.values());
+    if (apps.length > 1 && maxStacked / apps.length > 0.6) {
+      const suggestion = suggestLayoutForOpd(model, opdId);
+      if (suggestion.patches.length > 0) {
+        dispatch({
+          tag: "updateAppearancesBatch",
+          updates: suggestion.patches.map((p) => ({ thingId: p.thingId, opdId: p.opdId, patch: p.patch as Record<string, unknown> })),
+        });
+      }
+    }
+    requestAnimationFrame(() => fitToContent());
+  }, [opdId, appearances, model, dispatch, fitToContent]);
+
   const bringThingIntoView = useCallback((thingId: string) => {
     const app = appearances.get(thingId);
     const svgRect = svgRef.current?.getBoundingClientRect();
@@ -832,6 +860,17 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, select
     [appearances, model, draggedThings, dragDelta, semiFoldPartRects],
   );
 
+  const opdForRouting = model.opds.get(opdId);
+  const containerRectForRouting = opdForRouting?.refines ? (() => {
+    const containerApp = appearances.get(opdForRouting.refines);
+    return containerApp ? { x: containerApp.x, y: containerApp.y, w: containerApp.w, h: containerApp.h } : undefined;
+  })() : undefined;
+  const isInternalForRouting = (thingId: string): boolean => {
+    if (!opdForRouting?.refines) return false;
+    const app = appearances.get(thingId);
+    return app?.internal === true;
+  };
+
   // Edge routing: compute curved paths for links with crossings
   const edgeRoutes = useMemo((): Map<string, EdgePath> => {
     const routeInputs = filteredVisibleLinks
@@ -845,11 +884,21 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, select
         const p1 = edgePoint(srcThing.kind, srcRect, center(tgtRect));
         const p2 = edgePoint(tgtThing.kind, tgtRect, center(srcRect));
         const key = vl.isInputHalf ? `${vl.link.id}__in` : vl.isOutputHalf ? `${vl.link.id}__out` : vl.link.id;
-        return { id: key, sourceId: vl.visualSource, targetId: vl.visualTarget, p1, p2 };
+        const srcInternal = isInternalForRouting(vl.visualSource);
+        const tgtInternal = isInternalForRouting(vl.visualTarget);
+        return {
+          id: key,
+          sourceId: vl.visualSource,
+          targetId: vl.visualTarget,
+          p1, p2,
+          internal: srcInternal && tgtInternal,
+          containerRect: containerRectForRouting,
+          linkType: vl.link.type,
+        };
       })
       .filter((x): x is NonNullable<typeof x> => x !== null);
     return routeEdges(routeInputs);
-  }, [filteredVisibleLinks, forkedLinkIds, model, getEffectiveRect]);
+  }, [filteredVisibleLinks, forkedLinkIds, model, getEffectiveRect, opdForRouting, containerRectForRouting, isInternalForRouting]);
 
   // Cursor
   const cursorClass = dragTarget

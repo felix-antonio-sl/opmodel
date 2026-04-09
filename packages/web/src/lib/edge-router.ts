@@ -6,8 +6,11 @@
  *
  * Strategies:
  * 1. Straight line for short, non-crossing links
- * 2. Quadratic Bézier curve for links that cross others
- * 3. Bundled parallel links (same source→target pair offset)
+ * 2. Smart port selection based on flow direction
+ * 3. Quadratic/cubic Bézier curves for crossing links with topological awareness
+ * 4. Bundled parallel links (same source→target pair offset)
+ * 5. Fan grouping with consistent arc direction
+ * 6. Orthogonal routing hints for refinement-internal links
  */
 
 import type { Point, Rect } from "./geometry";
@@ -94,6 +97,22 @@ function straightPath(p1: Point, p2: Point): EdgePath {
   };
 }
 
+/** Generate a cubic path that preserves stronger horizontal flow for long fan links */
+function cubicHorizontalPath(p1: Point, p2: Point, offsetY: number): EdgePath {
+  const dx = p2.x - p1.x;
+  const cp1 = { x: p1.x + dx * 0.35, y: p1.y + offsetY };
+  const cp2 = { x: p2.x - dx * 0.35, y: p2.y + offsetY };
+  const labelPoint = {
+    x: (p1.x + 3 * cp1.x + 3 * cp2.x + p2.x) / 8,
+    y: (p1.y + 3 * cp1.y + 3 * cp2.y + p2.y) / 8,
+  };
+  return {
+    d: `M ${p1.x},${p1.y} C ${cp1.x},${cp1.y} ${cp2.x},${cp2.y} ${p2.x},${p2.y}`,
+    labelPoint,
+    curved: true,
+  };
+}
+
 /** Key for parallel link detection (same source↔target pair) */
 function pairKey(a: string, b: string): string {
   return a < b ? `${a}::${b}` : `${b}::${a}`;
@@ -104,12 +123,23 @@ function targetKey(targetId: string): string {
   return `tgt::${targetId}`;
 }
 
+/** Key for divergent link detection (same source → multiple targets) */
+function sourceKey(sourceId: string): string {
+  return `src::${sourceId}`;
+}
+
 export interface RouteInput {
   id: string;
   sourceId: string;
   targetId: string;
   p1: Point;
   p2: Point;
+  /** Optional: the bounding rect of a refinement container, used for layer separation */
+  containerRect?: Rect;
+  /** Whether this link is internal to a refinement */
+  internal?: boolean;
+  /** Link type hint for semantic routing (agent, result, etc.) */
+  linkType?: string;
 }
 
 export interface RouteResult {
@@ -117,14 +147,113 @@ export interface RouteResult {
   path: EdgePath;
 }
 
+/** Classify the predominant flow direction for a set of links */
+function classifyFlowDirection(links: RouteInput[]): "top-down" | "left-right" | "mixed" {
+  let vertical = 0;
+  let horizontal = 0;
+  for (const link of links) {
+    const dx = Math.abs(link.p2.x - link.p1.x);
+    const dy = Math.abs(link.p2.y - link.p1.y);
+    if (dy > dx * 1.4) vertical++;
+    else if (dx > dy * 1.4) horizontal++;
+  }
+  if (vertical > horizontal * 2) return "top-down";
+  if (horizontal > vertical * 2) return "left-right";
+  return "mixed";
+}
+
+/** Determine the preferred exit/entry side for a link endpoint based on flow */
+function preferredExitSide(
+  p1: Point, p2: Point, flow: "top-down" | "left-right" | "mixed"
+): "top" | "bottom" | "left" | "right" {
+  const dx = p2.x - p1.x;
+  const dy = p2.y - p1.y;
+  if (flow === "top-down") {
+    // In top-down flow, prefer exiting bottom when going down, top when going up
+    return dy >= 0 ? "bottom" : "top";
+  }
+  if (flow === "left-right") {
+    return dx >= 0 ? "right" : "left";
+  }
+  // mixed: use geometric direction
+  if (Math.abs(dy) > Math.abs(dx)) return dy >= 0 ? "bottom" : "top";
+  return dx >= 0 ? "right" : "left";
+}
+
+/** Compute adjusted endpoints with port-aware offsets */
+function adjustPorts(
+  p1: Point, p2: Point, flow: "top-down" | "left-right" | "mixed"
+): { p1: Point; p2: Point } {
+  const portOffset = 4; // small visual offset to separate port from edge
+  const side = preferredExitSide(p1, p2, flow);
+  const ap1 = { ...p1 };
+  const ap2 = { ...p2 };
+  switch (side) {
+    case "bottom": ap1.y += portOffset; break;
+    case "top": ap1.y -= portOffset; break;
+    case "right": ap1.x += portOffset; break;
+    case "left": ap1.x -= portOffset; break;
+  }
+  return { p1: ap1, p2: ap2 };
+}
+
+/** Generate an orthogonal-style cubic path for refinement-internal links */
+function orthogonalPath(p1: Point, p2: Point, flow: "top-down" | "left-right" | "mixed", offset: number): EdgePath {
+  if (flow === "top-down" || (flow === "mixed" && Math.abs(p2.y - p1.y) >= Math.abs(p2.x - p1.x))) {
+    // Vertical preference: route down then across
+    const midY = (p1.y + p2.y) / 2 + offset;
+    const cp1 = { x: p1.x, y: midY };
+    const cp2 = { x: p2.x, y: midY };
+    const labelPoint = {
+      x: (p1.x + 3 * cp1.x + 3 * cp2.x + p2.x) / 8,
+      y: (p1.y + 3 * cp1.y + 3 * cp2.y + p2.y) / 8,
+    };
+    return {
+      d: `M ${p1.x},${p1.y} C ${cp1.x},${cp1.y} ${cp2.x},${cp2.y} ${p2.x},${p2.y}`,
+      labelPoint,
+      curved: true,
+    };
+  } else {
+    // Horizontal preference: route across then down
+    const midX = (p1.x + p2.x) / 2 + offset;
+    const cp1 = { x: midX, y: p1.y };
+    const cp2 = { x: midX, y: p2.y };
+    const labelPoint = {
+      x: (p1.x + 3 * cp1.x + 3 * cp2.x + p2.x) / 8,
+      y: (p1.y + 3 * cp1.y + 3 * cp2.y + p2.y) / 8,
+    };
+    return {
+      d: `M ${p1.x},${p1.y} C ${cp1.x},${cp1.y} ${cp2.x},${cp2.y} ${p2.x},${p2.y}`,
+      labelPoint,
+      curved: true,
+    };
+  }
+}
+
+/** Semantic lane for link types */
+function semanticLane(linkType?: string): "input" | "output" | "structural" | "control" {
+  if (!linkType) return "control";
+  if (["agent", "instrument", "consumption", "input"].includes(linkType)) return "input";
+  if (["result", "output", "effect"].includes(linkType)) return "output";
+  if (["aggregation", "exhibition", "generalization", "classification", "tagged"].includes(linkType)) return "structural";
+  return "control";
+}
+
 /**
  * Route a batch of links, applying curves where crossings occur,
  * offsetting parallel links, and nudging labels to avoid collisions.
+ *
+ * Enhanced with:
+ * - Flow-direction awareness (top-down, left-right, mixed)
+ * - Semantic link type routing (input vs output lanes)
+ * - Orthogonal routing hints for refinement-internal links
+ * - Consistent fan arc direction
  */
 export function routeEdges(links: RouteInput[]): Map<string, EdgePath> {
   const result = new Map<string, EdgePath>();
   if (links.length === 0) return result;
 
+  const flow = classifyFlowDirection(links);
   const endpoints: LinkEndpoints[] = links.map(l => ({ id: l.id, p1: l.p1, p2: l.p2 }));
 
   // Detect parallel links (same source↔target pair)
@@ -143,12 +272,27 @@ export function routeEdges(links: RouteInput[]): Map<string, EdgePath> {
     convergentGroups.get(key)!.push(link);
   }
 
+  // Detect divergent links (same source → different targets)
+  const divergentGroups = new Map<string, RouteInput[]>();
+  for (const link of links) {
+    const key = sourceKey(link.sourceId);
+    if (!divergentGroups.has(key)) divergentGroups.set(key, []);
+    divergentGroups.get(key)!.push(link);
+  }
+
   // For each link, decide path
   for (const link of links) {
     const key = pairKey(link.sourceId, link.targetId);
     const group = parallelGroups.get(key)!;
     const convKey = targetKey(link.targetId);
     const convGroup = convergentGroups.get(convKey)!;
+    const divKey = sourceKey(link.sourceId);
+    const divGroup = divergentGroups.get(divKey)!;
+
+    // Apply port adjustment for flow awareness
+    const adjusted = adjustPorts(link.p1, link.p2, flow);
+    const ap1 = adjusted.p1;
+    const ap2 = adjusted.p2;
 
     if (group.length > 1) {
       // Parallel links (same pair): offset each one
@@ -158,37 +302,65 @@ export function routeEdges(links: RouteInput[]): Map<string, EdgePath> {
       const offset = (idx - (total - 1) / 2) * spread;
 
       if (Math.abs(offset) < 1) {
-        const crossings = countCrossings({ id: link.id, p1: link.p1, p2: link.p2 }, endpoints);
+        const crossings = countCrossings({ id: link.id, p1: ap1, p2: ap2 }, endpoints);
         if (crossings > 0) {
-          result.set(link.id, curvedPath(link.p1, link.p2, 25 + crossings * 10));
+          result.set(link.id, curvedPath(ap1, ap2, 25 + crossings * 10));
         } else {
-          result.set(link.id, straightPath(link.p1, link.p2));
+          result.set(link.id, straightPath(ap1, ap2));
         }
       } else {
-        result.set(link.id, curvedPath(link.p1, link.p2, offset));
+        result.set(link.id, curvedPath(ap1, ap2, offset));
       }
-    } else if (convGroup.length >= 3) {
-      // Convergent links: 3+ links from different sources to same target
-      // Offset them so they don't all arrive at exactly the same point
-      const idx = convGroup.indexOf(link);
-      const total = convGroup.length;
-      const spread = Math.min(25, Math.max(12, 50 / total));
+    } else if (convGroup.length >= 3 || divGroup.length >= 3) {
+      // Fan-in / fan-out: use consistent arc direction sorted by position
+      const fanGroup = convGroup.length >= divGroup.length ? convGroup : divGroup;
+      // Sort fan members by their endpoint position for consistent ordering
+      const sortedFan = [...fanGroup].sort((a, b) => {
+        const aPos = a.p2.y * 10000 + a.p2.x;
+        const bPos = b.p2.y * 10000 + b.p2.x;
+        return aPos - bPos;
+      });
+      const idx = sortedFan.findIndex(l => l.id === link.id);
+      const total = sortedFan.length;
+      const spread = Math.min(34, Math.max(14, 84 / total));
       const offset = (idx - (total - 1) / 2) * spread;
+      const crossings = countCrossings({ id: link.id, p1: ap1, p2: ap2 }, endpoints);
+      const amplified = offset === 0 ? 0 : offset * (crossings > 0 ? 1.15 : 0.9);
+      const dx = Math.abs(ap2.x - ap1.x);
+      const dy = Math.abs(ap2.y - ap1.y);
 
-      if (Math.abs(offset) < 2) {
-        result.set(link.id, straightPath(link.p1, link.p2));
+      // Use orthogonal routing for internal refinement links
+      if (link.internal && (flow === "top-down" || flow === "left-right")) {
+        result.set(link.id, orthogonalPath(ap1, ap2, flow, amplified * 0.4));
+      } else if (Math.abs(amplified) < 2) {
+        result.set(link.id, straightPath(ap1, ap2));
+      } else if (dx > 260 && dy > 30) {
+        result.set(link.id, cubicHorizontalPath(ap1, ap2, amplified));
       } else {
-        result.set(link.id, curvedPath(link.p1, link.p2, offset * 0.6));
+        result.set(link.id, curvedPath(ap1, ap2, amplified));
+      }
+    } else if (link.internal && (flow === "top-down" || flow === "left-right")) {
+      // Single internal link in a refinement with clear flow: use orthogonal routing
+      const crossings = countCrossings({ id: link.id, p1: ap1, p2: ap2 }, endpoints);
+      const semanticOff = semanticLane(link.linkType) === "input" ? -12 : semanticLane(link.linkType) === "output" ? 12 : 0;
+      if (crossings >= 1) {
+        result.set(link.id, orthogonalPath(ap1, ap2, flow, semanticOff + crossings * 8));
+      } else {
+        result.set(link.id, orthogonalPath(ap1, ap2, flow, semanticOff));
       }
     } else {
       // Single link: check for crossings
-      const crossings = countCrossings({ id: link.id, p1: link.p1, p2: link.p2 }, endpoints);
+      const crossings = countCrossings({ id: link.id, p1: ap1, p2: ap2 }, endpoints);
       if (crossings >= 2) {
-        const hash = link.id.split("").reduce((h, c) => h * 31 + c.charCodeAt(0), 0);
-        const sign = hash % 2 === 0 ? 1 : -1;
-        result.set(link.id, curvedPath(link.p1, link.p2, sign * (20 + crossings * 8)));
+        // Use geometric direction instead of hash for consistent curve direction
+        const midX = (ap1.x + ap2.x) / 2;
+        const midY = (ap1.y + ap2.y) / 2;
+        const perp = perpendicular(ap1, ap2);
+        // Bias curve toward the side with more space
+        const sign = perp.x > 0 ? 1 : perp.y > 0 ? -1 : 1;
+        result.set(link.id, curvedPath(ap1, ap2, sign * (20 + crossings * 8)));
       } else {
-        result.set(link.id, straightPath(link.p1, link.p2));
+        result.set(link.id, straightPath(ap1, ap2));
       }
     }
   }
