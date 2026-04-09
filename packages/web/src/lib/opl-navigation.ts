@@ -231,3 +231,49 @@ export function getActiveSentenceText(text: string, activeSentenceRef?: ParsedSe
   const lines = text.split("\n");
   return lines.slice(activeSentenceRef.span.line - 1, activeSentenceRef.span.endLine).join("\n").trim() || null;
 }
+
+export function getRelatedHighlightNames(model: Model, highlightThingId?: string | null, highlightLinkId?: string | null): string[] {
+  const names = new Set<string>();
+  if (highlightThingId) {
+    const thing = model.things.get(highlightThingId);
+    if (thing) {
+      names.add(thing.name);
+      const exhibitors = [...model.links.values()].filter(
+        (l) => l.type === "exhibition" && (l.target === highlightThingId || l.source === highlightThingId),
+      );
+      for (const ex of exhibitors) {
+        const otherId = ex.source === highlightThingId ? ex.target : ex.source;
+        const other = model.things.get(otherId);
+        if (other) {
+          names.add(`${thing.name} of ${other.name}`);
+          names.add(`${thing.name} de ${other.name}`);
+        }
+      }
+    }
+  }
+  if (highlightLinkId) {
+    const link = model.links.get(highlightLinkId);
+    if (link) {
+      const src = model.things.get(link.source);
+      const tgt = model.things.get(link.target);
+      if (src) names.add(src.name);
+      if (tgt) names.add(tgt.name);
+    }
+  }
+  return [...names];
+}
+
+export function getLineState(
+  line: string,
+  lineNumber: number,
+  activeSentenceRef?: ParsedSentenceRef | null,
+  relatedNames: string[] = [],
+): "active" | "related" | "plain" {
+  if (activeSentenceRef && lineNumber >= activeSentenceRef.span.line && lineNumber <= activeSentenceRef.span.endLine) {
+    return "active";
+  }
+  if (relatedNames.length > 0 && relatedNames.some((name) => line.includes(name))) {
+    return "related";
+  }
+  return "plain";
+}

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import type { Model } from "@opmodel/core";
 import { semanticKernelFromModel, exposeSemanticKernel, exposeFromKernel, render, renderAllFromKernelNative } from "@opmodel/core";
 import type { Command } from "../lib/commands";
-import { findFirstLinkIdByPathLabels, findLinkIdByNames, findOpdIdByName, findSentenceAtLine, findSentenceForSelection, findThingIdByName, findThingOrLinkTarget, parseSentenceRefs } from "../lib/opl-navigation";
+import { findFirstLinkIdByPathLabels, findLinkIdByNames, findOpdIdByName, findSentenceAtLine, findSentenceForSelection, findThingIdByName, findThingOrLinkTarget, getLineState, getRelatedHighlightNames, parseSentenceRefs } from "../lib/opl-navigation";
 
 interface Props {
   model: Model;
@@ -27,48 +27,7 @@ export function OplTextView({ model, opdId, highlightThingId, highlightLinkId, d
     [sentenceRefs, model, highlightThingId, highlightLinkId, opdId],
   );
 
-  const highlightNames = useCallback((): string[] => {
-    const names = new Set<string>();
-    if (highlightThingId) {
-      const thing = model.things.get(highlightThingId);
-      if (thing) {
-        names.add(thing.name);
-        const exhibitors = [...model.links.values()].filter(
-          (l) => l.type === "exhibition" && (l.target === highlightThingId || l.source === highlightThingId),
-        );
-        for (const ex of exhibitors) {
-          const otherId = ex.source === highlightThingId ? ex.target : ex.source;
-          const other = model.things.get(otherId);
-          if (other) {
-            names.add(`${thing.name} of ${other.name}`);
-            names.add(`${thing.name} de ${other.name}`);
-          }
-        }
-      }
-    }
-    if (highlightLinkId) {
-      const link = model.links.get(highlightLinkId);
-      if (link) {
-        const src = model.things.get(link.source);
-        const tgt = model.things.get(link.target);
-        if (src) names.add(src.name);
-        if (tgt) names.add(tgt.name);
-      }
-    }
-    return [...names];
-  }, [model, highlightThingId, highlightLinkId]);
-
-  const hlNames = highlightNames();
-
-  const lineState = (line: string, lineNumber: number): "active" | "related" | "plain" => {
-    if (activeSentenceRef && lineNumber >= activeSentenceRef.span.line && lineNumber <= activeSentenceRef.span.endLine) {
-      return "active";
-    }
-    if (hlNames.length > 0 && hlNames.some((name) => line.includes(name))) {
-      return "related";
-    }
-    return "plain";
-  };
+  const hlNames = useMemo(() => getRelatedHighlightNames(model, highlightThingId ?? null, highlightLinkId ?? null), [model, highlightThingId, highlightLinkId]);
 
   useEffect(() => {
     if (containerRef.current) {
@@ -155,7 +114,7 @@ export function OplTextView({ model, opdId, highlightThingId, highlightLinkId, d
       </div>
       <div ref={containerRef} className="opl-text__lines">
         {lines.map((line, i) => {
-          const state = lineState(line, i + 1);
+          const state = getLineState(line, i + 1, activeSentenceRef, hlNames);
           const active = state === "active";
           const highlighted = state !== "plain";
           return (
