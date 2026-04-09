@@ -132,7 +132,7 @@ export function findOpdIdByName(model: Model, name?: string | null) {
  * Preferred OPD adds +10 bonus (applied by caller).
  * Link exact match scores 110 (highest) to prioritize explicit link selection.
  */
-function sentenceScore(sentence: OplSentence, thingName: string, linkNames?: { source: string; target: string }) {
+export function sentenceScore(sentence: OplSentence, thingName: string, linkNames?: { source: string; target: string }) {
   switch (sentence.kind) {
     case "thing-declaration":
       return sentence.name === thingName ? 100 : 0;

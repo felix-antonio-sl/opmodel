@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import type { Model, ValidationIssue } from "@opmodel/core";
 import { renderAll, parseOplDocuments, compileToKernel, legacyModelFromSemanticKernel, exposeSemanticKernel, validateOpl, semanticKernelFromModel, exposeFromKernel, render } from "@opmodel/core";
 import type { Command } from "../lib/commands";
-import { findOpdIdByName, findSentenceForSelection, findThingIdByName, lineColumnToOffset } from "../lib/opl-navigation";
+import { findOpdIdByName, findSentenceForSelection, findThingIdByName, getActiveSentenceText, lineColumnToOffset } from "../lib/opl-navigation";
 import { useAutocomplete } from "../hooks/useAutocomplete";
 import { useOplContext } from "../hooks/useOplContext";
 import { OplAutocomplete } from "./OplAutocomplete";
@@ -99,7 +99,7 @@ export function OplLiveEditor({ model, opdId, selectedThing, selectedLink, dispa
   }, [text, opdId, selectedThing, selectedLink]);
   const displayedSentenceRef = relatedSentenceRefs[contextIndex] ?? activeSentenceRef;
   const displayedSentenceText = useMemo(
-    () => (displayedSentenceRef ? text.split("\n").slice(displayedSentenceRef.span.line - 1, displayedSentenceRef.span.endLine).join("\n").trim() : null),
+    () => getActiveSentenceText(text, displayedSentenceRef),
     [displayedSentenceRef, text],
   );
 
@@ -148,6 +148,23 @@ export function OplLiveEditor({ model, opdId, selectedThing, selectedLink, dispa
     return map;
   }, [validationResult]);
 
+  const scrollToSpan = useCallback((line?: number, column?: number, endLine?: number, endColumn?: number) => {
+    const start = lineColumnToOffset(textRef.current, line, column);
+    const end = lineColumnToOffset(textRef.current, endLine ?? line, endColumn ?? column);
+    if (start == null) return;
+    requestAnimationFrame(() => {
+      const ta = textareaRef.current;
+      if (!ta) return;
+      ta.focus();
+      ta.setSelectionRange(start, end != null && end > start ? end : start);
+      const lineIndex = Math.max(0, (line ?? 1) - 1);
+      const lineHeight = 16;
+      const targetScroll = Math.max(0, lineIndex * lineHeight - ta.clientHeight / 3);
+      ta.scrollTop = targetScroll;
+      if (lineNumbersRef.current) lineNumbersRef.current.scrollTop = targetScroll;
+    });
+  }, []);
+
   const focusIssue = useCallback((issue: ValidationIssue, key?: string | null) => {
     if (key) setActiveIssueKey(key);
 
@@ -157,43 +174,16 @@ export function OplLiveEditor({ model, opdId, selectedThing, selectedLink, dispa
     const thingMatch = findThingIdByName(model, issue.focusThingName);
     if (thingMatch) dispatch({ tag: "selectThing", thingId: thingMatch });
 
-    const start = lineColumnToOffset(textRef.current, issue.line, issue.column);
-    const end = lineColumnToOffset(textRef.current, issue.endLine ?? issue.line, issue.endColumn ?? issue.column);
-    if (start == null) return;
-
-    requestAnimationFrame(() => {
-      const ta = textareaRef.current;
-      if (!ta) return;
-      ta.focus();
-      ta.setSelectionRange(start, end != null && end > start ? end : start);
-      const lineIndex = Math.max(0, (issue.line ?? 1) - 1);
-      const lineHeight = 16;
-      const targetScroll = Math.max(0, lineIndex * lineHeight - ta.clientHeight / 3);
-      ta.scrollTop = targetScroll;
-      if (lineNumbersRef.current) lineNumbersRef.current.scrollTop = targetScroll;
-    });
-  }, [dispatch, model, opdId]);
+    scrollToSpan(issue.line, issue.column, issue.endLine, issue.endColumn);
+  }, [dispatch, model, opdId, scrollToSpan]);
 
   const revealSelection = useCallback((thingId?: string | null, linkId?: string | null) => {
     const match = findSentenceForSelection(sentenceRefs, model, thingId, linkId, opdId);
     if (!match) return;
     const targetOpdId = findOpdIdByName(model, match.doc.opdName);
     if (targetOpdId && targetOpdId !== opdId) dispatch({ tag: "selectOpd", opdId: targetOpdId });
-    const start = lineColumnToOffset(textRef.current, match.span.line, match.span.column);
-    const end = lineColumnToOffset(textRef.current, match.span.endLine, match.span.endColumn);
-    if (start == null) return;
-    requestAnimationFrame(() => {
-      const ta = textareaRef.current;
-      if (!ta) return;
-      ta.focus();
-      ta.setSelectionRange(start, end != null && end > start ? end : start);
-      const lineIndex = Math.max(0, match.span.line - 1);
-      const lineHeight = 16;
-      const targetScroll = Math.max(0, lineIndex * lineHeight - ta.clientHeight / 3);
-      ta.scrollTop = targetScroll;
-      if (lineNumbersRef.current) lineNumbersRef.current.scrollTop = targetScroll;
-    });
-  }, [dispatch, model, opdId, sentenceRefs]);
+    scrollToSpan(match.span.line, match.span.column, match.span.endLine, match.span.endColumn);
+  }, [dispatch, model, opdId, sentenceRefs, scrollToSpan]);
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const nextText = e.target.value;
@@ -319,7 +309,7 @@ export function OplLiveEditor({ model, opdId, selectedThing, selectedLink, dispa
     return () => window.removeEventListener("keydown", handler, true);
   }, [handleApply]);
 
-  const statusColor = status === "valid" ? "#5cb85c" : status === "error" ? "#d9534f" : status === "dirty" ? "#f0ad4e" : "#666";
+  const statusColor = status === "valid" ? "var(--success)" : status === "error" ? "var(--error)" : status === "dirty" ? "var(--warning)" : "var(--text-muted)";
   const statusText = status === "idle"
     ? "Synced"
     : status === "dirty"
@@ -388,7 +378,7 @@ export function OplLiveEditor({ model, opdId, selectedThing, selectedLink, dispa
         onToggleFocusMode={() => setFocusMode((v) => !v)}
         onPrev={() => setContextIndex((i) => (i - 1 + relatedSentenceRefs.length) % relatedSentenceRefs.length)}
         onNext={() => setContextIndex((i) => (i + 1) % relatedSentenceRefs.length)}
-        onReveal={() => displayedSentenceRef ? focusIssue({ phase: "V3-semantic", severity: "warning", message: displayedSentenceText ?? "", line: displayedSentenceRef.span.line, column: displayedSentenceRef.span.column, endLine: displayedSentenceRef.span.endLine, endColumn: displayedSentenceRef.span.endColumn }, null) : revealSelection(selectedThing, selectedLink)}
+        onReveal={() => displayedSentenceRef ? scrollToSpan(displayedSentenceRef.span.line, displayedSentenceRef.span.column, displayedSentenceRef.span.endLine, displayedSentenceRef.span.endColumn) : revealSelection(selectedThing, selectedLink)}
         onInsertTemplate={insertRefinementTemplate}
       />
 
@@ -404,7 +394,7 @@ export function OplLiveEditor({ model, opdId, selectedThing, selectedLink, dispa
                 key={i}
                 className={`opl-line-number${isActiveLine ? " opl-line-number--active" : ""}`}
                 style={{
-                  color: severity === "error" ? "#d9534f" : severity === "warning" ? "#f0ad4e" : isActiveLine ? "rgba(124, 92, 255, 0.95)" : undefined,
+                  color: severity === "error" ? "var(--error)" : severity === "warning" ? "var(--warning)" : isActiveLine ? "rgba(124, 92, 255, 0.95)" : undefined,
                   fontWeight: severity || isActiveLine ? 700 : undefined,
                   opacity: isDimmed ? 0.28 : 1,
                 }}
@@ -435,7 +425,7 @@ export function OplLiveEditor({ model, opdId, selectedThing, selectedLink, dispa
       </div>
 
       {errorMsg && (
-        <div style={{ color: "#d9534f", fontSize: 11, fontFamily: "monospace", marginTop: 4 }}>
+        <div style={{ color: "var(--error)", fontSize: 11, fontFamily: "monospace", marginTop: 4 }}>
           {errorMsg}
         </div>
       )}
@@ -454,7 +444,7 @@ export function OplLiveEditor({ model, opdId, selectedThing, selectedLink, dispa
                   textAlign: "left",
                   border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
                   background: active ? "rgba(124, 92, 255, 0.08)" : "var(--bg-panel)",
-                  color: issue.severity === "error" ? "#f38b8b" : "#f3c96b",
+                  color: issue.severity === "error" ? "var(--error)" : "var(--warning)",
                   borderRadius: 4,
                   padding: "6px 8px",
                   cursor: "pointer",
@@ -473,7 +463,7 @@ export function OplLiveEditor({ model, opdId, selectedThing, selectedLink, dispa
             );
           })}
           {validationResult.issues.length > 8 && (
-            <div style={{ color: "#666", fontSize: 10 }}>...+{validationResult.issues.length - 8} more</div>
+            <div style={{ color: "var(--text-muted)", fontSize: 10 }}>...+{validationResult.issues.length - 8} more</div>
           )}
         </div>
       )}

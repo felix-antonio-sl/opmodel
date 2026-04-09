@@ -72,6 +72,8 @@ export interface ModelStore {
   save: () => void;
   /** Autosave status: saved | saving | error */
   saveStatus: SaveStatus;
+  /** Human-readable error when autosave fails (e.g. quota exceeded) */
+  saveError: string | null;
   /** Local persistence metadata for UI trust cues */
   localSnapshotInfo: LocalSnapshotInfo;
 }
@@ -91,6 +93,7 @@ export function useModelStore(initialModel: Model): ModelStore {
   });
   const [lastError, setLastError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [localSnapshotInfo, setLocalSnapshotInfo] = useState<LocalSnapshotInfo>({ lastSavedAt: null, snapshotCount: 0 });
 
   const projection = useMemo(() => projectLegacyModel(history.present), [history.present]);
@@ -116,8 +119,13 @@ export function useModelStore(initialModel: Model): ModelStore {
         const { current, backups } = saveToLocalSnapshots(history.present);
         setLocalSnapshotInfo({ lastSavedAt: current.savedAt, snapshotCount: backups.length });
         setSaveStatus("saved");
-      } catch {
+        setSaveError(null);
+      } catch (e) {
         setSaveStatus("error");
+        const msg = e instanceof DOMException && e.name === "QuotaExceededError"
+          ? "Local storage is full. Export your model to free space."
+          : e instanceof Error ? e.message : "Failed to save locally";
+        setSaveError(msg);
       }
     }, intervalMs);
     return () => clearTimeout(saveTimer.current);
@@ -324,6 +332,7 @@ export function useModelStore(initialModel: Model): ModelStore {
     lastError,
     save,
     saveStatus,
+    saveError,
     localSnapshotInfo,
   };
 }
