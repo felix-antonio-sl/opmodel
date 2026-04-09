@@ -17,7 +17,7 @@ import { LINK_COLORS, paddedBounds } from "../lib/visual-rules";
 import { suggestLayoutForOpd } from "../lib/spatial-layout";
 import { auditVisualOpd, computeVisualQuality } from "../lib/visual-lint";
 import { routeEdges, type EdgePath } from "../lib/edge-router";
-import { canCreateRefinement, getRefinementContext, nextChildOpdName } from "../lib/refinement-navigation";
+import { getRefinementActionState, getRefinementContext, nextChildOpdName } from "../lib/refinement-navigation";
 
 import { ThingNode } from "./canvas/ThingNode";
 import { LinkLine } from "./canvas/LinkLine";
@@ -63,6 +63,9 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, select
   const [attentionLinkId, setAttentionLinkId] = useState<string | null>(null);
   const refinementContext = useMemo(() => getRefinementContext(model, opdId, selectedThing), [model, opdId, selectedThing]);
   const selectedThingEntity = selectedThing ? model.things.get(selectedThing) ?? null : null;
+  const selectedThingAppearance = selectedThing ? model.appearances.get(`${selectedThing}::${opdId}`) : null;
+  const inZoomAction = getRefinementActionState(model, opdId, selectedThingEntity, selectedThingAppearance, refinementContext.selectedThingChildRefinements, "in-zoom");
+  const unfoldAction = getRefinementActionState(model, opdId, selectedThingEntity, selectedThingAppearance, refinementContext.selectedThingChildRefinements, "unfold");
 
   const toggleLinkCategory = (category: string) => {
     setHiddenLinkTypes(prev => {
@@ -1133,11 +1136,14 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, select
                 Alternate {sibling.refinement_type}: {sibling.name}
               </button>
             ))}
-            {selectedThingEntity && canCreateRefinement(selectedThingEntity, refinementContext.selectedThingChildRefinements, "in-zoom") && (
+            {selectedThingEntity && (
               <button
-                className="canvas-refinement-nav__item canvas-refinement-nav__item--create"
+                className={`canvas-refinement-nav__item canvas-refinement-nav__item--create${!inZoomAction.enabled ? " canvas-refinement-nav__item--disabled" : ""}`}
                 type="button"
+                disabled={!inZoomAction.enabled}
+                title={inZoomAction.reason}
                 onClick={() => {
+                  if (!inZoomAction.enabled) return;
                   const childOpdId = genId("opd");
                   const childOpdName = nextChildOpdName(model, opdId);
                   if (dispatch({ tag: "refineThing", thingId: selectedThingEntity.id, opdId, refinementType: "in-zoom", childOpdId, childOpdName })) {
@@ -1145,14 +1151,17 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, select
                   }
                 }}
               >
-                + In-zoom {selectedThingEntity.name}
+                {inZoomAction.enabled ? `+ In-zoom ${selectedThingEntity.name}` : `In-zoom unavailable`}
               </button>
             )}
-            {selectedThingEntity && canCreateRefinement(selectedThingEntity, refinementContext.selectedThingChildRefinements, "unfold") && (
+            {selectedThingEntity && (
               <button
-                className="canvas-refinement-nav__item canvas-refinement-nav__item--create"
+                className={`canvas-refinement-nav__item canvas-refinement-nav__item--create${!unfoldAction.enabled ? " canvas-refinement-nav__item--disabled" : ""}`}
                 type="button"
+                disabled={!unfoldAction.enabled}
+                title={unfoldAction.reason}
                 onClick={() => {
+                  if (!unfoldAction.enabled) return;
                   const childOpdId = genId("opd");
                   const childOpdName = nextChildOpdName(model, opdId);
                   if (dispatch({ tag: "refineThing", thingId: selectedThingEntity.id, opdId, refinementType: "unfold", childOpdId, childOpdName })) {
@@ -1160,7 +1169,7 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, select
                   }
                 }}
               >
-                + Unfold {selectedThingEntity.name}
+                {unfoldAction.enabled ? `+ Unfold ${selectedThingEntity.name}` : `Unfold unavailable`}
               </button>
             )}
             {selectedThing && refinementContext.selectedThingChildRefinements.map((child) => (
@@ -1173,6 +1182,11 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, select
                 Child {child.refinement_type}: {child.name}
               </button>
             ))}
+            {selectedThingEntity && (!inZoomAction.enabled || !unfoldAction.enabled) && (
+              <div className="canvas-refinement-nav__hint">
+                {[inZoomAction, unfoldAction].filter((action) => !action.enabled && action.reason).map((action) => action.reason).filter((value, index, arr) => arr.indexOf(value) === index).join(" • ")}
+              </div>
+            )}
           </div>
         )}
       </div>

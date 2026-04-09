@@ -1025,6 +1025,23 @@ button.header__pill:hover {
   font-weight: 600;
 }
 
+.canvas-refinement-nav__item--disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.canvas-refinement-nav__item--disabled:hover {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: var(--border);
+}
+
+.canvas-refinement-nav__hint {
+  width: 100%;
+  font-size: 10px;
+  color: var(--text-muted);
+  padding: 2px 2px 0;
+}
+
 .canvas-zoom {
   position: absolute;
   bottom: 12px;

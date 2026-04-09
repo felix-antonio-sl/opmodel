@@ -2,6 +2,7 @@ import type { Model, Thing, State, Link, LinkType, FanType, ModifierType, Refine
 import { getCompoundStates } from "@opmodel/core";
 import type { Command } from "../lib/commands";
 import { genId } from "../lib/ids";
+import { getRefinementActionState, nextChildOpdName } from "../lib/refinement-navigation";
 
 const TIME_UNITS: TimeUnit[] = ["ms", "s", "min", "h", "d"];
 
@@ -349,16 +350,6 @@ function refinementsOf(model: Model, thingId: string, opdId: string): OPD[] {
     .filter((o) => o.refines === thingId && o.parent_opd === opdId);
 }
 
-function nextChildOpdName(model: Model, parentOpdId: string): string {
-  const parentOpd = model.opds.get(parentOpdId);
-  const parentName = parentOpd?.name ?? "SD";
-  let maxN = 0;
-  for (const opd of model.opds.values()) {
-    if (opd.parent_opd === parentOpdId) maxN++;
-  }
-  const sep = /\d$/.test(parentName) ? "." : "";
-  return `${parentName}${sep}${maxN + 1}`;
-}
 
 function StateRow({
   state, dispatch, isSuppressed, onToggleSuppression,
@@ -423,17 +414,6 @@ function StateRow({
       </button>
     </div>
   );
-}
-
-function isInOwnRefinementTree(model: Model, thingId: string, opdId: string): boolean {
-  let id: string | null = opdId;
-  while (id) {
-    const opd = model.opds.get(id);
-    if (!opd) break;
-    if (opd.refines === thingId) return true;
-    id = opd.parent_opd;
-  }
-  return false;
 }
 
 const FAN_TYPES: FanType[] = ["xor", "or", "and"];
@@ -602,11 +582,8 @@ function RefineSection({
   const appKey = `${thingId}::${opdId}`;
   const app = model.appearances.get(appKey);
 
-  // I-REFINE-EXT: external appearances (pullback projections) cannot be refined
-  const isExternal = app?.internal === false;
-  // I-REFINE-CYCLE: cannot refine from within the thing's own refinement tree
-  const isCyclic = isInOwnRefinementTree(model, thingId, opdId);
-  const blocked = isExternal || isCyclic;
+  const inZoomAction = getRefinementActionState(model, opdId, thing, app, existing, "in-zoom");
+  const unfoldAction = getRefinementActionState(model, opdId, thing, app, existing, "unfold");
 
   const handleRefine = (refinementType: RefinementType) => {
     const childOpdId = genId("opd");
@@ -620,32 +597,24 @@ function RefineSection({
     }
   };
 
-  const canUnfold = thing.kind === "object";
-  const hasInZoom = existing.some((o) => o.refinement_type === "in-zoom");
-  const hasUnfold = existing.some((o) => o.refinement_type === "unfold");
+  const blockedReasons = [inZoomAction.reason, unfoldAction.reason].filter((value, index, arr): value is string => Boolean(value) && arr.indexOf(value) === index);
 
   return (
     <div className="props-panel__refine">
       <div className="props-panel__states-header">
         <span className="props-panel__label">Refinement</span>
-        {!blocked && (
-          <div className="props-panel__refine-actions">
-            {!hasInZoom && (
-              <button className="props-panel__add-btn" onClick={() => handleRefine("in-zoom")}>
-                In-zoom
-              </button>
-            )}
-            {canUnfold && !hasUnfold && (
-              <button className="props-panel__add-btn" onClick={() => handleRefine("unfold")}>
-                Unfold
-              </button>
-            )}
-          </div>
-        )}
+        <div className="props-panel__refine-actions">
+          <button className="props-panel__add-btn" onClick={() => handleRefine("in-zoom")} disabled={!inZoomAction.enabled} title={inZoomAction.reason}>
+            In-zoom
+          </button>
+          <button className="props-panel__add-btn" onClick={() => handleRefine("unfold")} disabled={!unfoldAction.enabled} title={unfoldAction.reason}>
+            Unfold
+          </button>
+        </div>
       </div>
-      {blocked && (
+      {blockedReasons.length > 0 && (
         <div className="props-panel__refine-hint">
-          {isExternal ? "External — refine from parent OPD" : "Already refined in ancestor"}
+          {blockedReasons.join(" • ")}
         </div>
       )}
       {existing.map((o) => (

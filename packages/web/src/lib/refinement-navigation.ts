@@ -1,4 +1,4 @@
-import type { Model, OPD, Thing, RefinementType } from "@opmodel/core";
+import type { Appearance, Model, OPD, Thing, RefinementType } from "@opmodel/core";
 
 export interface RefinementContext {
   currentOpd: OPD | null;
@@ -6,6 +6,11 @@ export interface RefinementContext {
   refinedThing: Thing | null;
   siblingRefinements: OPD[];
   selectedThingChildRefinements: OPD[];
+}
+
+export interface RefinementActionState {
+  enabled: boolean;
+  reason?: string;
 }
 
 export function nextChildOpdName(model: Model, parentOpdId: string): string {
@@ -17,6 +22,35 @@ export function nextChildOpdName(model: Model, parentOpdId: string): string {
   }
   const sep = /\d$/.test(parentName) ? "." : "";
   return `${parentName}${sep}${maxN + 1}`;
+}
+
+export function isInOwnRefinementTree(model: Model, thingId: string, opdId: string): boolean {
+  let id: string | null = opdId;
+  while (id) {
+    const opd = model.opds.get(id);
+    if (!opd) break;
+    if (opd.refines === thingId) return true;
+    id = opd.parent_opd;
+  }
+  return false;
+}
+
+export function getRefinementActionState(
+  model: Model,
+  opdId: string,
+  thing: Thing | null,
+  appearance: Appearance | null | undefined,
+  existing: OPD[],
+  type: RefinementType,
+): RefinementActionState {
+  const opd = model.opds.get(opdId);
+  if (!thing) return { enabled: false, reason: "Select a thing first" };
+  if (!opd || opd.opd_type !== "hierarchical") return { enabled: false, reason: "Only hierarchical OPDs can create refinements" };
+  if (appearance?.internal === false) return { enabled: false, reason: "External appearance, refine from its home OPD" };
+  if (isInOwnRefinementTree(model, thing.id, opdId)) return { enabled: false, reason: "Cannot refine from inside the same refinement tree" };
+  if (type === "unfold" && thing.kind !== "object") return { enabled: false, reason: "Unfold is only available for objects" };
+  if (existing.some((child) => child.refinement_type === type)) return { enabled: false, reason: `This ${type} refinement already exists here` };
+  return { enabled: true };
 }
 
 export function canCreateRefinement(thing: Thing | null, existing: OPD[], type: RefinementType): boolean {
