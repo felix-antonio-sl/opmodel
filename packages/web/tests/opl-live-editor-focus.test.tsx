@@ -31,7 +31,7 @@ describe("OplLiveEditor focus card", () => {
     );
 
     expect(screen.getByText("Current focus")).toBeTruthy();
-    const card = document.querySelector(".opl-editor-focus-card") as HTMLElement;
+    const card = document.querySelector(".opl-editor-context-card") as HTMLElement;
     expect(card).toBeTruthy();
     expect(within(card).getByText(/Boiling consumes Water\./i)).toBeTruthy();
     expect(within(card).getByText(/L4:1/i)).toBeTruthy();

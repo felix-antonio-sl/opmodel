@@ -4,9 +4,8 @@ import { renderAll, parseOplDocuments, compileToKernel, legacyModelFromSemanticK
 import type { Command } from "../lib/commands";
 import { findOpdIdByName, findSentenceForSelection, findThingIdByName, lineColumnToOffset, parseSentenceRefs } from "../lib/opl-navigation";
 import { useAutocomplete } from "../hooks/useAutocomplete";
-import { OplFocusCard } from "./OplFocusCard";
-import { OplRefinementGuidance } from "./OplRefinementGuidance";
 import { OplAutocomplete } from "./OplAutocomplete";
+import { OplContextCard } from "./OplContextCard";
 
 interface Props {
   model: Model;
@@ -374,17 +373,13 @@ export function OplLiveEditor({ model, opdId, selectedThing, selectedLink, dispa
         )}
       </div>
 
-      {refinementGuidance && (
-        <OplRefinementGuidance guidance={refinementGuidance} onInsertTemplate={insertRefinementTemplate} />
-      )}
-
-      {activeSentenceRef && activeSentenceText && (
-        <OplFocusCard
-          activeSentenceRef={activeSentenceRef}
-          activeSentenceText={activeSentenceText}
-          onReveal={() => revealSelection(selectedThing, selectedLink)}
-        />
-      )}
+      <OplContextCard
+        activeSentenceRef={activeSentenceRef}
+        activeSentenceText={activeSentenceText}
+        guidance={refinementGuidance}
+        onReveal={() => revealSelection(selectedThing, selectedLink)}
+        onInsertTemplate={insertRefinementTemplate}
+      />
 
       <div className="opl-editor-wrapper" style={{ flex: 1, display: "flex", minHeight: 200, position: "relative" }}>
         <div ref={lineNumbersRef} className="opl-line-numbers" aria-hidden="true">
