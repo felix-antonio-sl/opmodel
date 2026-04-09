@@ -29,7 +29,7 @@ import { auditVisualOpd, computeVisualQuality } from "./lib/visual-lint";
 import { suggestLayoutForOpd } from "./lib/spatial-layout";
 import { buildPatchableOpdProjectionSliceFromProjection } from "./lib/projection-view";
 import { buildSearchResults } from "./lib/search";
-import { clearLocalSnapshots, listBackups, loadCurrentFromStorage, restoreSnapshot, type LocalSnapshot } from "./lib/local-persistence";
+import { clearLocalSnapshots, listBackups, loadRecoveryInfo, restoreSnapshot, type LocalRecoveryInfo, type LocalSnapshot } from "./lib/local-persistence";
 
 const STORAGE_KEY = "opmodel:current";
 
@@ -289,11 +289,12 @@ function FileMenu({ model, onNew, onLoadExample, onImport, onSave, onAutoLayoutA
   );
 }
 
-function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel: Model; onNew: () => void; onLoadExample: (file: string) => void; onImport: (model: Model) => void }) {
+function Editor({ initialModel, recoveryInfo, onNew, onLoadExample, onImport }: { initialModel: Model; recoveryInfo: LocalRecoveryInfo | null; onNew: () => void; onLoadExample: (file: string) => void; onImport: (model: Model) => void }) {
   const store = useModelStore(initialModel);
   const { model, projection, currentProjectionSlice, ui, dispatch, doUndo, doRedo, canUndo, canRedo, isDirty, lastError, save, saveStatus, localSnapshotInfo } = store;
 
   const [showSearch, setShowSearch] = useState(false);
+  const [showRecoveryBanner, setShowRecoveryBanner] = useState(Boolean(recoveryInfo));
   const [showValidation, setShowValidation] = useState(false);
   const [validationTab, setValidationTab] = useState<ValidationTab>("issues");
   const [showHelp, setShowHelp] = useState(false);
@@ -509,6 +510,15 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
 
   return (
     <div className="app" role="application">
+      {showRecoveryBanner && recoveryInfo && (
+        <div className="recovery-banner">
+          <span>
+            Recovered local snapshot from {recoveryInfo.lastSavedAt ? new Date(recoveryInfo.lastSavedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "recent autosave"}
+            {recoveryInfo.snapshotCount > 0 ? ` • ${recoveryInfo.snapshotCount} local snapshot${recoveryInfo.snapshotCount === 1 ? "" : "s"} available in File` : ""}
+          </span>
+          <button type="button" onClick={() => setShowRecoveryBanner(false)}>Dismiss</button>
+        </div>
+      )}
       {/* Header */}
       <header className="header" role="banner">
         <div className="header__logo">
@@ -926,8 +936,8 @@ function Editor({ initialModel, onNew, onLoadExample, onImport }: { initialModel
   );
 }
 
-function loadFromStorage(): Model | null {
-  return loadCurrentFromStorage();
+function loadFromStorage(): LocalRecoveryInfo | null {
+  return loadRecoveryInfo();
 }
 
 function loadExample(file = "coffee-making.opmodel"): Promise<Model> {
@@ -945,6 +955,7 @@ function loadExample(file = "coffee-making.opmodel"): Promise<Model> {
 
 export function App() {
   const [initialModel, setInitialModel] = useState<Model | null>(null);
+  const [recoveryInfo, setRecoveryInfo] = useState<LocalRecoveryInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Increment key to force Editor remount when switching models
   const [editorKey, setEditorKey] = useState(0);
@@ -953,7 +964,8 @@ export function App() {
     // Try localStorage first, fallback to example
     const stored = loadFromStorage();
     if (stored) {
-      setInitialModel(stored);
+      setInitialModel(stored.model);
+      setRecoveryInfo(stored);
       return;
     }
     loadExample()
@@ -965,6 +977,7 @@ export function App() {
     const m = createModel("New Model");
     clearLocalSnapshots();
     setInitialModel(m);
+    setRecoveryInfo(null);
     setEditorKey((k) => k + 1);
   }, []);
 
@@ -972,6 +985,7 @@ export function App() {
     loadExample(file)
       .then((m) => {
         setInitialModel(m);
+        setRecoveryInfo(null);
         setEditorKey((k) => k + 1);
       })
       .catch((e) => setError(e.message));
@@ -979,6 +993,7 @@ export function App() {
 
   const handleImport = useCallback((m: Model) => {
     setInitialModel(m);
+    setRecoveryInfo(null);
     setEditorKey((k) => k + 1);
   }, []);
 
@@ -999,5 +1014,5 @@ export function App() {
     );
   }
 
-  return <ErrorBoundary><Editor key={editorKey} initialModel={initialModel} onNew={handleNew} onLoadExample={handleLoadExample} onImport={handleImport} /></ErrorBoundary>;
+  return <ErrorBoundary><Editor key={editorKey} initialModel={initialModel} recoveryInfo={recoveryInfo} onNew={handleNew} onLoadExample={handleLoadExample} onImport={handleImport} /></ErrorBoundary>;
 }

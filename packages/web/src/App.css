@@ -1929,6 +1929,27 @@ button.header__pill:hover {
   animation: spin 0.8s linear infinite;
 }
 
+.recovery-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  background: rgba(92, 184, 92, 0.10);
+  border-bottom: 1px solid rgba(92, 184, 92, 0.25);
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.recovery-banner button {
+  border: 1px solid var(--border);
+  background: var(--bg-panel);
+  color: var(--text-secondary);
+  border-radius: 4px;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+
 @keyframes spin {
   to { transform: rotate(360deg); }
 }

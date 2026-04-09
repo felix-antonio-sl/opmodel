@@ -21,6 +21,12 @@ function safeParseSnapshots(raw: string | null): LocalSnapshot[] {
   }
 }
 
+export interface LocalRecoveryInfo {
+  model: Model;
+  lastSavedAt: string | null;
+  snapshotCount: number;
+}
+
 export function loadCurrentFromStorage(): Model | null {
   try {
     const json = localStorage.getItem(CURRENT_STORAGE_KEY);
@@ -30,6 +36,17 @@ export function loadCurrentFromStorage(): Model | null {
   } catch {
     return null;
   }
+}
+
+export function loadRecoveryInfo(): LocalRecoveryInfo | null {
+  const model = loadCurrentFromStorage();
+  if (!model) return null;
+  const backups = listBackups();
+  return {
+    model,
+    lastSavedAt: backups[0]?.savedAt ?? null,
+    snapshotCount: backups.length,
+  };
 }
 
 export function listBackups(): LocalSnapshot[] {
