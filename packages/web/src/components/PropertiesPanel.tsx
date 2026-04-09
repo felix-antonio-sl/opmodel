@@ -531,7 +531,7 @@ function FanSection({
                   const probs = f.members.map(mid => model.links.get(mid)?.probability).filter((p): p is number => p != null);
                   if (probs.length === f.members.length) {
                     const sum = probs.reduce((a, b) => a + b, 0);
-                    return <div style={{ fontSize: 9, color: Math.abs(sum - 1) < 0.01 ? "#48bb78" : "#f56565" }}>Σ = {sum.toFixed(2)}</div>;
+                    return <div style={{ fontSize: 9, color: Math.abs(sum - 1) < 0.01 ? "var(--success)" : "var(--error)" }}>Σ = {sum.toFixed(2)}</div>;
                   }
                   return null;
                 })()}
@@ -1088,7 +1088,7 @@ export function PropertiesPanel({ model, thingId, opdId, dispatch }: Props) {
                           <span style={{
                             display: "inline-block", width: 14, height: 14, borderRadius: "50%", textAlign: "center", lineHeight: "14px",
                             color: "white", fontWeight: "bold", fontSize: 8,
-                            background: mod.type === "event" ? "#d69e2e" : mod.condition_mode === "skip" ? "#c05621" : "#3182ce",
+                            background: mod.type === "event" ? "var(--warning)" : mod.condition_mode === "skip" ? "var(--warning)" : "var(--info)",
                           }}>
                             {mod.type === "event" ? "e" : "c"}
                           </span>
@@ -1116,11 +1116,11 @@ export function PropertiesPanel({ model, thingId, opdId, dispatch }: Props) {
                       ))}
                       {mods.length === 0 && !["aggregation", "exhibition", "generalization", "classification", "tagged"].includes(l.type) && (
                         <div style={{ display: "flex", gap: 4, marginTop: 2 }}>
-                          <button style={{ fontSize: 8, cursor: "pointer", color: "#d69e2e" }}
+                          <button style={{ fontSize: 8, cursor: "pointer", color: "var(--warning)" }}
                             onClick={() => dispatch({ tag: "addModifier", modifier: { id: genId("mod"), over: l.id, type: "event" } })}>
                             +event
                           </button>
-                          <button style={{ fontSize: 8, cursor: "pointer", color: "#3182ce" }}
+                          <button style={{ fontSize: 8, cursor: "pointer", color: "var(--info)" }}
                             onClick={() => dispatch({ tag: "addModifier", modifier: { id: genId("mod"), over: l.id, type: "condition", condition_mode: "wait" } })}>
                             +condition
                           </button>

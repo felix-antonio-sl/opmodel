@@ -76,12 +76,12 @@ export function OplImportPanel({ model, onClose, onApply }: OplImportPanelProps)
   const canApply = validation && validation.ok && text.trim().length > 0;
 
   const statusColor = !validation
-    ? "#666"
+    ? "var(--text-muted)"
     : validation.ok
       ? validation.issues.length > 0
-        ? "#f0ad4e"
-        : "#5cb85c"
-      : "#d9534f";
+        ? "var(--warning)"
+        : "var(--success)"
+      : "var(--error)";
 
   const statusText = !validation
     ? "Type or paste OPL text…"
@@ -113,15 +113,15 @@ export function OplImportPanel({ model, onClose, onApply }: OplImportPanelProps)
         {validation && validation.issues.length > 0 && (
           <div style={{ marginTop: 4, maxHeight: 120, overflowY: "auto", fontSize: 12 }}>
             {validation.issues.map((issue, i) => (
-              <div key={i} style={{ color: issue.severity === "error" ? "#d9534f" : "#f0ad4e", padding: "2px 0" }}>
-                {issue.line != null && <span style={{ color: "#888" }}>L{issue.line}: </span>}
-                <span style={{ color: "#666" }}>[{issue.phase}]</span> {issue.message}
+              <div key={i} style={{ color: issue.severity === "error" ? "var(--error)" : "var(--warning)", padding: "2px 0" }}>
+                {issue.line != null && <span style={{ color: "var(--text-muted)" }}>L{issue.line}: </span>}
+                <span style={{ color: "var(--text-muted)" }}>[{issue.phase}]</span> {issue.message}
               </div>
             ))}
           </div>
         )}
         {applyError && (
-          <div style={{ color: "#d9534f", marginTop: 4, fontSize: 12 }}>{applyError}</div>
+          <div style={{ color: "var(--error)", marginTop: 4, fontSize: 12 }}>{applyError}</div>
         )}
       </div>
 
@@ -130,7 +130,7 @@ export function OplImportPanel({ model, onClose, onApply }: OplImportPanelProps)
         <div className="opl-status-bar__phases">
           {(["syntax", "binding", "semantic", "canonical"] as const).map(phase => {
             const s = validation.phases[phase];
-            const color = s === "pass" ? "#5cb85c" : s === "fail" ? "#d9534f" : "#666";
+            const color = s === "pass" ? "var(--success)" : s === "fail" ? "var(--error)" : "var(--text-muted)";
             return <span key={phase} style={{ color, fontFamily: "monospace" }}>{phase}: {s}</span>;
           })}
         </div>
@@ -160,8 +160,8 @@ export function OplImportPanel({ model, onClose, onApply }: OplImportPanelProps)
           style={{
             flex: 0,
             padding: "8px 16px",
-            background: "#333",
-            color: "#999",
+            background: "var(--text-primary)",
+            color: "var(--text-muted)",
             border: "none",
             borderRadius: 4,
             cursor: "pointer",

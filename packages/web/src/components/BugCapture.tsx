@@ -19,10 +19,10 @@ interface BugReport {
 }
 
 const SEVERITY_COLORS: Record<string, string> = {
-  CRITICAL: "#e53e3e",
-  HIGH: "#dd6b20",
+  CRITICAL: "var(--error)",
+  HIGH: "var(--warning)",
   MEDIUM: "#3182ce",
-  LOW: "#38a169",
+  LOW: "var(--success)",
 };
 
 async function loadBugsFromServer(): Promise<BugReport[]> {
@@ -92,7 +92,7 @@ export function BugCapture({ model, opdId, selectedThing, errors }: Props) {
   const handleSubmit = useCallback(() => {
     if (!title.trim()) return;
     const bug: BugReport = {
-      id: crypto.randomUUID(),
+      id: typeof crypto?.randomUUID === "function" ? crypto.randomUUID() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
       created_at: new Date().toISOString(),
       title: title.trim(),
       severity,

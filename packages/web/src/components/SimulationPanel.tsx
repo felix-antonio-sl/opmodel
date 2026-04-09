@@ -342,7 +342,7 @@ export function SimulationPanel({ model, simulation, dispatch }: Props) {
                     {Object.entries(mcResult.assertionPassRate).map(([id, rate]) => {
                       const assertion = model.assertions.get(id);
                       return (
-                        <div key={id} style={{ color: rate >= 0.95 ? "#48bb78" : rate >= 0.5 ? "#ed8936" : "#f56565" }}>
+                        <div key={id} style={{ color: rate >= 0.95 ? "var(--success)" : rate >= 0.5 ? "var(--warning)" : "var(--error)" }}>
                           {Math.round(rate * 100)}% — {assertion?.predicate ?? id}
                         </div>
                       );
@@ -353,7 +353,7 @@ export function SimulationPanel({ model, simulation, dispatch }: Props) {
                   <div style={{ marginTop: 4 }}>
                     <div style={{ fontWeight: 600 }}>Exception rates:</div>
                     {Object.entries(mcResult.exceptionRate).map(([key, rate]) => (
-                      <div key={key} style={{ color: "#f56565" }}>{Math.round(rate * 100)}% — {key}</div>
+                      <div key={key} style={{ color: "var(--error)" }}>{Math.round(rate * 100)}% — {key}</div>
                     ))}
                   </div>
                 )}
@@ -374,7 +374,7 @@ export function SimulationPanel({ model, simulation, dispatch }: Props) {
                         `Exception ${Math.round(rate*100)}%: ${key}`
                       ),
                     ];
-                    navigator.clipboard.writeText(lines.join("\n"));
+                    navigator.clipboard.writeText(lines.join("\n")).catch(() => {});
                   }}
                 >
                   Copy to clipboard
@@ -403,7 +403,7 @@ export function SimulationPanel({ model, simulation, dispatch }: Props) {
               <div style={{ fontWeight: 600, fontSize: 10, marginBottom: 4 }}>Assertions</div>
               {trace.assertionResults.map(ar => (
                 <div key={ar.assertionId} style={{ fontSize: 10, display: "flex", gap: 6 }}>
-                  <span style={{ color: ar.passed ? "#48bb78" : "#f56565", fontWeight: 700 }}>
+                  <span style={{ color: ar.passed ? "var(--success)" : "var(--error)", fontWeight: 700 }}>
                     {ar.passed ? "✓" : "✗"}
                   </span>
                   <span>[{ar.category}] {ar.name}</span>
