@@ -939,16 +939,23 @@ button.header__pill:hover {
   color: var(--bg);
 }
 
-.canvas-breadcrumb {
+.canvas-breadcrumb-wrap {
   position: absolute;
   top: 12px;
   left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: min(72vw, 820px);
+  z-index: 1;
+}
+
+.canvas-breadcrumb {
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--text-muted);
   letter-spacing: 0.04em;
   user-select: none;
-  z-index: 1;
 }
 
 .canvas-breadcrumb__item {
@@ -980,6 +987,37 @@ button.header__pill:hover {
 .canvas-breadcrumb__refines {
   font-size: 10px;
   color: var(--text-muted);
+}
+
+.canvas-refinement-nav {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.canvas-refinement-nav__item {
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--text-secondary);
+  border-radius: 999px;
+  padding: 4px 9px;
+  font-size: 11px;
+  line-height: 1.2;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+}
+
+.canvas-refinement-nav__item:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
+}
+
+.canvas-refinement-nav__item--thing {
+  color: var(--accent);
+}
+
+.canvas-refinement-nav__item--child {
+  color: var(--success);
 }
 
 .canvas-zoom {

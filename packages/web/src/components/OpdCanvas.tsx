@@ -17,6 +17,7 @@ import { LINK_COLORS, paddedBounds } from "../lib/visual-rules";
 import { suggestLayoutForOpd } from "../lib/spatial-layout";
 import { auditVisualOpd, computeVisualQuality } from "../lib/visual-lint";
 import { routeEdges, type EdgePath } from "../lib/edge-router";
+import { getRefinementContext } from "../lib/refinement-navigation";
 
 import { ThingNode } from "./canvas/ThingNode";
 import { LinkLine } from "./canvas/LinkLine";
@@ -60,6 +61,7 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, select
   const [showGhosts, setShowGhosts] = useState(false);
   const [attentionThingId, setAttentionThingId] = useState<string | null>(null);
   const [attentionLinkId, setAttentionLinkId] = useState<string | null>(null);
+  const refinementContext = useMemo(() => getRefinementContext(model, opdId, selectedThing), [model, opdId, selectedThing]);
 
   const toggleLinkCategory = (category: string) => {
     setHiddenLinkTypes(prev => {
@@ -1078,22 +1080,69 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, select
           </div>
         );
       })()}
-      <div className="canvas-breadcrumb">
-        {opdAncestors(model, opdId).map((ancestor, i, arr) => (
-          <span key={ancestor.id}>
-            {i > 0 && <span className="canvas-breadcrumb__sep"> › </span>}
-            <span
-              className={`canvas-breadcrumb__item${ancestor.id === opdId ? " canvas-breadcrumb__item--current" : ""}`}
-              onClick={() => { if (ancestor.id !== opdId) dispatch({ tag: "selectOpd", opdId: ancestor.id }); }}
-            >
-              {ancestor.name}
+      <div className="canvas-breadcrumb-wrap">
+        <div className="canvas-breadcrumb">
+          {opdAncestors(model, opdId).map((ancestor, i) => (
+            <span key={ancestor.id}>
+              {i > 0 && <span className="canvas-breadcrumb__sep"> › </span>}
+              <span
+                className={`canvas-breadcrumb__item${ancestor.id === opdId ? " canvas-breadcrumb__item--current" : ""}`}
+                onClick={() => { if (ancestor.id !== opdId) dispatch({ tag: "selectOpd", opdId: ancestor.id }); }}
+              >
+                {ancestor.name}
+              </span>
             </span>
-          </span>
-        ))}
-        {opd?.refines && (
-          <span className="canvas-breadcrumb__refines">
-            {" "}— {opd.refinement_type}: {model.things.get(opd.refines)?.name ?? opd.refines}
-          </span>
+          ))}
+          {opd?.refines && (
+            <span className="canvas-breadcrumb__refines">
+              {" "}— {opd.refinement_type}: {model.things.get(opd.refines)?.name ?? opd.refines}
+            </span>
+          )}
+        </div>
+        {(refinementContext.parentOpd || refinementContext.siblingRefinements.length > 0 || refinementContext.selectedThingChildRefinements.length > 0) && (
+          <div className="canvas-refinement-nav">
+            {refinementContext.parentOpd && (
+              <button
+                className="canvas-refinement-nav__item"
+                type="button"
+                onClick={() => dispatch({ tag: "selectOpd", opdId: refinementContext.parentOpd!.id })}
+              >
+                ↑ Parent: {refinementContext.parentOpd.name}
+              </button>
+            )}
+            {refinementContext.parentOpd && refinementContext.refinedThing && (
+              <button
+                className="canvas-refinement-nav__item canvas-refinement-nav__item--thing"
+                type="button"
+                onClick={() => {
+                  dispatch({ tag: "selectOpd", opdId: refinementContext.parentOpd!.id });
+                  dispatch({ tag: "selectThing", thingId: refinementContext.refinedThing!.id });
+                }}
+              >
+                Refinee: {refinementContext.refinedThing.name}
+              </button>
+            )}
+            {refinementContext.siblingRefinements.map((sibling) => (
+              <button
+                key={sibling.id}
+                className="canvas-refinement-nav__item"
+                type="button"
+                onClick={() => dispatch({ tag: "selectOpd", opdId: sibling.id })}
+              >
+                Alternate {sibling.refinement_type}: {sibling.name}
+              </button>
+            ))}
+            {selectedThing && refinementContext.selectedThingChildRefinements.map((child) => (
+              <button
+                key={child.id}
+                className="canvas-refinement-nav__item canvas-refinement-nav__item--child"
+                type="button"
+                onClick={() => dispatch({ tag: "selectOpd", opdId: child.id })}
+              >
+                Child {child.refinement_type}: {child.name}
+              </button>
+            ))}
+          </div>
         )}
       </div>
       <div className="canvas-zoom">{Math.round(zoom * 100)}%</div>
