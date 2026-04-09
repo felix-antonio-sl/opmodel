@@ -1,7 +1,7 @@
 import type { Model } from "@opmodel/core";
 import { semanticKernelFromModel, exposeSemanticKernel, exposeFromKernel, render, type OplSentence, type OplDocument } from "@opmodel/core";
 import type { Command } from "../lib/commands";
-import { findFirstLinkIdByPathLabels, findThingIdByName, findThingOrLinkTarget } from "../lib/opl-navigation";
+import { findFirstLinkIdByPathLabels, findThingIdByName, findThingOrLinkTarget, matchesSentenceSelection } from "../lib/opl-navigation";
 
 interface Props {
   model: Model;
@@ -38,43 +38,10 @@ function renderSentence(sentence: OplSentence, doc: OplDocument): string {
   return render({ ...rest, sentences: [sentence] });
 }
 
-function matchesSelection(model: Model, sentence: OplSentence, selectedThing: string | null, selectedLink: string | null): boolean {
-  switch (sentence.kind) {
-    case "thing-declaration":
-    case "state-enumeration":
-    case "duration":
-    case "state-description":
-    case "attribute-value":
-      return selectedThing === sentence.thingId;
-    case "link":
-      return selectedLink === sentence.linkId || selectedThing === sentence.sourceId || selectedThing === sentence.targetId;
-    case "modifier":
-      return selectedLink === sentence.linkId;
-    case "grouped-structural":
-      return selectedThing === sentence.parentId || sentence.childIds.includes(selectedThing ?? "");
-    case "in-zoom-sequence":
-      return selectedThing === sentence.parentId || sentence.steps.some((step) => step.thingIds.includes(selectedThing ?? ""));
-    case "fan":
-      return selectedThing === findThingIdByName(model, sentence.sharedEndpointName);
-    case "requirement": {
-      const target = findThingOrLinkTarget(model, sentence.targetName);
-      return (target?.kind === "thing" && selectedThing === target.id) || (target?.kind === "link" && selectedLink === target.id);
-    }
-    case "assertion": {
-      const target = findThingOrLinkTarget(model, sentence.targetName);
-      return (target?.kind === "thing" && selectedThing === target.id) || (target?.kind === "link" && selectedLink === target.id);
-    }
-    case "scenario": {
-      const linkId = findFirstLinkIdByPathLabels(model, sentence.pathLabels);
-      return Boolean(linkId && selectedLink === linkId);
-    }
-  }
-}
-
 function sentenceClass(model: Model, sentence: OplSentence, selectedThing: string | null, selectedLink: string | null): string {
   const category = sentenceCategory(sentence);
   const base = `opl-sentence opl-sentence--${category}`;
-  if (matchesSelection(model, sentence, selectedThing, selectedLink)) {
+  if (matchesSentenceSelection(model, sentence, selectedThing, selectedLink)) {
     return `${base} opl-sentence--highlighted`;
   }
   return base;

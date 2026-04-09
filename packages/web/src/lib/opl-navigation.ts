@@ -195,3 +195,39 @@ export function findSentenceForSelection(
 export function findSentenceAtLine(refs: ParsedSentenceRef[], line: number) {
   return refs.find((ref) => line >= ref.span.line && line <= ref.span.endLine) ?? null;
 }
+
+export function matchesSentenceSelection(model: Model, sentence: OplSentence, selectedThing: string | null, selectedLink: string | null): boolean {
+  switch (sentence.kind) {
+    case "thing-declaration":
+    case "state-enumeration":
+    case "duration":
+    case "state-description":
+    case "attribute-value":
+      return selectedThing === sentence.thingId;
+    case "link":
+      return selectedLink === sentence.linkId || selectedThing === sentence.sourceId || selectedThing === sentence.targetId;
+    case "modifier":
+      return selectedLink === sentence.linkId;
+    case "grouped-structural":
+      return selectedThing === sentence.parentId || sentence.childIds.includes(selectedThing ?? "");
+    case "in-zoom-sequence":
+      return selectedThing === sentence.parentId || sentence.steps.some((step) => step.thingIds.includes(selectedThing ?? ""));
+    case "fan":
+      return selectedThing === findThingIdByName(model, sentence.sharedEndpointName);
+    case "requirement":
+    case "assertion": {
+      const target = findThingOrLinkTarget(model, sentence.targetName);
+      return (target?.kind === "thing" && selectedThing === target.id) || (target?.kind === "link" && selectedLink === target.id);
+    }
+    case "scenario": {
+      const linkId = findFirstLinkIdByPathLabels(model, sentence.pathLabels);
+      return Boolean(linkId && selectedLink === linkId);
+    }
+  }
+}
+
+export function getActiveSentenceText(text: string, activeSentenceRef?: ParsedSentenceRef | null): string | null {
+  if (!activeSentenceRef) return null;
+  const lines = text.split("\n");
+  return lines.slice(activeSentenceRef.span.line - 1, activeSentenceRef.span.endLine).join("\n").trim() || null;
+}

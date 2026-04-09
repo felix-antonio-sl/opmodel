@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import type { Model, ValidationIssue } from "@opmodel/core";
 import { renderAll, parseOplDocuments, compileToKernel, legacyModelFromSemanticKernel, exposeSemanticKernel, validateOpl, semanticKernelFromModel, exposeFromKernel, render } from "@opmodel/core";
 import type { Command } from "../lib/commands";
-import { findOpdIdByName, findSentenceForSelection, findThingIdByName, lineColumnToOffset, parseSentenceRefs } from "../lib/opl-navigation";
+import { findOpdIdByName, findSentenceForSelection, findThingIdByName, getActiveSentenceText, lineColumnToOffset, parseSentenceRefs } from "../lib/opl-navigation";
 import { useAutocomplete } from "../hooks/useAutocomplete";
 import { OplAutocomplete } from "./OplAutocomplete";
 import { OplContextCard } from "./OplContextCard";
@@ -92,11 +92,7 @@ export function OplLiveEditor({ model, opdId, selectedThing, selectedLink, dispa
     [sentenceRefs, model, selectedThing, selectedLink, opdId],
   );
 
-  const activeSentenceText = useMemo(() => {
-    if (!activeSentenceRef) return null;
-    const lines = text.split("\n");
-    return lines.slice(activeSentenceRef.span.line - 1, activeSentenceRef.span.endLine).join("\n").trim() || null;
-  }, [activeSentenceRef, text]);
+  const activeSentenceText = useMemo(() => getActiveSentenceText(text, activeSentenceRef), [activeSentenceRef, text]);
 
   const refinementGuidance = useMemo(() => {
     const opd = model.opds.get(opdId);
