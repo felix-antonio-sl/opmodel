@@ -1,7 +1,8 @@
 import type { Model } from "@opmodel/core";
 import { semanticKernelFromModel, exposeSemanticKernel, exposeFromKernel, render, type OplSentence, type OplDocument } from "@opmodel/core";
 import type { Command } from "../lib/commands";
-import { findFirstLinkIdByPathLabels, findThingIdByName, findThingOrLinkTarget, matchesSentenceSelection } from "../lib/opl-navigation";
+import { findFirstLinkIdByPathLabels, findThingIdByName, findThingOrLinkTarget } from "../lib/opl-navigation";
+import { useOplSentenceSelection } from "../hooks/useOplSentenceSelection";
 
 interface Props {
   model: Model;
@@ -38,10 +39,10 @@ function renderSentence(sentence: OplSentence, doc: OplDocument): string {
   return render({ ...rest, sentences: [sentence] });
 }
 
-function sentenceClass(model: Model, sentence: OplSentence, selectedThing: string | null, selectedLink: string | null): string {
+function sentenceClass(isSentenceSelected: (sentence: OplSentence) => boolean, sentence: OplSentence): string {
   const category = sentenceCategory(sentence);
   const base = `opl-sentence opl-sentence--${category}`;
-  if (matchesSentenceSelection(model, sentence, selectedThing, selectedLink)) {
+  if (isSentenceSelected(sentence)) {
     return `${base} opl-sentence--highlighted`;
   }
   return base;
@@ -80,6 +81,7 @@ function commandForSentence(model: Model, sentence: OplSentence): Command | null
 }
 
 export function OplSentencesView({ model, opdId, selectedThing, selectedLink, onSelectEntity }: Props) {
+  const { isSentenceSelected } = useOplSentenceSelection(model, selectedThing, selectedLink);
   const kernel = semanticKernelFromModel(model);
   const atlas = exposeSemanticKernel(kernel);
   const doc = exposeFromKernel(kernel, atlas, opdId);
@@ -123,7 +125,7 @@ export function OplSentencesView({ model, opdId, selectedThing, selectedLink, on
         return (
           <div
             key={`t-${i}`}
-            className={sentenceClass(model, sentence, selectedThing, selectedLink)}
+            className={sentenceClass(isSentenceSelected, sentence)}
             onClick={cmd && onSelectEntity ? () => onSelectEntity(cmd) : undefined}
             style={cmd && onSelectEntity ? { cursor: "pointer" } : undefined}
           >
@@ -137,7 +139,7 @@ export function OplSentencesView({ model, opdId, selectedThing, selectedLink, on
         return (
           <div
             key={`l-${i}`}
-            className={sentenceClass(model, sentence, selectedThing, selectedLink)}
+            className={sentenceClass(isSentenceSelected, sentence)}
             onClick={cmd && onSelectEntity ? () => onSelectEntity(cmd) : undefined}
             style={cmd && onSelectEntity ? { cursor: "pointer" } : undefined}
           >
@@ -151,7 +153,7 @@ export function OplSentencesView({ model, opdId, selectedThing, selectedLink, on
         return (
           <div
             key={`m-${i}`}
-            className={sentenceClass(model, sentence, selectedThing, selectedLink)}
+            className={sentenceClass(isSentenceSelected, sentence)}
             style={cmd && onSelectEntity ? { fontSize: "0.85em", opacity: 0.8, cursor: "pointer" } : { fontSize: "0.85em", opacity: 0.8 }}
             onClick={cmd && onSelectEntity ? () => onSelectEntity(cmd) : undefined}
           >
