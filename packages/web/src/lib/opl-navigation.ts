@@ -64,24 +64,45 @@ export function lineColumnToOffset(text: string, line?: number, column?: number)
   return offset + Math.max(0, column - 1);
 }
 
-export function findThingIdByName(model: Model, name?: string | null) {
+/**
+ * Build O(1) lookup indexes for things and links by name.
+ * Should be memoized at the call site (e.g. via useMemo) to avoid
+ * rebuilding on every render.
+ */
+export function buildNameIndex(model: Model) {
+  const thingsByName = new Map<string, string>();
+  for (const thing of model.things.values()) {
+    thingsByName.set(thing.name, thing.id);
+  }
+  const linksByKey = new Map<string, string>();
+  for (const link of model.links.values()) {
+    const src = model.things.get(link.source);
+    const tgt = model.things.get(link.target);
+    if (src && tgt) linksByKey.set(`${src.name}\0${tgt.name}`, link.id);
+  }
+  return { thingsByName, linksByKey };
+}
+
+export function findThingIdByName(model: Model, name?: string | null, index?: ReturnType<typeof buildNameIndex>) {
   if (!name) return null;
+  if (index) return index.thingsByName.get(name) ?? null;
   return [...model.things.values()].find((thing) => thing.name === name)?.id ?? null;
 }
 
-export function findLinkIdByNames(model: Model, sourceName?: string | null, targetName?: string | null) {
+export function findLinkIdByNames(model: Model, sourceName?: string | null, targetName?: string | null, index?: ReturnType<typeof buildNameIndex>) {
   if (!sourceName || !targetName) return null;
-  const sourceId = findThingIdByName(model, sourceName);
-  const targetId = findThingIdByName(model, targetName);
+  if (index) return index.linksByKey.get(`${sourceName}\0${targetName}`) ?? null;
+  const sourceId = findThingIdByName(model, sourceName, index);
+  const targetId = findThingIdByName(model, targetName, index);
   if (!sourceId || !targetId) return null;
   return [...model.links.values()].find((link) => link.source === sourceId && link.target === targetId)?.id ?? null;
 }
 
-export function findLinkIdByDisplayName(model: Model, displayName?: string | null) {
+export function findLinkIdByDisplayName(model: Model, displayName?: string | null, index?: ReturnType<typeof buildNameIndex>) {
   if (!displayName) return null;
   const parts = displayName.split("→").map((part) => part.trim()).filter(Boolean);
   if (parts.length !== 2) return null;
-  return findLinkIdByNames(model, parts[0], parts[1]);
+  return findLinkIdByNames(model, parts[0], parts[1], index);
 }
 
 export function findThingOrLinkTarget(model: Model, targetName?: string | null) {
@@ -102,6 +123,15 @@ export function findOpdIdByName(model: Model, name?: string | null) {
   return [...model.opds.values()].find((opd) => opd.name === name)?.id ?? null;
 }
 
+/**
+ * Score how well a sentence matches the selected thing/link.
+ * Implements ISO 19450's ontological hierarchy:
+ *   Things (100) > States (90) > Attributes (80) > Structural/Zoom (70)
+ *   > Links (60) > Modifiers/Fans (50) > Meta (40) > Scenario (0).
+ * Higher score = more semantically direct match.
+ * Preferred OPD adds +10 bonus (applied by caller).
+ * Link exact match scores 110 (highest) to prioritize explicit link selection.
+ */
 function sentenceScore(sentence: OplSentence, thingName: string, linkNames?: { source: string; target: string }) {
   switch (sentence.kind) {
     case "thing-declaration":
