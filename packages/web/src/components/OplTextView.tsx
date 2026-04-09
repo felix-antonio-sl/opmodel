@@ -1,8 +1,9 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect } from "react";
 import type { Model } from "@opmodel/core";
 import { semanticKernelFromModel, exposeSemanticKernel, exposeFromKernel, render, renderAllFromKernelNative } from "@opmodel/core";
 import type { Command } from "../lib/commands";
-import { findFirstLinkIdByPathLabels, findLinkIdByNames, findOpdIdByName, findSentenceAtLine, findSentenceForSelection, findThingIdByName, findThingOrLinkTarget, getLineState, getRelatedHighlightNames, parseSentenceRefs } from "../lib/opl-navigation";
+import { findFirstLinkIdByPathLabels, findLinkIdByNames, findOpdIdByName, findSentenceAtLine, findThingIdByName, findThingOrLinkTarget, getLineState } from "../lib/opl-navigation";
+import { useOplContext } from "../hooks/useOplContext";
 
 interface Props {
   model: Model;
@@ -21,13 +22,14 @@ export function OplTextView({ model, opdId, highlightThingId, highlightLinkId, d
   const doc = exposeFromKernel(kernel, atlas, opdId);
   const text = showAll ? renderAllFromKernelNative(kernel, atlas) : render(doc);
   const lines = text.split("\n");
-  const sentenceRefs = useMemo(() => parseSentenceRefs(text, doc.opdName), [text, doc.opdName]);
-  const activeSentenceRef = useMemo(
-    () => findSentenceForSelection(sentenceRefs, model, highlightThingId ?? null, highlightLinkId ?? null, opdId),
-    [sentenceRefs, model, highlightThingId, highlightLinkId, opdId],
-  );
-
-  const hlNames = useMemo(() => getRelatedHighlightNames(model, highlightThingId ?? null, highlightLinkId ?? null), [model, highlightThingId, highlightLinkId]);
+  const { sentenceRefs, activeSentenceRef, relatedHighlightNames } = useOplContext({
+    model,
+    opdId,
+    text,
+    selectedThing: highlightThingId,
+    selectedLink: highlightLinkId,
+    fallbackOpdName: doc.opdName,
+  });
 
   useEffect(() => {
     if (containerRef.current) {
@@ -114,7 +116,7 @@ export function OplTextView({ model, opdId, highlightThingId, highlightLinkId, d
       </div>
       <div ref={containerRef} className="opl-text__lines">
         {lines.map((line, i) => {
-          const state = getLineState(line, i + 1, activeSentenceRef, hlNames);
+          const state = getLineState(line, i + 1, activeSentenceRef, relatedHighlightNames);
           const active = state === "active";
           const highlighted = state !== "plain";
           return (
