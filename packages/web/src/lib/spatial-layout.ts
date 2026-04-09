@@ -301,6 +301,49 @@ function branchProcessIdsForFan(fan: Fan, links: Link[], internalProcessIds: Set
   return [...ids];
 }
 
+/** Topological sort of processes based on link direction for natural flow */
+function topologicalSort(processes: Appearance[], links: Link[], processIds: Set<string>): Appearance[] {
+  if (processes.length <= 1) return processes;
+  const idToApp = new Map(processes.map((a) => [a.thing, a]));
+  const inDegree = new Map(processes.map((a) => [a.thing, 0]));
+  const successors = new Map<string, string[]>();
+  for (const id of processIds) successors.set(id, []);
+
+  for (const link of links) {
+    if (!processIds.has(link.source) || !processIds.has(link.target)) continue;
+    const deg = inDegree.get(link.target) ?? 0;
+    inDegree.set(link.target, deg + 1);
+    const succ = successors.get(link.source) ?? [];
+    succ.push(link.target);
+    successors.set(link.source, succ);
+  }
+
+  const queue: string[] = [];
+  for (const [id, deg] of inDegree) {
+    if (deg === 0) queue.push(id);
+  }
+
+  const sorted: Appearance[] = [];
+  while (queue.length > 0) {
+    const id = queue.shift()!;
+    const app = idToApp.get(id);
+    if (app) sorted.push(app);
+    for (const succId of (successors.get(id) ?? [])) {
+      const newDeg = (inDegree.get(succId) ?? 1) - 1;
+      inDegree.set(succId, newDeg);
+      if (newDeg === 0) queue.push(succId);
+    }
+  }
+
+  // Append any remaining (cycle participants) in position order
+  const sortedIds = new Set(sorted.map((a) => a.thing));
+  for (const app of processes) {
+    if (!sortedIds.has(app.thing)) sorted.push(app);
+  }
+
+  return sorted;
+}
+
 function layoutBranchingControl(model: Model, opdId: string, apps: Appearance[], links: Link[], fans: Fan[], refines?: string): LayoutSuggestion {
   const patches: AppearancePatch[] = [];
   const container = refines ? apps.find((a) => a.thing === refines) : undefined;
@@ -401,12 +444,16 @@ function layoutInZoom(model: Model, opdId: string, apps: Appearance[], links: Li
   const internalProcesses = internal.filter((app) => model.things.get(app.thing)?.kind === "process");
   const internalObjects = internal.filter((app) => model.things.get(app.thing)?.kind === "object");
   const processSource = internalProcesses.length > 0 ? internalProcesses : internal;
-  const cols = processSource.length > 8 ? 3 : processSource.length > 4 ? 2 : 1;
-  const rowsPerCol = Math.ceil(processSource.length / cols);
   const internalProcessIds = new Set(processSource.map((a) => a.thing));
 
+  // Topological sort of internal processes based on link direction
+  const topoSorted = topologicalSort(processSource, links, internalProcessIds);
+
+  const cols = topoSorted.length > 8 ? 3 : topoSorted.length > 4 ? 2 : 1;
+  const rowsPerCol = Math.ceil(topoSorted.length / cols);
+
   const plannedCenters = new Map<string, number>();
-  processSource.forEach((app, i) => {
+  topoSorted.forEach((app, i) => {
     const row = i % rowsPerCol;
     plannedCenters.set(app.thing, containerY + innerPaddingY + row * (processH + processGapY) + processH / 2);
   });
@@ -438,7 +485,7 @@ function layoutInZoom(model: Model, opdId: string, apps: Appearance[], links: Li
   const processStartX = containerX + innerPaddingX + leftInnerWidth + (leftInnerWidth > 0 ? 56 : 0);
   const processStartY = containerY + innerPaddingY;
 
-  processSource.filter((app) => !isPinned(app)).forEach((app, i) => {
+  topoSorted.filter((app) => !isPinned(app)).forEach((app, i) => {
     const col = Math.floor(i / rowsPerCol);
     const row = i % rowsPerCol;
     patches.push({
@@ -458,7 +505,7 @@ function layoutInZoom(model: Model, opdId: string, apps: Appearance[], links: Li
   const targetContainerH = Math.max(container.h, lastInternalBottom - containerY + innerPaddingY);
   if (!isPinned(container)) patches.push({ thingId: container.thing, opdId, patch: { w: targetContainerW, h: targetContainerH } });
 
-  const processCenters = new Map(processSource.map((app, i) => {
+  const processCenters = new Map(topoSorted.map((app, i) => {
     const row = i % rowsPerCol;
     return [app.thing, processStartY + row * (processH + processGapY) + processH / 2] as const;
   }));
@@ -475,6 +522,7 @@ function layoutInZoom(model: Model, opdId: string, apps: Appearance[], links: Li
       return { ...full, y: entry.y };
     }).sort((a, b) => a.y - b.y);
     const maxLaneHeight = Math.max(targetContainerH - 180, 360);
+    const colGap = 36;
     let column = 0;
     let columnStartY = processStartY;
     let cursorBottom = columnStartY;
@@ -486,9 +534,11 @@ function layoutInZoom(model: Model, opdId: string, apps: Appearance[], links: Li
         cursorBottom = columnStartY;
         columnWidth = 0;
       }
+      // For left lanes (direction=-1): columns grow leftward from baseX
+      // For right lanes (direction=1): columns grow rightward from baseX
       const x = direction === -1
-        ? baseX + column * (Math.max(entry.w, columnWidth) + 36)
-        : baseX + column * (Math.max(entry.w, columnWidth) + 36);
+        ? baseX - column * (Math.max(entry.w, columnWidth) + colGap)
+        : baseX + column * (Math.max(entry.w, columnWidth) + colGap);
       patches.push({ thingId: entry.app.thing, opdId, patch: { x, y: cursorBottom, w: entry.w, h: entry.h } });
       cursorBottom += entry.h + VISUAL_RULES.spacing.nodeGap + 8;
       columnWidth = Math.max(columnWidth, entry.w);
