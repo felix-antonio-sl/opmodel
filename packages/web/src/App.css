@@ -3446,6 +3446,10 @@ button.header__pill:hover {
   border: none;
   border-radius: 0;
 }
+
+.opl-editor-wrapper .opl-editor-textarea--focus {
+  box-shadow: inset 0 0 0 9999px rgba(0, 0, 0, 0.04);
+}
 .opl-line-numbers {
   width: 36px;
   min-width: 36px;
@@ -3459,6 +3463,10 @@ button.header__pill:hover {
   border-right: 1px solid var(--code-border);
   overflow: hidden;
   user-select: none;
+}
+
+.opl-line-numbers--focus {
+  background: linear-gradient(180deg, rgba(124, 92, 255, 0.04), rgba(124, 92, 255, 0.01));
 }
 .opl-line-number {
   padding-right: 6px;

@@ -93,6 +93,7 @@ export function OplLiveEditor({ model, opdId, selectedThing, selectedLink, dispa
     selectedLink,
   });
   const [contextIndex, setContextIndex] = useState(0);
+  const [focusMode, setFocusMode] = useState(false);
   useEffect(() => {
     setContextIndex(0);
   }, [text, opdId, selectedThing, selectedLink]);
@@ -383,6 +384,8 @@ export function OplLiveEditor({ model, opdId, selectedThing, selectedLink, dispa
         guidance={refinementGuidance}
         relatedIndex={contextIndex}
         relatedCount={relatedSentenceRefs.length}
+        focusMode={focusMode}
+        onToggleFocusMode={() => setFocusMode((v) => !v)}
         onPrev={() => setContextIndex((i) => (i - 1 + relatedSentenceRefs.length) % relatedSentenceRefs.length)}
         onNext={() => setContextIndex((i) => (i + 1) % relatedSentenceRefs.length)}
         onReveal={() => displayedSentenceRef ? focusIssue({ phase: "V3-semantic", severity: "warning", message: displayedSentenceText ?? "", line: displayedSentenceRef.span.line, column: displayedSentenceRef.span.column, endLine: displayedSentenceRef.span.endLine, endColumn: displayedSentenceRef.span.endColumn }, null) : revealSelection(selectedThing, selectedLink)}
@@ -390,11 +393,12 @@ export function OplLiveEditor({ model, opdId, selectedThing, selectedLink, dispa
       />
 
       <div className="opl-editor-wrapper" style={{ flex: 1, display: "flex", minHeight: 200, position: "relative" }}>
-        <div ref={lineNumbersRef} className="opl-line-numbers" aria-hidden="true">
+        <div ref={lineNumbersRef} className={`opl-line-numbers${focusMode ? " opl-line-numbers--focus" : ""}`} aria-hidden="true">
           {Array.from({ length: lineCount }, (_, i) => {
             const lineNumber = i + 1;
             const severity = lineIssueSeverity.get(lineNumber);
             const isActiveLine = displayedSentenceRef && lineNumber >= displayedSentenceRef.span.line && lineNumber <= displayedSentenceRef.span.endLine;
+            const isDimmed = focusMode && displayedSentenceRef && !isActiveLine;
             return (
               <div
                 key={i}
@@ -402,6 +406,7 @@ export function OplLiveEditor({ model, opdId, selectedThing, selectedLink, dispa
                 style={{
                   color: severity === "error" ? "#d9534f" : severity === "warning" ? "#f0ad4e" : isActiveLine ? "rgba(124, 92, 255, 0.95)" : undefined,
                   fontWeight: severity || isActiveLine ? 700 : undefined,
+                  opacity: isDimmed ? 0.28 : 1,
                 }}
               >
                 {lineNumber}
@@ -411,7 +416,7 @@ export function OplLiveEditor({ model, opdId, selectedThing, selectedLink, dispa
         </div>
         <textarea
           ref={textareaRef}
-          className="code-editor opl-editor-textarea"
+          className={`code-editor opl-editor-textarea${focusMode ? " opl-editor-textarea--focus" : ""}`}
           value={text}
           onChange={handleChange}
           onKeyDown={handleKeyDown}

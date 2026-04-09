@@ -13,13 +13,15 @@ interface Props {
   guidance?: Guidance | null;
   relatedIndex?: number;
   relatedCount?: number;
+  focusMode?: boolean;
+  onToggleFocusMode?: () => void;
   onPrev?: () => void;
   onNext?: () => void;
   onReveal?: () => void;
   onInsertTemplate?: () => void;
 }
 
-export function OplContextCard({ activeSentenceRef, activeSentenceText, guidance, relatedIndex = 0, relatedCount = 0, onPrev, onNext, onReveal, onInsertTemplate }: Props) {
+export function OplContextCard({ activeSentenceRef, activeSentenceText, guidance, relatedIndex = 0, relatedCount = 0, focusMode = false, onToggleFocusMode, onPrev, onNext, onReveal, onInsertTemplate }: Props) {
   if (!activeSentenceRef && !guidance) return null;
 
   return (
@@ -36,8 +38,27 @@ export function OplContextCard({ activeSentenceRef, activeSentenceText, guidance
         gap: 8,
       }}
     >
-      <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", fontWeight: 700 }}>
-        Context
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+        <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--text-muted)", fontWeight: 700 }}>
+          Context
+        </div>
+        {onToggleFocusMode && (
+          <button
+            type="button"
+            onClick={onToggleFocusMode}
+            style={{
+              border: "1px solid var(--border)",
+              background: focusMode ? "rgba(124, 92, 255, 0.10)" : "var(--bg-panel)",
+              color: focusMode ? "var(--accent)" : "var(--text-secondary)",
+              borderRadius: 4,
+              fontSize: 11,
+              padding: "2px 6px",
+              cursor: "pointer",
+            }}
+          >
+            {focusMode ? "Focus mode on" : "Focus mode"}
+          </button>
+        )}
       </div>
 
       {activeSentenceRef && activeSentenceText && (

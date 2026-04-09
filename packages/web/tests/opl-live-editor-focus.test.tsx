@@ -37,6 +37,24 @@ describe("OplLiveEditor focus card", () => {
     expect(within(card).getByText(/L4:1/i)).toBeTruthy();
   });
 
+  it("can toggle focus mode in the context card", () => {
+    const model = buildSimpleModel();
+    render(
+      React.createElement(OplLiveEditor, {
+        model,
+        opdId: "opd-sd",
+        selectedThing: "thing-water",
+        selectedLink: null,
+        dispatch: vi.fn(() => true),
+      }),
+    );
+
+    const toggle = screen.getByRole("button", { name: "Focus mode" });
+    fireEvent.click(toggle);
+    expect(screen.getByRole("button", { name: "Focus mode on" })).toBeTruthy();
+    expect(document.querySelector(".opl-editor-textarea--focus")).toBeTruthy();
+  });
+
   it("can move through related sentences for the current selection", () => {
     const model = buildSimpleModel();
     render(
