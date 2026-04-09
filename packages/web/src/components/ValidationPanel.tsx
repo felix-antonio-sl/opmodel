@@ -99,6 +99,10 @@ function visualFindingLabel(model: Model, finding: VisualFinding): string {
       return `Crowded diagram — ${finding.nodeCount} nodes in ${Math.round(finding.width)}×${Math.round(finding.height)} (fill ${(finding.fillRatio * 100).toFixed(0)}%)`;
     case "tight-spacing":
       return `Tight spacing — ${thingLabel(model, finding.aThing)} ↔ ${thingLabel(model, finding.bThing)} (${finding.axis}-gap ${Math.round(finding.gap)}px)`;
+    case "link-crossing":
+      return `Link crossing — ${finding.aLink} × ${finding.bLink}`;
+    case "label-cluster":
+      return `Label cluster — ${finding.clusterSize} labels competing in one area`;
   }
 }
 
@@ -116,6 +120,10 @@ function visualFindingEntity(finding: VisualFinding): string | null {
       return null;
     case "tight-spacing":
       return finding.aThing;
+    case "link-crossing":
+      return finding.aLink;
+    case "label-cluster":
+      return finding.linkIds[0] ?? null;
   }
 }
 
@@ -127,6 +135,8 @@ function visualFindingKindLabel(kind: VisualFinding["kind"]): string {
     case "degenerate-bounds": return "Degenerate bounds";
     case "crowded-diagram": return "Crowded diagrams";
     case "tight-spacing": return "Tight spacing";
+    case "link-crossing": return "Link crossings";
+    case "label-cluster": return "Label clusters";
   }
 }
 

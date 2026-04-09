@@ -2371,9 +2371,9 @@ button.header__pill:hover {
 .validation-panel {
   position: fixed;
   bottom: 26px;
-  left: 200px;
-  right: 280px;
-  max-height: 240px;
+  left: var(--sidebar-w);
+  right: var(--opl-w);
+  max-height: 40vh;
   background: var(--bg-panel);
   border: 1px solid var(--border);
   border-bottom: none;

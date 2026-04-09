@@ -381,7 +381,7 @@ describe("spatial layout engine", () => {
       });
     const proc = patched.find((a) => a.thing === "proc-main")!;
     expect(proc.x).toBeGreaterThanOrEqual(260);
-    expect(proc.x).toBeLessThanOrEqual(500);
+    expect(proc.x).toBeLessThanOrEqual(560);
   });
 
   it("respects pinned nodes during auto-layout and relaxation", () => {

@@ -1,0 +1,61 @@
+{
+  "modelName": "SD",
+  "avgScore": 100,
+  "bestScore": 100,
+  "worstScore": 100,
+  "totalErrors": 0,
+  "totalWarnings": 0,
+  "totalInfo": 0,
+  "opds": [
+    {
+      "opdId": "opd-sd",
+      "name": "SD",
+      "score": 100,
+      "grade": "A",
+      "errors": 0,
+      "warnings": 0,
+      "info": 0,
+      "findings": []
+    },
+    {
+      "opdId": "opd-sd1",
+      "name": "SD1",
+      "score": 100,
+      "grade": "A",
+      "errors": 0,
+      "warnings": 0,
+      "info": 0,
+      "findings": []
+    },
+    {
+      "opdId": "opd-sd11",
+      "name": "SD1.1",
+      "score": 100,
+      "grade": "A",
+      "errors": 0,
+      "warnings": 0,
+      "info": 0,
+      "findings": []
+    },
+    {
+      "opdId": "opd-sd2",
+      "name": "SD2",
+      "score": 100,
+      "grade": "A",
+      "errors": 0,
+      "warnings": 0,
+      "info": 0,
+      "findings": []
+    },
+    {
+      "opdId": "opd-sd3",
+      "name": "SD3",
+      "score": 100,
+      "grade": "A",
+      "errors": 0,
+      "warnings": 0,
+      "info": 0,
+      "findings": []
+    }
+  ]
+}

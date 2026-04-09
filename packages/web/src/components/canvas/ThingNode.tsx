@@ -286,7 +286,7 @@ export function ThingNode({
                   x={pill.x + pill.w / 2}
                   y={pill.y + pill.h / 2}
                 >
-                  {pill.state.name.length > Math.floor(pill.w / 5) ? pill.state.name.substring(0, Math.floor(pill.w / 5)) + "…" : pill.state.name}
+                  {pill.state.name.length > Math.max(3, Math.floor((pill.w - 8) / 5)) ? pill.state.name.substring(0, Math.max(3, Math.floor((pill.w - 8) / 5))) + "…" : pill.state.name}
                 </text>
               </g>
             );

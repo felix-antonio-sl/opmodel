@@ -1,0 +1,22 @@
+[
+  {
+    "opd": "SD",
+    "file": "01-sd.png"
+  },
+  {
+    "opd": "SD1",
+    "file": "02-sd1.png"
+  },
+  {
+    "opd": "SD1.1",
+    "file": "03-sd1-1.png"
+  },
+  {
+    "opd": "SD2",
+    "file": "04-sd2.png"
+  },
+  {
+    "opd": "SD3",
+    "file": "05-sd3.png"
+  }
+]

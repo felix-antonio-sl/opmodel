@@ -20,8 +20,9 @@ export const LINK_COLORS: Record<string, string> = {
 export const VISUAL_RULES = {
   statePill: {
     height: 16,
-    maxWidth: 80,
-    compactMaxWidth: 70,
+    maxWidth: 112,
+    compactMaxWidth: 84,
+    singleVisibleMaxWidth: 220,
     horizontalPadding: 12,
     compactHorizontalPadding: 8,
     gap: 4,
@@ -47,7 +48,7 @@ export const VISUAL_RULES = {
     minContentWidth: 120,
     minContentHeight: 80,
     crowdedNodeCount: 8,
-    crowdedFillRatio: 0.48,
+    crowdedFillRatio: 0.58,
     minReadableGap: 16,
   },
 } as const;
@@ -66,7 +67,11 @@ export function statePillLayout(
   variant: "compact" | "default" = "default",
 ): StatePillLayout {
   const compact = variant === "compact";
-  const maxWidth = compact ? VISUAL_RULES.statePill.compactMaxWidth : VISUAL_RULES.statePill.maxWidth;
+  const maxWidth = visibleCount === 1
+    ? VISUAL_RULES.statePill.singleVisibleMaxWidth
+    : compact
+      ? VISUAL_RULES.statePill.compactMaxWidth
+      : VISUAL_RULES.statePill.maxWidth;
   const horizontalPadding = compact ? VISUAL_RULES.statePill.compactHorizontalPadding : VISUAL_RULES.statePill.horizontalPadding;
   const pillW = Math.min(maxWidth, (nodeWidth - horizontalPadding) / Math.max(visibleCount, 1) - VISUAL_RULES.statePill.gap);
   const pillH = VISUAL_RULES.statePill.height;

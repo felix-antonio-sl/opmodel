@@ -8,6 +8,7 @@ import {
   type VisualSeverity,
 } from "./visual-lint";
 import { buildPatchableOpdProjectionSlice } from "./projection-view";
+import { estimatedStateTextCapacity } from "./visual-rules";
 
 export interface VisualFindingReportItem {
   severity: VisualSeverity;
@@ -66,6 +67,10 @@ function primaryEntityForFinding(finding: VisualFinding): string | null {
       return null;
     case "tight-spacing":
       return finding.aThing;
+    case "link-crossing":
+      return finding.aLink;
+    case "label-cluster":
+      return finding.linkIds[0] ?? null;
   }
 }
 
@@ -83,13 +88,36 @@ function summarizeFinding(model: Model, finding: VisualFinding): string {
       return `Crowded diagram with ${finding.nodeCount} visible nodes and fill ratio ${formatPercent(finding.fillRatio)} inside ${Math.round(finding.width)}×${Math.round(finding.height)}px bounds.`;
     case "tight-spacing":
       return `Tight spacing between ${thingLabel(model, finding.aThing)} and ${thingLabel(model, finding.bThing)}: ${finding.gap}px on ${finding.axis.toUpperCase()} axis.`;
+    case "link-crossing":
+      return `Visible link crossing between ${finding.aLink} and ${finding.bLink}.`;
+    case "label-cluster":
+      return `Cluster of ${finding.clusterSize} link labels competing for the same visual area (${finding.linkIds.join(", ")}).`;
   }
+}
+
+function projectedTruncatedStateFindings(model: Model, opdId: string): VisualFinding[] {
+  const slice = buildPatchableOpdProjectionSlice(model, opdId);
+  const findings: VisualFinding[] = [];
+  for (const entry of slice.visualGraph.thingsById.values()) {
+    if (entry.statePills.length === 0) continue;
+    const capacity = estimatedStateTextCapacity(entry.statePills[0]!.w);
+    for (const pill of entry.statePills) {
+      if (pill.state.name.length > capacity) {
+        findings.push({ kind: "truncated-state", thing: entry.thingId, state: pill.state.id, capacity });
+      }
+    }
+  }
+  return findings;
 }
 
 export function buildVisualReport(model: Model): VisualModelReport {
   const opds: VisualOpdReport[] = [...model.opds.values()].map((opd) => {
     const slice = buildPatchableOpdProjectionSlice(model, opd.id);
-    const findings = auditVisualOpd({ appearances: slice.appearances, links: slice.links, things: model.things.values(), states: model.states.values() });
+    const baseFindings = auditVisualOpd({ appearances: slice.appearances, links: slice.links, things: model.things.values(), states: model.states.values() });
+    const findings = [
+      ...baseFindings.filter((finding) => finding.kind !== "truncated-state"),
+      ...projectedTruncatedStateFindings(model, opd.id),
+    ];
     const quality = computeVisualQuality(findings);
     return {
       opdId: opd.id,

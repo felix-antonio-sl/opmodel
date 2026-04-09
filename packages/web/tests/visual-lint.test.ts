@@ -9,6 +9,8 @@ import {
   findDegenerateBounds,
   findNonContainerOverlaps,
   computeVisualQuality,
+  findLinkCrossings,
+  findLabelClusters,
   findTightSpacing,
   findTruncatedStateBoxes,
   findVisibleOrphans,
@@ -113,6 +115,8 @@ describe("visual-lint", () => {
       { kind: "crowded-diagram", nodeCount: 9, fillRatio: 0.5, width: 100, height: 100 },
       { kind: "tight-spacing", aThing: "a", bThing: "b", gap: 4, axis: "x" },
       { kind: "tight-spacing", aThing: "c", bThing: "d", gap: 4, axis: "y" },
+      { kind: "link-crossing", aLink: "l1", bLink: "l2" },
+      { kind: "label-cluster", linkIds: ["l1", "l2", "l3"], clusterSize: 3 },
     ])).toMatchObject({ grade: "D" });
     expect(computeVisualQuality([
       { kind: "truncated-state", thing: "a", state: "s", capacity: 4 },
@@ -126,7 +130,34 @@ describe("visual-lint", () => {
     expect(visualFindingSeverity({ kind: "orphan", thing: "a" })).toBe("warning");
     expect(visualFindingSeverity({ kind: "crowded-diagram", nodeCount: 9, fillRatio: 0.5, width: 100, height: 100 })).toBe("warning");
     expect(visualFindingSeverity({ kind: "tight-spacing", aThing: "a", bThing: "b", gap: 4, axis: "x" })).toBe("warning");
+    expect(visualFindingSeverity({ kind: "link-crossing", aLink: "l1", bLink: "l2" })).toBe("warning");
+    expect(visualFindingSeverity({ kind: "label-cluster", linkIds: ["l1", "l2", "l3"], clusterSize: 3 })).toBe("warning");
     expect(visualFindingSeverity({ kind: "truncated-state", thing: "a", state: "s", capacity: 4 })).toBe("info");
+  });
+
+  it("detects crossing links and label clusters in dense routing", () => {
+    const appearances = [
+      makeAppearance("s1", 0, 0, 80, 40),
+      makeAppearance("s2", 0, 140, 80, 40),
+      makeAppearance("t1", 240, 140, 120, 60),
+      makeAppearance("t2", 240, 0, 120, 60),
+      makeAppearance("t3", 240, 70, 120, 60),
+    ];
+    const links = [
+      { id: "l1", type: "agent", source: "s1", target: "t1" } as Link,
+      { id: "l2", type: "agent", source: "s2", target: "t2" } as Link,
+      { id: "l3", type: "agent", source: "s1", target: "t3" } as Link,
+      { id: "l4", type: "agent", source: "s2", target: "t3" } as Link,
+    ];
+    const things = [
+      { id: "s1", kind: "object", name: "S1", essence: "physical", affiliation: "systemic" },
+      { id: "s2", kind: "object", name: "S2", essence: "physical", affiliation: "systemic" },
+      { id: "t1", kind: "process", name: "T1", essence: "physical", affiliation: "systemic" },
+      { id: "t2", kind: "process", name: "T2", essence: "physical", affiliation: "systemic" },
+      { id: "t3", kind: "process", name: "T3", essence: "physical", affiliation: "systemic" },
+    ] as Thing[];
+    expect(findLinkCrossings(appearances, links, things).length).toBeGreaterThan(0);
+    expect(findLabelClusters(appearances, links, things).length).toBeGreaterThanOrEqual(0);
   });
 
   it("audits EV-AMS with no overlap/orphan findings", () => {

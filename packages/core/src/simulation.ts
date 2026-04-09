@@ -273,7 +273,9 @@ export function resolveLinksForOpd(model: Model, opdId: string): ResolvedLink[] 
     }
   }
 
-  function registerDescendants(ancestorId: string, processId: string): void {
+  function registerDescendants(ancestorId: string, processId: string, visited: Set<string> = new Set()): void {
+    if (visited.has(processId)) return;
+    visited.add(processId);
     const childOpd = inZoomOpds.get(processId);
     if (!childOpd) return;
     for (const app of model.appearances.values()) {
@@ -282,7 +284,7 @@ export function resolveLinksForOpd(model: Model, opdId: string): ResolvedLink[] 
       const thing = model.things.get(app.thing);
       if (thing?.kind === "process") {
         subprocessToAncestor.set(thing.id, ancestorId);
-        registerDescendants(ancestorId, thing.id);
+        registerDescendants(ancestorId, thing.id, visited);
       }
     }
   }
@@ -824,7 +826,9 @@ export function resolveLinksForOpdNative(
     if (ref.kind === "in-zoom") inZoomRefinements.set(ref.parentThing, ref);
   }
 
-  function registerDescendants(ancestorId: string, processId: string): void {
+  function registerDescendants(ancestorId: string, processId: string, visited: Set<string> = new Set()): void {
+    if (visited.has(processId)) return;
+    visited.add(processId);
     const ref = inZoomRefinements.get(processId);
     if (!ref) return;
     for (const step of ref.steps) {
@@ -832,7 +836,7 @@ export function resolveLinksForOpdNative(
         const thing = data.things.get(tid);
         if (thing?.kind === "process") {
           subprocessToAncestor.set(tid, ancestorId);
-          registerDescendants(ancestorId, tid);
+          registerDescendants(ancestorId, tid, visited);
         }
       }
     }

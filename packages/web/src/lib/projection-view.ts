@@ -127,13 +127,32 @@ export function buildPatchableOpdProjectionSliceFromProjection(
   for (const app of model.appearances.values()) {
     if (app.opd !== opdId) continue;
     patchableThingIds.add(app.thing);
-    appearances.push(view.appearancesByThing.get(app.thing) ?? app);
+    const projected = view.appearancesByThing.get(app.thing);
+    appearances.push(projected
+      ? {
+          ...projected,
+          ...(app.internal ? { internal: true } : {}),
+          ...(app.pinned !== undefined ? { pinned: app.pinned } : {}),
+          ...(app.auto_sizing !== undefined ? { auto_sizing: app.auto_sizing } : {}),
+          ...(app.state_alignment ? { state_alignment: app.state_alignment } : {}),
+        }
+      : app);
     suppressedStateIdsByThing.set(app.thing, new Set(app.suppressed_states ?? []));
   }
 
   const visualThingsById = new Map<string, ProjectionVisualThing>();
-  for (const [thingId, appearance] of view.appearancesByThing) {
+  for (const [thingId, projectedAppearance] of view.appearancesByThing) {
     const thing = model.things.get(thingId);
+    const sourceAppearance = appearances.find((app) => app.thing === thingId);
+    const appearance = sourceAppearance
+      ? {
+          ...projectedAppearance,
+          ...(sourceAppearance.internal ? { internal: true } : {}),
+          ...(sourceAppearance.pinned !== undefined ? { pinned: sourceAppearance.pinned } : {}),
+          ...(sourceAppearance.auto_sizing !== undefined ? { auto_sizing: sourceAppearance.auto_sizing } : {}),
+          ...(sourceAppearance.state_alignment ? { state_alignment: sourceAppearance.state_alignment } : {}),
+        }
+      : projectedAppearance;
     const suppressedStateIds = new Set(suppressedStateIdsByThing.get(thingId) ?? []);
     const visibleStates = [...model.states.values()]
       .filter((state) => state.parent === thingId)
@@ -199,9 +218,15 @@ function buildStatePills(
   appearance: Appearance,
   visibleStates: State[],
 ): { pills: ProjectionStatePill[]; hiddenCount: number } {
-  const minPillW = 30;
-  const maxVisible = Math.min(visibleStates.length, Math.max(2, Math.floor((appearance.w - 8) / (minPillW + 4))));
-  const layout = statePillLayout(appearance.w, maxVisible, "default");
+  const denseInternalObject = appearance.internal && appearance.w <= 360;
+  const minPillW = denseInternalObject ? 44 : 30;
+  const minVisible = denseInternalObject ? 1 : 2;
+  const preferredVisible = denseInternalObject ? 1 : Math.floor((appearance.w - 8) / (minPillW + 4));
+  const maxVisible = Math.min(
+    visibleStates.length,
+    Math.max(minVisible, preferredVisible),
+  );
+  const layout = statePillLayout(appearance.w, maxVisible, denseInternalObject ? "compact" : "default");
   const visibleCount = Math.min(visibleStates.length, maxVisible);
   const totalPillW = visibleCount * (layout.pillW + 4) - 4;
   const startX = appearance.x + (appearance.w - totalPillW) / 2;
