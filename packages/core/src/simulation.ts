@@ -322,21 +322,40 @@ export function resolveLinksForOpd(model: Model, opdId: string): ResolvedLink[] 
   const opd = model.opds.get(opdId);
   const containerThingId = opd?.refines;
   let internalThings: Set<string> | null = null;
+  let duplicateThings: Set<string> | null = null;
   // C-01: Subprocesses sorted by Y for link distribution (ISO §14.2.2.4.1)
   let subprocessesByY: string[] = [];
+  const sharedSupportThings = new Set<string>();
   if (containerThingId) {
     internalThings = new Set<string>();
+    duplicateThings = new Set<string>();
     const subprocessApps: Array<{ thingId: string; y: number }> = [];
     for (const app of model.appearances.values()) {
-      if (app.opd === opdId && app.internal === true) {
+      if (app.opd !== opdId) continue;
+      if (app.internal === true) {
         internalThings.add(app.thing);
         const thing = model.things.get(app.thing);
         if (thing?.kind === "process" && app.thing !== containerThingId) {
           subprocessApps.push({ thingId: app.thing, y: app.y });
         }
+      } else {
+        duplicateThings.add(app.thing);
       }
     }
     subprocessesByY = subprocessApps.sort((a, b) => a.y - b.y).map(a => a.thingId);
+
+    for (const dupId of duplicateThings) {
+      const dupThing = model.things.get(dupId);
+      if (dupThing?.kind !== "object") continue;
+      let sharedTouches = 0;
+      for (const link of model.links.values()) {
+        if (link.type !== "agent" && link.type !== "instrument") continue;
+        const otherId = link.source === dupId ? link.target : link.target === dupId ? link.source : null;
+        if (!otherId || !internalThings.has(otherId)) continue;
+        sharedTouches += 1;
+      }
+      if (sharedTouches >= 4) sharedSupportThings.add(dupId);
+    }
   }
 
   for (const link of model.links.values()) {
@@ -420,6 +439,25 @@ export function resolveLinksForOpd(model: Model, opdId: string): ResolvedLink[] 
           continue; // distributed — skip original
         }
         // No subprocesses yet — show link to container as-is (fall through)
+      }
+
+      if ((link.type === "agent" || link.type === "instrument") && duplicateThings && sharedSupportThings.size > 0) {
+        const sourceIsSharedSupport = duplicateThings.has(vs) && sharedSupportThings.has(vs);
+        const targetIsSharedSupport = duplicateThings.has(vt) && sharedSupportThings.has(vt);
+        if ((sourceIsSharedSupport && internalThings.has(vt)) || (targetIsSharedSupport && internalThings.has(vs))) {
+          const dupId = sourceIsSharedSupport ? vs : vt;
+          const collapseKey = `shared-support|${link.type}|${dupId}|${containerThingId}`;
+          if (!seen.has(collapseKey)) {
+            seen.add(collapseKey);
+            result.push({
+              link,
+              visualSource: sourceIsSharedSupport ? dupId : containerThingId,
+              visualTarget: sourceIsSharedSupport ? containerThingId : dupId,
+              aggregated: true,
+            });
+          }
+          continue;
+        }
       }
       if (!internalThings.has(vs) && !internalThings.has(vt)) continue;
     }
@@ -872,15 +910,18 @@ export function resolveLinksForOpdNative(
   const opd = data.opds.get(opdId);
   const containerThingId = opd?.refines;
   let internalThings: Set<string> | null = null;
+  let duplicateThings: Set<string> | null = null;
   let subprocessesByOrder: string[] = [];
+  const sharedSupportThings = new Set<string>();
 
   if (containerThingId) {
     internalThings = new Set<string>();
-    // Internal things from atlas occurrences
+    duplicateThings = new Set<string>();
+    // Internal/duplicate things from atlas occurrences
     for (const occ of atlas.occurrences.values()) {
-      if (occ.opdId === opdId && occ.role === "internal") {
-        internalThings.add(occ.thingId);
-      }
+      if (occ.opdId !== opdId) continue;
+      if (occ.role === "internal") internalThings.add(occ.thingId);
+      if (occ.role === "duplicate") duplicateThings.add(occ.thingId);
     }
     // Subprocess order from refinements (C-01, no Y-coords)
     const ref = inZoomRefinements.get(containerThingId);
@@ -893,6 +934,19 @@ export function resolveLinksForOpdNative(
           }
         }
       }
+    }
+
+    for (const dupId of duplicateThings) {
+      const dupThing = data.things.get(dupId);
+      if (dupThing?.kind !== "object") continue;
+      let sharedTouches = 0;
+      for (const link of data.links.values()) {
+        if (link.type !== "agent" && link.type !== "instrument") continue;
+        const otherId = link.source === dupId ? link.target : link.target === dupId ? link.source : null;
+        if (!otherId || !internalThings.has(otherId)) continue;
+        sharedTouches += 1;
+      }
+      if (sharedTouches >= 4) sharedSupportThings.add(dupId);
     }
   }
 
@@ -942,6 +996,43 @@ export function resolveLinksForOpdNative(
                 result.push({ link, visualSource: dvs, visualTarget: dvt, aggregated: true });
               }
             }
+          }
+          continue;
+        }
+      }
+
+      if ((link.type === "agent" || link.type === "instrument") && duplicateThings && sharedSupportThings.size > 0) {
+        const sourceIsSharedSupport = duplicateThings.has(vs) && sharedSupportThings.has(vs);
+        const targetIsSharedSupport = duplicateThings.has(vt) && sharedSupportThings.has(vt);
+        if ((sourceIsSharedSupport && internalThings.has(vt)) || (targetIsSharedSupport && internalThings.has(vs))) {
+          const dupId = sourceIsSharedSupport ? vs : vt;
+          const collapseKey = `shared-support|${link.type}|${dupId}|${containerThingId}`;
+          if (!seen.has(collapseKey)) {
+            seen.add(collapseKey);
+            result.push({
+              link,
+              visualSource: sourceIsSharedSupport ? dupId : containerThingId,
+              visualTarget: sourceIsSharedSupport ? containerThingId : dupId,
+              aggregated: true,
+            });
+          }
+          continue;
+        }
+      }
+      if ((link.type === "agent" || link.type === "instrument") && duplicateThings && sharedSupportThings.size > 0) {
+        const sourceIsSharedSupport = duplicateThings.has(vs) && sharedSupportThings.has(vs);
+        const targetIsSharedSupport = duplicateThings.has(vt) && sharedSupportThings.has(vt);
+        if ((sourceIsSharedSupport && internalThings.has(vt)) || (targetIsSharedSupport && internalThings.has(vs))) {
+          const dupId = sourceIsSharedSupport ? vs : vt;
+          const collapseKey = `shared-support|${link.type}|${dupId}|${containerThingId}`;
+          if (!seen.has(collapseKey)) {
+            seen.add(collapseKey);
+            result.push({
+              link,
+              visualSource: sourceIsSharedSupport ? dupId : containerThingId,
+              visualTarget: sourceIsSharedSupport ? containerThingId : dupId,
+              aggregated: true,
+            });
           }
           continue;
         }
