@@ -371,12 +371,24 @@ function defaultLayoutFromAtlas(atlas: OpdAtlas, kernel: SemanticKernel): Layout
       const internalProcesses = occs
         .filter((occ) => occ.role === "internal" && kernel.things.get(occ.thingId)?.kind === "process")
         .sort((a, b) => (a.semanticRank ?? 0) - (b.semanticRank ?? 0) || a.thingId.localeCompare(b.thingId));
+      const processOrder = new Map(internalProcesses.map((occ, index) => [occ.thingId, index]));
+      const linkedProcessRank = (thingId: ThingId): number => {
+        const ranks: number[] = [];
+        for (const link of kernel.links.values()) {
+          if (link.source !== thingId && link.target !== thingId) continue;
+          const otherId = link.source === thingId ? link.target : link.source;
+          const rank = processOrder.get(otherId);
+          if (rank !== undefined) ranks.push(rank);
+        }
+        if (ranks.length === 0) return Number.MAX_SAFE_INTEGER;
+        return ranks.reduce((sum, rank) => sum + rank, 0) / ranks.length;
+      };
       const internalObjects = occs
         .filter((occ) => occ.role === "internal" && kernel.things.get(occ.thingId)?.kind !== "process")
-        .sort((a, b) => (a.semanticRank ?? 0) - (b.semanticRank ?? 0) || a.thingId.localeCompare(b.thingId));
+        .sort((a, b) => linkedProcessRank(a.thingId) - linkedProcessRank(b.thingId) || a.thingId.localeCompare(b.thingId));
       const duplicates = occs
         .filter((occ) => occ.role === "duplicate")
-        .sort((a, b) => a.thingId.localeCompare(b.thingId));
+        .sort((a, b) => linkedProcessRank(a.thingId) - linkedProcessRank(b.thingId) || a.thingId.localeCompare(b.thingId));
 
       const containerX = 80;
       const containerY = 60;
@@ -422,23 +434,28 @@ function defaultLayoutFromAtlas(atlas: OpdAtlas, kernel: SemanticKernel): Layout
         });
       });
 
+      const objectYFor = (thingId: ThingId, fallbackIndex: number) => {
+        const rank = linkedProcessRank(thingId);
+        if (!Number.isFinite(rank) || rank === Number.MAX_SAFE_INTEGER) return containerY + 65 + fallbackIndex * (objectH + objectGapY);
+        return containerY + 65 + rank * (processH + processGapY);
+      };
       internalObjects.forEach((occ, index) => {
         nodes.set(occ.id, {
           viewId: occ.id,
           x: objectX,
-          y: containerY + 65 + index * (objectH + objectGapY),
+          y: objectYFor(occ.thingId, index),
           w: objectW,
           h: objectH,
         });
       });
 
-      const leftDuplicates = duplicates.filter((_, index) => index % 2 === 0);
-      const rightDuplicates = duplicates.filter((_, index) => index % 2 === 1);
+      const leftDuplicates = duplicates.filter((occ) => occ.lane === "objects-left" || occ.lane === "agents");
+      const rightDuplicates = duplicates.filter((occ) => !leftDuplicates.includes(occ));
       leftDuplicates.forEach((occ, index) => {
         nodes.set(occ.id, {
           viewId: occ.id,
           x: leftX,
-          y: containerY + 80 + index * (duplicateH + duplicateGapY),
+          y: objectYFor(occ.thingId, index),
           w: duplicateW,
           h: duplicateH,
         });
@@ -447,7 +464,7 @@ function defaultLayoutFromAtlas(atlas: OpdAtlas, kernel: SemanticKernel): Layout
         nodes.set(occ.id, {
           viewId: occ.id,
           x: rightX,
-          y: containerY + 80 + index * (duplicateH + duplicateGapY),
+          y: objectYFor(occ.thingId, index),
           w: duplicateW,
           h: duplicateH,
         });
