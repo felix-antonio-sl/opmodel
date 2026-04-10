@@ -600,9 +600,27 @@ export function exposeSemanticKernel(kernel: SemanticKernel): OpdAtlas {
       const focusThings = new Set<ThingId>(visibleThings);
       for (const link of kernel.links.values()) {
         if (shouldHideLinkInSlice(link, rules)) continue;
-        if (focusThings.has(link.source) || focusThings.has(link.target)) {
+        const sourceFocused = focusThings.has(link.source);
+        const targetFocused = focusThings.has(link.target);
+        if (!sourceFocused && !targetFocused) continue;
+
+        const sourceThing = kernel.things.get(link.source);
+        const targetThing = kernel.things.get(link.target);
+
+        if (sourceFocused && targetFocused) {
           visibleThings.add(link.source);
           visibleThings.add(link.target);
+          continue;
+        }
+
+        if (sourceFocused && targetThing?.kind === "object") {
+          visibleThings.add(link.target);
+          continue;
+        }
+
+        if (targetFocused && sourceThing?.kind === "object") {
+          visibleThings.add(link.source);
+          continue;
         }
       }
       for (const link of kernel.links.values()) {
