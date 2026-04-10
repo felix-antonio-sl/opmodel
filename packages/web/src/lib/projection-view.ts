@@ -72,6 +72,8 @@ export interface PatchableOpdProjectionSlice extends OpdProjectionView {
   suppressedStateIdsByThing: Map<string, Set<string>>;
 }
 
+export type EffectiveVisualSlice = PatchableOpdProjectionSlice;
+
 export function buildOpdProjectionViewFromProjection(projection: LegacyProjection, opdId: string): OpdProjectionView {
   const appearancesByThing = new Map<string, Appearance>();
 
@@ -223,6 +225,40 @@ export function buildPatchableOpdProjectionSliceFromProjection(
 export function buildPatchableOpdProjectionSlice(model: Model, opdId: string): PatchableOpdProjectionSlice {
   const projection = projectLegacyModel(model);
   return buildPatchableOpdProjectionSliceFromProjection(projection, model, opdId);
+}
+
+export function buildEffectiveVisualSliceFromProjection(
+  projection: LegacyProjection,
+  model: Model,
+  opdId: string,
+): EffectiveVisualSlice {
+  return buildPatchableOpdProjectionSliceFromProjection(projection, model, opdId);
+}
+
+export function buildEffectiveVisualSlice(model: Model, opdId: string): EffectiveVisualSlice {
+  return buildPatchableOpdProjectionSlice(model, opdId);
+}
+
+export function effectiveVisualAppearances(slice: EffectiveVisualSlice): Appearance[] {
+  return [...slice.visualGraph.thingsById.values()]
+    .filter((entry) => !entry.implicit)
+    .map((entry) => entry.appearance);
+}
+
+export function effectiveVisualLinks(slice: EffectiveVisualSlice): Link[] {
+  const visibleThingIds = new Set(
+    [...slice.visualGraph.thingsById.values()]
+      .filter((entry) => !entry.implicit)
+      .map((entry) => entry.thingId),
+  );
+
+  return slice.visualGraph.links
+    .filter((entry) => visibleThingIds.has(entry.visualSource) && visibleThingIds.has(entry.visualTarget))
+    .map((entry) => ({
+      ...entry.link,
+      source: entry.visualSource,
+      target: entry.visualTarget,
+    }));
 }
 
 function isAutoPlaceholderSubprocess(model: Model, opdId: string, thingId: string): boolean {

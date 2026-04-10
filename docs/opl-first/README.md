@@ -19,6 +19,8 @@
 | 9 | [09-web-projection-migration.md](./09-web-projection-migration.md) | Estado y estrategia de migración web a projection layer |
 | 10 | [opl-grammar.md](./opl-grammar.md) | Gramática canónica inicial del input OPL |
 | **11** | [**10-isomorphism-architecture.md**](./10-isomorphism-architecture.md) | **ADR-003 — Arquitectura categorial para isomorfismo OPL ↔ OPD (VINCULANTE)** |
+| **12** | [**11-effective-visual-slice-adr.md**](./11-effective-visual-slice-adr.md) | **ADR-004 — Frontera canónica de vista efectiva para la capa visual web** |
+| **13** | [**12-web-visual-refactor-plan.md**](./12-web-visual-refactor-plan.md) | **Plan por fases para la refactor estructural profunda de la capa visual web** |
 
 ## SSOT reference
 
@@ -39,7 +41,7 @@ Precedence:
 - **Roundtrip categórico**: estabilizado en caso canónico
 - **Semantic kernel / atlas / layout**: introducidos como capa nueva
 - **Migración web**: en progreso con projection layer ya conectado a canvas/layout/reporting/store
-- **Siguiente paso**: canvas nativo desde `projection` y luego persistencia de layout más allá de `Appearance` legacy
+- **Siguiente paso**: canonizar `EffectiveVisualSlice` en web, adelgazar `OpdCanvas`, y luego abrir persistencia de layout más allá de `Appearance` legacy
 
 ## Decisión vinculante (ADR-003)
 
@@ -50,6 +52,8 @@ OPL/~ ≅ SemanticKernel ≅ Atlas/~
 ```
 
 Ver [10-isomorphism-architecture.md](./10-isomorphism-architecture.md) para las 4 leyes verificables y los 3 slices de implementación.
+
+Para la frontera visual web, ver [11-effective-visual-slice-adr.md](./11-effective-visual-slice-adr.md).
 
 ## En una frase
 

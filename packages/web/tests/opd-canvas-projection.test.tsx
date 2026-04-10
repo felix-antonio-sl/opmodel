@@ -3,7 +3,7 @@ import React from "react";
 import { describe, expect, it, vi } from "vitest";
 import { render } from "@testing-library/react";
 import { createModel } from "@opmodel/core";
-import { buildPatchableOpdProjectionSlice } from "../src/lib/projection-view";
+import { buildEffectiveVisualSlice } from "../src/lib/projection-view";
 import { OpdCanvas } from "../src/components/OpdCanvas";
 
 describe("OpdCanvas projection slice migration", () => {
@@ -25,9 +25,9 @@ describe("OpdCanvas projection slice migration", () => {
       h: 50,
     });
 
-    const baseSlice = buildPatchableOpdProjectionSlice(model, "opd-sd");
+    const baseSlice = buildEffectiveVisualSlice(model, "opd-sd");
     const projectedAppearance = { ...baseSlice.appearances[0]!, x: 220, y: 140 };
-    const projectionSlice = {
+    const visualSlice = {
       ...baseSlice,
       visualGraph: {
         ...baseSlice.visualGraph,
@@ -44,7 +44,7 @@ describe("OpdCanvas projection slice migration", () => {
 
     const { container } = render(React.createElement(OpdCanvas, {
       model,
-      projectionSlice,
+      visualSlice,
       opdId: "opd-sd",
       selectedThing: null,
       mode: "select",
@@ -97,8 +97,8 @@ describe("OpdCanvas projection slice migration", () => {
       target: "proc-b",
     });
 
-    const baseSlice = buildPatchableOpdProjectionSlice(model, "opd-sd");
-    const projectionSlice = {
+    const baseSlice = buildEffectiveVisualSlice(model, "opd-sd");
+    const visualSlice = {
       ...baseSlice,
       visualGraph: {
         ...baseSlice.visualGraph,
@@ -108,7 +108,7 @@ describe("OpdCanvas projection slice migration", () => {
 
     const { container } = render(React.createElement(OpdCanvas, {
       model,
-      projectionSlice,
+      visualSlice,
       opdId: "opd-sd",
       selectedThing: null,
       mode: "select",
@@ -126,12 +126,12 @@ describe("OpdCanvas projection slice migration", () => {
     model.states.set("state-a", { id: "state-a", parent: "obj-a", name: "Ready" });
     model.appearances.set("app-a", { id: "app-a", thing: "obj-a", opd: "opd-sd", x: 20, y: 30, w: 120, h: 60 });
 
-    const baseSlice = buildPatchableOpdProjectionSlice(model, "opd-sd");
+    const baseSlice = buildEffectiveVisualSlice(model, "opd-sd");
     const projectedThing = baseSlice.visualGraph.thingsById.get("obj-a");
     expect(projectedThing?.statePills.length).toBe(1);
     if (!projectedThing) return;
 
-    const projectionSlice = {
+    const visualSlice = {
       ...baseSlice,
       visualGraph: {
         ...baseSlice.visualGraph,
@@ -144,7 +144,7 @@ describe("OpdCanvas projection slice migration", () => {
 
     const { container } = render(React.createElement(OpdCanvas, {
       model,
-      projectionSlice,
+      visualSlice,
       opdId: "opd-sd",
       selectedThing: null,
       mode: "select",
@@ -158,5 +158,4 @@ describe("OpdCanvas projection slice migration", () => {
     expect(pill?.getAttribute("x")).toBe("333");
     expect(pill?.getAttribute("y")).toBe("444");
   });
-
 });

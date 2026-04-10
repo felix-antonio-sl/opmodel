@@ -25,7 +25,11 @@ import {
 } from "@opmodel/core";
 import { type Command, interpret } from "../lib/commands";
 import type { EditorMode, LinkTypeChoice, SimulationUIState } from "../lib/commands";
-import { buildPatchableOpdProjectionSliceFromProjection, type PatchableOpdProjectionSlice } from "../lib/projection-view";
+import {
+  buildPatchableOpdProjectionSliceFromProjection,
+  type EffectiveVisualSlice,
+  type PatchableOpdProjectionSlice,
+} from "../lib/projection-view";
 import { saveToLocalSnapshots } from "../lib/local-persistence";
 
 export interface UIState {
@@ -52,6 +56,8 @@ export interface ModelStore {
   projection: LegacyProjection;
   /** Current OPD slice used by visual consumers */
   currentProjectionSlice: PatchableOpdProjectionSlice;
+  /** Canonical effective visual slice for the current OPD */
+  currentVisualSlice: EffectiveVisualSlice;
   /** Ephemeral UI state — orthogonal to History */
   ui: UIState;
   /** Can undo? */
@@ -100,6 +106,10 @@ export function useModelStore(initialModel: Model): ModelStore {
   const currentProjectionSlice = useMemo(
     () => buildPatchableOpdProjectionSliceFromProjection(projection, history.present, ui.currentOpd),
     [projection, history.present, ui.currentOpd],
+  );
+  const currentVisualSlice = useMemo<EffectiveVisualSlice>(
+    () => currentProjectionSlice,
+    [currentProjectionSlice],
   );
 
   // Refs for accessing current state inside useCallback without stale closures
@@ -322,6 +332,7 @@ export function useModelStore(initialModel: Model): ModelStore {
     model: history.present,
     projection,
     currentProjectionSlice,
+    currentVisualSlice,
     ui,
     canUndo: history.past.length > 0,
     canRedo: history.future.length > 0,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { addAppearance, addThing, createModel, isOk, refineThing } from "@opmodel/core";
 import { buildVisualReport } from "../src/lib/visual-report";
+import { buildEffectiveVisualSlice, effectiveVisualLinks } from "../src/lib/projection-view";
 
 describe("visual-report", () => {
   it("ignores hidden placeholder subprocesses in visual findings", () => {
@@ -62,7 +63,7 @@ describe("visual-report", () => {
     expect(sd1?.findings.some((finding) => finding.primaryEntity?.startsWith("opd-sd1-sub-") ?? false)).toBe(false);
   });
 
-  it("builds per-OPD reports through projection-backed slices", () => {
+  it("builds per-OPD reports through the same effective visual slice used by visual consumers", () => {
     const model = createModel("Visual Report Test");
 
     model.things.set("proc-parent", {
@@ -104,6 +105,7 @@ describe("visual-report", () => {
       h: 60,
     });
 
+    const slice = buildEffectiveVisualSlice(model, "opd-sd1");
     const report = buildVisualReport(model);
     const sd1 = report.opds.find((r) => r.opdId === "opd-sd1");
 
@@ -111,5 +113,6 @@ describe("visual-report", () => {
     expect(sd1?.findings).toBeDefined();
     expect(sd1?.score).toBeGreaterThanOrEqual(0);
     expect(sd1?.grade).toBeDefined();
+    expect(effectiveVisualLinks(slice).every((link) => link.source === "proc-parent" || link.target === "proc-parent" || link.source === "proc-child" || link.target === "proc-child")).toBe(true);
   });
 });

@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { addAppearance, addFan, addThing, createModel, isOk, refineThing } from "@opmodel/core";
-import { buildOpdProjectionView, buildPatchableOpdProjectionSlice } from "../src/lib/projection-view";
+import {
+  buildEffectiveVisualSlice,
+  buildOpdProjectionView,
+  buildPatchableOpdProjectionSlice,
+  effectiveVisualAppearances,
+  effectiveVisualLinks,
+} from "../src/lib/projection-view";
 
 describe("projection-view", () => {
   it("builds projected appearances and multi-OPD thing detection from legacy model", () => {
@@ -197,6 +203,66 @@ describe("projection-view", () => {
     expect(slice.appearances.map((app) => app.thing)).not.toContain("opd-sd1-sub-2");
     expect(slice.appearances.map((app) => app.thing)).not.toContain("opd-sd1-sub-3");
     expect(slice.visualGraph.thingsById.get("opd-sd1-sub-1")?.implicit).toBe(true);
+  });
+
+  it("uses the effective visual slice as the canonical visible boundary for appearances and links", () => {
+    const model = createModel("Effective visual slice contract");
+
+    model.things.set("obj-a", {
+      id: "obj-a",
+      kind: "object",
+      name: "A",
+      essence: "physical",
+      affiliation: "systemic",
+    });
+    model.things.set("obj-b", {
+      id: "obj-b",
+      kind: "object",
+      name: "B",
+      essence: "physical",
+      affiliation: "systemic",
+    });
+    model.things.set("obj-hidden", {
+      id: "obj-hidden",
+      kind: "object",
+      name: "Hidden",
+      essence: "physical",
+      affiliation: "systemic",
+    });
+
+    model.appearances.set("obj-a::opd-sd", {
+      thing: "obj-a",
+      opd: "opd-sd",
+      x: 10,
+      y: 20,
+      w: 100,
+      h: 50,
+    });
+    model.appearances.set("obj-b::opd-sd", {
+      thing: "obj-b",
+      opd: "opd-sd",
+      x: 160,
+      y: 20,
+      w: 100,
+      h: 50,
+    });
+
+    model.links.set("link-visible", {
+      id: "link-visible",
+      type: "tagged",
+      source: "obj-a",
+      target: "obj-b",
+    });
+    model.links.set("link-hidden", {
+      id: "link-hidden",
+      type: "tagged",
+      source: "obj-a",
+      target: "obj-hidden",
+    });
+
+    const slice = buildEffectiveVisualSlice(model, "opd-sd");
+    expect(effectiveVisualAppearances(slice).map((app) => app.thing)).toEqual(["obj-a", "obj-b"]);
+    expect(effectiveVisualLinks(slice).map((link) => link.id)).toEqual(["link-visible"]);
   });
 
   it("keeps an explicit appearance visible even when the projection atlas prefers another OPD occurrence", () => {

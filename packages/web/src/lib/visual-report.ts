@@ -7,7 +7,12 @@ import {
   type VisualQualityScore,
   type VisualSeverity,
 } from "./visual-lint";
-import { buildPatchableOpdProjectionSlice, type ProjectionVisualLinkEntry } from "./projection-view";
+import {
+  buildEffectiveVisualSlice,
+  effectiveVisualAppearances,
+  effectiveVisualLinks,
+  type EffectiveVisualSlice,
+} from "./projection-view";
 import { estimatedStateTextCapacity } from "./visual-rules";
 
 export interface VisualFindingReportItem {
@@ -98,8 +103,7 @@ function summarizeFinding(model: Model, finding: VisualFinding): string {
   }
 }
 
-function projectedTruncatedStateFindings(model: Model, opdId: string): VisualFinding[] {
-  const slice = buildPatchableOpdProjectionSlice(model, opdId);
+function projectedTruncatedStateFindings(slice: EffectiveVisualSlice): VisualFinding[] {
   const findings: VisualFinding[] = [];
   for (const entry of slice.visualGraph.thingsById.values()) {
     if (entry.statePills.length === 0) continue;
@@ -113,37 +117,23 @@ function projectedTruncatedStateFindings(model: Model, opdId: string): VisualFin
   return findings;
 }
 
-function visualLintLinks(slice: ReturnType<typeof buildPatchableOpdProjectionSlice>) {
-  const visibleThingIds = new Set(
-    [...slice.visualGraph.thingsById.values()]
-      .filter((entry) => !entry.implicit)
-      .map((entry) => entry.thingId),
-  );
-
-  return slice.visualGraph.links
-    .filter((entry) => visibleThingIds.has(entry.visualSource) && visibleThingIds.has(entry.visualTarget))
-    .map((entry: ProjectionVisualLinkEntry) => ({
-      ...entry.link,
-      source: entry.visualSource,
-      target: entry.visualTarget,
-    }));
+function visualLintLinks(slice: EffectiveVisualSlice) {
+  return effectiveVisualLinks(slice);
 }
 
-function visualLintAppearances(slice: ReturnType<typeof buildPatchableOpdProjectionSlice>) {
-  return [...slice.visualGraph.thingsById.values()]
-    .filter((entry) => !entry.implicit)
-    .map((entry) => entry.appearance);
+function visualLintAppearances(slice: EffectiveVisualSlice) {
+  return effectiveVisualAppearances(slice);
 }
 
 export function buildVisualReport(model: Model): VisualModelReport {
   const opds: VisualOpdReport[] = [...model.opds.values()].map((opd) => {
-    const slice = buildPatchableOpdProjectionSlice(model, opd.id);
+    const slice = buildEffectiveVisualSlice(model, opd.id);
     const lintAppearances = visualLintAppearances(slice);
     const lintLinks = visualLintLinks(slice);
     const baseFindings = auditVisualOpd({ appearances: lintAppearances, links: lintLinks, things: model.things.values(), states: model.states.values() });
     const findings = [
       ...baseFindings.filter((finding) => finding.kind !== "truncated-state"),
-      ...projectedTruncatedStateFindings(model, opd.id),
+      ...projectedTruncatedStateFindings(slice),
     ];
     const quality = computeVisualQuality(findings, lintAppearances, lintLinks);
     return {
