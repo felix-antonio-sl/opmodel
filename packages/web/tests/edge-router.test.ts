@@ -140,4 +140,41 @@ describe("edge-router", () => {
     const paths = [...result.values()].map(p => p.d);
     expect(new Set(paths).size).toBe(3);
   });
+
+  it("routes cross-container links around the container border", () => {
+    const containerRect = { x: 200, y: 200, w: 400, h: 300 };
+    const links: RouteInput[] = [
+      { id: "a", sourceId: "internal", targetId: "external", p1: { x: 400, y: 350 }, p2: { x: 100, y: 100 }, containerRect, internal: false },
+    ];
+    const result = routeEdges(links);
+    const path = result.get("a")!;
+    expect(path.curved).toBe(true);
+    expect(path.d).toContain("L");
+  });
+
+  it("handles cross-container link from outside to inside", () => {
+    const containerRect = { x: 200, y: 200, w: 400, h: 300 };
+    const links: RouteInput[] = [
+      { id: "a", sourceId: "external", targetId: "internal", p1: { x: 100, y: 100 }, p2: { x: 400, y: 350 }, containerRect, internal: false },
+    ];
+    const result = routeEdges(links);
+    const path = result.get("a")!;
+    expect(path.curved).toBe(true);
+  });
+
+  it("does not apply cross-container routing when both points are inside", () => {
+    const containerRect = { x: 200, y: 200, w: 400, h: 300 };
+    const links: RouteInput[] = [
+      // Multiple vertical internal links to establish top-down flow
+      { id: "a", sourceId: "s1", targetId: "t1", p1: { x: 250, y: 250 }, p2: { x: 250, y: 450 }, containerRect, internal: true },
+      { id: "b", sourceId: "s2", targetId: "t2", p1: { x: 450, y: 250 }, p2: { x: 450, y: 450 }, containerRect, internal: true },
+      { id: "c", sourceId: "s3", targetId: "t3", p1: { x: 350, y: 220 }, p2: { x: 350, y: 470 }, containerRect, internal: true },
+    ];
+    const result = routeEdges(links);
+    // Internal links with clear vertical flow should use orthogonal paths
+    for (const path of result.values()) {
+      expect(path.curved).toBe(true);
+      expect(path.d).toContain("C ");
+    }
+  });
 });

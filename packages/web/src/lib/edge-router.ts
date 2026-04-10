@@ -230,6 +230,108 @@ function orthogonalPath(p1: Point, p2: Point, flow: "top-down" | "left-right" | 
   }
 }
 
+/** Check if a point is inside a rect (inclusive) */
+function pointInRect(p: Point, r: Rect): boolean {
+  return p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
+}
+
+/** Find the intersection of a ray from inside a rect to the rect border */
+function rectExitPoint(from: Point, to: Point, rect: Rect): Point {
+  const cx = rect.x + rect.w / 2;
+  const cy = rect.y + rect.h / 2;
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  if (dx === 0 && dy === 0) return from;
+
+  // Check all 4 sides, find the one the ray hits first
+  const candidates: Point[] = [];
+  const halfW = rect.w / 2;
+  const halfH = rect.h / 2;
+
+  // Right side (x = rect.x + rect.w)
+  if (dx > 0) {
+    const t = halfW / dx;
+    const yAtT = from.y + t * dy;
+    if (yAtT >= rect.y && yAtT <= rect.y + rect.h) candidates.push({ x: rect.x + rect.w, y: yAtT });
+  }
+  // Left side (x = rect.x)
+  if (dx < 0) {
+    const t = -halfW / dx;
+    const yAtT = from.y + t * dy;
+    if (yAtT >= rect.y && yAtT <= rect.y + rect.h) candidates.push({ x: rect.x, y: yAtT });
+  }
+  // Bottom side (y = rect.y + rect.h)
+  if (dy > 0) {
+    const t = halfH / dy;
+    const xAtT = from.x + t * dx;
+    if (xAtT >= rect.x && xAtT <= rect.x + rect.w) candidates.push({ x: xAtT, y: rect.y + rect.h });
+  }
+  // Top side (y = rect.y)
+  if (dy < 0) {
+    const t = -halfH / dy;
+    const xAtT = from.x + t * dx;
+    if (xAtT >= rect.x && xAtT <= rect.x + rect.w) candidates.push({ x: xAtT, y: rect.y });
+  }
+
+  // Pick the closest candidate
+  if (candidates.length === 0) return { x: cx, y: cy };
+  let best = candidates[0]!;
+  let bestDist = (best.x - from.x) ** 2 + (best.y - from.y) ** 2;
+  for (let i = 1; i < candidates.length; i++) {
+    const c = candidates[i]!;
+    const d = (c.x - from.x) ** 2 + (c.y - from.y) ** 2;
+    if (d < bestDist) { best = c; bestDist = d; }
+  }
+  return best;
+}
+
+/** Generate a path that routes around a container rect */
+function crossContainerPath(
+  internalPt: Point,
+  externalPt: Point,
+  containerRect: Rect,
+  offset: number,
+): EdgePath {
+  // Find exit point on container border
+  const exitPt = rectExitPoint(internalPt, externalPt, containerRect);
+
+  // Nudge the exit point outward by offset pixels
+  const exitDx = exitPt.x - (containerRect.x + containerRect.w / 2);
+  const exitDy = exitPt.y - (containerRect.y + containerRect.h / 2);
+  const exitLen = Math.sqrt(exitDx * exitDx + exitDy * exitDy);
+  const nudgeFactor = exitLen > 0 ? offset / exitLen : 0;
+  const nudgedExit: Point = {
+    x: exitPt.x + exitDx * nudgeFactor,
+    y: exitPt.y + exitDy * nudgeFactor,
+  };
+
+  // Control points: one near the exit, one bridging to external
+  const bridgeMid = {
+    x: (nudgedExit.x + externalPt.x) / 2,
+    y: (nudgedExit.y + externalPt.y) / 2,
+  };
+  const cp1 = {
+    x: nudgedExit.x + (bridgeMid.x - nudgedExit.x) * 0.3,
+    y: nudgedExit.y + (bridgeMid.y - nudgedExit.y) * 0.3,
+  };
+  const cp2 = {
+    x: bridgeMid.x + (externalPt.x - bridgeMid.x) * 0.3,
+    y: bridgeMid.y + (externalPt.y - bridgeMid.y) * 0.3,
+  };
+
+  // Label at the bridge midpoint
+  const labelPoint = {
+    x: (internalPt.x + 3 * cp1.x + 3 * cp2.x + externalPt.x) / 8,
+    y: (internalPt.y + 3 * cp1.y + 3 * cp2.y + externalPt.y) / 8,
+  };
+
+  return {
+    d: `M ${internalPt.x},${internalPt.y} L ${nudgedExit.x},${nudgedExit.y} C ${cp1.x},${cp1.y} ${cp2.x},${cp2.y} ${externalPt.x},${externalPt.y}`,
+    labelPoint: bridgeMid,
+    curved: true,
+  };
+}
+
 /** Semantic lane for link types */
 function semanticLane(linkType?: string): "input" | "output" | "structural" | "control" {
   if (!linkType) return "control";
@@ -339,6 +441,14 @@ export function routeEdges(links: RouteInput[]): Map<string, EdgePath> {
       } else {
         result.set(link.id, curvedPath(ap1, ap2, amplified));
       }
+    } else if (link.containerRect && !link.internal &&
+      (pointInRect(link.p1, link.containerRect) !== pointInRect(link.p2, link.containerRect))) {
+      // Cross-container link: one endpoint inside container, one outside
+      const [internalPt, externalPt] = pointInRect(link.p1, link.containerRect!)
+        ? [ap1, ap2]
+        : [ap2, ap1];
+      const semanticOff = semanticLane(link.linkType) === "input" ? -8 : semanticLane(link.linkType) === "output" ? 8 : 0;
+      result.set(link.id, crossContainerPath(internalPt, externalPt, link.containerRect!, 12 + semanticOff));
     } else if (link.internal && (flow === "top-down" || flow === "left-right")) {
       // Single internal link in a refinement with clear flow: use orthogonal routing
       const crossings = countCrossings({ id: link.id, p1: ap1, p2: ap2 }, endpoints);
