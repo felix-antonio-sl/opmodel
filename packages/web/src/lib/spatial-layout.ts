@@ -504,12 +504,12 @@ function layoutInZoom(model: Model, opdId: string, apps: Appearance[], links: Li
 
   const containerX = container.x;
   const containerY = container.y;
-  const processW = 230;
+  const processW = 220;
   const processH = 60;
-  const processGapX = 84;
+  const processGapX = 72;
   const processGapY = 52;
-  const innerPaddingX = 48;
-  const innerPaddingY = 70;
+  const innerPaddingX = 32;
+  const innerPaddingY = 64;
   const maxInternalObjectWidth = 320;
 
   const internalProcesses = internal.filter((app) => model.things.get(app.thing)?.kind === "process");
@@ -617,12 +617,12 @@ function layoutInZoom(model: Model, opdId: string, apps: Appearance[], links: Li
   };
 
   const internalLeftX = containerX + innerPaddingX;
-  const internalRightX = processStartX + processBandWidth + (rightInnerWidth > 0 ? 56 : 0);
+  const internalRightX = processStartX + processBandWidth + (rightInnerWidth > 0 ? 40 : 0);
   placeInternalEntries(internalLeftEntries, internalLeftX, -1);
   placeInternalEntries(internalRightEntries, internalRightX, 1);
 
-  const laneBaseLeft = containerX - 220;
-  const laneBaseRight = containerX + targetContainerW + 110;
+  const laneBaseLeft = containerX - 180;
+  const laneBaseRight = containerX + targetContainerW + 36;
   const leftEntries: Array<{ app: Appearance; y: number; h: number; w: number }> = [];
   const rightEntries: Array<{ app: Appearance; y: number; h: number; w: number }> = [];
   const supportEntries: Array<{ app: Appearance; y: number; h: number; w: number }> = [];
@@ -669,8 +669,8 @@ function layoutInZoom(model: Model, opdId: string, apps: Appearance[], links: Li
         maxWidthInColumn = 0;
       }
       const x = direction === -1
-        ? baseX - column * 220 - maxWidthInColumn
-        : baseX + column * 220;
+        ? baseX - column * 188 - maxWidthInColumn
+        : baseX + column * 188;
       patches.push({ thingId: entry.app.thing, opdId, patch: { x, y: cursorBottom, w: entry.w, h: entry.h } });
       cursorBottom += entry.h + VISUAL_RULES.spacing.nodeGap;
       maxWidthInColumn = Math.max(maxWidthInColumn, entry.w);
