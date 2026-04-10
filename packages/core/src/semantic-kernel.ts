@@ -762,12 +762,13 @@ export function exposeSemanticKernel(kernel: SemanticKernel): OpdAtlas {
       const contextOccurrence = createOccurrence(kernel, opd.id, refinement.parentThing, { role: "context", lane: "processes-center" });
       occurrences.set(contextOccurrence.id, contextOccurrence);
 
+      let sequenceRank = 0;
       refinement.steps.forEach((step, stepIndex) => {
         const parallelClass = step.execution === "parallel" ? `parallel:${refinement.id}:${stepIndex}` : undefined;
         for (const thingId of step.thingIds) {
           const occurrence = createOccurrence(kernel, opd.id, thingId, {
             role: "internal",
-            semanticRank: stepIndex,
+            semanticRank: sequenceRank++,
             ...(parallelClass ? { parallelClass } : {}),
             lane: defaultLaneForThing(kernel, thingId),
           });
