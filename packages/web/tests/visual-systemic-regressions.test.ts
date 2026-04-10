@@ -209,9 +209,9 @@ describe("visual systemic regressions", () => {
     const distinctProcessColumns = new Set(processApps.map((app) => Math.round(app.x / 50))).size;
 
     expect(suggestion.strategy).toBe("process-in-zoom");
-    expect(bounds.maxX - bounds.minX).toBeLessThan(3000);
-    expect(bounds.maxY - bounds.minY).toBeGreaterThan(450);
-    expect(distinctProcessColumns).toBeGreaterThanOrEqual(3);
+    expect(bounds.maxX - bounds.minX).toBeLessThan(2200);
+    expect(bounds.maxY - bounds.minY).toBeGreaterThan(700);
+    expect(distinctProcessColumns).toBeLessThanOrEqual(2);
   });
 
   it("keeps Import OPL on the canonical auto-layout path and derives SD1 externals from the refined thing in the parent OPD", () => {

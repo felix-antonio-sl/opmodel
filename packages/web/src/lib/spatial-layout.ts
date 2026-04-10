@@ -504,10 +504,10 @@ function layoutInZoom(model: Model, opdId: string, apps: Appearance[], links: Li
 
   const containerX = container.x;
   const containerY = container.y;
-  const processW = 240;
+  const processW = 230;
   const processH = 60;
-  const processGapX = 110;
-  const processGapY = 64;
+  const processGapX = 84;
+  const processGapY = 52;
   const innerPaddingX = 48;
   const innerPaddingY = 70;
   const maxInternalObjectWidth = 320;
@@ -520,7 +520,7 @@ function layoutInZoom(model: Model, opdId: string, apps: Appearance[], links: Li
   // Topological sort of internal processes based on link direction
   const topoSorted = topologicalSort(processSource, links, internalProcessIds);
 
-  const cols = topoSorted.length > 8 ? 3 : topoSorted.length > 4 ? 2 : 1;
+  const cols = topoSorted.length > 12 ? 2 : 1;
   const rowsPerCol = Math.ceil(topoSorted.length / cols);
 
   const plannedCenters = new Map<string, number>();
@@ -621,8 +621,8 @@ function layoutInZoom(model: Model, opdId: string, apps: Appearance[], links: Li
   placeInternalEntries(internalLeftEntries, internalLeftX, -1);
   placeInternalEntries(internalRightEntries, internalRightX, 1);
 
-  const laneBaseLeft = containerX - 280;
-  const laneBaseRight = containerX + targetContainerW + 170;
+  const laneBaseLeft = containerX - 220;
+  const laneBaseRight = containerX + targetContainerW + 110;
   const leftEntries: Array<{ app: Appearance; y: number; h: number; w: number }> = [];
   const rightEntries: Array<{ app: Appearance; y: number; h: number; w: number }> = [];
   const supportEntries: Array<{ app: Appearance; y: number; h: number; w: number }> = [];

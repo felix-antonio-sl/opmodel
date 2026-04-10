@@ -344,16 +344,25 @@ export function resolveLinksForOpd(model: Model, opdId: string): ResolvedLink[] 
     }
     subprocessesByY = subprocessApps.sort((a, b) => a.y - b.y).map(a => a.thingId);
 
+    const supportFanout = new Map<string, Set<string>>();
+    for (const link of model.links.values()) {
+      if (link.type !== "agent" && link.type !== "instrument") continue;
+      const rs = resolve(link.source);
+      const rt = resolve(link.target);
+      if (!rs || !rt) continue;
+      if (duplicateThings.has(rs) && internalThings.has(rt)) {
+        if (!supportFanout.has(rs)) supportFanout.set(rs, new Set());
+        supportFanout.get(rs)!.add(rt);
+      }
+      if (duplicateThings.has(rt) && internalThings.has(rs)) {
+        if (!supportFanout.has(rt)) supportFanout.set(rt, new Set());
+        supportFanout.get(rt)!.add(rs);
+      }
+    }
     for (const dupId of duplicateThings) {
       const dupThing = model.things.get(dupId);
       if (dupThing?.kind !== "object") continue;
-      let sharedTouches = 0;
-      for (const link of model.links.values()) {
-        if (link.type !== "agent" && link.type !== "instrument") continue;
-        const otherId = link.source === dupId ? link.target : link.target === dupId ? link.source : null;
-        if (!otherId || !internalThings.has(otherId)) continue;
-        sharedTouches += 1;
-      }
+      const sharedTouches = supportFanout.get(dupId)?.size ?? 0;
       if (sharedTouches >= 4) sharedSupportThings.add(dupId);
     }
   }
