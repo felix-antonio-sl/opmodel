@@ -425,15 +425,13 @@ export function resolveLinksForOpd(model: Model, opdId: string): ResolvedLink[] 
               result.push({ link, visualSource: finalVs, visualTarget: finalVt, aggregated: true });
             }
           } else {
-            // Agent/instrument → all subprocesses
-            for (const spId of subprocessesByY) {
-              const dvs = vs === containerThingId ? spId : vs;
-              const dvt = vt === containerThingId ? spId : vt;
-              const spKey = `${link.type}|${dvs}|${dvt}`;
-              if (!seen.has(spKey)) {
-                seen.add(spKey);
-                result.push({ link, visualSource: dvs, visualTarget: dvt, aggregated: true });
-              }
+            // R-LD-3 + ISO/OPCloud visual convention:
+            // enabling links attached to outer contour keep a single visual link to the container.
+            // Distribution remains semantic, not N explicit visual cables.
+            const contourKey = `${link.type}|${vs}|${vt}|contour`;
+            if (!seen.has(contourKey)) {
+              seen.add(contourKey);
+              result.push({ link, visualSource: vs, visualTarget: vt, aggregated: true });
             }
           }
           continue; // distributed — skip original
@@ -986,15 +984,12 @@ export function resolveLinksForOpdNative(
               result.push({ link, visualSource: finalVs, visualTarget: finalVt, aggregated: true });
             }
           } else {
-            // Agent/instrument only → all subprocesses
-            for (const spId of subprocessesByOrder) {
-              const dvs = vs === containerThingId ? spId : vs;
-              const dvt = vt === containerThingId ? spId : vt;
-              const spKey = `${link.type}|${dvs}|${dvt}`;
-              if (!seen.has(spKey)) {
-                seen.add(spKey);
-                result.push({ link, visualSource: dvs, visualTarget: dvt, aggregated: true });
-              }
+            // R-LD-3 + ISO/OPCloud visual convention:
+            // enabling links attached to outer contour keep a single visual link to the container.
+            const contourKey = `${link.type}|${vs}|${vt}|contour`;
+            if (!seen.has(contourKey)) {
+              seen.add(contourKey);
+              result.push({ link, visualSource: vs, visualTarget: vt, aggregated: true });
             }
           }
           continue;

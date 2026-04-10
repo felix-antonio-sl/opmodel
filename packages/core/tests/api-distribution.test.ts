@@ -74,15 +74,14 @@ describe("C-01: Link Distribution (derived via resolveLinksForOpd)", () => {
     expect(result!.visualTarget).toBe("obj-output");
   });
 
-  it("agent distributes to all subprocesses", () => {
+  it("agent keeps a single visual link to the in-zoom contour", () => {
     const m = buildDistributionModel();
     const resolved = resolveLinksForOpd(m, "opd-sd1");
     const agents = resolved.filter(r => r.link.id === "lnk-agent");
-    expect(agents.length).toBe(3); // one per subprocess
-    const targets = agents.map(a => a.visualTarget).sort();
-    expect(targets).toEqual(["proc-p1", "proc-p2", "proc-p3"]);
-    // All have same source (obj-tool)
-    for (const a of agents) expect(a.visualSource).toBe("obj-tool");
+    expect(agents.length).toBe(1);
+    expect(agents[0]!.visualSource).toBe("obj-tool");
+    expect(agents[0]!.visualTarget).toBe("proc-main");
+    expect(agents[0]!.aggregated).toBe(true);
   });
 
   it("effect distributes to first+last subprocesses (R-LD-4 / R-ES)", () => {
