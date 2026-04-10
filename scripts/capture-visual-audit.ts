@@ -4,6 +4,9 @@ import { join } from "node:path";
 import { spawn, type ChildProcess } from "node:child_process";
 import {
   compileOplDocuments,
+  compileToKernel,
+  exposeSemanticKernel,
+  legacyModelFromSemanticKernel,
   loadModel,
   parseOplDocuments,
   saveModel,
@@ -56,9 +59,11 @@ async function buildModelFromFixture(path: string): Promise<{ model: Model; mode
 
   const parsed = parseOplDocuments(content);
   if (!parsed.ok) throw new Error(parsed.error.message);
-  const compiled = compileOplDocuments(parsed.value, { ignoreUnsupported: true });
+  const compiled = compileToKernel(parsed.value, { ignoreUnsupported: true });
   if (!compiled.ok) throw new Error(compiled.error.message);
-  const laidOut = autoLayoutModel(compiled.value).model;
+  const atlas = exposeSemanticKernel(compiled.value);
+  const imported = legacyModelFromSemanticKernel(compiled.value, atlas);
+  const laidOut = autoLayoutModel(imported).model;
   const report = buildVisualReport(laidOut);
   return { model: laidOut, modelJson: saveModel(laidOut), report };
 }

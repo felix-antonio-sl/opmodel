@@ -364,6 +364,104 @@ function defaultLayoutFromAtlas(atlas: OpdAtlas, kernel: SemanticKernel): Layout
 
   for (const [opdId, occs] of byOpd) {
     const nodes = new Map<ViewId, LayoutNode>();
+    const slice = atlas.nodes.get(opdId);
+    const context = occs.find((occ) => occ.role === "context");
+
+    if (slice?.refinementId && context) {
+      const internalProcesses = occs
+        .filter((occ) => occ.role === "internal" && kernel.things.get(occ.thingId)?.kind === "process")
+        .sort((a, b) => (a.semanticRank ?? 0) - (b.semanticRank ?? 0) || a.thingId.localeCompare(b.thingId));
+      const internalObjects = occs
+        .filter((occ) => occ.role === "internal" && kernel.things.get(occ.thingId)?.kind !== "process")
+        .sort((a, b) => (a.semanticRank ?? 0) - (b.semanticRank ?? 0) || a.thingId.localeCompare(b.thingId));
+      const duplicates = occs
+        .filter((occ) => occ.role === "duplicate")
+        .sort((a, b) => a.thingId.localeCompare(b.thingId));
+
+      const containerX = 80;
+      const containerY = 60;
+      const processX = containerX + 120;
+      const objectX = containerX + 430;
+      const leftX = containerX - 220;
+      const rightX = containerX + 830;
+      const supportStartY = containerY + 520;
+      const processW = 210;
+      const processH = 60;
+      const processGapY = 44;
+      const objectW = 230;
+      const objectH = 58;
+      const objectGapY = 42;
+      const duplicateW = 170;
+      const duplicateH = 50;
+      const duplicateGapY = 18;
+      const supportRowGap = 14;
+
+      const processHeight = Math.max(1, internalProcesses.length) * (processH + processGapY) - processGapY;
+      const objectHeight = Math.max(1, internalObjects.length) * (objectH + objectGapY) - objectGapY;
+      const contentHeight = Math.max(processHeight, objectHeight);
+      const supportRows = Math.ceil(duplicates.length / 5);
+      const supportHeight = supportRows > 0 ? supportRows * (duplicateH + supportRowGap) - supportRowGap + 40 : 0;
+      const containerW = 1040;
+      const containerH = Math.max(620, 120 + contentHeight + 120 + supportHeight);
+
+      nodes.set(context.id, {
+        viewId: context.id,
+        x: containerX,
+        y: containerY,
+        w: containerW,
+        h: containerH,
+      });
+
+      internalProcesses.forEach((occ, index) => {
+        nodes.set(occ.id, {
+          viewId: occ.id,
+          x: processX,
+          y: containerY + 70 + index * (processH + processGapY),
+          w: processW,
+          h: processH,
+        });
+      });
+
+      internalObjects.forEach((occ, index) => {
+        nodes.set(occ.id, {
+          viewId: occ.id,
+          x: objectX,
+          y: containerY + 65 + index * (objectH + objectGapY),
+          w: objectW,
+          h: objectH,
+        });
+      });
+
+      const leftDuplicates = duplicates.filter((_, index) => index % 2 === 0);
+      const rightDuplicates = duplicates.filter((_, index) => index % 2 === 1);
+      leftDuplicates.forEach((occ, index) => {
+        nodes.set(occ.id, {
+          viewId: occ.id,
+          x: leftX,
+          y: containerY + 80 + index * (duplicateH + duplicateGapY),
+          w: duplicateW,
+          h: duplicateH,
+        });
+      });
+      rightDuplicates.forEach((occ, index) => {
+        nodes.set(occ.id, {
+          viewId: occ.id,
+          x: rightX,
+          y: containerY + 80 + index * (duplicateH + duplicateGapY),
+          w: duplicateW,
+          h: duplicateH,
+        });
+      });
+
+      opdLayouts.set(opdId, {
+        opdId,
+        nodes,
+        edges: new Map(),
+        meta: { algorithm: "in-zoom-role-aware", version: "2.0" },
+      });
+      continue;
+    }
+
     const processes = occs.filter(o => kernel.things.get(o.thingId)?.kind === "process");
     const objects = occs.filter(o => kernel.things.get(o.thingId)?.kind !== "process");
 
@@ -373,7 +471,6 @@ function defaultLayoutFromAtlas(atlas: OpdAtlas, kernel: SemanticKernel): Layout
     const startX = 60;
     const startY = 60;
 
-    // Place processes first (center area)
     for (let i = 0; i < processes.length; i++) {
       const proc = processes[i];
       if (!proc) continue;
@@ -389,7 +486,6 @@ function defaultLayoutFromAtlas(atlas: OpdAtlas, kernel: SemanticKernel): Layout
       });
     }
 
-    // Place objects below processes
     const objStartY = startY + (Math.ceil(processes.length / cols) || 1) * rowHeight + 40;
     for (let i = 0; i < objects.length; i++) {
       const obj = objects[i];
