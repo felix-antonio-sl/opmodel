@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { Model, ValidationResult } from "@opmodel/core";
 import { validateOpl, parseOplDocuments, compileToKernel, legacyModelFromSemanticKernel, exposeSemanticKernel } from "@opmodel/core";
+import { autoLayoutModel } from "../lib/auto-layout";
 
 interface OplImportPanelProps {
   model: Model;
@@ -47,18 +48,8 @@ export function OplImportPanel({ model, onClose, onApply }: OplImportPanelProps)
         setApplyError(`Parse error: ${parsed.error.message}`);
         return;
       }
-      // Build layout hints from current model (by thing name)
-      const layoutHints = new Map<string, { x: number; y: number; w: number; h: number }>();
-      for (const [, app] of model.appearances) {
-        const thing = model.things.get(app.thing);
-        if (thing) {
-          layoutHints.set(thing.name, { x: app.x, y: app.y, w: app.w, h: app.h });
-        }
-      }
       const compiled = compileToKernel(parsed.value, {
         ignoreUnsupported: true,
-        preserveLayout: model.appearances,
-        layoutHints,
       });
       if (!compiled.ok) {
         setApplyError(`Compile error: ${compiled.error.message}`);
@@ -66,7 +57,8 @@ export function OplImportPanel({ model, onClose, onApply }: OplImportPanelProps)
       }
       const kernel = compiled.value;
       const atlas = exposeSemanticKernel(kernel);
-      onApply(legacyModelFromSemanticKernel(kernel, atlas));
+      const imported = legacyModelFromSemanticKernel(kernel, atlas);
+      onApply(autoLayoutModel(imported).model);
       onClose();
     } catch (e) {
       setApplyError(e instanceof Error ? e.message : String(e));

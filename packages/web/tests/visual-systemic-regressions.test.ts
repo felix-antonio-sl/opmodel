@@ -2,11 +2,14 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import {
   compileOplDocuments,
+  compileToKernel,
   createModel,
   addThing,
   addAppearance,
   addLink,
+  exposeSemanticKernel,
   isOk,
+  legacyModelFromSemanticKernel,
   loadModel,
   parseOplDocuments,
   refineThing,
@@ -209,6 +212,23 @@ describe("visual systemic regressions", () => {
     expect(bounds.maxX - bounds.minX).toBeLessThan(3000);
     expect(bounds.maxY - bounds.minY).toBeGreaterThan(450);
     expect(distinctProcessColumns).toBeGreaterThanOrEqual(3);
+  });
+
+  it("keeps Import OPL on the canonical auto-layout path for the real HODOM benchmark", () => {
+    const opl = readFileSync(new URL("../../../tests/hodom-real-import.opl", import.meta.url), "utf8");
+    const parsed = parseOplDocuments(opl);
+    if (!parsed.ok) throw new Error(parsed.error.message);
+    const compiled = compileToKernel(parsed.value, { ignoreUnsupported: true });
+    if (!compiled.ok) throw new Error(compiled.error.message);
+    const atlas = exposeSemanticKernel(compiled.value);
+    const imported = legacyModelFromSemanticKernel(compiled.value, atlas);
+    const laidOut = autoLayoutModel(imported).model;
+    const report = buildVisualReport(laidOut);
+    const byName = new Map(report.opds.map((opd) => [opd.name, opd]));
+
+    expect(byName.get("SD")?.score ?? 0).toBeGreaterThanOrEqual(80);
+    expect(byName.get("SD1")?.score ?? 0).toBeGreaterThanOrEqual(95);
+    expect(byName.get("SD1")?.errors ?? 99).toBe(0);
   });
 
   it("improves the stress visual report enough to clear catastrophic SD/SD1 collapse", () => {
