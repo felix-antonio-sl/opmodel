@@ -1,12 +1,11 @@
 import { useRef, useState, useCallback, useMemo, useEffect } from "react";
 import {
-  buildEffectiveVisualSlice,
   effectiveVisualAppearances,
   type EffectiveVisualSlice,
   type ProjectionVisualLinkEntry,
 } from "../lib/projection-view";
 import type { Model, Appearance, Fan } from "@opmodel/core";
-import { createInitialState, resolveOpdFiber, findConsumptionResultPairs, findStructuralForks, getSemiFoldedParts, type ModelState, type StructuralFork, type OpdFiber } from "@opmodel/core";
+import { createInitialState, findConsumptionResultPairs, findStructuralForks, getSemiFoldedParts, type ModelState, type StructuralFork } from "@opmodel/core";
 import type { Command, EditorMode, LinkTypeChoice, SimulationUIState } from "../lib/commands";
 import { genId } from "../lib/ids";
 import {
@@ -39,7 +38,7 @@ import {
 
 interface Props {
   model: Model;
-  visualSlice?: EffectiveVisualSlice;
+  visualSlice: EffectiveVisualSlice;
   opdId: string;
   selectedThing: string | null;
   selectedLink: string | null;
@@ -177,10 +176,7 @@ export function OpdCanvas({ model, visualSlice, opdId, selectedThing, selectedLi
     return opd?.refines ?? null;
   }, [model, opdId]);
 
-  const projectedSlice = useMemo(
-    () => visualSlice ?? buildEffectiveVisualSlice(model, opdId),
-    [visualSlice, model, opdId],
-  );
+  const projectedSlice = visualSlice;
 
   // Set of things that move during drag
   const draggedThings = useMemo(() => {
@@ -211,9 +207,6 @@ export function OpdCanvas({ model, visualSlice, opdId, selectedThing, selectedLi
     if (mode !== "addLink") setLinkSource(null);
   }, [mode]);
 
-  // DA-9: Compute fiber (derived OPD view)
-  const fiber = useMemo(() => resolveOpdFiber(model, opdId), [model, opdId]);
-
   // SubModel shared things
   const sharedThingIds = useMemo(() => {
     const set = new Set<string>();
@@ -229,25 +222,14 @@ export function OpdCanvas({ model, visualSlice, opdId, selectedThing, selectedLi
   const multiOpdThings = useMemo(() => projectedSlice.multiOpdThings, [projectedSlice]);
 
   const appearances = useMemo(() => {
-    const projectionThings = projectedSlice.visualGraph?.thingsById;
-    if (projectionThings) {
-      const map = new Map<string, Appearance>();
-      for (const [thingId, entry] of projectionThings) {
-        if (entry.implicit) continue;
-        map.set(thingId, entry.appearance);
-      }
-
-      return map;
-    }
-
     const map = new Map<string, Appearance>();
-    for (const [id, entry] of fiber.things) {
+    for (const [id, entry] of projectedSlice.visualGraph.thingsById) {
       if (entry.implicit) continue;
-      map.set(id, projectedSlice.appearancesByThing.get(id) ?? entry.appearance);
+      map.set(id, entry.appearance);
     }
 
     return map;
-  }, [fiber, projectedSlice]);
+  }, [projectedSlice]);
 
   // Select all (Ctrl+A)
   useEffect(() => {
@@ -260,37 +242,17 @@ export function OpdCanvas({ model, visualSlice, opdId, selectedThing, selectedLi
   }, [appearances, simulation]);
 
   // Implicit things set
-  const implicitThings = useMemo(() => {
-    if (projectedSlice.visualGraph) {
-      return projectedSlice.visualGraph.implicitThingIds;
-    }
-    const set = new Set<string>();
-    for (const [id, entry] of fiber.things) {
-      if (entry.implicit) set.add(id);
-    }
-    return set;
-  }, [projectedSlice, fiber]);
+  const implicitThings = useMemo(() => projectedSlice.visualGraph.implicitThingIds, [projectedSlice]);
 
   // DA-9: filter suppressed states
   const visibleStatesFor = useCallback((allStates: ReturnType<typeof statesForThing>, thingId: string) => {
-    const projectedThing = projectedSlice.visualGraph?.thingsById.get(thingId);
-    if (projectedThing?.visibleStates) return projectedThing.visibleStates;
-
-    const projectionSuppressed = projectedThing?.suppressedStateIds;
-    const fiberSuppressed = fiber.suppressedStates.get(thingId);
-    const app = fiber.things.get(thingId)?.appearance;
-    const storedSuppressed = app?.suppressed_states;
-    if (!fiberSuppressed && !projectionSuppressed && !storedSuppressed) return allStates;
-    return allStates.filter(s => {
-      if (fiberSuppressed?.has(s.id)) return false;
-      if (projectionSuppressed?.has(s.id)) return false;
-      if (storedSuppressed?.includes(s.id)) return false;
-      return true;
-    });
-  }, [projectedSlice, fiber]);
+    const projectedThing = projectedSlice.visualGraph.thingsById.get(thingId);
+    if (projectedThing) return projectedThing.visibleStates;
+    return allStates;
+  }, [projectedSlice]);
 
   const projectedStatePillsFor = useCallback((thingId: string, appearance: { x: number; y: number }) => {
-    const projectedThing = projectedSlice.visualGraph?.thingsById.get(thingId);
+    const projectedThing = projectedSlice.visualGraph.thingsById.get(thingId);
     if (!projectedThing?.statePills?.length) return undefined;
 
     const dx = appearance.x - projectedThing.appearance.x;
@@ -312,29 +274,20 @@ export function OpdCanvas({ model, visualSlice, opdId, selectedThing, selectedLi
 
   // Collect visible links
   const visibleLinks = useMemo((): ProjectionVisualLinkEntry[] => {
-    if (projectedSlice.visualGraph?.links) {
-      return projectedSlice.visualGraph.links;
-    }
-
-    const resolved = projectedSlice.visualLinks ?? fiber.links;
-    const entries: ProjectionVisualLinkEntry[] = resolved.map((rl) => {
+    const resolved = projectedSlice.visualLinks;
+    const entries: ProjectionVisualLinkEntry[] = projectedSlice.visualGraph.links.map((entry) => {
       // Enrich label with state transition for effect links
-      let labelOverride = rl.splitHalf as string | undefined;
-      if (!labelOverride && rl.link.source_state && rl.link.target_state) {
-        const fromState = model.states.get(rl.link.source_state);
-        const toState = model.states.get(rl.link.target_state);
+      let labelOverride = entry.labelOverride;
+      if (!labelOverride && entry.link.source_state && entry.link.target_state) {
+        const fromState = model.states.get(entry.link.source_state);
+        const toState = model.states.get(entry.link.target_state);
         if (fromState && toState) {
-          labelOverride = `${rl.link.type} (${fromState.name} → ${toState.name})`;
+          labelOverride = `${entry.link.type} (${fromState.name} → ${toState.name})`;
         }
       }
       return {
-        link: rl.link,
-        modifier: [...model.modifiers.values()].find((m) => m.over === rl.link.id),
-        visualSource: rl.visualSource,
-        visualTarget: rl.visualTarget,
+        ...entry,
         labelOverride,
-        isMergedPair: false,
-        aggregated: rl.aggregated,
       };
     });
 
@@ -365,7 +318,7 @@ export function OpdCanvas({ model, visualSlice, opdId, selectedThing, selectedLi
       .map(e => mergedEntries.get(e.link.id) ?? e);
 
     return adjustEffectEndpoints(filtered, model);
-  }, [projectedSlice, fiber, model]);
+  }, [projectedSlice, model]);
 
   // Link type filter
   const filteredVisibleLinks = useMemo(() => {
@@ -1539,7 +1492,7 @@ export function OpdCanvas({ model, visualSlice, opdId, selectedThing, selectedLi
               return 0;
             })
             .map(([thingId, app]) => {
-            const projectedThing = projectedSlice.visualGraph?.thingsById.get(thingId);
+            const projectedThing = projectedSlice.visualGraph.thingsById.get(thingId);
             const thing = projectedThing?.thing ?? model.things.get(thingId);
             if (!thing) return null;
             const allStates = statesForThing(model, thingId);
@@ -1547,7 +1500,7 @@ export function OpdCanvas({ model, visualSlice, opdId, selectedThing, selectedLi
             const isDragging = draggedThings.has(thingId);
             const isLinkSource = linkSource?.thingId === thingId;
             const isAppExternal = app.internal === false;
-            const isAppContainer = projectedThing?.isContainer ?? (app.internal === true && opd?.refines === thingId);
+            const isAppContainer = projectedThing?.isContainer ?? false;
 
             let simClass = "";
             let simFilter: string | undefined;
@@ -1582,7 +1535,7 @@ export function OpdCanvas({ model, visualSlice, opdId, selectedThing, selectedLi
                   isLinkSource={isLinkSource}
                   isExternal={isAppExternal && !opd?.refines}
                   isContainer={isAppContainer}
-                  isRefined={projectedThing?.isRefined ?? [...model.opds.values()].some(o => o.refines === thingId)}
+                  isRefined={projectedThing?.isRefined ?? false}
                   isError={errorEntities?.has(thingId)}
                   isShared={sharedThingIds.has(thingId)}
                   hasSuppressedStates={projectedThing ? projectedThing.hasSuppressedStates : allStates.length > states.length}
@@ -1733,7 +1686,7 @@ export function OpdCanvas({ model, visualSlice, opdId, selectedThing, selectedLi
           })()}
 
           {/* Implicit things (ghosts) */}
-          {showGhosts && [...(projectedSlice.visualGraph?.thingsById.entries() ?? [])]
+          {showGhosts && [...projectedSlice.visualGraph.thingsById.entries()]
             .filter(([, entry]) => entry.implicit)
             .map(([thingId, entry]) => {
             const thing = model.things.get(thingId);
@@ -1756,33 +1709,6 @@ export function OpdCanvas({ model, visualSlice, opdId, selectedThing, selectedLi
                   isImplicit={true}
                   hiddenStateCount={entry.hiddenStateCount}
                   statePills={entry.statePills}
-                  dragDelta={{ x: 0, y: 0 }}
-                  onMouseDown={() => {}}
-                  onSelect={() => dispatch({ tag: "selectThing", thingId })}
-                  onDoubleClick={() => {}}
-                />
-              </g>
-            );
-          })}
-          {showGhosts && !projectedSlice.visualGraph && [...fiber.things.entries()]
-            .filter(([, entry]) => entry.implicit)
-            .map(([thingId, entry]) => {
-            const { thing, appearance: app } = entry;
-            const allStates = statesForThing(model, thingId);
-            const states = visibleStatesFor(allStates, thingId);
-            return (
-              <g key={`implicit-fallback-${thingId}`} style={{ opacity: 0.4 }}>
-                <ThingNode
-                  thing={thing}
-                  appearance={app}
-                  states={states}
-                  isSelected={false}
-                  isDragging={false}
-                  isLinkSource={false}
-                  isExternal={false}
-                  isContainer={false}
-                  isRefined={false}
-                  isImplicit={true}
                   dragDelta={{ x: 0, y: 0 }}
                   onMouseDown={() => {}}
                   onSelect={() => dispatch({ tag: "selectThing", thingId })}
