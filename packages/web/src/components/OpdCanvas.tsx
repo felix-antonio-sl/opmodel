@@ -1,7 +1,8 @@
 import { useRef, useState, useCallback, useMemo, useEffect } from "react";
 import {
-  buildPatchableOpdProjectionSlice,
-  type PatchableOpdProjectionSlice,
+  buildEffectiveVisualSlice,
+  effectiveVisualAppearances,
+  type EffectiveVisualSlice,
   type ProjectionVisualLinkEntry,
 } from "../lib/projection-view";
 import type { Model, Appearance, Fan } from "@opmodel/core";
@@ -17,6 +18,7 @@ import { LINK_COLORS, paddedBounds } from "../lib/visual-rules";
 import { suggestLayoutForOpd } from "../lib/spatial-layout";
 import { auditVisualOpd, computeVisualQuality } from "../lib/visual-lint";
 import { routeEdges, type EdgePath } from "../lib/edge-router";
+import { buildFanOverlayGeometry } from "../lib/fan-overlay";
 import { getRefinementActionState, getRefinementContext, nextChildOpdDisplayName } from "../lib/refinement-navigation";
 
 import { ThingNode } from "./canvas/ThingNode";
@@ -37,7 +39,7 @@ import {
 
 interface Props {
   model: Model;
-  projectionSlice?: PatchableOpdProjectionSlice;
+  visualSlice?: EffectiveVisualSlice;
   opdId: string;
   selectedThing: string | null;
   selectedLink: string | null;
@@ -48,9 +50,17 @@ interface Props {
   errorEntities?: Set<string>;
 }
 
+function applyAppearancePatches(appearances: readonly Appearance[], updates: Array<{ thingId: string; patch: Record<string, unknown> }>) {
+  const patchesByThing = new Map(updates.map((update) => [update.thingId, update.patch]));
+  return appearances.map((appearance) => {
+    const patch = patchesByThing.get(appearance.thing);
+    return patch ? { ...appearance, ...patch } : appearance;
+  });
+}
+
 /* ─── Main Canvas Component ─── */
 
-export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, selectedLink, mode, linkType, dispatch, simulation, errorEntities }: Props) {
+export function OpdCanvas({ model, visualSlice, opdId, selectedThing, selectedLink, mode, linkType, dispatch, simulation, errorEntities }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [pan, setPan] = useState({ x: 40, y: 20 });
   const [zoom, setZoom] = useState(1);
@@ -168,8 +178,8 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, select
   }, [model, opdId]);
 
   const projectedSlice = useMemo(
-    () => projectionSlice ?? buildPatchableOpdProjectionSlice(model, opdId),
-    [projectionSlice, model, opdId],
+    () => visualSlice ?? buildEffectiveVisualSlice(model, opdId),
+    [visualSlice, model, opdId],
   );
 
   // Set of things that move during drag
@@ -306,8 +316,8 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, select
       return projectedSlice.visualGraph.links;
     }
 
-    const resolved = projectionSlice?.visualLinks ?? fiber.links;
-    const entries: ProjectionVisualLinkEntry[] = resolved.map(rl => {
+    const resolved = projectedSlice.visualLinks ?? fiber.links;
+    const entries: ProjectionVisualLinkEntry[] = resolved.map((rl) => {
       // Enrich label with state transition for effect links
       let labelOverride = rl.splitHalf as string | undefined;
       if (!labelOverride && rl.link.source_state && rl.link.target_state) {
@@ -355,7 +365,7 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, select
       .map(e => mergedEntries.get(e.link.id) ?? e);
 
     return adjustEffectEndpoints(filtered, model);
-  }, [projectedSlice, projectionSlice, fiber, model]);
+  }, [projectedSlice, fiber, model]);
 
   // Link type filter
   const filteredVisibleLinks = useMemo(() => {
@@ -695,9 +705,12 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, select
   const [layoutToast, setLayoutToast] = useState<string | null>(null);
 
   const autoLayoutCurrentOpd = useCallback(() => {
-    const currentApps = [...model.appearances.values()].filter((a) => a.opd === opdId);
-    const ids = new Set(currentApps.map((a) => a.thing));
-    const currentLinks = [...model.links.values()].filter((l) => ids.has(l.source) && ids.has(l.target));
+    const currentApps = effectiveVisualAppearances(projectedSlice);
+    const currentLinks = visibleLinks.map((entry) => ({
+        ...entry.link,
+        source: entry.visualSource,
+        target: entry.visualTarget,
+      }));
     const beforeFindings = auditVisualOpd({ appearances: currentApps, links: currentLinks, things: model.things.values(), states: model.states.values() });
     const before = computeVisualQuality(beforeFindings, currentApps, currentLinks);
 
@@ -707,7 +720,11 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, select
       setTimeout(() => setLayoutToast(null), 3000);
       return;
     }
-    const after = computeVisualQuality(suggestion.findings, currentApps, currentLinks);
+    const afterApps = applyAppearancePatches(
+      currentApps,
+      suggestion.patches.map((p) => ({ thingId: p.thingId, patch: p.patch as Record<string, unknown> })),
+    );
+    const after = computeVisualQuality(suggestion.findings, afterApps, currentLinks);
     const ok = dispatch({
       tag: "updateAppearancesBatch",
       updates: suggestion.patches.map((p) => ({ thingId: p.thingId, opdId: p.opdId, patch: p.patch as Record<string, unknown> })),
@@ -719,7 +736,7 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, select
       setTimeout(() => setLayoutToast(null), 4000);
       setTimeout(() => fitToContent(), 0);
     }
-  }, [model, opdId, dispatch, fitToContent]);
+  }, [model, opdId, projectedSlice, visibleLinks, dispatch, fitToContent]);
 
   useEffect(() => {
     const svg = svgRef.current;
@@ -1364,6 +1381,10 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, select
 
           {/* Structural fork triangles */}
           {visibleForks.map(fork => {
+            const siblingForks = visibleForks
+              .filter((candidate) => candidate.parentId === fork.parentId)
+              .sort((a, b) => a.type.localeCompare(b.type));
+            const siblingIndex = Math.max(0, siblingForks.findIndex((candidate) => candidate.type === fork.type));
             const parentRect = getEffectiveRect(fork.parentId);
             const parentThing = model.things.get(fork.parentId);
             if (!parentRect || !parentThing) return null;
@@ -1384,6 +1405,7 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, select
             const dy = centroid.y - parentCtr.y;
             const len = Math.sqrt(dx * dx + dy * dy);
             if (len < 1) return null;
+            const isParentContainer = fork.parentId === containerThingId;
             const dir = { x: dx / len, y: dy / len };
             const perp = { x: -dir.y, y: dir.x };
 
@@ -1395,7 +1417,6 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, select
             const TRI_H = (hasInner ? 14 : 12) * scaleFactor;
             const TRI_HALF = (hasInner ? 9 : 7) * scaleFactor;
 
-            const isParentContainer = fork.parentId === containerThingId;
             const trunkStart = isParentContainer
               ? { x: parentCtr.x + dir.x * 20, y: parentCtr.y + dir.y * 20 }
               : edgePoint(parentThing.kind, parentRect, centroid);
@@ -1460,7 +1481,7 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, select
                       className="link-line" stroke={color}
                       onClick={(e) => { e.stopPropagation(); dispatch({ tag: "selectLink", linkId: b.link.id }); }}
                     />
-                    {b === branches[0] && (
+                    {b === branches[0] && !isParentContainer && (
                       <text className="link-label"
                         x={baseCtr.x + dir.x * 8} y={baseCtr.y + dir.y * 8 - 7}>
                         {fork.type}{fork.children.some(c => c.link.ordered) ? " {ordered}" : ""}
@@ -1492,48 +1513,18 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, select
           {visibleFans.map(({ fan, arcPoints, sharedCenter }) => {
             if (arcPoints.length < 2) return null;
             const color = LINK_COLORS[fan.members[0] ? model.links.get(fan.members[0])?.type ?? "effect" : "effect"] ?? "#666";
-            const polar = arcPoints.map(p => ({
-              angle: Math.atan2(p.y - sharedCenter.y, p.x - sharedCenter.x),
-              r: Math.sqrt((p.x - sharedCenter.x) ** 2 + (p.y - sharedCenter.y) ** 2),
-            }));
-            polar.sort((a, b) => a.angle - b.angle);
-            let maxGap = 0, maxGapIdx = 0;
-            for (let i = 0; i < polar.length; i++) {
-              const next = (i + 1) % polar.length;
-              let gap = polar[next]!.angle - polar[i]!.angle;
-              if (gap <= 0) gap += 2 * Math.PI;
-              if (gap > maxGap) { maxGap = gap; maxGapIdx = i; }
-            }
-            const startIdx = (maxGapIdx + 1) % polar.length;
-            const ordered: Array<{ angle: number; r: number }> = [];
-            for (let i = 0; i < polar.length; i++) {
-              const idx = (startIdx + i) % polar.length;
-              let angle = polar[idx]!.angle;
-              if (ordered.length > 0 && angle < ordered[ordered.length - 1]!.angle) {
-                angle += 2 * Math.PI;
-              }
-              ordered.push({ angle, r: polar[idx]!.r });
-            }
-            const avgR = ordered.reduce((s, p) => s + p.r, 0) / ordered.length;
-            const minAngle = ordered[0]!.angle;
-            const maxAngle = ordered[ordered.length - 1]!.angle;
-            const N = 30;
-            function arcPath(radius: number): string {
-              const points: string[] = [];
-              for (let i = 0; i <= N; i++) {
-                const a = minAngle + (maxAngle - minAngle) * i / N;
-                const x = sharedCenter.x + radius * Math.cos(a);
-                const y = sharedCenter.y + radius * Math.sin(a);
-                points.push(`${x},${y}`);
-              }
-              return `M ${points.join(" L ")}`;
-            }
-            const d = arcPath(avgR);
-            const d2 = fan.type === "or" ? arcPath(avgR + 6) : null;
+            const geometry = buildFanOverlayGeometry(sharedCenter, arcPoints, fan.type === "or" ? "or" : "xor");
+            if (!geometry) return null;
             return (
               <g key={fan.id}>
-                <path d={d} fill="none" stroke={color} strokeWidth={1.5} strokeDasharray="5,3" />
-                {d2 && <path d={d2} fill="none" stroke={color} strokeWidth={1.5} strokeDasharray="5,3" />}
+                <path d={geometry.primaryPath} fill="none" stroke="var(--bg-canvas)" strokeWidth={5.5} strokeLinecap="round" opacity={0.96} />
+                <path d={geometry.primaryPath} fill="none" stroke={color} strokeWidth={2.2} strokeDasharray="6,4" strokeLinecap="round" />
+                {geometry.secondaryPath && (
+                  <>
+                    <path d={geometry.secondaryPath} fill="none" stroke="var(--bg-canvas)" strokeWidth={5.5} strokeLinecap="round" opacity={0.96} />
+                    <path d={geometry.secondaryPath} fill="none" stroke={color} strokeWidth={2.2} strokeDasharray="6,4" strokeLinecap="round" />
+                  </>
+                )}
               </g>
             );
           })}

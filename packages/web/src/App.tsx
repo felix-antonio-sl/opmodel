@@ -16,7 +16,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
     return this.props.children;
   }
 }
-import { loadModel, createModel, isOk, validate, saveModel, expose, render, exportMarkdown, semanticKernelFromModel, exposeSemanticKernel, renderAllFromKernelNative, type Model, type Thing } from "@opmodel/core";
+import { loadModel, createModel, isOk, validate, saveModel, expose, render, exportMarkdown, semanticKernelFromModel, exposeSemanticKernel, renderAllFromKernelNative, type Appearance, type Model, type Thing } from "@opmodel/core";
 import { useModelStore } from "./hooks/useModelStore";
 import { OpdTree } from "./components/OpdTree";
 import { OpdCanvas } from "./components/OpdCanvas";
@@ -27,7 +27,11 @@ import { SimulationPanel } from "./components/SimulationPanel";
 import type { ValidationTab } from "./components/ValidationPanel";
 import { auditVisualOpd, computeVisualQuality } from "./lib/visual-lint";
 import { suggestLayoutForOpd } from "./lib/spatial-layout";
-import { buildPatchableOpdProjectionSliceFromProjection } from "./lib/projection-view";
+import {
+  buildPatchableOpdProjectionSliceFromProjection,
+  effectiveVisualAppearances,
+  effectiveVisualLinks,
+} from "./lib/projection-view";
 import { buildSearchResults } from "./lib/search";
 import { clearLocalSnapshots, listBackups, loadRecoveryInfo, loadRecoveryInfoAsync, restoreSnapshot, type LocalRecoveryInfo, type LocalSnapshot } from "./lib/local-persistence";
 
@@ -50,6 +54,14 @@ function downloadBlob(blob: Blob, filename: string) {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+function applyAppearancePatches(appearances: readonly Appearance[], updates: Array<{ thingId: string; patch: Record<string, unknown> }>) {
+  const patchesByThing = new Map(updates.map((update) => [update.thingId, update.patch]));
+  return appearances.map((appearance) => {
+    const patch = patchesByThing.get(appearance.thing);
+    return patch ? { ...appearance, ...patch } : appearance;
+  });
 }
 
 /** Inline computed styles from the live SVG into a cloned SVG for standalone export */
@@ -253,7 +265,7 @@ function FileMenu({ model, onNew, onImport, onSave, onAutoLayoutAll, onShowVisua
 
 function Editor({ initialModel, recoveryInfo, onNew, onImport }: { initialModel: Model; recoveryInfo: LocalRecoveryInfo | null; onNew: () => void; onImport: (model: Model) => void }) {
   const store = useModelStore(initialModel);
-  const { model, projection, currentProjectionSlice, ui, dispatch, doUndo, doRedo, canUndo, canRedo, isDirty, lastError, save, saveStatus, saveError, localSnapshotInfo } = store;
+  const { model, projection, currentProjectionSlice, currentVisualSlice, ui, dispatch, doUndo, doRedo, canUndo, canRedo, isDirty, lastError, save, saveStatus, saveError, localSnapshotInfo } = store;
 
   const [showSearch, setShowSearch] = useState(false);
   const [showRecoveryBanner, setShowRecoveryBanner] = useState(Boolean(recoveryInfo));
@@ -424,9 +436,15 @@ function Editor({ initialModel, recoveryInfo, onNew, onImport }: { initialModel:
   }, [dispatch, model, ui.currentOpd]);
 
   const visualFindings = useMemo(() => {
-    return auditVisualOpd({ appearances: currentProjectionSlice.appearances, links: currentProjectionSlice.links, things: model.things.values(), states: model.states.values() });
-  }, [currentProjectionSlice, model]);
-  const visualQuality = useMemo(() => computeVisualQuality(visualFindings, currentProjectionSlice.appearances, currentProjectionSlice.links), [visualFindings, currentProjectionSlice]);
+    const appearances = effectiveVisualAppearances(currentVisualSlice);
+    const links = effectiveVisualLinks(currentVisualSlice);
+    return auditVisualOpd({ appearances, links, things: model.things.values(), states: model.states.values() });
+  }, [currentVisualSlice, model]);
+  const visualQuality = useMemo(() => {
+    const appearances = effectiveVisualAppearances(currentVisualSlice);
+    const links = effectiveVisualLinks(currentVisualSlice);
+    return computeVisualQuality(visualFindings, appearances, links);
+  }, [visualFindings, currentVisualSlice]);
   const validationLabel = isValid
     ? (errors.length > 0 ? `${errors.length} hints` : "Valid")
     : `${hardErrors.length} errors`;
@@ -445,11 +463,17 @@ function Editor({ initialModel, recoveryInfo, onNew, onImport }: { initialModel:
 
     for (const opd of opds) {
       const slice = buildPatchableOpdProjectionSliceFromProjection(projection, model, opd.id);
-      const beforeFindings = auditVisualOpd({ appearances: slice.appearances, links: slice.links, things: model.things.values(), states: model.states.values() });
-      beforeSum += computeVisualQuality(beforeFindings, slice.appearances, slice.links).score;
+      const appearances = effectiveVisualAppearances(slice);
+      const links = effectiveVisualLinks(slice);
+      const beforeFindings = auditVisualOpd({ appearances, links, things: model.things.values(), states: model.states.values() });
+      beforeSum += computeVisualQuality(beforeFindings, appearances, links).score;
 
       const suggestion = suggestLayoutForOpd(model, opd.id);
-      afterSum += computeVisualQuality(suggestion.findings, slice.appearances, slice.links).score;
+      const afterAppearances = applyAppearancePatches(
+        appearances,
+        suggestion.patches.map((patch) => ({ thingId: patch.thingId, patch: patch.patch as Record<string, unknown> })),
+      );
+      afterSum += computeVisualQuality(suggestion.findings, afterAppearances, links).score;
       totalPatches += suggestion.patches.length;
       for (const p of suggestion.patches) {
         allUpdates.push({ thingId: p.thingId, opdId: p.opdId, patch: p.patch as Record<string, unknown> });
@@ -624,7 +648,7 @@ function Editor({ initialModel, recoveryInfo, onNew, onImport }: { initialModel:
       </div>
       <OpdCanvas
         model={ui.simulation ? ui.simulation.frozenModel : model}
-        projectionSlice={currentProjectionSlice}
+        visualSlice={currentVisualSlice}
         opdId={ui.currentOpd}
         selectedThing={ui.selectedThing}
         selectedLink={ui.selectedLink}
