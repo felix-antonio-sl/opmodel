@@ -185,6 +185,32 @@ describe("visual systemic regressions", () => {
     expect(sd?.findings.some((finding) => finding.summary.includes("crossing"))).toBe(false);
   });
 
+  it("keeps the real HODOM import out of catastrophic branching collapse in SD1", () => {
+    const opl = readFileSync(new URL("../../../tests/hodom-real-import.opl", import.meta.url), "utf8");
+    const parsed = parseOplDocuments(opl);
+    if (!parsed.ok) throw new Error(parsed.error.message);
+    const compiled = compileOplDocuments(parsed.value, { ignoreUnsupported: true });
+    if (!compiled.ok) throw new Error(compiled.error.message);
+    const laidOut = autoLayoutModel(compiled.value).model;
+    const suggestion = suggestLayoutForOpd(laidOut, "opd-sd1");
+    const sd1Apps = [...laidOut.appearances.values()].filter((app) => app.opd === "opd-sd1");
+    const processApps = sd1Apps.filter((app) => app.thing !== "proc-hospitalizar-en-domicilio" && laidOut.things.get(app.thing)?.kind === "process");
+
+    const bounds = sd1Apps.reduce((acc, app) => ({
+      minX: Math.min(acc.minX, app.x),
+      minY: Math.min(acc.minY, app.y),
+      maxX: Math.max(acc.maxX, app.x + app.w),
+      maxY: Math.max(acc.maxY, app.y + app.h),
+    }), { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity });
+
+    const distinctProcessColumns = new Set(processApps.map((app) => Math.round(app.x / 50))).size;
+
+    expect(suggestion.strategy).toBe("process-in-zoom");
+    expect(bounds.maxX - bounds.minX).toBeLessThan(3000);
+    expect(bounds.maxY - bounds.minY).toBeGreaterThan(450);
+    expect(distinctProcessColumns).toBeGreaterThanOrEqual(3);
+  });
+
   it("improves the stress visual report enough to clear catastrophic SD/SD1 collapse", () => {
     const opl = readFileSync(new URL("../../../tests/stress-test-max-complexity.opl", import.meta.url), "utf8");
     const parsed = parseOplDocuments(opl);

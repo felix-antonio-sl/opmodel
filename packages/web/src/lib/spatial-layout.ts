@@ -400,14 +400,20 @@ function layoutBranchingControl(model: Model, opdId: string, apps: Appearance[],
   const external = apps.filter((a) => !a.internal && a.thing !== refines).sort(sortByPosition);
   if (!container || internal.length === 0) return { strategy: "none", patches: [], findings: [] };
 
-  const internalProcessIds = new Set(internal.map((a) => a.thing));
+  const internalProcesses = internal.filter((a) => model.things.get(a.thing)?.kind === "process");
+  const internalObjects = internal.filter((a) => model.things.get(a.thing)?.kind === "object");
+  const internalProcessIds = new Set(internalProcesses.map((a) => a.thing));
   const diverging = fans.find((f) => f.direction === "diverging" && (f.type === "xor" || f.type === "or" || f.type === "and"));
   if (!diverging) return { strategy: "none", patches: [], findings: [] };
 
+  if (internalProcesses.length > 7 || internalObjects.length > 6) {
+    return { strategy: "none", patches: [], findings: [] };
+  }
+
   const branchIds = branchProcessIdsForFan(diverging, links, internalProcessIds);
-  const branches = internal.filter((a) => branchIds.includes(a.thing)).sort(sortByPosition);
-  const trunk = internal.filter((a) => !branchIds.includes(a.thing)).sort(sortByPosition);
-  if (branches.length === 0) return { strategy: "none", patches: [], findings: [] };
+  const branches = internalProcesses.filter((a) => branchIds.includes(a.thing)).sort(sortByPosition);
+  const trunk = internalProcesses.filter((a) => !branchIds.includes(a.thing)).sort(sortByPosition);
+  if (branches.length === 0 || trunk.length === 0) return { strategy: "none", patches: [], findings: [] };
 
   const containerX = container.x;
   const containerY = container.y;

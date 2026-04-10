@@ -1,0 +1,1413 @@
+=== SD ===
+Sistema HODOM es un objeto, físico.
+Hospitalizar en Domicilio es un proceso, físico.
+Grupo de Pacientes es un objeto, físico.
+Condicion Clinica es un objeto, informatico.
+Equipo de Salud es un objeto, físico.
+Equipamiento Medico es un objeto, físico.
+Sistema de Comunicacion es un objeto, físico.
+Vehiculo de Transporte es un objeto, físico.
+Infraestructura Administrativa es un objeto, físico.
+Sistema HDOS es un objeto, informatico.
+Insumo Clinico es un objeto, físico.
+Medicamento es un objeto, físico.
+Ficha Clinica es un objeto, informatico.
+Domicilio del Paciente es un objeto, físico, ambiental.
+Establecimiento de Atencion Cerrada es un objeto, físico, ambiental.
+Normativa Vigente es un objeto, informatico, ambiental.
+Centro de Salud Familiar es un objeto, físico, ambiental.
+Cuidador es un objeto, físico, ambiental.
+UGCC es un objeto, informatico, ambiental.
+Ocurrir Episodio Agudo es un proceso, físico, ambiental.
+
+Sistema HODOM exhibe Hospitalizar en Domicilio.
+Grupo de Pacientes exhibe Condicion Clinica.
+
+Condicion Clinica puede estar agudo-reagudizado o recuperado.
+Estado agudo-reagudizado de Condicion Clinica es inicial.
+Estado recuperado de Condicion Clinica es final.
+
+Hospitalizar en Domicilio cambia Condicion Clinica de agudo-reagudizado a recuperado.
+Equipo de Salud maneja Hospitalizar en Domicilio.
+Hospitalizar en Domicilio requiere Equipamiento Medico.
+Hospitalizar en Domicilio requiere Sistema de Comunicacion.
+Hospitalizar en Domicilio requiere Vehiculo de Transporte.
+Hospitalizar en Domicilio requiere Infraestructura Administrativa.
+Hospitalizar en Domicilio requiere Sistema HDOS.
+Hospitalizar en Domicilio requiere Domicilio del Paciente.
+Hospitalizar en Domicilio consume Insumo Clinico.
+Hospitalizar en Domicilio consume Medicamento.
+
+Ficha Clinica puede estar activa o finalizada.
+Hospitalizar en Domicilio genera Ficha Clinica.
+
+Ocurrir Episodio Agudo cambia Condicion Clinica a agudo-reagudizado.
+
+Establecimiento de Atencion Cerrada deriva Grupo de Pacientes.
+Centro de Salud Familiar deriva Grupo de Pacientes.
+Sistema HODOM contrarefiere a Centro de Salud Familiar.
+Normativa Vigente rige Sistema HODOM.
+Cuidador cuida a Grupo de Pacientes.
+UGCC gestiona camas para Grupo de Pacientes.
+
+=== SD1 ===
+SD se refina por descomposicion de Hospitalizar en Domicilio en SD1.
+
+Derivar Paciente es un proceso, informatico.
+Regular Derivacion es un proceso, informatico.
+Evaluar Elegibilidad es un proceso, informatico.
+Ingresar Paciente es un proceso, informatico.
+Planificar Atencion es un proceso, informatico.
+Ejecutar Plan Terapeutico es un proceso, físico.
+Monitorear Evolucion Clinica es un proceso, informatico.
+Decidir Continuidad es un proceso, informatico.
+Egresar Paciente es un proceso, informatico.
+Contrarreferir a APS es un proceso, informatico.
+Seguimiento Post-Egreso es un proceso, informatico.
+
+Hospitalizar en Domicilio se descompone en Derivar Paciente, Regular Derivacion, Evaluar Elegibilidad, Ingresar Paciente, Planificar Atencion, Ejecutar Plan Terapeutico, Monitorear Evolucion Clinica, Decidir Continuidad, Egresar Paciente, Contrarreferir a APS y Seguimiento Post-Egreso, en esa secuencia.
+
+Derivacion es un objeto, informatico.
+Derivacion puede estar pendiente, recibida, aceptada o rechazada.
+Estado pendiente de Derivacion es inicial.
+Derivar Paciente genera Derivacion en pendiente.
+
+Origen de Derivacion es un objeto, informatico.
+Origen de Derivacion puede estar APS, urgencia, hospitalizacion, ambulatorio, ley_urgencia o UGCC.
+Derivar Paciente genera exactamente uno de Origen de Derivacion en APS, Origen de Derivacion en urgencia, Origen de Derivacion en hospitalizacion, Origen de Derivacion en ambulatorio, Origen de Derivacion en ley_urgencia o Origen de Derivacion en UGCC.
+
+Medico Regulador es un objeto, físico.
+Regular Derivacion cambia Derivacion de pendiente a recibida.
+Medico Regulador maneja Regular Derivacion.
+Regular Derivacion requiere Sistema HDOS.
+
+Estado de Elegibilidad es un objeto, informatico.
+Estado de Elegibilidad puede estar pendiente, elegible o admitido.
+Estado pendiente de Estado de Elegibilidad es inicial.
+Evaluar Elegibilidad ocurre si Derivacion está en aceptada, de lo contrario Evaluar Elegibilidad se omite.
+Evaluar Elegibilidad cambia Estado de Elegibilidad de pendiente a elegible.
+
+Consentimiento Informado es un objeto, informatico.
+Consentimiento Informado puede estar sin firmar o firmado.
+Estado sin firmar de Consentimiento Informado es inicial.
+Estado firmado de Consentimiento Informado es final.
+Evaluar Elegibilidad cambia Consentimiento Informado de sin firmar a firmado.
+Evaluar Elegibilidad requiere Cuidador.
+
+Estadia es un objeto, informatico.
+Estadia puede estar pendiente_evaluacion, elegible, admitido, activo, egresado o fallecido.
+Estado pendiente_evaluacion de Estadia es inicial.
+
+Ingresar Paciente ocurre si Estado de Elegibilidad está en elegible, de lo contrario Ingresar Paciente se omite.
+Ingresar Paciente cambia Estadia de pendiente_evaluacion a activo.
+Ingresar Paciente requiere Consentimiento Informado en firmado.
+Ficha Clinica es un objeto, informatico.
+Ficha Clinica puede estar activa o finalizada.
+Ingresar Paciente genera Ficha Clinica en activa.
+
+Plan Terapeutico es un objeto, informatico.
+Plan Terapeutico puede estar borrador, activo o completado.
+Estado borrador de Plan Terapeutico es inicial.
+Estado activo de Plan Terapeutico es por defecto.
+Estado completado de Plan Terapeutico es final.
+Planificar Atencion genera Plan Terapeutico en activo.
+
+Plan de Cuidados de Enfermeria es un objeto, informatico.
+Plan de Cuidados de Enfermeria puede estar borrador, activo o completado.
+Estado borrador de Plan de Cuidados de Enfermeria es inicial.
+Estado activo de Plan de Cuidados de Enfermeria es por defecto.
+Estado completado de Plan de Cuidados de Enfermeria es final.
+Planificar Atencion genera Plan de Cuidados de Enfermeria en activo.
+
+Ejecutar Plan Terapeutico requiere Plan Terapeutico en activo.
+Ejecutar Plan Terapeutico requiere Plan de Cuidados de Enfermeria en activo.
+Ejecutar Plan Terapeutico consume Insumo Clinico.
+Ejecutar Plan Terapeutico consume Medicamento.
+Ejecutar Plan Terapeutico requiere Equipamiento Medico.
+Ejecutar Plan Terapeutico requiere Vehiculo de Transporte.
+
+Monitorear Evolucion Clinica afecta Grupo de Pacientes.
+Monitorear Evolucion Clinica requiere Sistema HDOS.
+
+Decision de Continuidad es un objeto, informatico.
+Decision de Continuidad puede estar continuar tratamiento o proceder egreso.
+Decidir Continuidad genera Decision de Continuidad.
+Decidir Continuidad requiere Sistema HDOS.
+Medico de Atencion Directa es un objeto, físico.
+Medico de Atencion Directa maneja Decidir Continuidad.
+
+Egresar Paciente ocurre si Decision de Continuidad está en proceder egreso, de lo contrario Egresar Paciente se omite.
+Egresar Paciente cambia Estadia de activo a egresado.
+Egresar Paciente cambia Plan Terapeutico de activo a completado.
+Egresar Paciente cambia Plan de Cuidados de Enfermeria de activo a completado.
+Epicrisis es un objeto, informatico.
+Egresar Paciente genera Epicrisis.
+Egresar Paciente cambia Ficha Clinica de activa a finalizada.
+
+Contrarreferencia es un objeto, informatico.
+Contrarreferencia puede estar pendiente o enviada.
+Estado pendiente de Contrarreferencia es inicial.
+Contrarreferir a APS cambia Contrarreferencia de pendiente a enviada.
+Contrarreferir a APS requiere Epicrisis.
+Contrarreferir a APS requiere Centro de Salud Familiar.
+Profesional Coordinador es un objeto, físico.
+Profesional Coordinador maneja Contrarreferir a APS.
+
+Resultado del Egreso es un objeto, informatico.
+Resultado del Egreso puede estar favorable o desfavorable.
+Seguimiento Post-Egreso genera exactamente uno de Resultado del Egreso en favorable o Resultado del Egreso en desfavorable.
+
+Equipo de Salud maneja Derivar Paciente.
+Equipo de Salud maneja Evaluar Elegibilidad.
+Equipo de Salud maneja Ingresar Paciente.
+Equipo de Salud maneja Planificar Atencion.
+Equipo de Salud maneja Ejecutar Plan Terapeutico.
+Equipo de Salud maneja Monitorear Evolucion Clinica.
+Equipo de Salud maneja Egresar Paciente.
+Equipo de Salud maneja Seguimiento Post-Egreso.
+
+Decidir Continuidad invoca Ejecutar Plan Terapeutico.
+
+=== SD1.1 ===
+
+Derivacion puede estar pendiente, recibida, aceptada o rechazada.
+SD1 se refina por descomposicion de Derivar Paciente en SD1.1.
+
+Identificar Candidato es un proceso, informatico.
+Completar Formulario de Derivacion es un proceso, informatico.
+Adjuntar Documentacion es un proceso, informatico.
+Enviar Derivacion es un proceso, informatico.
+
+Derivar Paciente se descompone en Identificar Candidato, Completar Formulario de Derivacion, Adjuntar Documentacion y Enviar Derivacion, en esa secuencia.
+
+Candidato es un objeto, físico.
+Candidato puede estar identificado, postulado o derivado.
+Estado identificado de Candidato es inicial.
+
+Medico Derivador es un objeto, físico, ambiental.
+
+Identificar Candidato genera Candidato en identificado.
+Medico Derivador maneja Identificar Candidato.
+
+Formulario de Derivacion es un objeto, informatico.
+Formulario de Derivacion puede estar incompleto o completo.
+Estado incompleto de Formulario de Derivacion es inicial.
+
+Completar Formulario de Derivacion cambia Formulario de Derivacion de incompleto a completo.
+Completar Formulario de Derivacion requiere Sistema HDOS.
+Medico Derivador maneja Completar Formulario de Derivacion.
+
+Contexto Comunitario es un objeto, informatico.
+Completar Formulario de Derivacion genera Contexto Comunitario.
+
+Adjunto de Derivacion es un objeto, informatico.
+Adjuntar Documentacion genera Adjunto de Derivacion.
+Adjuntar Documentacion requiere Sistema HDOS.
+Medico Derivador maneja Adjuntar Documentacion.
+
+Token de Seguimiento es un objeto, informatico.
+Enviar Derivacion cambia Candidato de identificado a derivado.
+Enviar Derivacion genera Derivacion en pendiente.
+Enviar Derivacion genera Token de Seguimiento.
+Enviar Derivacion requiere Sistema HDOS.
+Medico Derivador maneja Enviar Derivacion.
+
+=== SD1.2 ===
+
+Formulario de Derivacion es un objeto, informatico.
+Formulario de Derivacion puede estar incompleto o completo.
+SD1 se refina por descomposicion de Regular Derivacion en SD1.2.
+
+Derivacion es un objeto, informatico.
+Derivacion puede estar pendiente, recibida, aceptada o rechazada.
+
+Recibir Derivacion es un proceso, informatico.
+Evaluar Criterios de Admision es un proceso, informatico.
+Decidir Admisibilidad es un proceso, informatico.
+Registrar Rechazo es un proceso, informatico.
+
+Regular Derivacion se descompone en Recibir Derivacion, Evaluar Criterios de Admision, Decidir Admisibilidad y Registrar Rechazo, en esa secuencia.
+
+Recibir Derivacion cambia Derivacion de pendiente a recibida.
+Recibir Derivacion requiere Sistema HDOS.
+Medico Regulador maneja Recibir Derivacion.
+
+Criterio de Inclusion es un objeto, informatico.
+Criterio de Inclusion puede estar cumple o no cumple.
+
+Estado de Prevision es un objeto, informatico.
+Estado de Prevision puede estar fonasa-a, fonasa-b, fonasa-c, fonasa-d, prais u otro.
+
+Edad del Paciente es un objeto, informatico.
+Edad del Paciente puede estar adulto o menor-de-edad.
+
+Distancia al Hospital es un objeto, informatico.
+Distancia al Hospital puede estar dentro-de-cobertura o fuera-de-cobertura.
+
+Condicion Clinica Estable es un objeto, informatico.
+Condicion Clinica Estable puede estar estable o inestable.
+
+Criterio de Inclusion consta de Estado de Prevision, Edad del Paciente, Distancia al Hospital y Condicion Clinica Estable.
+
+Evaluar Criterios de Admision afecta Criterio de Inclusion.
+Evaluar Criterios de Admision requiere Formulario de Derivacion en completo.
+Medico Regulador maneja Evaluar Criterios de Admision.
+
+Condicion de Exclusion es un objeto, informatico.
+Condicion de Exclusion puede estar ausente o presente.
+Estado ausente de Condicion de Exclusion es inicial.
+
+Exclusion por Inestabilidad Clinica es un objeto, informatico.
+Exclusion por Diagnostico no Establecido es un objeto, informatico.
+Exclusion por Salud Mental Descompensada es un objeto, informatico.
+Exclusion por Prestacion no Listada es un objeto, informatico.
+Exclusion por Alta Disciplinaria Previa es un objeto, informatico.
+Exclusion por Inestabilidad Clinica, Exclusion por Diagnostico no Establecido, Exclusion por Salud Mental Descompensada, Exclusion por Prestacion no Listada y Exclusion por Alta Disciplinaria Previa son Condicion de Exclusion.
+
+Decidir Admisibilidad cambia Derivacion de recibida a aceptada.
+Medico Regulador maneja Decidir Admisibilidad.
+Decidir Admisibilidad requiere Sistema HDOS.
+
+Causal de Rechazo es un objeto, informatico.
+Registrar Rechazo ocurre si Derivacion está en rechazada, de lo contrario Registrar Rechazo se omite.
+Registrar Rechazo genera Causal de Rechazo.
+Medico Regulador maneja Registrar Rechazo.
+Registrar Rechazo requiere Sistema HDOS.
+
+Estadistica de Regulacion es un objeto, informatico.
+Regular Derivacion genera Estadistica de Regulacion.
+
+=== SD1.3 ===
+
+Candidato es un objeto, físico.
+Candidato puede estar identificado, postulado o derivado.
+Derivacion es un objeto, informatico.
+Derivacion puede estar pendiente, recibida, aceptada o rechazada.
+SD1 se refina por descomposicion de Evaluar Elegibilidad en SD1.3.
+
+Consentimiento Informado es un objeto, informatico.
+Consentimiento Informado puede estar sin firmar o firmado.
+Estado de Elegibilidad es un objeto, informatico.
+Estado de Elegibilidad puede estar pendiente, elegible o admitido.
+
+Pesquisar Candidato es un proceso, informatico.
+Evaluar Condicion Clinica es un proceso, informatico.
+Evaluar Condicion del Domicilio es un proceso, informatico.
+Verificar Red de Apoyo es un proceso, informatico.
+Realizar Valoracion de Ingreso es un proceso, informatico.
+Obtener Consentimiento Informado es un proceso, informatico.
+
+Evaluar Elegibilidad se descompone en Pesquisar Candidato, Evaluar Condicion Clinica, Evaluar Condicion del Domicilio, Verificar Red de Apoyo, Realizar Valoracion de Ingreso y Obtener Consentimiento Informado, en esa secuencia.
+
+Pesquisar Candidato genera Candidato en postulado.
+Pesquisar Candidato requiere Derivacion en aceptada.
+Trabajador Social es un objeto, físico.
+Trabajador Social maneja Pesquisar Candidato.
+
+Registro de Evaluacion Clinica es un objeto, informatico.
+Evaluar Condicion Clinica genera Registro de Evaluacion Clinica.
+Evaluar Condicion Clinica requiere Establecimiento de Atencion Cerrada.
+Medico de Atencion Directa maneja Evaluar Condicion Clinica.
+
+Condicion del Domicilio es un objeto, informatico.
+Condicion del Domicilio puede estar adecuada o inadecuada.
+Estado inadecuada de Condicion del Domicilio es inicial.
+Domicilio del Paciente exhibe Condicion del Domicilio.
+
+Informe Social Preliminar es un objeto, informatico.
+Evaluar Condicion del Domicilio cambia Condicion del Domicilio de inadecuada a adecuada.
+Evaluar Condicion del Domicilio genera Informe Social Preliminar.
+Trabajador Social maneja Evaluar Condicion del Domicilio.
+
+Red de Apoyo es un objeto, informatico.
+Red de Apoyo puede estar verificada o insuficiente.
+Estado insuficiente de Red de Apoyo es inicial.
+Verificar Red de Apoyo cambia Red de Apoyo de insuficiente a verificada.
+Trabajador Social maneja Verificar Red de Apoyo.
+
+Valoracion de Ingreso es un objeto, informatico.
+Enfermero Clinico es un objeto, físico.
+Realizar Valoracion de Ingreso genera Valoracion de Ingreso.
+Realizar Valoracion de Ingreso afecta Grupo de Pacientes.
+Realizar Valoracion de Ingreso requiere Equipamiento Medico.
+Enfermero Clinico maneja Realizar Valoracion de Ingreso.
+
+Carta de Derechos y Deberes es un objeto, informatico.
+Obtener Consentimiento Informado cambia Consentimiento Informado de sin firmar a firmado.
+Obtener Consentimiento Informado cambia Estado de Elegibilidad de pendiente a elegible.
+Obtener Consentimiento Informado genera Carta de Derechos y Deberes.
+Obtener Consentimiento Informado requiere Grupo de Pacientes.
+Enfermero Clinico maneja Obtener Consentimiento Informado.
+
+=== SD1.4 ===
+
+Consentimiento Informado es un objeto, informatico.
+Consentimiento Informado puede estar sin firmar o firmado.
+SD1 se refina por descomposicion de Ingresar Paciente en SD1.4.
+
+Estadia es un objeto, informatico.
+
+Registrar Ingreso es un proceso, informatico.
+Elaborar Diagnostico Social es un proceso, informatico.
+Entregar Documentacion al Paciente es un proceso, informatico.
+Coordinar con Establecimiento Derivador es un proceso, informatico.
+
+Ingresar Paciente se descompone en Registrar Ingreso, Elaborar Diagnostico Social, Entregar Documentacion al Paciente y Coordinar con Establecimiento Derivador, en esa secuencia.
+
+Formulario de Ingreso es un objeto, informatico.
+Personal Administrativo es un objeto, físico.
+Registrar Ingreso genera Formulario de Ingreso.
+Registrar Ingreso requiere Sistema HDOS.
+Registrar Ingreso cambia Estadia de pendiente_evaluacion a activo.
+Personal Administrativo maneja Registrar Ingreso.
+
+Informe Social es un objeto, informatico.
+Elaborar Diagnostico Social genera Informe Social.
+Elaborar Diagnostico Social requiere Domicilio del Paciente.
+Trabajador Social maneja Elaborar Diagnostico Social.
+
+Situacion Socioeconomica es un objeto, informatico.
+Elaborar Diagnostico Social genera Situacion Socioeconomica.
+
+Documento de Indicaciones de Cuidado es un objeto, informatico.
+Entregar Documentacion al Paciente requiere Consentimiento Informado en firmado.
+Entregar Documentacion al Paciente genera Documento de Indicaciones de Cuidado.
+Enfermero Clinico maneja Entregar Documentacion al Paciente.
+
+Registro de Coordinacion con Derivador es un objeto, informatico.
+Coordinar con Establecimiento Derivador requiere Establecimiento de Atencion Cerrada.
+Coordinar con Establecimiento Derivador requiere Sistema de Comunicacion.
+Coordinar con Establecimiento Derivador genera Registro de Coordinacion con Derivador.
+Profesional Coordinador maneja Coordinar con Establecimiento Derivador.
+
+=== SD1.5 ===
+SD1 se refina por descomposicion de Planificar Atencion en SD1.5.
+
+Plan Terapeutico es un objeto, informatico.
+Plan Terapeutico puede estar borrador, activo o completado.
+Plan de Cuidados de Enfermeria es un objeto, informatico.
+Plan de Cuidados de Enfermeria puede estar borrador, activo o completado.
+
+Elaborar Plan Terapeutico es un proceso, informatico.
+Elaborar Plan de Cuidados de Enfermeria es un proceso, informatico.
+Programar Visitas Domiciliarias es un proceso, informatico.
+Programar Rutas de Transporte es un proceso, informatico.
+Activar Planes es un proceso, informatico.
+
+Planificar Atencion se descompone en Elaborar Plan Terapeutico, Elaborar Plan de Cuidados de Enfermeria, Programar Visitas Domiciliarias, Programar Rutas de Transporte y Activar Planes, en esa secuencia.
+
+Elaborar Plan Terapeutico genera Plan Terapeutico en borrador.
+Elaborar Plan Terapeutico requiere Sistema HDOS.
+Medico de Atencion Directa maneja Elaborar Plan Terapeutico.
+
+Elaborar Plan de Cuidados de Enfermeria genera Plan de Cuidados de Enfermeria en borrador.
+Elaborar Plan de Cuidados de Enfermeria requiere Plan Terapeutico en borrador.
+Enfermero Clinico maneja Elaborar Plan de Cuidados de Enfermeria.
+
+Programa de Visitas es un objeto, informatico.
+Programar Visitas Domiciliarias genera Programa de Visitas.
+Programar Visitas Domiciliarias requiere Plan Terapeutico en borrador.
+Programar Visitas Domiciliarias requiere Sistema HDOS.
+Profesional Coordinador maneja Programar Visitas Domiciliarias.
+
+Ruta de Transporte es un objeto, informatico.
+Conductor es un objeto, físico.
+Programar Rutas de Transporte genera Ruta de Transporte.
+Programar Rutas de Transporte requiere Programa de Visitas.
+Programar Rutas de Transporte requiere Domicilio del Paciente.
+Programar Rutas de Transporte requiere Sistema HDOS.
+Conductor maneja Programar Rutas de Transporte.
+
+Activar Planes cambia Plan Terapeutico de borrador a activo.
+Activar Planes cambia Plan de Cuidados de Enfermeria de borrador a activo.
+Medico de Atencion Directa maneja Activar Planes.
+
+=== SD1.6 ===
+
+Plan Terapeutico es un objeto, informatico.
+Plan Terapeutico puede estar borrador, activo o completado.
+Plan de Cuidados de Enfermeria es un objeto, informatico.
+Plan de Cuidados de Enfermeria puede estar borrador, activo o completado.
+SD1 se refina por descomposicion de Ejecutar Plan Terapeutico en SD1.6.
+
+Ejecutar Visita Domiciliaria es un proceso, físico.
+Ejecutar Cuidados de Enfermeria es un proceso, físico.
+Ejecutar Terapia Kinesiologica es un proceso, físico.
+Administrar Medicamentos es un proceso, físico.
+Regular Atencion a Distancia es un proceso, informatico.
+Educar a Paciente y Cuidador es un proceso, informatico.
+Ejecutar Curacion es un proceso, físico.
+Ejecutar Fonoaudiologia es un proceso, físico.
+Gestionar Logistica Diaria es un proceso, informatico.
+Ejecutar Entrega de Turno es un proceso, informatico.
+Gestionar Equipamiento Medico es un proceso, físico.
+Ejecutar Teleatencion es un proceso, informatico.
+
+Ejecutar Plan Terapeutico se descompone en paralelo Ejecutar Visita Domiciliaria, paralelo Ejecutar Cuidados de Enfermeria, paralelo Ejecutar Terapia Kinesiologica, paralelo Administrar Medicamentos, paralelo Regular Atencion a Distancia, paralelo Educar a Paciente y Cuidador, paralelo Ejecutar Curacion, paralelo Ejecutar Fonoaudiologia, paralelo Gestionar Logistica Diaria, paralelo Ejecutar Entrega de Turno, paralelo Gestionar Equipamiento Medico y paralelo Ejecutar Teleatencion.
+
+Registro de Visita es un objeto, informatico.
+Ejecutar Visita Domiciliaria afecta Grupo de Pacientes.
+Ejecutar Visita Domiciliaria requiere Plan Terapeutico en activo.
+Ejecutar Visita Domiciliaria requiere Equipamiento Medico.
+Ejecutar Visita Domiciliaria requiere Vehiculo de Transporte.
+Ejecutar Visita Domiciliaria requiere Sistema HDOS.
+Ejecutar Visita Domiciliaria genera Registro de Visita.
+Medico de Atencion Directa maneja Ejecutar Visita Domiciliaria.
+
+Ejecutar Cuidados de Enfermeria afecta Grupo de Pacientes.
+Ejecutar Cuidados de Enfermeria requiere Plan de Cuidados de Enfermeria en activo.
+Ejecutar Cuidados de Enfermeria requiere Equipamiento Medico.
+Ejecutar Cuidados de Enfermeria consume Insumo Clinico.
+Enfermero Clinico maneja Ejecutar Cuidados de Enfermeria.
+Tecnico de Enfermeria es un objeto, físico.
+Tecnico de Enfermeria maneja Ejecutar Cuidados de Enfermeria.
+
+Kinesiologo es un objeto, físico.
+Tipo de Terapia es un objeto, informatico.
+Tipo de Terapia puede estar motora o respiratoria.
+Ejecutar Terapia Kinesiologica afecta Grupo de Pacientes.
+Ejecutar Terapia Kinesiologica requiere Plan Terapeutico en activo.
+Ejecutar Terapia Kinesiologica requiere Equipamiento Medico.
+Kinesiologo maneja Ejecutar Terapia Kinesiologica.
+
+Receta Medica es un objeto, informatico.
+Administrar Medicamentos consume Medicamento.
+Administrar Medicamentos afecta Grupo de Pacientes.
+Administrar Medicamentos requiere Plan Terapeutico en activo.
+Enfermero Clinico maneja Administrar Medicamentos.
+Tecnico de Enfermeria maneja Administrar Medicamentos.
+Administrar Medicamentos requiere Receta Medica.
+
+Modo Operacional es un objeto, informatico.
+Modo Operacional puede estar dias-habiles o fin-de-semana.
+Estado dias-habiles de Modo Operacional es inicial.
+
+Registro de Llamada es un objeto, informatico.
+Registro de Telesalud es un objeto, informatico.
+Regular Atencion a Distancia afecta Grupo de Pacientes.
+Regular Atencion a Distancia requiere Sistema de Comunicacion.
+Regular Atencion a Distancia requiere Sistema HDOS.
+Enfermero Clinico maneja Regular Atencion a Distancia.
+Regular Atencion a Distancia genera Registro de Llamada.
+Regular Atencion a Distancia genera Registro de Telesalud.
+
+Conocimiento del Cuidador es un objeto, informatico.
+Cuidador exhibe Conocimiento del Cuidador.
+Conocimiento del Cuidador puede estar insuficiente o suficiente.
+Estado insuficiente de Conocimiento del Cuidador es inicial.
+Educar a Paciente y Cuidador cambia Conocimiento del Cuidador de insuficiente a suficiente.
+Educar a Paciente y Cuidador afecta Grupo de Pacientes.
+Educar a Paciente y Cuidador requiere Plan Terapeutico en activo.
+Enfermero Clinico maneja Educar a Paciente y Cuidador.
+
+Estado de Herida es un objeto, informatico.
+Estado de Herida puede estar activa, en cicatrizacion o cerrada.
+Estado activa de Estado de Herida es inicial.
+Estado en cicatrizacion de Estado de Herida es por defecto.
+Estado cerrada de Estado de Herida es final.
+Grupo de Pacientes exhibe Estado de Herida.
+Registro de Curacion es un objeto, informatico.
+Ejecutar Curacion afecta Grupo de Pacientes.
+Ejecutar Curacion afecta Estado de Herida.
+Ejecutar Curacion requiere Plan Terapeutico en activo.
+Ejecutar Curacion consume Insumo Clinico.
+Ejecutar Curacion genera Registro de Curacion.
+Enfermero Clinico maneja Ejecutar Curacion.
+
+Fonoaudiologo es un objeto, físico.
+Estado Fonoaudiologico es un objeto, informatico.
+Estado Fonoaudiologico puede estar alterado, en mejora o funcional.
+Estado alterado de Estado Fonoaudiologico es inicial.
+Estado en mejora de Estado Fonoaudiologico es por defecto.
+Estado funcional de Estado Fonoaudiologico es final.
+Grupo de Pacientes exhibe Estado Fonoaudiologico.
+Registro de Fonoaudiologia es un objeto, informatico.
+Ejecutar Fonoaudiologia afecta Grupo de Pacientes.
+Ejecutar Fonoaudiologia afecta Estado Fonoaudiologico.
+Ejecutar Fonoaudiologia requiere Plan Terapeutico en activo.
+Ejecutar Fonoaudiologia genera Registro de Fonoaudiologia.
+Fonoaudiologo maneja Ejecutar Fonoaudiologia.
+
+Estado de Programacion Diaria es un objeto, informatico.
+Estado de Programacion Diaria puede estar pendiente, asignada o ejecutada.
+Estado pendiente de Estado de Programacion Diaria es inicial.
+Programacion Diaria es un objeto, informatico.
+Gestionar Logistica Diaria afecta Estado de Programacion Diaria.
+Gestionar Logistica Diaria requiere Programa de Visitas.
+Gestionar Logistica Diaria requiere Vehiculo de Transporte.
+Gestionar Logistica Diaria requiere Sistema HDOS.
+Gestionar Logistica Diaria genera Programacion Diaria.
+Profesional Coordinador maneja Gestionar Logistica Diaria.
+
+Estado de Turno es un objeto, informatico.
+Estado de Turno puede estar pendiente o entregado.
+Estado pendiente de Estado de Turno es inicial.
+Estado entregado de Estado de Turno es final.
+Ejecutar Entrega de Turno cambia Estado de Turno de pendiente a entregado.
+Enfermero Clinico maneja Ejecutar Entrega de Turno.
+
+Estado de Equipo Medico es un objeto, informatico.
+Estado de Equipo Medico puede estar disponible, asignado o en mantencion.
+Estado disponible de Estado de Equipo Medico es inicial.
+Gestionar Equipamiento Medico afecta Estado de Equipo Medico.
+Gestionar Equipamiento Medico requiere Equipamiento Medico.
+Gestionar Equipamiento Medico requiere Sistema HDOS.
+Profesional Coordinador maneja Gestionar Equipamiento Medico.
+
+Registro de Teleatencion es un objeto, informatico.
+Ejecutar Teleatencion afecta Grupo de Pacientes.
+Ejecutar Teleatencion requiere Sistema HDOS.
+Ejecutar Teleatencion requiere Sistema de Comunicacion.
+Ejecutar Teleatencion genera Registro de Teleatencion.
+Enfermero Clinico maneja Ejecutar Teleatencion.
+Medico de Atencion Directa maneja Ejecutar Teleatencion.
+
+=== SD1.6.1 ===
+
+Plan Terapeutico es un objeto, informatico.
+Plan Terapeutico puede estar borrador, activo o completado.
+SD1.6 se refina por descomposicion de Ejecutar Visita Domiciliaria en SD1.6.1.
+
+Despachar Equipo es un proceso, informatico.
+Trasladar al Domicilio es un proceso, físico.
+Llegar al Domicilio es un proceso, físico.
+Atender Paciente es un proceso, físico.
+Registrar Signos Vitales es un proceso, informatico.
+Realizar Procedimiento es un proceso, físico.
+Documentar Visita es un proceso, informatico.
+Verificar Documentacion es un proceso, informatico.
+Reportar a REM es un proceso, informatico.
+
+Ejecutar Visita Domiciliaria se descompone en Despachar Equipo, Trasladar al Domicilio, Llegar al Domicilio, Atender Paciente, Registrar Signos Vitales, Realizar Procedimiento, Documentar Visita, Verificar Documentacion y Reportar a REM, en esa secuencia.
+
+Visita es un objeto, informatico.
+Visita puede estar PROGRAMADA, ASIGNADA, DESPACHADA, EN_RUTA, LLEGADA, EN_ATENCION, COMPLETA, PARCIAL, NO_REALIZADA, DOCUMENTADA, VERIFICADA, REPORTADA_REM o CANCELADA.
+Estado PROGRAMADA de Visita es inicial.
+Estado REPORTADA_REM de Visita es final.
+
+Despachar Equipo cambia Visita de ASIGNADA a DESPACHADA.
+Despachar Equipo requiere Vehiculo de Transporte.
+Despachar Equipo requiere Sistema HDOS.
+Profesional Coordinador maneja Despachar Equipo.
+Conductor maneja Despachar Equipo.
+
+Registro Vehicular es un objeto, informatico.
+Despachar Equipo genera Registro Vehicular.
+
+Trasladar al Domicilio cambia Visita de DESPACHADA a EN_RUTA.
+Trasladar al Domicilio requiere Vehiculo de Transporte.
+Trasladar al Domicilio requiere Domicilio del Paciente.
+Conductor maneja Trasladar al Domicilio.
+
+Llegar al Domicilio cambia Visita de EN_RUTA a LLEGADA.
+Llegar al Domicilio requiere Domicilio del Paciente.
+Conductor maneja Llegar al Domicilio.
+
+Atender Paciente cambia Visita de LLEGADA a EN_ATENCION.
+Atender Paciente afecta Grupo de Pacientes.
+Atender Paciente requiere Plan Terapeutico en activo.
+Atender Paciente requiere Equipamiento Medico.
+Equipo de Salud maneja Atender Paciente.
+
+Datos de Signos Vitales es un objeto, informatico.
+Datos de Signos Vitales consta de Presion Arterial, Frecuencia Cardiaca, Frecuencia Respiratoria, Saturacion de Oxigeno, Temperatura Corporal, Nivel de Glucosa, Puntaje de Dolor, Puntaje de Glasgow, Estado de Edema, Diuresis, Estado Intestinal y Estado de Dispositivo Invasivo.
+Presion Arterial es un objeto, informatico.
+Frecuencia Cardiaca es un objeto, informatico.
+Frecuencia Respiratoria es un objeto, informatico.
+Saturacion de Oxigeno es un objeto, informatico.
+Temperatura Corporal es un objeto, informatico.
+Nivel de Glucosa es un objeto, informatico.
+Puntaje de Dolor es un objeto, informatico.
+Puntaje de Glasgow es un objeto, informatico.
+Estado de Edema es un objeto, informatico.
+Diuresis es un objeto, informatico.
+Estado Intestinal es un objeto, informatico.
+Estado de Dispositivo Invasivo es un objeto, informatico.
+
+Registrar Signos Vitales genera Datos de Signos Vitales.
+Registrar Signos Vitales afecta Grupo de Pacientes.
+Registrar Signos Vitales requiere Equipamiento Medico.
+Registrar Signos Vitales requiere Sistema HDOS.
+Enfermero Clinico maneja Registrar Signos Vitales.
+
+Realizar Procedimiento afecta Grupo de Pacientes.
+Realizar Procedimiento consume Insumo Clinico.
+Realizar Procedimiento requiere Equipamiento Medico.
+Equipo de Salud maneja Realizar Procedimiento.
+
+Nota de Evolucion es un objeto, informatico.
+Documentar Visita cambia Visita de COMPLETA a DOCUMENTADA.
+Documentar Visita genera Nota de Evolucion.
+Documentar Visita requiere Sistema HDOS.
+Equipo de Salud maneja Documentar Visita.
+
+Verificar Documentacion cambia Visita de DOCUMENTADA a VERIFICADA.
+Verificar Documentacion requiere Sistema HDOS.
+Enfermero Clinico maneja Verificar Documentacion.
+
+Estadistico es un objeto, físico.
+Reportar a REM cambia Visita de VERIFICADA a REPORTADA_REM.
+Reportar a REM requiere Sistema HDOS.
+Estadistico maneja Reportar a REM.
+
+=== SD1.6.2 ===
+SD1.6 se refina por descomposicion de Gestionar Logistica Diaria en SD1.6.2.
+
+Estado de Programacion Diaria es un objeto, informatico.
+Estado de Programacion Diaria puede estar pendiente, asignada o ejecutada.
+
+Asignar Paciente a Ruta es un proceso, informatico.
+Asignar Profesional a Ruta es un proceso, informatico.
+Secuenciar Visitas es un proceso, informatico.
+Resolver Visita sin Ruta es un proceso, informatico.
+Monitorear Ejecucion de Rutas es un proceso, informatico.
+
+Gestionar Logistica Diaria se descompone en Asignar Paciente a Ruta, Asignar Profesional a Ruta, Secuenciar Visitas, Resolver Visita sin Ruta y Monitorear Ejecucion de Rutas, en esa secuencia.
+
+Asignacion de Ruta es un objeto, informatico.
+Asignacion de Ruta puede estar sin asignar, asignada o con equipo.
+Estado sin asignar de Asignacion de Ruta es inicial.
+
+Asignar Paciente a Ruta cambia Asignacion de Ruta de sin asignar a asignada.
+Asignar Paciente a Ruta requiere Domicilio del Paciente.
+Asignar Paciente a Ruta requiere Sistema HDOS.
+Profesional Coordinador maneja Asignar Paciente a Ruta.
+Conductor maneja Asignar Paciente a Ruta.
+
+Asignar Profesional a Ruta cambia Asignacion de Ruta de asignada a con equipo.
+Asignar Profesional a Ruta requiere Equipo de Salud.
+Profesional Coordinador maneja Asignar Profesional a Ruta.
+
+Secuenciar Visitas genera Programacion Diaria.
+Secuenciar Visitas cambia Estado de Programacion Diaria de pendiente a asignada.
+Secuenciar Visitas requiere Sistema HDOS.
+Profesional Coordinador maneja Secuenciar Visitas.
+
+Visita sin Ruta Asignada es un objeto, informatico.
+Visita sin Ruta Asignada puede estar sin resolver o resuelta.
+Estado sin resolver de Visita sin Ruta Asignada es inicial.
+Resolver Visita sin Ruta afecta Programacion Diaria.
+Profesional Coordinador maneja Resolver Visita sin Ruta.
+
+Reporte de Ejecucion de Rutas es un objeto, informatico.
+Monitorear Ejecucion de Rutas cambia Estado de Programacion Diaria de asignada a ejecutada.
+Monitorear Ejecucion de Rutas genera Reporte de Ejecucion de Rutas.
+Monitorear Ejecucion de Rutas requiere Sistema HDOS.
+Profesional Coordinador maneja Monitorear Ejecucion de Rutas.
+
+=== SD1.6.3 ===
+SD1.6 se refina por descomposicion de Ejecutar Teleatencion en SD1.6.3.
+
+Crear Sesion es un proceso, informatico.
+Obtener Consentimiento Teleatencion es un proceso, informatico.
+Establecer Conexion es un proceso, informatico.
+Realizar Videollamada es un proceso, informatico.
+Finalizar Sesion es un proceso, informatico.
+
+Ejecutar Teleatencion se descompone en Crear Sesion, Obtener Consentimiento Teleatencion, Establecer Conexion, Realizar Videollamada y Finalizar Sesion, en esa secuencia.
+
+Sesion de Teleatencion es un objeto, informatico.
+Sesion de Teleatencion puede estar esperando, activa, finalizada, fallida o cancelada.
+Estado esperando de Sesion de Teleatencion es inicial.
+Estado finalizada de Sesion de Teleatencion es final.
+
+Crear Sesion genera Sesion de Teleatencion en esperando.
+Crear Sesion requiere Sistema HDOS.
+Enfermero Clinico maneja Crear Sesion.
+
+Consentimiento Teleatencion es un objeto, informatico.
+Consentimiento Teleatencion puede estar pendiente u otorgado.
+Estado pendiente de Consentimiento Teleatencion es inicial.
+Obtener Consentimiento Teleatencion cambia Consentimiento Teleatencion de pendiente a otorgado.
+Obtener Consentimiento Teleatencion requiere Grupo de Pacientes.
+
+Establecer Conexion cambia Sesion de Teleatencion de esperando a activa.
+Establecer Conexion requiere Sistema de Comunicacion.
+Establecer Conexion requiere Consentimiento Teleatencion en otorgado.
+
+Realizar Videollamada afecta Grupo de Pacientes.
+Realizar Videollamada requiere Sesion de Teleatencion en activa.
+Realizar Videollamada requiere Sistema de Comunicacion.
+Enfermero Clinico maneja Realizar Videollamada.
+Medico de Atencion Directa maneja Realizar Videollamada.
+
+Finalizar Sesion cambia Sesion de Teleatencion de activa a finalizada.
+Finalizar Sesion genera Registro de Teleatencion.
+Finalizar Sesion requiere Sistema HDOS.
+Enfermero Clinico maneja Finalizar Sesion.
+
+=== SD1.6.4 ===
+SD1.6 se refina por descomposicion de Ejecutar Entrega de Turno en SD1.6.4.
+
+Estado de Turno es un objeto, informatico.
+Estado de Turno puede estar pendiente o entregado.
+
+Reportar Estado Clinico es un proceso, informatico.
+Registrar Movimientos del Dia es un proceso, informatico.
+Transferir Responsabilidad Clinica es un proceso, informatico.
+
+Ejecutar Entrega de Turno se descompone en Reportar Estado Clinico, Registrar Movimientos del Dia y Transferir Responsabilidad Clinica, en esa secuencia.
+
+Snapshot de Pacientes es un objeto, informatico.
+Snapshot de Pacientes puede estar desactualizado o actual.
+Estado desactualizado de Snapshot de Pacientes es inicial.
+
+Reportar Estado Clinico cambia Snapshot de Pacientes de desactualizado a actual.
+Enfermero Clinico maneja Reportar Estado Clinico.
+
+Registro de Movimientos es un objeto, informatico.
+Registrar Movimientos del Dia genera Registro de Movimientos.
+Enfermero Clinico maneja Registrar Movimientos del Dia.
+
+Enfermero Clinico Saliente es un objeto, físico.
+Enfermero Clinico Entrante es un objeto, físico.
+Registro de Entrega de Turno es un objeto, informatico.
+Transferir Responsabilidad Clinica cambia Estado de Turno de pendiente a entregado.
+Transferir Responsabilidad Clinica genera Registro de Entrega de Turno.
+Enfermero Clinico Saliente maneja Transferir Responsabilidad Clinica.
+Enfermero Clinico Entrante maneja Transferir Responsabilidad Clinica.
+
+Enfermero Clinico Saliente es un Enfermero Clinico.
+Enfermero Clinico Entrante es un Enfermero Clinico.
+
+=== SD1.7 ===
+SD1 se refina por descomposicion de Monitorear Evolucion Clinica en SD1.7.
+
+Evaluar Signos Vitales es un proceso, informatico.
+Actualizar Registro Clinico es un proceso, informatico.
+Categorizar Paciente es un proceso, informatico.
+Evaluar Alertas Clinicas es un proceso, informatico.
+
+Monitorear Evolucion Clinica se descompone en Evaluar Signos Vitales, Actualizar Registro Clinico, Categorizar Paciente y Evaluar Alertas Clinicas, en esa secuencia.
+
+Evaluar Signos Vitales afecta Grupo de Pacientes.
+Evaluar Signos Vitales requiere Equipamiento Medico.
+Evaluar Signos Vitales requiere Sistema HDOS.
+Enfermero Clinico maneja Evaluar Signos Vitales.
+
+Evaluar Signos Vitales genera Datos de Signos Vitales.
+
+Actualizar Registro Clinico requiere Datos de Signos Vitales.
+Actualizar Registro Clinico afecta Ficha Clinica.
+Actualizar Registro Clinico requiere Sistema HDOS.
+Enfermero Clinico maneja Actualizar Registro Clinico.
+
+Categoria del Paciente es un objeto, informatico.
+Categoria del Paciente puede estar estable, mejorando o deteriorandose.
+Estado estable de Categoria del Paciente es inicial.
+Estado estable de Categoria del Paciente es por defecto.
+Categorizar Paciente genera Categoria del Paciente.
+Categorizar Paciente requiere Datos de Signos Vitales.
+Medico de Atencion Directa maneja Categorizar Paciente.
+
+Alerta Clinica es un objeto, informatico.
+Alerta Clinica puede estar activa, resuelta o ignorada.
+Estado activa de Alerta Clinica es inicial.
+
+Regla de Alerta es un objeto, informatico.
+Regla de Alerta puede estar estada_mayor, sin_visita_dias, dispositivo_vencido, visita_fallida_recurrente o sin_nota_dias.
+
+Evaluar Alertas Clinicas afecta Alerta Clinica.
+Evaluar Alertas Clinicas requiere Regla de Alerta.
+Evaluar Alertas Clinicas requiere Datos de Signos Vitales.
+Evaluar Alertas Clinicas requiere Sistema HDOS.
+Enfermero Clinico maneja Evaluar Alertas Clinicas.
+Profesional Coordinador maneja Evaluar Alertas Clinicas.
+
+=== SD1.8 ===
+
+Consentimiento Informado es un objeto, informatico.
+Consentimiento Informado puede estar sin firmar o firmado.
+SD1 se refina por despliegue de Egresar Paciente en SD1.8.
+
+Condicion Clinica es un objeto, informatico.
+Condicion Clinica puede estar agudo-reagudizado o recuperado.
+Estadia es un objeto, informatico.
+Estadia puede estar pendiente_evaluacion, elegible, admitido, activo, egresado o fallecido.
+
+Egresar por Alta Medica es un proceso, informatico.
+Egresar por Reingreso Hospitalario es un proceso, informatico.
+Egresar por Muerte Esperada es un proceso, informatico.
+Egresar por Muerte Inesperada es un proceso, informatico.
+Egresar por Renuncia Voluntaria es un proceso, informatico.
+Egresar por Alta Disciplinaria es un proceso, informatico.
+
+Egresar por Alta Medica, Egresar por Reingreso Hospitalario, Egresar por Muerte Esperada, Egresar por Muerte Inesperada, Egresar por Renuncia Voluntaria y Egresar por Alta Disciplinaria son Egresar Paciente.
+
+Encuesta de Satisfaccion es un objeto, informatico.
+Diagnostico de Egreso es un objeto, informatico.
+Egresar por Alta Medica cambia Condicion Clinica de agudo-reagudizado a recuperado.
+Egresar por Alta Medica cambia Estadia de activo a egresado.
+Egresar por Alta Medica genera Epicrisis.
+Egresar por Alta Medica genera Encuesta de Satisfaccion.
+Egresar por Alta Medica genera Diagnostico de Egreso.
+Medico de Atencion Directa maneja Egresar por Alta Medica.
+
+Inestabilidad Clinica Aguda es un objeto, informatico.
+Inestabilidad Clinica Aguda puede estar ausente o presente.
+Egresar por Reingreso Hospitalario cambia Estadia de activo a egresado.
+Egresar por Reingreso Hospitalario requiere Establecimiento de Atencion Cerrada.
+Egresar por Reingreso Hospitalario requiere Vehiculo de Transporte.
+Egresar por Reingreso Hospitalario genera Epicrisis.
+Medico de Atencion Directa maneja Egresar por Reingreso Hospitalario.
+Egresar por Reingreso Hospitalario ocurre si Inestabilidad Clinica Aguda está en presente, de lo contrario Egresar por Reingreso Hospitalario se omite.
+
+Intencion Paliativa es un objeto, informatico.
+Intencion Paliativa puede estar ausente o presente.
+Protocolo de Fallecimiento es un objeto, informatico.
+Egresar por Muerte Esperada cambia Estadia de activo a fallecido.
+Egresar por Muerte Esperada genera Epicrisis.
+Egresar por Muerte Esperada genera Protocolo de Fallecimiento.
+Medico de Atencion Directa maneja Egresar por Muerte Esperada.
+Egresar por Muerte Esperada ocurre si Intencion Paliativa está en presente, de lo contrario Egresar por Muerte Esperada se omite.
+
+Egresar por Muerte Inesperada cambia Estadia de activo a fallecido.
+Egresar por Muerte Inesperada genera Epicrisis.
+Egresar por Muerte Inesperada genera Protocolo de Fallecimiento.
+Medico de Atencion Directa maneja Egresar por Muerte Inesperada.
+
+Declaracion de Retiro es un objeto, informatico.
+Egresar por Renuncia Voluntaria cambia Estadia de activo a egresado.
+Egresar por Renuncia Voluntaria requiere Consentimiento Informado en firmado.
+Egresar por Renuncia Voluntaria genera Epicrisis.
+Egresar por Renuncia Voluntaria genera Encuesta de Satisfaccion.
+Egresar por Renuncia Voluntaria genera Declaracion de Retiro.
+Medico de Atencion Directa maneja Egresar por Renuncia Voluntaria.
+
+Director Tecnico es un objeto, físico.
+Adherencia al Tratamiento es un objeto, informatico.
+Adherencia al Tratamiento puede estar adherente o no adherente.
+Egresar por Alta Disciplinaria cambia Estadia de activo a egresado.
+Egresar por Alta Disciplinaria genera Epicrisis.
+Director Tecnico maneja Egresar por Alta Disciplinaria.
+Egresar por Alta Disciplinaria ocurre si Adherencia al Tratamiento está en no adherente, de lo contrario Egresar por Alta Disciplinaria se omite.
+
+=== SD1.8.1 ===
+SD1.8 se refina por descomposicion de Egresar por Alta Medica en SD1.8.1.
+
+Estadia es un objeto, informatico.
+Plan Terapeutico es un objeto, informatico.
+Plan de Cuidados de Enfermeria es un objeto, informatico.
+Ficha Clinica es un objeto, informatico.
+
+Decidir Alta Clinica es un proceso, informatico.
+Elaborar Epicrisis es un proceso, informatico.
+Elaborar Diagnostico de Egreso es un proceso, informatico.
+Registrar Egreso es un proceso, informatico.
+Aplicar Encuesta es un proceso, informatico.
+
+Egresar por Alta Medica se descompone en Decidir Alta Clinica, Elaborar Epicrisis, Elaborar Diagnostico de Egreso, Registrar Egreso y Aplicar Encuesta, en esa secuencia.
+
+Decidir Alta Clinica requiere Categoria del Paciente.
+Decidir Alta Clinica requiere Plan Terapeutico en activo.
+Medico de Atencion Directa maneja Decidir Alta Clinica.
+
+Elaborar Epicrisis genera Epicrisis.
+Elaborar Epicrisis requiere Ficha Clinica en activa.
+Elaborar Epicrisis requiere Sistema HDOS.
+Medico de Atencion Directa maneja Elaborar Epicrisis.
+
+Elaborar Diagnostico de Egreso genera Diagnostico de Egreso.
+Elaborar Diagnostico de Egreso requiere Sistema HDOS.
+Medico de Atencion Directa maneja Elaborar Diagnostico de Egreso.
+
+Registrar Egreso cambia Estadia de activo a egresado.
+Registrar Egreso cambia Plan Terapeutico de activo a completado.
+Registrar Egreso cambia Plan de Cuidados de Enfermeria de activo a completado.
+Registrar Egreso cambia Ficha Clinica de activa a finalizada.
+Registrar Egreso requiere Sistema HDOS.
+Medico de Atencion Directa maneja Registrar Egreso.
+
+Aplicar Encuesta genera Encuesta de Satisfaccion.
+Aplicar Encuesta requiere Grupo de Pacientes.
+Aplicar Encuesta requiere Sistema HDOS.
+Enfermero Clinico maneja Aplicar Encuesta.
+
+=== SD1.9 ===
+SD1 se refina por descomposicion de Contrarreferir a APS en SD1.9.
+
+Elaborar Contrarreferencia es un proceso, informatico.
+Contrarreferencia es un objeto, informatico.
+Contrarreferencia puede estar pendiente o enviada.
+Enviar Contrarreferencia es un proceso, informatico.
+Compartir con APS es un proceso, informatico.
+
+Contrarreferir a APS se descompone en Elaborar Contrarreferencia, Enviar Contrarreferencia y Compartir con APS, en esa secuencia.
+
+Elaborar Contrarreferencia genera Contrarreferencia en pendiente.
+Elaborar Contrarreferencia requiere Epicrisis.
+Elaborar Contrarreferencia requiere Sistema HDOS.
+Medico de Atencion Directa maneja Elaborar Contrarreferencia.
+
+Enviar Contrarreferencia cambia Contrarreferencia de pendiente a enviada.
+Enviar Contrarreferencia requiere Centro de Salud Familiar.
+Enviar Contrarreferencia requiere Sistema de Comunicacion.
+Profesional Coordinador maneja Enviar Contrarreferencia.
+
+Compartir con APS requiere Contrarreferencia en enviada.
+Compartir con APS requiere Sistema HDOS.
+Profesional Coordinador maneja Compartir con APS.
+
+=== SD1.10 ===
+SD1 se refina por descomposicion de Seguimiento Post-Egreso en SD1.10.
+
+Estadia es un objeto, informatico.
+
+Ejecutar Llamada de Seguimiento es un proceso, informatico.
+Evaluar Resultado del Egreso es un proceso, informatico.
+Registrar Reingreso es un proceso, informatico.
+
+Seguimiento Post-Egreso se descompone en Ejecutar Llamada de Seguimiento, Evaluar Resultado del Egreso y Registrar Reingreso, en esa secuencia.
+
+Estado de Seguimiento es un objeto, informatico.
+Estado de Seguimiento puede estar pendiente o contactado.
+Estado pendiente de Estado de Seguimiento es inicial.
+Estado contactado de Estado de Seguimiento es final.
+
+Registro de Llamada de Seguimiento es un objeto, informatico.
+Ejecutar Llamada de Seguimiento cambia Estado de Seguimiento de pendiente a contactado.
+Ejecutar Llamada de Seguimiento genera Registro de Llamada de Seguimiento.
+Ejecutar Llamada de Seguimiento requiere Sistema de Comunicacion.
+Ejecutar Llamada de Seguimiento requiere Sistema HDOS.
+Enfermero Clinico maneja Ejecutar Llamada de Seguimiento.
+
+Evaluar Resultado del Egreso genera exactamente uno de Resultado del Egreso en favorable o Resultado del Egreso en desfavorable.
+Medico de Atencion Directa maneja Evaluar Resultado del Egreso.
+
+Registrar Reingreso ocurre si Resultado del Egreso está en desfavorable, de lo contrario Registrar Reingreso se omite.
+Registrar Reingreso cambia Estadia de egresado a activo.
+Registrar Reingreso requiere Sistema HDOS.
+Medico de Atencion Directa maneja Registrar Reingreso.
+
+=== SD2 ===
+SD se refina por despliegue de Equipo de Salud en SD2.
+
+Equipo de Salud consta de Director Tecnico, Profesional Coordinador, Medico de Atencion Directa, Medico Regulador, Enfermero Clinico, Kinesiologo, Fonoaudiologo, Tecnico de Enfermeria, Trabajador Social, Personal Administrativo, Conductor y Estadistico.
+
+Director Tecnico es un objeto, físico.
+Experiencia Clinica es un objeto, informatico.
+Director Tecnico exhibe Experiencia Clinica.
+Dedicacion Semanal es un objeto, informatico.
+Director Tecnico exhibe Dedicacion Semanal.
+
+Profesional Coordinador es un objeto, físico.
+Profesional Coordinador exhibe Experiencia Clinica.
+Formacion en Gestion es un objeto, informatico.
+Profesional Coordinador exhibe Formacion en Gestion.
+
+Medico de Atencion Directa es un objeto, físico.
+Medico de Atencion Directa exhibe Experiencia Clinica.
+Certificacion SVB es un objeto, informatico.
+Medico de Atencion Directa exhibe Certificacion SVB.
+
+Medico Regulador es un objeto, físico.
+Medico Regulador exhibe Experiencia Clinica.
+
+Enfermero Clinico es un objeto, físico.
+Enfermero Clinico exhibe Experiencia Clinica.
+Enfermero Clinico exhibe Certificacion SVB.
+
+Kinesiologo es un objeto, físico.
+Kinesiologo exhibe Experiencia Clinica.
+Kinesiologo exhibe Certificacion SVB.
+
+Fonoaudiologo es un objeto, físico.
+Fonoaudiologo exhibe Experiencia Clinica.
+Fonoaudiologo exhibe Certificacion SVB.
+
+Tecnico de Enfermeria es un objeto, físico.
+Tecnico de Enfermeria exhibe Experiencia Clinica.
+Tecnico de Enfermeria exhibe Certificacion SVB.
+
+Trabajador Social es un objeto, físico.
+Personal Administrativo es un objeto, físico.
+
+Conductor es un objeto, físico.
+Regimen de Jornada es un objeto, informatico.
+Regimen de Jornada puede estar diurno-lunes-a-viernes o turno-rotativo.
+Conductor exhibe Regimen de Jornada.
+
+Estadistico es un objeto, físico.
+
+=== SD3 ===
+SD se refina por despliegue de Sistema HDOS en SD3.
+
+Modulo Clinico es un objeto, informatico.
+Modulo Operacional es un objeto, informatico.
+Modulo de Reporteria es un objeto, informatico.
+Portal Paciente es un objeto, informatico.
+Modulo de Referencia es un objeto, informatico.
+Modulo Territorial es un objeto, informatico.
+
+Sistema HDOS consta de Modulo Clinico, Modulo Operacional, Modulo de Reporteria, Portal Paciente, Modulo de Referencia y Modulo Territorial.
+
+Ficha Clinica es un objeto, informatico.
+Visita es un objeto, informatico.
+Grupo de Pacientes es un objeto, físico.
+Programa de Visitas es un objeto, informatico.
+Ruta de Transporte es un objeto, informatico.
+Equipo de Salud es un objeto, físico.
+Alerta Clinica es un objeto, informatico.
+Registro de Auditoria es un objeto, informatico.
+Reporte REM es un objeto, informatico.
+Reporte Analitico es un objeto, informatico.
+Documento FHIR es un objeto, informatico.
+Sistema Documental es un objeto, informatico.
+Establecimiento de Atencion Cerrada es un objeto, físico, ambiental.
+Domicilio del Paciente es un objeto, físico, ambiental.
+
+Gestionar Ficha Clinica es un proceso, informatico.
+Gestionar Ficha Clinica afecta Ficha Clinica.
+Registrar Visita es un proceso, informatico.
+Registrar Visita afecta Visita.
+Gestionar Indicaciones es un proceso, informatico.
+Gestionar Indicaciones afecta Grupo de Pacientes.
+Gestionar Heridas es un proceso, informatico.
+Gestionar Heridas afecta Grupo de Pacientes.
+Gestionar Examenes es un proceso, informatico.
+Gestionar Examenes afecta Grupo de Pacientes.
+Modulo Clinico exhibe Gestionar Ficha Clinica así como Registrar Visita así como Registrar Signos Vitales así como Gestionar Indicaciones así como Gestionar Heridas así como Gestionar Examenes.
+
+Gestionar Agenda es un proceso, informatico.
+Gestionar Agenda afecta Programa de Visitas.
+Gestionar Rutas es un proceso, informatico.
+Gestionar Rutas afecta Ruta de Transporte.
+Gestionar Profesionales es un proceso, informatico.
+Gestionar Profesionales afecta Equipo de Salud.
+Gestionar Alertas es un proceso, informatico.
+Gestionar Alertas afecta Alerta Clinica.
+Auditar Acciones es un proceso, informatico.
+Auditar Acciones genera Registro de Auditoria.
+Modulo Operacional exhibe Gestionar Agenda así como Gestionar Rutas así como Gestionar Profesionales así como Gestionar Alertas así como Auditar Acciones.
+
+Generar REM es un proceso, informatico.
+Generar REM genera Reporte REM.
+Generar Analitica es un proceso, informatico.
+Generar Analitica genera Reporte Analitico.
+Exportar FHIR es un proceso, informatico.
+Exportar FHIR genera Documento FHIR.
+Modulo de Reporteria exhibe Generar REM así como Generar Analitica así como Exportar FHIR.
+
+Consultar Indicaciones es un proceso, informatico.
+Consultar Indicaciones afecta Grupo de Pacientes.
+Reportar Observacion es un proceso, informatico.
+Recibir Mensaje es un proceso, informatico.
+Recibir Mensaje afecta Grupo de Pacientes.
+Realizar Checklist Cuidador es un proceso, informatico.
+Realizar Checklist Cuidador afecta Grupo de Pacientes.
+Responder Encuesta es un proceso, informatico.
+Portal Paciente exhibe Consultar Indicaciones así como Reportar Observacion así como Recibir Mensaje así como Realizar Checklist Cuidador así como Responder Encuesta.
+
+Gestionar Conocimiento es un proceso, informatico.
+Gestionar Conocimiento afecta Sistema Documental.
+Consultar Datos Referencia es un proceso, informatico.
+Consultar Datos Referencia afecta Grupo de Pacientes.
+Modulo de Referencia exhibe Gestionar Conocimiento así como Consultar Datos Referencia.
+
+Gestionar Establecimientos es un proceso, informatico.
+Gestionar Establecimientos afecta Establecimiento de Atencion Cerrada.
+Gestionar Zonas es un proceso, informatico.
+Gestionar Zonas afecta Domicilio del Paciente.
+Modulo Territorial exhibe Gestionar Establecimientos así como Gestionar Zonas.
+
+=== SD4 ===
+
+Estadia es un objeto, informatico.
+Estadia puede estar pendiente_evaluacion, elegible, admitido, activo, egresado o fallecido.
+Plan Terapeutico es un objeto, informatico.
+Plan Terapeutico puede estar borrador, activo o completado.
+Sesion de Teleatencion es un objeto, informatico.
+SD3 se refina por descomposicion de Portal Paciente en SD4.
+
+Autenticar Portal es un proceso, informatico.
+Consultar Dashboard es un proceso, informatico.
+Consultar Medicamentos es un proceso, informatico.
+Participar en Teleatencion es un proceso, informatico.
+Consultar Educacion es un proceso, informatico.
+Consultar Historial es un proceso, informatico.
+
+Portal Paciente exhibe Autenticar Portal así como Consultar Dashboard así como Consultar Indicaciones así como Consultar Medicamentos así como Reportar Observacion así como Recibir Mensaje así como Realizar Checklist Cuidador así como Consultar Historial así como Responder Encuesta así como Participar en Teleatencion así como Consultar Educacion.
+
+Usuario Portal es un objeto, físico, ambiental.
+Rol Portal es un objeto, informatico.
+Rol Portal puede estar paciente, familiar o cuidador.
+Usuario Portal exhibe Rol Portal.
+
+Autenticar Portal afecta Usuario Portal.
+Autenticar Portal requiere Sistema HDOS.
+
+Consultar Dashboard requiere Estadia en activo.
+Consultar Dashboard requiere Sistema HDOS.
+
+Consultar Medicamentos requiere Estadia.
+Consultar Medicamentos requiere Sistema HDOS.
+
+Observacion Portal es un objeto, informatico.
+Reportar Observacion genera Observacion Portal.
+Reportar Observacion requiere Sistema HDOS.
+
+Recibir Mensaje requiere Sistema HDOS.
+
+Realizar Checklist Cuidador requiere Plan Terapeutico en activo.
+Realizar Checklist Cuidador requiere Sistema HDOS.
+
+Responder Encuesta genera Encuesta de Satisfaccion.
+Responder Encuesta requiere Sistema HDOS.
+
+Participar en Teleatencion requiere Sesion de Teleatencion.
+Participar en Teleatencion requiere Sistema de Comunicacion.
+
+Consultar Educacion requiere Sistema HDOS.
+
+=== SD5 ===
+SD se refina por despliegue de Equipamiento Medico en SD5.
+
+Monitor de Presion Arterial es un objeto, físico.
+Oximetro de Pulso es un objeto, físico.
+Monitor Cardiaco es un objeto, físico.
+Termometro es un objeto, físico.
+Desfibrilador es un objeto, físico.
+Concentrador de Oxigeno es un objeto, físico.
+Bomba de Infusion es un objeto, físico.
+Conjunto de Instrumentos Especializados es un objeto, físico.
+
+Equipamiento Medico consta de Monitor de Presion Arterial, Oximetro de Pulso, Monitor Cardiaco, Termometro, Desfibrilador, Concentrador de Oxigeno, Bomba de Infusion y Conjunto de Instrumentos Especializados.
+
+Estado de Mantencion es un objeto, informatico.
+Estado de Mantencion puede estar vigente o vencido.
+Estado vigente de Estado de Mantencion es inicial.
+Equipamiento Medico exhibe Estado de Mantencion.
+
+Autorizacion Sanitaria de Equipo es un objeto, informatico.
+Autorizacion Sanitaria de Equipo puede estar autorizado o no autorizado.
+Estado autorizado de Autorizacion Sanitaria de Equipo es inicial.
+Equipamiento Medico exhibe Autorizacion Sanitaria de Equipo.
+
+Estado de Asignacion es un objeto, informatico.
+Estado de Asignacion puede estar disponible, asignado o en mantencion.
+Estado disponible de Estado de Asignacion es inicial.
+Equipamiento Medico exhibe Estado de Asignacion.
+
+=== SD6 ===
+SD se refina por despliegue de Infraestructura Administrativa en SD6.
+
+Sistema Telefonico es un objeto, físico.
+Sistema Informatico es un objeto, informatico.
+Respaldo Electrico es un objeto, físico.
+Area de Archivo Clinico es un objeto, físico.
+Dispensario de Medicamentos es un objeto, físico.
+Bodega de Insumos es un objeto, físico.
+Area de Disposicion de Residuos es un objeto, físico.
+Recinto de Aseo es un objeto, físico.
+Area de Bienestar del Personal es un objeto, físico.
+Estacionamiento de Vehiculos es un objeto, físico.
+Sistema de Senhalizacion es un objeto, físico.
+
+Infraestructura Administrativa consta de Sistema Telefonico, Sistema Informatico, Respaldo Electrico, Area de Archivo Clinico, Dispensario de Medicamentos, Bodega de Insumos, Area de Disposicion de Residuos, Recinto de Aseo, Area de Bienestar del Personal, Estacionamiento de Vehiculos y Sistema de Senhalizacion.
+
+Disponibilidad es un objeto, informatico.
+Disponibilidad puede estar 24-7 o parcial.
+Estado 24-7 de Disponibilidad es inicial.
+Sistema Telefonico exhibe Disponibilidad.
+
+Trazabilidad de Llamadas es un objeto, informatico.
+Trazabilidad de Llamadas puede estar habilitada o deshabilitada.
+Estado habilitada de Trazabilidad de Llamadas es inicial.
+Sistema Telefonico exhibe Trazabilidad de Llamadas.
+
+Conectividad Internet es un objeto, informatico.
+Sistema Informatico exhibe Conectividad Internet.
+
+Autorizacion SEC es un objeto, informatico.
+Respaldo Electrico exhibe Autorizacion SEC.
+
+Nivel de Seguridad es un objeto, informatico.
+Nivel de Seguridad puede estar seguro o no seguro.
+Estado seguro de Nivel de Seguridad es inicial.
+Area de Archivo Clinico exhibe Nivel de Seguridad.
+
+Cumplimiento de Cadena de Frio es un objeto, informatico.
+Cumplimiento de Cadena de Frio puede estar cumple o no cumple.
+Estado cumple de Cumplimiento de Cadena de Frio es inicial.
+Dispensario de Medicamentos exhibe Cumplimiento de Cadena de Frio.
+
+Control de Temperatura es un objeto, informatico.
+Bodega de Insumos exhibe Control de Temperatura.
+
+Cumplimiento REAS es un objeto, informatico.
+Area de Disposicion de Residuos exhibe Cumplimiento REAS.
+
+Acceso a Alimentacion es un objeto, físico.
+Servicios Higienicos es un objeto, físico.
+Casilleros es un objeto, físico.
+Sala de Estar es un objeto, físico.
+Area de Bienestar del Personal consta de Acceso a Alimentacion, Servicios Higienicos, Casilleros y Sala de Estar.
+
+=== SD7 ===
+Estado de Mantencion es un objeto, informatico.
+Estado de Mantencion puede estar vigente o vencido.
+
+Gestionar Autorizacion Sanitaria es un proceso, informatico.
+Gestionar Calidad-Seguridad es un proceso, informatico.
+Gestionar Capacitacion es un proceso, informatico.
+Gestionar Cadena de Abastecimiento es un proceso, informatico.
+Gestionar Residuos es un proceso, informatico.
+Gestionar Mantencion de Equipos es un proceso, informatico.
+Gestionar Capacidad es un proceso, informatico.
+
+Sistema HODOM exhibe Gestionar Autorizacion Sanitaria así como Gestionar Calidad-Seguridad así como Gestionar Capacitacion así como Gestionar Cadena de Abastecimiento así como Gestionar Residuos así como Gestionar Mantencion de Equipos así como Gestionar Capacidad.
+
+Estado de Autorizacion Sanitaria es un objeto, informatico.
+Estado de Autorizacion Sanitaria puede estar pendiente, autorizado o vencido.
+Estado pendiente de Estado de Autorizacion Sanitaria es inicial.
+Sistema HODOM exhibe Estado de Autorizacion Sanitaria.
+Gestionar Autorizacion Sanitaria afecta Sistema HODOM.
+Gestionar Autorizacion Sanitaria requiere Normativa Vigente.
+Director Tecnico maneja Gestionar Autorizacion Sanitaria.
+Gestionar Autorizacion Sanitaria cambia Estado de Autorizacion Sanitaria de pendiente a autorizado.
+
+SEREMI es un objeto, físico, ambiental.
+SEREMI supervisa Sistema HODOM.
+Gestionar Autorizacion Sanitaria requiere SEREMI.
+
+Sistema Documental es un objeto, informatico.
+Auditoria de Reacciones Adversas es un objeto, informatico.
+Auditoria de Mortalidad es un objeto, informatico.
+Gestionar Calidad-Seguridad afecta Sistema HODOM.
+Gestionar Calidad-Seguridad requiere Sistema Documental.
+Gestionar Calidad-Seguridad genera Auditoria de Reacciones Adversas.
+Gestionar Calidad-Seguridad genera Auditoria de Mortalidad.
+Profesional Coordinador maneja Gestionar Calidad-Seguridad.
+
+Plan Anual de Capacitacion es un objeto, informatico.
+Gestionar Capacitacion afecta Equipo de Salud.
+Gestionar Capacitacion requiere Plan Anual de Capacitacion.
+Profesional Coordinador maneja Gestionar Capacitacion.
+
+Gestionar Cadena de Abastecimiento afecta Insumo Clinico.
+Gestionar Cadena de Abastecimiento afecta Medicamento.
+Gestionar Cadena de Abastecimiento requiere Dispensario de Medicamentos.
+Profesional Coordinador maneja Gestionar Cadena de Abastecimiento.
+
+Residuo Biomedico es un objeto, físico.
+Protocolo de Manejo de Residuos es un objeto, informatico.
+Gestionar Residuos consume Residuo Biomedico.
+Gestionar Residuos requiere Area de Disposicion de Residuos.
+Gestionar Residuos requiere Protocolo de Manejo de Residuos.
+Profesional Coordinador maneja Gestionar Residuos.
+
+Gestionar Mantencion de Equipos afecta Equipamiento Medico.
+Gestionar Mantencion de Equipos cambia Estado de Mantencion de vencido a vigente.
+Director Tecnico maneja Gestionar Mantencion de Equipos.
+
+Capacidad Instalada es un objeto, informatico.
+Cupos Programados es un objeto, informatico.
+Cupos Utilizados es un objeto, informatico.
+Cupos Disponibles es un objeto, informatico.
+Sistema HODOM exhibe Capacidad Instalada.
+Capacidad Instalada exhibe Cupos Programados así como Cupos Utilizados así como Cupos Disponibles.
+Gestionar Capacidad afecta Sistema HODOM.
+Profesional Coordinador maneja Gestionar Capacidad.
+Gestionar Capacidad afecta Capacidad Instalada.
+
+=== SD8 ===
+SD se refina por despliegue de Domicilio del Paciente en SD8.
+
+Servicios Basicos es un objeto, informatico.
+Servicios Basicos puede estar disponible o no disponible.
+
+Acceso a Telefonia es un objeto, informatico.
+Acceso a Telefonia puede estar disponible o no disponible.
+
+Acceso Vial es un objeto, informatico.
+Acceso Vial puede estar dentro del radio de cobertura o fuera del radio de cobertura.
+
+Localizacion Geografica es un objeto, informatico.
+Latitud es un objeto, informatico.
+Longitud es un objeto, informatico.
+Precision Geo es un objeto, informatico.
+Tipo de Zona es un objeto, informatico.
+Tipo de Zona puede estar URBANO, PERIURBANO, RURAL o RURAL_AISLADO.
+
+Localizacion Geografica exhibe Latitud así como Longitud así como Precision Geo así como Tipo de Zona.
+
+Domicilio del Paciente exhibe Condicion del Domicilio así como Servicios Basicos así como Acceso a Telefonia así como Acceso Vial así como Localizacion Geografica.
+
+=== SD9 ===
+SD se refina por despliegue de Sistema Documental en SD9.
+
+Manual de Organizacion Interna es un objeto, informatico.
+Conjunto de Protocolos Clinicos es un objeto, informatico.
+Manual de Procedimientos es un objeto, informatico.
+
+Sistema Documental consta de Manual de Organizacion Interna, Conjunto de Protocolos Clinicos, Manual de Procedimientos, Protocolo de Manejo de Residuos y Plan Anual de Capacitacion.
+
+Organigrama es un objeto, informatico.
+Definicion de Roles es un objeto, informatico.
+Definicion de Horarios es un objeto, informatico.
+Reglamento de Higiene es un objeto, informatico.
+Manual de Organizacion Interna consta de Organigrama, Definicion de Roles, Definicion de Horarios y Reglamento de Higiene.
+
+Protocolo de Evaluacion e Ingreso es un objeto, informatico.
+Protocolo de Programacion de Visitas es un objeto, informatico.
+Protocolo de Categorizacion-Egreso es un objeto, informatico.
+Protocolo de Gestion de Recetas es un objeto, informatico.
+Protocolo de Actuacion ante Emergencias es un objeto, informatico.
+Protocolo ante Agresiones al Personal es un objeto, informatico.
+Conjunto de Protocolos Clinicos consta de Protocolo de Evaluacion e Ingreso, Protocolo de Programacion de Visitas, Protocolo de Categorizacion-Egreso, Protocolo de Gestion de Recetas, Protocolo de Actuacion ante Emergencias y Protocolo ante Agresiones al Personal.
+
+Procedimiento de Via Venosa Periferica es un objeto, informatico.
+Procedimiento de Via Venosa Central es un objeto, informatico.
+Procedimiento de Cateter Urinario es un objeto, informatico.
+Procedimiento de Traqueostomia es un objeto, informatico.
+Procedimiento de Toma de Muestras es un objeto, informatico.
+Procedimiento de Precauciones de Aislamiento es un objeto, informatico.
+Manual de Procedimientos consta de Procedimiento de Via Venosa Periferica, Procedimiento de Via Venosa Central, Procedimiento de Cateter Urinario, Procedimiento de Traqueostomia, Procedimiento de Toma de Muestras y Procedimiento de Precauciones de Aislamiento.
+
+Cumplimiento Decreto REAS es un objeto, informatico.
+Protocolo de Manejo de Residuos exhibe Cumplimiento Decreto REAS.
+
+Capacitacion IAAS es un objeto, informatico.
+Capacitacion SVB es un objeto, informatico.
+Programa de Induccion es un objeto, informatico.
+Capacitacion en Humanizacion del Cuidado es un objeto, informatico.
+Plan Anual de Capacitacion consta de Capacitacion IAAS, Capacitacion SVB, Programa de Induccion y Capacitacion en Humanizacion del Cuidado.
+
+Duracion Minima es un objeto, informatico.
+Programa de Induccion exhibe Duracion Minima.
+
+=== SD10 ===
+Establecimiento de Atencion Cerrada es un objeto, físico, ambiental.
+Grupo de Pacientes es un objeto, físico.
+Domicilio del Paciente es un objeto, físico, ambiental.
+SEREMI es un objeto, físico, ambiental.
+Sistema HODOM es un objeto, físico.
+Normativa Vigente es un objeto, informatico, ambiental.
+Director Tecnico es un objeto, físico.
+Medico de Atencion Directa es un objeto, físico.
+Medico Regulador es un objeto, físico.
+Cuidador es un objeto, físico, ambiental.
+Centro de Salud Familiar es un objeto, físico, ambiental.
+UGCC es un objeto, informatico, ambiental.
+Usuario Portal es un objeto, físico, ambiental.
+Portal Paciente es un objeto, informatico.
+
+Establecimiento de Atencion Cerrada deriva Grupo de Pacientes.
+Domicilio del Paciente alberga Grupo de Pacientes.
+SEREMI supervisa Sistema HODOM.
+Normativa Vigente rige Sistema HODOM.
+Director Tecnico representa Sistema HODOM.
+Continuidad de la Atencion es un objeto, informatico.
+Sistema HODOM garantiza Continuidad de la Atencion.
+Medico de Atencion Directa coordina con Establecimiento de Atencion Cerrada.
+Medico Regulador apoya a Medico de Atencion Directa.
+Cuidador cuida a Grupo de Pacientes.
+Centro de Salud Familiar deriva Grupo de Pacientes.
+Sistema HODOM contrarefiere a Centro de Salud Familiar.
+UGCC gestiona camas para Grupo de Pacientes.
+Usuario Portal accede a Portal Paciente.
+
+=== SD11 ===
+Sistema HODOM exhibe Modo Operacional.
+Ciclar Programacion Semanal es un proceso, informatico, ambiental.
+Ciclar Programacion Semanal afecta Modo Operacional.
