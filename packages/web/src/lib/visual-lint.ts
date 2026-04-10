@@ -431,6 +431,9 @@ export function computeVisualQuality(
   // Clutter penalty: scales with severity (0-25 pts)
   const clutterPenalty = Math.round(clutterScore * 25);
 
+  // Track crossing penalty separately for capping
+  let crossingPenalty = 0;
+
   for (const f of findings) {
     const sev = visualFindingSeverity(f);
     if (sev === "error") {
@@ -438,18 +441,23 @@ export function computeVisualQuality(
       score -= f.kind === "overlap" ? 15 : 10;
     } else if (sev === "warning") {
       warningCount++;
-      // Scale penalties by diagram complexity
-      const complexityFactor = totalLinks > 0 ? Math.max(0.5, 1 - totalLinks / 80) : 1;
-      score -= f.kind === "crowded-diagram" ? 8 :
-        f.kind === "link-crossing" ? Math.round(5 / Math.max(1, totalLinks / 10)) :
-        f.kind === "label-cluster" ? 6 :
-        f.kind === "tight-spacing" ? 4 :
-        f.kind === "orphan" ? 1 : 3;
-      score -= Math.round((1 - complexityFactor) * 2); // discount for complex diagrams
+      if (f.kind === "link-crossing") {
+        // Per-crossing penalty: small, will be capped
+        crossingPenalty += totalLinks > 15 ? 0.5 : totalLinks > 5 ? 1.5 : 4;
+      } else {
+        score -= f.kind === "crowded-diagram" ? 8 :
+          f.kind === "label-cluster" ? 6 :
+          f.kind === "tight-spacing" ? 4 :
+          f.kind === "orphan" ? 1 : 3;
+      }
     } else {
       infoCount++;
     }
   }
+
+  // Cap crossing penalty based on diagram complexity
+  const maxCrossingPenalty = totalLinks > 15 ? 8 : totalLinks > 5 ? 15 : 20;
+  score -= Math.min(Math.round(crossingPenalty), maxCrossingPenalty);
 
   // Apply clutter penalty on top
   score -= clutterPenalty;
@@ -475,7 +483,8 @@ export function computeVisualQuality(
 }
 
 export function auditVisualOpd({ appearances, links, things, states }: AuditVisualOpdArgs): VisualFinding[] {
-  const thingsById = things ? new Map([...things].map((t) => [t.id, t])) : undefined;
+  const thingsArr = things ? [...things] : undefined;
+  const thingsById = thingsArr ? new Map(thingsArr.map((t) => [t.id, t])) : undefined;
   const statesByThing = new Map<string, State[]>();
   if (states) {
     for (const state of states) {
@@ -491,8 +500,8 @@ export function auditVisualOpd({ appearances, links, things, states }: AuditVisu
     ...findDegenerateBounds(appearances),
     ...findCrowdedDiagrams(appearances),
     ...findTightSpacing(appearances),
-    ...findLinkCrossings(appearances, links, things),
-    ...findLabelClusters(appearances, links, things),
+    ...findLinkCrossings(appearances, links, thingsArr),
+    ...findLabelClusters(appearances, links, thingsArr),
   ].sort((a, b) => {
     const rank = visualFindingRank(a) - visualFindingRank(b);
     if (rank !== 0) return rank;
