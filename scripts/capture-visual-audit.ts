@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { spawn, type ChildProcess } from "node:child_process";
 import {
   compileOplDocuments,
+  loadModel,
   parseOplDocuments,
   saveModel,
   type Model,
@@ -41,9 +42,19 @@ async function waitForHttp(url: string, timeoutMs = 20000) {
   throw new Error(`Timed out waiting for ${url}`);
 }
 
-async function buildModelFromOpl(path: string): Promise<{ model: Model; modelJson: string; report: ReturnType<typeof buildVisualReport> }> {
-  const opl = readFileSync(path, "utf8");
-  const parsed = parseOplDocuments(opl);
+async function buildModelFromFixture(path: string): Promise<{ model: Model; modelJson: string; report: ReturnType<typeof buildVisualReport> }> {
+  const content = readFileSync(path, "utf8");
+  const isOpmodel = path.endsWith(".opmodel");
+
+  if (isOpmodel) {
+    const loaded = loadModel(content);
+    if (!loaded.ok) throw new Error(loaded.error.message);
+    const laidOut = autoLayoutModel(loaded.value).model;
+    const report = buildVisualReport(laidOut);
+    return { model: laidOut, modelJson: saveModel(laidOut), report };
+  }
+
+  const parsed = parseOplDocuments(content);
   if (!parsed.ok) throw new Error(parsed.error.message);
   const compiled = compileOplDocuments(parsed.value, { ignoreUnsupported: true });
   if (!compiled.ok) throw new Error(compiled.error.message);
@@ -136,6 +147,16 @@ async function navigate(client: CdpClient, url: string) {
   await wait(800);
 }
 
+async function waitFor(client: CdpClient, expression: string, timeoutMs = 10000) {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    const result = await client.send("Runtime.evaluate", { expression, returnByValue: true });
+    if (result?.result?.value) return result.result.value;
+    await wait(100);
+  }
+  throw new Error(`Timed out waiting for condition: ${expression}`);
+}
+
 async function setModelInLocalStorage(client: CdpClient, modelJson: string) {
   const expr = `(() => {
     localStorage.setItem("opmodel:current", ${JSON.stringify(modelJson)});
@@ -146,16 +167,30 @@ async function setModelInLocalStorage(client: CdpClient, modelJson: string) {
 }
 
 async function clickOpd(client: CdpClient, opdName: string) {
+  await waitFor(client, `(() => document.querySelectorAll('.opd-tree__node .opd-tree__label').length > 0)()`, 15000);
   const expr = `(() => {
-    const nodes = [...document.querySelectorAll('.opd-tree__node')];
-    const node = nodes.find((el) => (el.textContent || '').includes(${JSON.stringify(opdName)}));
+    const labels = [...document.querySelectorAll('.opd-tree__node .opd-tree__label')];
+    const label = labels.find((el) => {
+      const ownText = [...el.childNodes]
+        .filter((node) => node.nodeType === Node.TEXT_NODE)
+        .map((node) => node.textContent || '')
+        .join(' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      return ownText === ${JSON.stringify(opdName)};
+    });
+    const node = label?.closest('.opd-tree__node');
     if (!node) return false;
     node.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
     return true;
   })()`;
   const result = await client.send("Runtime.evaluate", { expression: expr, returnByValue: true });
   if (!result?.result?.value) throw new Error(`Could not select OPD ${opdName}`);
-  await wait(500);
+  await waitFor(
+    client,
+    `(() => document.querySelector('.canvas-breadcrumb__item--current')?.textContent?.trim() === ${JSON.stringify(opdName)})()`,
+    10000,
+  );
 }
 
 async function boundingRect(client: CdpClient, selector: string) {
@@ -180,7 +215,7 @@ async function captureClip(client: CdpClient, path: string, clip: { x: number; y
 
 async function main() {
   mkdirSync(OUT_DIR, { recursive: true });
-  const { model, modelJson, report } = await buildModelFromOpl(FIXTURE_PATH);
+  const { model, modelJson, report } = await buildModelFromFixture(FIXTURE_PATH);
   writeFileSync(join(OUT_DIR, "model.opmodel"), modelJson);
   writeFileSync(join(OUT_DIR, "visual-report.json"), JSON.stringify(report, null, 2));
 
@@ -203,7 +238,7 @@ async function main() {
     await navigate(client, PREVIEW_URL);
     await setModelInLocalStorage(client, modelJson);
     await client.send("Page.reload", { ignoreCache: true });
-    await wait(1200);
+    await waitFor(client, `(() => document.querySelectorAll('.opd-tree__node .opd-tree__label').length > 0)()`, 15000);
 
     const opds = [...model.opds.values()].map((opd) => opd.name);
     const shots: Array<{ opd: string; file: string }> = [];

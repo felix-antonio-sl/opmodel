@@ -431,8 +431,9 @@ export function computeVisualQuality(
   // Clutter penalty: scales with severity (0-25 pts)
   const clutterPenalty = Math.round(clutterScore * 25);
 
-  // Track crossing penalty separately for capping
+  // Track large-volume penalties separately for capping
   let crossingPenalty = 0;
+  let labelClusterPenalty = 0;
 
   for (const f of findings) {
     const sev = visualFindingSeverity(f);
@@ -444,9 +445,11 @@ export function computeVisualQuality(
       if (f.kind === "link-crossing") {
         // Per-crossing penalty: small, will be capped
         crossingPenalty += totalLinks > 15 ? 0.5 : totalLinks > 5 ? 1.5 : 4;
+      } else if (f.kind === "label-cluster") {
+        // Large diagrams can accumulate a few localized label pileups without becoming unreadable overall.
+        labelClusterPenalty += totalLinks > 15 ? 3 : totalLinks > 5 ? 5 : 6;
       } else {
         score -= f.kind === "crowded-diagram" ? 8 :
-          f.kind === "label-cluster" ? 6 :
           f.kind === "tight-spacing" ? 4 :
           f.kind === "orphan" ? 1 : 3;
       }
@@ -455,9 +458,11 @@ export function computeVisualQuality(
     }
   }
 
-  // Cap crossing penalty based on diagram complexity
+  // Cap crossing and label-cluster penalties based on diagram complexity
   const maxCrossingPenalty = totalLinks > 15 ? 8 : totalLinks > 5 ? 15 : 20;
+  const maxLabelClusterPenalty = totalLinks > 15 ? 8 : totalLinks > 5 ? 12 : 18;
   score -= Math.min(Math.round(crossingPenalty), maxCrossingPenalty);
+  score -= Math.min(Math.round(labelClusterPenalty), maxLabelClusterPenalty);
 
   // Apply clutter penalty on top
   score -= clutterPenalty;

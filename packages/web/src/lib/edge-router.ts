@@ -447,8 +447,18 @@ export function routeEdges(links: RouteInput[]): Map<string, EdgePath> {
       const [internalPt, externalPt] = pointInRect(link.p1, link.containerRect!)
         ? [ap1, ap2]
         : [ap2, ap1];
-      const semanticOff = semanticLane(link.linkType) === "input" ? -8 : semanticLane(link.linkType) === "output" ? 8 : 0;
-      result.set(link.id, crossContainerPath(internalPt, externalPt, link.containerRect!, 12 + semanticOff));
+      const lane = semanticLane(link.linkType);
+      const semanticOff = lane === "input" ? -8 : lane === "output" ? 8 : lane === "structural" ? 14 : 0;
+      const path = crossContainerPath(internalPt, externalPt, link.containerRect!, 12 + semanticOff);
+      result.set(link.id, lane === "structural"
+        ? {
+            ...path,
+            labelPoint: {
+              x: path.labelPoint.x * 0.35 + externalPt.x * 0.65,
+              y: path.labelPoint.y * 0.35 + externalPt.y * 0.65,
+            },
+          }
+        : path);
     } else if (link.internal && (flow === "top-down" || flow === "left-right")) {
       // Single internal link in a refinement with clear flow: use orthogonal routing
       const crossings = countCrossings({ id: link.id, p1: ap1, p2: ap2 }, endpoints);

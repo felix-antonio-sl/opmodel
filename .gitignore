@@ -6,3 +6,4 @@ dist/
 .DS_Store
 .superpowers/
 dev-data/
+artifacts/visual-audit/
