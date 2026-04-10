@@ -699,7 +699,7 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, select
     const ids = new Set(currentApps.map((a) => a.thing));
     const currentLinks = [...model.links.values()].filter((l) => ids.has(l.source) && ids.has(l.target));
     const beforeFindings = auditVisualOpd({ appearances: currentApps, links: currentLinks, things: model.things.values(), states: model.states.values() });
-    const before = computeVisualQuality(beforeFindings);
+    const before = computeVisualQuality(beforeFindings, currentApps, currentLinks);
 
     const suggestion = suggestLayoutForOpd(model, opdId);
     if (suggestion.patches.length === 0) {
@@ -707,7 +707,7 @@ export function OpdCanvas({ model, projectionSlice, opdId, selectedThing, select
       setTimeout(() => setLayoutToast(null), 3000);
       return;
     }
-    const after = computeVisualQuality(suggestion.findings);
+    const after = computeVisualQuality(suggestion.findings, currentApps, currentLinks);
     const ok = dispatch({
       tag: "updateAppearancesBatch",
       updates: suggestion.patches.map((p) => ({ thingId: p.thingId, opdId: p.opdId, patch: p.patch as Record<string, unknown> })),

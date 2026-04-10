@@ -426,7 +426,7 @@ function Editor({ initialModel, recoveryInfo, onNew, onImport }: { initialModel:
   const visualFindings = useMemo(() => {
     return auditVisualOpd({ appearances: currentProjectionSlice.appearances, links: currentProjectionSlice.links, things: model.things.values(), states: model.states.values() });
   }, [currentProjectionSlice, model]);
-  const visualQuality = useMemo(() => computeVisualQuality(visualFindings), [visualFindings]);
+  const visualQuality = useMemo(() => computeVisualQuality(visualFindings, currentProjectionSlice.appearances, currentProjectionSlice.links), [visualFindings, currentProjectionSlice]);
   const validationLabel = isValid
     ? (errors.length > 0 ? `${errors.length} hints` : "Valid")
     : `${hardErrors.length} errors`;
@@ -446,10 +446,10 @@ function Editor({ initialModel, recoveryInfo, onNew, onImport }: { initialModel:
     for (const opd of opds) {
       const slice = buildPatchableOpdProjectionSliceFromProjection(projection, model, opd.id);
       const beforeFindings = auditVisualOpd({ appearances: slice.appearances, links: slice.links, things: model.things.values(), states: model.states.values() });
-      beforeSum += computeVisualQuality(beforeFindings).score;
+      beforeSum += computeVisualQuality(beforeFindings, slice.appearances, slice.links).score;
 
       const suggestion = suggestLayoutForOpd(model, opd.id);
-      afterSum += computeVisualQuality(suggestion.findings).score;
+      afterSum += computeVisualQuality(suggestion.findings, slice.appearances, slice.links).score;
       totalPatches += suggestion.patches.length;
       for (const p of suggestion.patches) {
         allUpdates.push({ thingId: p.thingId, opdId: p.opdId, patch: p.patch as Record<string, unknown> });

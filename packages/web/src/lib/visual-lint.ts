@@ -328,11 +328,108 @@ export interface VisualQualityScore {
   infoCount: number;
 }
 
-export function computeVisualQuality(findings: VisualFinding[]): VisualQualityScore {
+/** Compute local density hotspots by dividing bounding box into a grid. */
+function computeLocalDensity(
+  appearances: Appearance[],
+  gridCols = 4,
+  gridRows = 4,
+): { maxDensity: number; hotCells: number; avgDensity: number } {
+  const visible = appearances.filter((a) => !a.internal);
+  if (visible.length < 3) return { maxDensity: 0, hotCells: 0, avgDensity: 0 };
+  const bounds = contentBounds(visible);
+  if (!bounds) return { maxDensity: 0, hotCells: 0, avgDensity: 0 };
+
+  const cellW = bounds.w / gridCols;
+  const cellH = bounds.h / gridRows;
+  if (cellW < 1 || cellH < 1) return { maxDensity: 0, hotCells: 0, avgDensity: 0 };
+
+  const cells = new Array(gridCols * gridRows).fill(0);
+  const cellAreas = new Array(gridCols * gridRows).fill(0);
+  const cellCapacity = cellW * cellH;
+
+  for (const app of visible) {
+    // Determine which cells this node overlaps
+    const startCol = Math.max(0, Math.floor((app.x - bounds.x) / cellW));
+    const endCol = Math.min(gridCols - 1, Math.floor((app.x + app.w - bounds.x) / cellW));
+    const startRow = Math.max(0, Math.floor((app.y - bounds.y) / cellH));
+    const endRow = Math.min(gridRows - 1, Math.floor((app.y + app.h - bounds.y) / cellH));
+    for (let r = startRow; r <= endRow; r++) {
+      for (let c = startCol; c <= endCol; c++) {
+        const idx = r * gridCols + c;
+        cells[idx]++;
+        // Compute intersection area of node with cell
+        const cx = bounds.x + c * cellW;
+        const cy = bounds.y + r * cellH;
+        const overlapX = Math.max(0, Math.min(app.x + app.w, cx + cellW) - Math.max(app.x, cx));
+        const overlapY = Math.max(0, Math.min(app.y + app.h, cy + cellH) - Math.max(app.y, cy));
+        cellAreas[idx] += overlapX * overlapY;
+      }
+    }
+  }
+
+  const densities = cellAreas.map((area, i) => cells[i] > 0 ? area / cellCapacity : 0);
+  const maxDensity = Math.max(...densities);
+  const avgDensity = densities.reduce((a, b) => a + b, 0) / densities.length;
+  // A cell is "hot" if its fill ratio exceeds the crowded threshold
+  const hotCells = densities.filter((d) => d >= VISUAL_RULES.lint.crowdedFillRatio).length;
+  return { maxDensity, hotCells, avgDensity };
+}
+
+/** Compute normalized crossing rate: crossings relative to the maximum possible crossings. */
+function computeNormalizedCrossingRate(
+  linkCrossings: LinkCrossingFinding[],
+  totalLinks: number,
+): number {
+  if (totalLinks < 2) return 0;
+  // Maximum possible crossings for N links: C(N,2)
+  const maxPossible = (totalLinks * (totalLinks - 1)) / 2;
+  return linkCrossings.length / maxPossible;
+}
+
+export interface VisualQualityScore {
+  score: number;
+  grade: "A" | "B" | "C" | "D" | "F";
+  errorCount: number;
+  warningCount: number;
+  infoCount: number;
+  /** Clutter perceptual score: 0 (clean) to 1 (severe clutter) */
+  clutterScore: number;
+  /** Normalized crossing rate: crossings / max possible crossings */
+  crossingRate: number;
+  /** Local density: max fill ratio in any grid cell */
+  localDensity: number;
+}
+
+export function computeVisualQuality(
+  findings: VisualFinding[],
+  appearances?: Appearance[],
+  links?: Link[],
+): VisualQualityScore {
   let score = 100;
   let errorCount = 0;
   let warningCount = 0;
   let infoCount = 0;
+
+  const linkCrossings = findings.filter((f): f is LinkCrossingFinding => f.kind === "link-crossing");
+  const totalLinks = links?.length ?? 0;
+
+  // Perceptual clutter metrics
+  const density = appearances ? computeLocalDensity(appearances) : { maxDensity: 0, hotCells: 0, avgDensity: 0 };
+  const crossingRate = computeNormalizedCrossingRate(linkCrossings, totalLinks);
+  const labelClusterCount = findings.filter((f) => f.kind === "label-cluster").length;
+
+  // Clutter score: weighted combination of density, crossing rate, and label clustering
+  const normalizedLabelCluster = totalLinks > 0
+    ? Math.min(labelClusterCount / (totalLinks * 0.5), 1)
+    : labelClusterCount > 0 ? 0.3 : 0; // mild penalty when no link context
+  const clutterScore = Math.min(1,
+    density.maxDensity * 0.35 +
+    crossingRate * 0.40 +
+    normalizedLabelCluster * 0.25,
+  );
+
+  // Clutter penalty: scales with severity (0-25 pts)
+  const clutterPenalty = Math.round(clutterScore * 25);
 
   for (const f of findings) {
     const sev = visualFindingSeverity(f);
@@ -341,15 +438,21 @@ export function computeVisualQuality(findings: VisualFinding[]): VisualQualitySc
       score -= f.kind === "overlap" ? 15 : 10;
     } else if (sev === "warning") {
       warningCount++;
+      // Scale penalties by diagram complexity
+      const complexityFactor = totalLinks > 0 ? Math.max(0.5, 1 - totalLinks / 80) : 1;
       score -= f.kind === "crowded-diagram" ? 8 :
-        f.kind === "link-crossing" ? 5 :
+        f.kind === "link-crossing" ? Math.round(5 / Math.max(1, totalLinks / 10)) :
         f.kind === "label-cluster" ? 6 :
         f.kind === "tight-spacing" ? 4 :
         f.kind === "orphan" ? 1 : 3;
+      score -= Math.round((1 - complexityFactor) * 2); // discount for complex diagrams
     } else {
       infoCount++;
     }
   }
+
+  // Apply clutter penalty on top
+  score -= clutterPenalty;
   score -= Math.min(infoCount, 5);
 
   score = Math.max(0, Math.min(100, score));
@@ -359,7 +462,16 @@ export function computeVisualQuality(findings: VisualFinding[]): VisualQualitySc
     score >= 60 ? "C" :
     score >= 40 ? "D" : "F";
 
-  return { score, grade, errorCount, warningCount, infoCount };
+  return {
+    score,
+    grade,
+    errorCount,
+    warningCount,
+    infoCount,
+    clutterScore: Math.round(clutterScore * 100) / 100,
+    crossingRate: Math.round(crossingRate * 1000) / 1000,
+    localDensity: Math.round(density.maxDensity * 100) / 100,
+  };
 }
 
 export function auditVisualOpd({ appearances, links, things, states }: AuditVisualOpdArgs): VisualFinding[] {

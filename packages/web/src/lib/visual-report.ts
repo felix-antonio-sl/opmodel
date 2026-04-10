@@ -25,6 +25,9 @@ export interface VisualOpdReport {
   errors: number;
   warnings: number;
   info: number;
+  clutterScore: number;
+  crossingRate: number;
+  localDensity: number;
   findings: VisualFindingReportItem[];
 }
 
@@ -118,7 +121,7 @@ export function buildVisualReport(model: Model): VisualModelReport {
       ...baseFindings.filter((finding) => finding.kind !== "truncated-state"),
       ...projectedTruncatedStateFindings(model, opd.id),
     ];
-    const quality = computeVisualQuality(findings);
+    const quality = computeVisualQuality(findings, slice.appearances, slice.links);
     return {
       opdId: opd.id,
       name: opd.name,
@@ -127,6 +130,9 @@ export function buildVisualReport(model: Model): VisualModelReport {
       errors: findings.filter((f) => visualFindingSeverity(f) === "error").length,
       warnings: findings.filter((f) => visualFindingSeverity(f) === "warning").length,
       info: findings.filter((f) => visualFindingSeverity(f) === "info").length,
+      clutterScore: quality.clutterScore,
+      crossingRate: quality.crossingRate,
+      localDensity: quality.localDensity,
       findings: findings.map((finding) => ({
         severity: visualFindingSeverity(finding),
         kind: finding.kind,
