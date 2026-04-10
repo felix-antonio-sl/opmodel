@@ -121,7 +121,7 @@ describe("spatial layout engine", () => {
     m = withLink(m, { id: "l2", type: "result", source: "proc-b", target: "obj-output" });
 
     const suggestion = suggestLayoutForOpd(m, "opd-sd1");
-    expect(suggestion.strategy).toBe("in-zoom-sequential");
+    expect(suggestion.strategy).toBe("process-in-zoom");
     const patched = [...m.appearances.values()]
       .filter((a) => a.opd === "opd-sd1")
       .map((a) => {
@@ -132,6 +132,29 @@ describe("spatial layout engine", () => {
     const links = [...m.links.values()].filter((l) => ids.has(l.source) && ids.has(l.target));
     expect(findNonContainerOverlaps(patched)).toEqual([]);
     expect(findVisibleOrphans(patched, links)).toEqual([]);
+  });
+
+  it("uses object-in-zoom as a distinct strategy for object refinements", () => {
+    let m = createModel("Object in zoom");
+    m = withThing(m, { id: "obj-hub", kind: "object", name: "Hub", essence: "physical", affiliation: "systemic" });
+    m = withAppearance(m, "obj-hub", "opd-sd", 100, 100, 220, 120);
+    const ref = refineThing(m, "obj-hub", "opd-sd", "in-zoom", "opd-sd1", "SD1");
+    if (!isOk(ref)) throw new Error(ref.error.message);
+    m = ref.value;
+    for (const id of ["obj-room", "obj-panel", "obj-sensor"]) {
+      m = withThing(m, { id, kind: "object", name: id, essence: "physical", affiliation: "systemic" });
+      m = withAppearance(m, id, "opd-sd1", 0, 0, 120, 50);
+    }
+    m = withLink(m, { id: "l1", type: "aggregation", source: "obj-hub", target: "obj-room" });
+    m = withLink(m, { id: "l2", type: "aggregation", source: "obj-hub", target: "obj-panel" });
+    m = withLink(m, { id: "l3", type: "exhibition", source: "obj-hub", target: "obj-sensor" });
+
+    const suggestion = suggestLayoutForOpd(m, "opd-sd1");
+    expect(suggestion.strategy).toBe("object-in-zoom");
+    const patchByThing = new Map(suggestion.patches.map((patch) => [patch.thingId, patch.patch]));
+    expect(patchByThing.get("obj-room")?.internal).toBe(true);
+    expect(patchByThing.get("obj-panel")?.internal).toBe(true);
+    expect(patchByThing.get("obj-sensor")?.internal).toBe(true);
   });
 
   it("suggests unfold grid layout with no visible overlap/orphans", () => {

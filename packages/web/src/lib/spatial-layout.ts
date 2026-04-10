@@ -9,7 +9,7 @@ export interface AppearancePatch {
   patch: Partial<Pick<Appearance, "x" | "y" | "w" | "h" | "internal">>;
 }
 
-export type LayoutStrategy = "in-zoom-sequential" | "unfold-grid" | "branching-control" | "structural-cluster" | "sd-balanced" | "none";
+export type LayoutStrategy = "process-in-zoom" | "object-in-zoom" | "unfold-grid" | "branching-control" | "structural-cluster" | "sd-balanced" | "none";
 
 export type LayoutRelaxPolicy = "by-strategy" | "always" | "never";
 
@@ -290,7 +290,13 @@ export function diffPatchedAppearances(originalApps: Appearance[], patchedApps: 
 function shouldRelaxLayout(strategy: LayoutStrategy, policy: LayoutRelaxPolicy = "by-strategy"): boolean {
   if (policy === "always") return true;
   if (policy === "never") return false;
-  return strategy !== "structural-cluster";
+  switch (strategy) {
+    case "structural-cluster":
+    case "object-in-zoom":
+      return false;
+    default:
+      return true;
+  }
 }
 
 function finalizeLayout(
@@ -662,7 +668,7 @@ function layoutInZoom(model: Model, opdId: string, apps: Appearance[], links: Li
   placeExternalEntries(leftEntries, laneBaseLeft, -1);
   placeExternalEntries(rightEntries, laneBaseRight, 1);
 
-  const strategy: LayoutStrategy = "in-zoom-sequential";
+  const strategy: LayoutStrategy = refinee?.kind === "object" ? "object-in-zoom" : "process-in-zoom";
   const finalized = finalizeLayout(model, strategy, apps, links, patches);
 
   return {
