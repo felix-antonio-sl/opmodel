@@ -592,10 +592,28 @@ export function exposeSemanticKernel(kernel: SemanticKernel): OpdAtlas {
       }
     } else if (refinement.kind === "in-zoom") {
       visibleThings.add(refinement.parentThing);
+      const internalProcessIds = new Set<ThingId>();
       for (const step of refinement.steps) {
-        for (const thingId of step.thingIds) visibleThings.add(thingId);
+        for (const thingId of step.thingIds) {
+          visibleThings.add(thingId);
+          internalProcessIds.add(thingId);
+        }
       }
-      for (const thingId of refinement.internalObjects) visibleThings.add(thingId);
+
+      const supportOnlyTypes = new Set(["agent", "instrument"]);
+      const staysInternal = (thingId: ThingId) => {
+        const relevant = [...kernel.links.values()].filter((link) => {
+          if (link.source !== thingId && link.target !== thingId) return false;
+          const other = link.source === thingId ? link.target : link.source;
+          return other === refinement.parentThing || internalProcessIds.has(other);
+        });
+        if (relevant.length === 0) return true;
+        return relevant.some((link) => !supportOnlyTypes.has(link.type));
+      };
+
+      for (const thingId of refinement.internalObjects) {
+        if (staysInternal(thingId)) visibleThings.add(thingId);
+      }
 
       const parentVisibleThings = new Set<ThingId>(nodes.get(opd.parent_opd ?? "")?.visibleThings ?? []);
       for (const link of kernel.links.values()) {
@@ -661,7 +679,20 @@ export function exposeSemanticKernel(kernel: SemanticKernel): OpdAtlas {
         }
       });
 
+      const supportOnlyTypes = new Set(["agent", "instrument"]);
+      const stepThingIds = new Set(refinement.steps.flatMap((step) => step.thingIds));
+      const shouldStayInternal = (thingId: ThingId) => {
+        const relevant = [...kernel.links.values()].filter((link) => {
+          if (link.source !== thingId && link.target !== thingId) return false;
+          const other = link.source === thingId ? link.target : link.source;
+          return other === refinement.parentThing || stepThingIds.has(other);
+        });
+        if (relevant.length === 0) return true;
+        return relevant.some((link) => !supportOnlyTypes.has(link.type));
+      };
+
       for (const thingId of refinement.internalObjects) {
+        if (!shouldStayInternal(thingId)) continue;
         const occurrence = createOccurrence(kernel, opd.id, thingId, {
           role: "internal",
           scope: "inner",
