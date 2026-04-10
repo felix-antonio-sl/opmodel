@@ -449,7 +449,7 @@ function defaultLayoutFromAtlas(atlas: OpdAtlas, kernel: SemanticKernel): Layout
         });
       });
 
-      const leftDuplicates = duplicates.filter((occ) => occ.lane === "objects-left" || occ.lane === "agents");
+      const leftDuplicates = duplicates.filter((occ) => occ.lane === "objects-left");
       const rightDuplicates = duplicates.filter((occ) => !leftDuplicates.includes(occ));
       leftDuplicates.forEach((occ, index) => {
         nodes.set(occ.id, {
