@@ -9,8 +9,12 @@ export interface AppearancePatch {
   patch: Partial<Pick<Appearance, "x" | "y" | "w" | "h" | "internal">>;
 }
 
+export type LayoutStrategy = "in-zoom-sequential" | "unfold-grid" | "branching-control" | "structural-cluster" | "sd-balanced" | "none";
+
+export type LayoutRelaxPolicy = "by-strategy" | "always" | "never";
+
 export interface LayoutSuggestion {
-  strategy: "in-zoom-sequential" | "unfold-grid" | "branching-control" | "structural-cluster" | "sd-balanced" | "none";
+  strategy: LayoutStrategy;
   patches: AppearancePatch[];
   findings: VisualFinding[];
 }
@@ -283,21 +287,28 @@ export function diffPatchedAppearances(originalApps: Appearance[], patchedApps: 
   });
 }
 
+function shouldRelaxLayout(strategy: LayoutStrategy, policy: LayoutRelaxPolicy = "by-strategy"): boolean {
+  if (policy === "always") return true;
+  if (policy === "never") return false;
+  return strategy !== "structural-cluster";
+}
+
 function finalizeLayout(
   model: Model,
+  strategy: LayoutStrategy,
   apps: Appearance[],
   links: Link[],
   patches: AppearancePatch[],
-  options?: { relax?: boolean },
+  options?: { relaxPolicy?: LayoutRelaxPolicy },
 ): { patches: AppearancePatch[]; findings: VisualFinding[] } {
   const mergedPatches = mergeLayoutPatches(apps, patches);
   const patchedApps = applyLayoutPatches(model, apps, mergedPatches);
-  const relaxedApps = options?.relax === false ? patchedApps : applyRelaxationPass(patchedApps);
-  const relaxedPatches = diffPatchedAppearances(apps, relaxedApps);
+  const finalApps = shouldRelaxLayout(strategy, options?.relaxPolicy) ? applyRelaxationPass(patchedApps) : patchedApps;
+  const finalPatches = diffPatchedAppearances(apps, finalApps);
 
   return {
-    patches: relaxedPatches,
-    findings: auditVisualOpd({ appearances: relaxedApps, links, things: model.things.values(), states: model.states.values() }),
+    patches: finalPatches,
+    findings: auditVisualOpd({ appearances: finalApps, links, things: model.things.values(), states: model.states.values() }),
   };
 }
 
@@ -448,9 +459,10 @@ function layoutBranchingControl(model: Model, opdId: string, apps: Appearance[],
     patches.push({ thingId: entry.thingId, opdId, patch: { x: laneBaseRight, y: entry.y, w: full.w, h: full.h } });
   }
 
-  const finalized = finalizeLayout(model, apps, links, patches);
+  const strategy: LayoutStrategy = "branching-control";
+  const finalized = finalizeLayout(model, strategy, apps, links, patches);
   return {
-    strategy: "branching-control",
+    strategy,
     patches: finalized.patches,
     findings: finalized.findings,
   };
@@ -650,10 +662,11 @@ function layoutInZoom(model: Model, opdId: string, apps: Appearance[], links: Li
   placeExternalEntries(leftEntries, laneBaseLeft, -1);
   placeExternalEntries(rightEntries, laneBaseRight, 1);
 
-  const finalized = finalizeLayout(model, apps, links, patches);
+  const strategy: LayoutStrategy = "in-zoom-sequential";
+  const finalized = finalizeLayout(model, strategy, apps, links, patches);
 
   return {
-    strategy: "in-zoom-sequential",
+    strategy,
     patches: finalized.patches,
     findings: finalized.findings,
   };
@@ -724,10 +737,11 @@ function layoutUnfold(model: Model, opdId: string, apps: Appearance[], links: Li
     patches.push({ thingId: entry.thingId, opdId, patch: { x: laneBaseRight, y: entry.y, w: full.w, h: full.h } });
   }
 
-  const finalized = finalizeLayout(model, apps, links, patches);
+  const strategy: LayoutStrategy = "unfold-grid";
+  const finalized = finalizeLayout(model, strategy, apps, links, patches);
 
   return {
-    strategy: "unfold-grid",
+    strategy,
     patches: finalized.patches,
     findings: finalized.findings,
   };
@@ -890,9 +904,10 @@ function layoutStructuralCluster(
     remainY += size.h + VISUAL_RULES.spacing.nodeGap;
   }
 
-  const finalized = finalizeLayout(model, apps, links, patches, { relax: false });
+  const strategy: LayoutStrategy = "structural-cluster";
+  const finalized = finalizeLayout(model, strategy, apps, links, patches);
   return {
-    strategy: "structural-cluster",
+    strategy,
     patches: finalized.patches,
     findings: finalized.findings,
   };
@@ -1002,9 +1017,10 @@ function layoutSdBalanced(
     }
   }
 
-  const finalized = finalizeLayout(model, apps, links, patches);
+  const strategy: LayoutStrategy = "sd-balanced";
+  const finalized = finalizeLayout(model, strategy, apps, links, patches);
   return {
-    strategy: "sd-balanced",
+    strategy,
     patches: finalized.patches,
     findings: finalized.findings,
   };
