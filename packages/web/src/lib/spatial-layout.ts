@@ -625,6 +625,7 @@ function layoutInZoom(model: Model, opdId: string, apps: Appearance[], links: Li
   const laneBaseRight = containerX + targetContainerW + 170;
   const leftEntries: Array<{ app: Appearance; y: number; h: number; w: number }> = [];
   const rightEntries: Array<{ app: Appearance; y: number; h: number; w: number }> = [];
+  const supportEntries: Array<{ app: Appearance; y: number; h: number; w: number }> = [];
 
   for (const app of external) {
     const connected = linkedProcesses(app, internalProcessIds, links);
@@ -633,6 +634,11 @@ function layoutInZoom(model: Model, opdId: string, apps: Appearance[], links: Li
     const h = Math.max(app.h, thing?.kind === "object" && [...model.states.values()].some((s) => s.parent === app.thing) ? 64 : 50);
     const w = preferredWidth(model, app, thing);
     const y = centerY - h / 2;
+    const supportLinkCount = links.filter((l) => (l.type === "agent" || l.type === "instrument") && (l.source === app.thing || l.target === app.thing)).length;
+    if (connected.length >= 4 || supportLinkCount >= 4) {
+      supportEntries.push({ app, y, h, w });
+      continue;
+    }
     const lane = classifyExternalLane(model, app, links);
     (lane === "left" ? leftEntries : rightEntries).push({ app, y, h, w });
   }
@@ -673,6 +679,24 @@ function layoutInZoom(model: Model, opdId: string, apps: Appearance[], links: Li
 
   placeExternalEntries(leftEntries, laneBaseLeft, -1);
   placeExternalEntries(rightEntries, laneBaseRight, 1);
+
+  if (supportEntries.length > 0) {
+    const supportBaseY = containerY + targetContainerH + 70;
+    let supportX = containerX + 40;
+    let supportY = supportBaseY;
+    let rowMaxH = 0;
+    const supportMaxX = containerX + Math.max(targetContainerW, 980);
+    for (const entry of supportEntries.sort((a, b) => a.app.thing.localeCompare(b.app.thing))) {
+      if (supportX > containerX + 40 && supportX + entry.w > supportMaxX) {
+        supportX = containerX + 40;
+        supportY += rowMaxH + VISUAL_RULES.spacing.nodeGap + 12;
+        rowMaxH = 0;
+      }
+      patches.push({ thingId: entry.app.thing, opdId, patch: { x: supportX, y: supportY, w: entry.w, h: entry.h } });
+      supportX += entry.w + VISUAL_RULES.spacing.nodeGap + 16;
+      rowMaxH = Math.max(rowMaxH, entry.h);
+    }
+  }
 
   const strategy: LayoutStrategy = refinee?.kind === "object" ? "object-in-zoom" : "process-in-zoom";
   const finalized = finalizeLayout(model, strategy, apps, links, patches);
