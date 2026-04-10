@@ -668,24 +668,8 @@ export function exposeSemanticKernel(kernel: SemanticKernel): OpdAtlas {
         occurrences.set(occurrence.id, occurrence);
       }
 
-      const duplicateEligible = new Set<string>();
-      const anchorThings = new Set<string>([refinement.parentThing, ...refinement.internalObjects]);
-      for (const step of refinement.steps) {
-        for (const thingId of step.thingIds) anchorThings.add(thingId);
-      }
-
-      for (const linkId of slice.visibleLinks) {
-        const link = kernel.links.get(linkId);
-        if (!link) continue;
-        if (anchorThings.has(link.source) && !anchorThings.has(link.target)) duplicateEligible.add(link.target);
-        if (anchorThings.has(link.target) && !anchorThings.has(link.source)) duplicateEligible.add(link.source);
-      }
-
       for (const thingId of slice.visibleThings) {
         if (occurrences.has(viewId(opd.id, thingId))) continue;
-        const thing = kernel.things.get(thingId);
-        if (thing?.kind !== "object") continue;
-        if (!duplicateEligible.has(thingId)) continue;
         const occurrence = createOccurrence(kernel, opd.id, thingId, {
           role: "duplicate",
           scope: "outer",
