@@ -13,7 +13,13 @@ import {
   type Thing,
 } from "@opmodel/core";
 import { findNonContainerOverlaps, findTightSpacing, findVisibleOrphans } from "../src/lib/visual-lint";
-import { suggestLayoutForOpd } from "../src/lib/spatial-layout";
+import {
+  applyLayoutPatches,
+  diffPatchedAppearances,
+  mergeLayoutPatches,
+  suggestLayoutForOpd,
+  type AppearancePatch,
+} from "../src/lib/spatial-layout";
 
 function withThing(model: Model, thing: Thing): Model {
   const r = addThing(model, thing);
@@ -382,6 +388,59 @@ describe("spatial layout engine", () => {
     const proc = patched.find((a) => a.thing === "proc-main")!;
     expect(proc.x).toBeGreaterThanOrEqual(260);
     expect(proc.x).toBeLessThanOrEqual(560);
+  });
+
+  it("merges per-thing layout patches while ignoring pinned nodes", () => {
+    const apps = [
+      { thing: "proc", opd: "opd-sd", x: 10, y: 20, w: 120, h: 40 },
+      { thing: "agent", opd: "opd-sd", x: 5, y: 8, w: 100, h: 40, pinned: true },
+    ];
+    const patches: AppearancePatch[] = [
+      { thingId: "proc", opdId: "opd-sd", patch: { x: 100 } },
+      { thingId: "proc", opdId: "opd-sd", patch: { y: 140, internal: true } },
+      { thingId: "agent", opdId: "opd-sd", patch: { x: 999 } },
+    ];
+
+    const merged = mergeLayoutPatches(apps, patches);
+    expect(merged.get("proc")?.patch).toEqual({ x: 100, y: 140, internal: true });
+    expect(merged.has("agent")).toBe(false);
+  });
+
+  it("applies layout patches without resizing auto_sizing=false nodes", () => {
+    let m = createModel("Apply patches");
+    m = withThing(m, { id: "proc-monitor", kind: "process", name: "Advanced Continuous Monitoring", essence: "physical", affiliation: "systemic" });
+    m = withAppearance(m, "proc-monitor", "opd-sd", 5, 7, 120, 40, false, false, false);
+
+    const [app] = [...m.appearances.values()];
+    const merged = new Map<string, AppearancePatch>([
+      ["proc-monitor", { thingId: "proc-monitor", opdId: "opd-sd", patch: { x: 50, y: 60, w: 400, h: 180 } }],
+    ]);
+
+    const [patched] = applyLayoutPatches(m, [app!], merged);
+    expect(patched?.x).toBe(50);
+    expect(patched?.y).toBe(60);
+    expect(patched?.w).toBe(120);
+    expect(patched?.h).toBe(40);
+  });
+
+  it("diffs patched appearances preserving internal changes", () => {
+    const originalApps = [
+      { thing: "obj-a", opd: "opd-sd", x: 10, y: 20, w: 100, h: 50 },
+      { thing: "obj-b", opd: "opd-sd", x: 200, y: 20, w: 100, h: 50, pinned: true },
+    ];
+    const patchedApps = [
+      { thing: "obj-a", opd: "opd-sd", x: 40, y: 60, w: 110, h: 50, internal: true },
+      { thing: "obj-b", opd: "opd-sd", x: 220, y: 20, w: 100, h: 50, pinned: true },
+    ];
+
+    const diff = diffPatchedAppearances(originalApps, patchedApps);
+    expect(diff).toEqual([
+      {
+        thingId: "obj-a",
+        opdId: "opd-sd",
+        patch: { x: 40, y: 60, w: 110, h: 50, internal: true },
+      },
+    ]);
   });
 
   it("respects pinned nodes during auto-layout and relaxation", () => {

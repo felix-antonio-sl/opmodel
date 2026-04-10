@@ -217,36 +217,42 @@ function applyRelaxationPass(apps: Appearance[], iterations = 3): Appearance[] {
   return relaxed;
 }
 
-function finalizeLayout(
+export function mergeLayoutPatches(apps: Appearance[], patches: AppearancePatch[]): Map<string, AppearancePatch> {
+  const pinnedIds = new Set(apps.filter((app) => app.pinned).map((app) => app.thing));
+  const mergedPatches = new Map<string, AppearancePatch>();
+
+  for (const patch of patches) {
+    if (pinnedIds.has(patch.thingId)) continue;
+    const existing = mergedPatches.get(patch.thingId);
+    mergedPatches.set(
+      patch.thingId,
+      existing
+        ? { thingId: patch.thingId, opdId: patch.opdId, patch: { ...existing.patch, ...patch.patch } }
+        : patch,
+    );
+  }
+
+  return mergedPatches;
+}
+
+export function applyLayoutPatches(
   model: Model,
   apps: Appearance[],
-  links: Link[],
-  patches: AppearancePatch[],
-  options?: { relax?: boolean },
-): { patches: AppearancePatch[]; findings: VisualFinding[] } {
-  const pinnedIds = new Set(apps.filter((app) => app.pinned).map((app) => app.thing));
-  const effectivePatches = patches.filter((patch) => !pinnedIds.has(patch.thingId));
-  const mergedPatches = new Map<string, AppearancePatch>();
-  for (const patch of effectivePatches) {
-    const existing = mergedPatches.get(patch.thingId);
-    mergedPatches.set(patch.thingId, existing
-      ? { thingId: patch.thingId, opdId: patch.opdId, patch: { ...existing.patch, ...patch.patch } }
-      : patch);
-  }
-  const patchedApps = apps.map((app) => {
-    const p = mergedPatches.get(app.thing);
+  mergedPatches: ReadonlyMap<string, AppearancePatch>,
+): Appearance[] {
+  return apps.map((app) => {
+    const patch = mergedPatches.get(app.thing);
     let result = app;
-    if (p) {
+    if (patch) {
       if (!allowsAutoSizing(app)) {
-        const { w: _w, h: _h, ...rest } = p.patch;
+        const { w: _w, h: _h, ...rest } = patch.patch;
         result = { ...app, ...rest };
       } else {
-        result = { ...app, ...p.patch };
+        result = { ...app, ...patch.patch };
       }
     }
-    // Ensure minimum width for state pills even if not in layout patches
+
     if (allowsAutoSizing(result) && !result.pinned) {
-      const minW = preferredWidth(model, result, model.things.get(result.thing));
       const sized = autoSizeAppearance(model, result);
       if (sized.w > result.w || sized.h > result.h) {
         result = { ...result, w: Math.max(result.w, sized.w), h: Math.max(result.h, sized.h) };
@@ -254,9 +260,13 @@ function finalizeLayout(
     }
     return result;
   });
-  const relaxedApps = options?.relax === false ? patchedApps : applyRelaxationPass(patchedApps);
-  const relaxedPatches: AppearancePatch[] = relaxedApps.map((app) => {
-    const original = apps.find((a) => a.thing === app.thing)!;
+}
+
+export function diffPatchedAppearances(originalApps: Appearance[], patchedApps: Appearance[]): AppearancePatch[] {
+  const originalByThing = new Map(originalApps.map((app) => [app.thing, app]));
+
+  return patchedApps.map((app) => {
+    const original = originalByThing.get(app.thing)!;
     const patch: Partial<Pick<Appearance, "x" | "y" | "w" | "h" | "internal">> = allowsAutoSizing(original)
       ? { x: app.x, y: app.y, w: app.w, h: app.h }
       : { x: app.x, y: app.y };
@@ -267,10 +277,23 @@ function finalizeLayout(
       patch,
     } satisfies AppearancePatch;
   }).filter((patch) => {
-    const original = apps.find((a) => a.thing === patch.thingId)!;
+    const original = originalByThing.get(patch.thingId)!;
     if (original.pinned) return false;
     return original.x !== patch.patch.x || original.y !== patch.patch.y || original.w !== patch.patch.w || original.h !== patch.patch.h || original.internal !== patch.patch.internal;
   });
+}
+
+function finalizeLayout(
+  model: Model,
+  apps: Appearance[],
+  links: Link[],
+  patches: AppearancePatch[],
+  options?: { relax?: boolean },
+): { patches: AppearancePatch[]; findings: VisualFinding[] } {
+  const mergedPatches = mergeLayoutPatches(apps, patches);
+  const patchedApps = applyLayoutPatches(model, apps, mergedPatches);
+  const relaxedApps = options?.relax === false ? patchedApps : applyRelaxationPass(patchedApps);
+  const relaxedPatches = diffPatchedAppearances(apps, relaxedApps);
 
   return {
     patches: relaxedPatches,
