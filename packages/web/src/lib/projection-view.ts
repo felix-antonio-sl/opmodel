@@ -120,12 +120,14 @@ export function buildPatchableOpdProjectionSliceFromProjection(
   opdId: string,
 ): PatchableOpdProjectionSlice {
   const view = buildOpdProjectionViewFromProjection(projection, opdId);
+  const hiddenPlaceholderIds = placeholderSubprocessesToHide(model, opdId);
   const patchableThingIds = new Set<string>();
   const appearances: Appearance[] = [];
   const suppressedStateIdsByThing = new Map<string, Set<string>>();
 
   for (const app of model.appearances.values()) {
     if (app.opd !== opdId) continue;
+    if (hiddenPlaceholderIds.has(app.thing)) continue;
     patchableThingIds.add(app.thing);
     const projected = view.appearancesByThing.get(app.thing);
     appearances.push(projected
@@ -141,7 +143,7 @@ export function buildPatchableOpdProjectionSliceFromProjection(
   }
 
   const visualThingsById = new Map<string, ProjectionVisualThing>();
-  for (const [thingId, projectedAppearance] of view.appearancesByThing) {
+  const registerVisualThing = (thingId: string, projectedAppearance: Appearance) => {
     const thing = model.things.get(thingId);
     const sourceAppearance = appearances.find((app) => app.thing === thingId);
     const appearance = sourceAppearance
@@ -164,7 +166,7 @@ export function buildPatchableOpdProjectionSliceFromProjection(
       thingId,
       thing,
       appearance,
-      implicit: !patchableThingIds.has(thingId),
+      implicit: hiddenPlaceholderIds.has(thingId) || !patchableThingIds.has(thingId),
       suppressedStateIds,
       visibleStates,
       hasSuppressedStates: suppressedStateIds.size > 0,
@@ -173,6 +175,15 @@ export function buildPatchableOpdProjectionSliceFromProjection(
       isContainer: false,
       isRefined: [...model.opds.values()].some((opd) => opd.refines === thingId),
     });
+  };
+
+  for (const [thingId, projectedAppearance] of view.appearancesByThing) {
+    registerVisualThing(thingId, projectedAppearance);
+  }
+
+  for (const appearance of appearances) {
+    if (visualThingsById.has(appearance.thing)) continue;
+    registerVisualThing(appearance.thing, appearance);
   }
 
   const containerThingId = model.opds.get(opdId)?.refines;
@@ -212,6 +223,29 @@ export function buildPatchableOpdProjectionSliceFromProjection(
 export function buildPatchableOpdProjectionSlice(model: Model, opdId: string): PatchableOpdProjectionSlice {
   const projection = projectLegacyModel(model);
   return buildPatchableOpdProjectionSliceFromProjection(projection, model, opdId);
+}
+
+function isAutoPlaceholderSubprocess(model: Model, opdId: string, thingId: string): boolean {
+  const opd = model.opds.get(opdId);
+  const thing = model.things.get(thingId);
+  if (!opd?.refines || opd.refinement_type !== "in-zoom") return false;
+  if (thing?.kind !== "process") return false;
+  return thingId.startsWith(`${opdId}-sub-`);
+}
+
+function placeholderSubprocessesToHide(model: Model, opdId: string): Set<string> {
+  const placeholders = new Set<string>();
+  const concreteInternalProcesses = new Set<string>();
+
+  for (const app of model.appearances.values()) {
+    if (app.opd !== opdId || app.internal !== true) continue;
+    const thing = model.things.get(app.thing);
+    if (thing?.kind !== "process") continue;
+    if (isAutoPlaceholderSubprocess(model, opdId, app.thing)) placeholders.add(app.thing);
+    else if (model.opds.get(opdId)?.refines !== app.thing) concreteInternalProcesses.add(app.thing);
+  }
+
+  return concreteInternalProcesses.size > 0 ? placeholders : new Set<string>();
 }
 
 function buildStatePills(

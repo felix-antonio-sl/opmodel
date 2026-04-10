@@ -190,6 +190,13 @@ function topologicalSortOpds(model: Model): OPD[] {
 function findThingsForOpd(model: Model, opd: OPD, existingApps: Set<string>): Set<string> {
   const thingIds = new Set(existingApps);
 
+  // If the OPD already has an explicit cast, preserve that cast and avoid
+  // auto-materializing descendants from child refinements into this level.
+  if (existingApps.size > 0) {
+    if (opd.refines) thingIds.add(opd.refines);
+    return thingIds;
+  }
+
   if (opd.refines) {
     // Refinement OPD: include the refined thing + its connected things
     thingIds.add(opd.refines);
@@ -227,7 +234,21 @@ function findThingsForOpd(model: Model, opd: OPD, existingApps: Set<string>): Se
       }
     }
   } else if (!opd.parent_opd) {
-    // SD (root): include all things that don't belong exclusively to a child OPD
+    // SD (root): keep root scoped to things that are explicitly in SD,
+    // plus unassigned things that do not already belong to descendant OPDs.
+    const descendantThingIds = new Set(
+      [...model.appearances.values()]
+        .filter((app) => app.opd !== opd.id)
+        .map((app) => app.thing),
+    );
+
+    for (const thing of model.things.values()) {
+      if (descendantThingIds.has(thing.id) && !existingApps.has(thing.id)) continue;
+      thingIds.add(thing.id);
+    }
+  }
+
+  if (thingIds.size === 0) {
     for (const thing of model.things.values()) {
       thingIds.add(thing.id);
     }

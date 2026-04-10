@@ -107,6 +107,44 @@ describe("visual systemic regressions", () => {
     expect(findNonContainerOverlaps(patched)).toEqual([]);
   });
 
+  it("keeps child-only refinement things out of the root SD during auto-layout", () => {
+    let m = createModel("Root scope stays root");
+    m = withThing(m, { id: "proc-main", kind: "process", name: "Main Coordinating", essence: "informatical", affiliation: "systemic" });
+    m = withThing(m, { id: "obj-agent", kind: "object", name: "Agent", essence: "physical", affiliation: "systemic" });
+    m = withThing(m, { id: "obj-input", kind: "object", name: "Input", essence: "informatical", affiliation: "systemic" });
+    m = withThing(m, { id: "obj-output", kind: "object", name: "Output", essence: "informatical", affiliation: "systemic" });
+    m = withThing(m, { id: "proc-child", kind: "process", name: "Child Processing", essence: "informatical", affiliation: "systemic" });
+    m = withThing(m, { id: "obj-child-only", kind: "object", name: "Child Only", essence: "informatical", affiliation: "systemic" });
+    m = withAppearance(m, "proc-main", "opd-sd", 100, 100, 180, 80);
+    m = withAppearance(m, "obj-agent", "opd-sd", 20, 100, 140, 50);
+    m = withAppearance(m, "obj-input", "opd-sd", 20, 200, 140, 50);
+    m = withAppearance(m, "obj-output", "opd-sd", 360, 160, 140, 50);
+    m = withLink(m, { id: "sd-agent", type: "agent", source: "obj-agent", target: "proc-main" });
+    m = withLink(m, { id: "sd-consume", type: "consumption", source: "obj-input", target: "proc-main" });
+    m = withLink(m, { id: "sd-result", type: "result", source: "proc-main", target: "obj-output" });
+
+    const refined = refineThing(m, "proc-main", "opd-sd", "in-zoom", "opd-sd1", "SD1");
+    if (!isOk(refined)) throw new Error(refined.error.message);
+    m = refined.value;
+    m = withAppearance(m, "proc-child", "opd-sd1", 0, 0, 140, 60, true);
+    m = withAppearance(m, "obj-child-only", "opd-sd1", 0, 0, 140, 50);
+    m = withLink(m, { id: "sd1-result", type: "result", source: "proc-child", target: "obj-child-only" });
+
+    const laidOut = autoLayoutModel(m).model;
+    const sdThings = new Set(
+      [...laidOut.appearances.values()]
+        .filter((a) => a.opd === "opd-sd")
+        .map((a) => a.thing),
+    );
+
+    expect(sdThings.has("proc-child")).toBe(false);
+    expect(sdThings.has("obj-child-only")).toBe(false);
+    expect(sdThings.has("proc-main")).toBe(true);
+    expect(sdThings.has("obj-agent")).toBe(true);
+    expect(sdThings.has("obj-input")).toBe(true);
+    expect(sdThings.has("obj-output")).toBe(true);
+  });
+
   it("improves the stress visual report enough to clear catastrophic SD/SD1 collapse", () => {
     const opl = readFileSync(new URL("../../../tests/stress-test-max-complexity.opl", import.meta.url), "utf8");
     const parsed = parseOplDocuments(opl);

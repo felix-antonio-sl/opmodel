@@ -1,8 +1,67 @@
 import { describe, expect, it } from "vitest";
-import { createModel } from "@opmodel/core";
+import { addAppearance, addThing, createModel, isOk, refineThing } from "@opmodel/core";
 import { buildVisualReport } from "../src/lib/visual-report";
 
 describe("visual-report", () => {
+  it("ignores hidden placeholder subprocesses in visual findings", () => {
+    let model = createModel("Visual Report Placeholder Filter");
+
+    let r = addThing(model, {
+      id: "proc-main",
+      kind: "process",
+      name: "Main Coordinating",
+      essence: "informatical",
+      affiliation: "systemic",
+    });
+    expect(isOk(r)).toBe(true);
+    model = isOk(r) ? r.value : model;
+
+    r = addAppearance(model, {
+      thing: "proc-main",
+      opd: "opd-sd",
+      x: 100,
+      y: 100,
+      w: 180,
+      h: 80,
+    });
+    expect(isOk(r)).toBe(true);
+    model = isOk(r) ? r.value : model;
+
+    const refined = refineThing(model, "proc-main", "opd-sd", "in-zoom", "opd-sd1", "SD1");
+    expect(isOk(refined)).toBe(true);
+    model = isOk(refined) ? refined.value : model;
+
+    for (const [id, name, y] of [["proc-a", "A", 100], ["proc-b", "B", 220]] as const) {
+      r = addThing(model, {
+        id,
+        kind: "process",
+        name,
+        essence: "informatical",
+        affiliation: "systemic",
+      });
+      expect(isOk(r)).toBe(true);
+      model = isOk(r) ? r.value : model;
+
+      r = addAppearance(model, {
+        thing: id,
+        opd: "opd-sd1",
+        x: 220,
+        y,
+        w: 140,
+        h: 60,
+        internal: true,
+      });
+      expect(isOk(r)).toBe(true);
+      model = isOk(r) ? r.value : model;
+    }
+
+    const report = buildVisualReport(model);
+    const sd1 = report.opds.find((entry) => entry.opdId === "opd-sd1");
+    expect(sd1).toBeDefined();
+    expect(sd1?.findings.some((finding) => finding.summary.includes("opd-sd1-sub-"))).toBe(false);
+    expect(sd1?.findings.some((finding) => finding.primaryEntity?.startsWith("opd-sd1-sub-") ?? false)).toBe(false);
+  });
+
   it("builds per-OPD reports through projection-backed slices", () => {
     const model = createModel("Visual Report Test");
 

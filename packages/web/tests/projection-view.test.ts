@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addFan, createModel, isOk } from "@opmodel/core";
+import { addAppearance, addFan, addThing, createModel, isOk, refineThing } from "@opmodel/core";
 import { buildOpdProjectionView, buildPatchableOpdProjectionSlice } from "../src/lib/projection-view";
 
 describe("projection-view", () => {
@@ -139,6 +139,64 @@ describe("projection-view", () => {
     expect(slice.visualLinks.map((entry) => entry.link.id)).toEqual(["link-visible"]);
     expect(slice.visualGraph.links.map((entry) => entry.link.id)).toEqual(["link-visible"]);
     expect(slice.fans.map((fan) => fan.id)).toEqual(["fan-visible"]);
+  });
+
+  it("hides in-zoom placeholder subprocesses once concrete subprocesses exist", () => {
+    let model = createModel("Projection hides placeholders");
+
+    let r = addThing(model, {
+      id: "proc-main",
+      kind: "process",
+      name: "Main Coordinating",
+      essence: "informatical",
+      affiliation: "systemic",
+    });
+    expect(isOk(r)).toBe(true);
+    model = isOk(r) ? r.value : model;
+
+    r = addAppearance(model, {
+      thing: "proc-main",
+      opd: "opd-sd",
+      x: 100,
+      y: 100,
+      w: 180,
+      h: 80,
+    });
+    expect(isOk(r)).toBe(true);
+    model = isOk(r) ? r.value : model;
+
+    const refined = refineThing(model, "proc-main", "opd-sd", "in-zoom", "opd-sd1", "SD1");
+    expect(isOk(refined)).toBe(true);
+    model = isOk(refined) ? refined.value : model;
+
+    r = addThing(model, {
+      id: "proc-real",
+      kind: "process",
+      name: "Real Subprocess",
+      essence: "informatical",
+      affiliation: "systemic",
+    });
+    expect(isOk(r)).toBe(true);
+    model = isOk(r) ? r.value : model;
+
+    r = addAppearance(model, {
+      thing: "proc-real",
+      opd: "opd-sd1",
+      x: 220,
+      y: 120,
+      w: 140,
+      h: 60,
+      internal: true,
+    });
+    expect(isOk(r)).toBe(true);
+    model = isOk(r) ? r.value : model;
+
+    const slice = buildPatchableOpdProjectionSlice(model, "opd-sd1");
+    expect(slice.appearances.map((app) => app.thing)).toContain("proc-real");
+    expect(slice.appearances.map((app) => app.thing)).not.toContain("opd-sd1-sub-1");
+    expect(slice.appearances.map((app) => app.thing)).not.toContain("opd-sd1-sub-2");
+    expect(slice.appearances.map((app) => app.thing)).not.toContain("opd-sd1-sub-3");
+    expect(slice.visualGraph.thingsById.get("opd-sd1-sub-1")?.implicit).toBe(true);
   });
 
   it("prepares visual graph links for merged transforming pairs", () => {
