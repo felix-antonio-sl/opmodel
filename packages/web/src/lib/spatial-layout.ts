@@ -508,9 +508,10 @@ function layoutInZoom(model: Model, opdId: string, apps: Appearance[], links: Li
   const processH = 60;
   const processGapX = 72;
   const processGapY = 52;
-  const innerPaddingX = 32;
+  const innerPaddingX = 28;
   const innerPaddingY = 64;
-  const maxInternalObjectWidth = 320;
+  const maxInternalObjectWidth = 280;
+  const maxExternalObjectWidth = 220;
 
   const internalProcesses = internal.filter((app) => model.things.get(app.thing)?.kind === "process");
   const internalObjects = internal.filter((app) => model.things.get(app.thing)?.kind === "object");
@@ -632,7 +633,7 @@ function layoutInZoom(model: Model, opdId: string, apps: Appearance[], links: Li
     const centerY = average(connected.map((id) => processCenters.get(id) ?? containerY + targetContainerH / 2)) || containerY + targetContainerH / 2;
     const thing = model.things.get(app.thing);
     const h = Math.max(app.h, thing?.kind === "object" && [...model.states.values()].some((s) => s.parent === app.thing) ? 64 : 50);
-    const w = preferredWidth(model, app, thing);
+    const w = Math.min(preferredWidth(model, app, thing), maxExternalObjectWidth);
     const y = centerY - h / 2;
     const supportLinkCount = links.filter((l) => (l.type === "agent" || l.type === "instrument") && (l.source === app.thing || l.target === app.thing)).length;
     if (connected.length >= 4 || supportLinkCount >= 4) {
