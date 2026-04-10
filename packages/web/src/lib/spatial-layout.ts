@@ -6,7 +6,7 @@ import { buildPatchableOpdProjectionSlice } from "./projection-view";
 export interface AppearancePatch {
   thingId: string;
   opdId: string;
-  patch: Partial<Pick<Appearance, "x" | "y" | "w" | "h">>;
+  patch: Partial<Pick<Appearance, "x" | "y" | "w" | "h" | "internal">>;
 }
 
 export interface LayoutSuggestion {
@@ -222,11 +222,19 @@ function finalizeLayout(
   apps: Appearance[],
   links: Link[],
   patches: AppearancePatch[],
+  options?: { relax?: boolean },
 ): { patches: AppearancePatch[]; findings: VisualFinding[] } {
   const pinnedIds = new Set(apps.filter((app) => app.pinned).map((app) => app.thing));
   const effectivePatches = patches.filter((patch) => !pinnedIds.has(patch.thingId));
+  const mergedPatches = new Map<string, AppearancePatch>();
+  for (const patch of effectivePatches) {
+    const existing = mergedPatches.get(patch.thingId);
+    mergedPatches.set(patch.thingId, existing
+      ? { thingId: patch.thingId, opdId: patch.opdId, patch: { ...existing.patch, ...patch.patch } }
+      : patch);
+  }
   const patchedApps = apps.map((app) => {
-    const p = effectivePatches.find((x) => x.thingId === app.thing);
+    const p = mergedPatches.get(app.thing);
     let result = app;
     if (p) {
       if (!allowsAutoSizing(app)) {
@@ -246,12 +254,13 @@ function finalizeLayout(
     }
     return result;
   });
-  const relaxedApps = applyRelaxationPass(patchedApps);
+  const relaxedApps = options?.relax === false ? patchedApps : applyRelaxationPass(patchedApps);
   const relaxedPatches: AppearancePatch[] = relaxedApps.map((app) => {
     const original = apps.find((a) => a.thing === app.thing)!;
-    const patch: Partial<Pick<Appearance, "x" | "y" | "w" | "h">> = allowsAutoSizing(original)
+    const patch: Partial<Pick<Appearance, "x" | "y" | "w" | "h" | "internal">> = allowsAutoSizing(original)
       ? { x: app.x, y: app.y, w: app.w, h: app.h }
       : { x: app.x, y: app.y };
+    if (original.internal !== app.internal) patch.internal = app.internal;
     return {
       thingId: app.thing,
       opdId: app.opd,
@@ -260,7 +269,7 @@ function finalizeLayout(
   }).filter((patch) => {
     const original = apps.find((a) => a.thing === patch.thingId)!;
     if (original.pinned) return false;
-    return original.x !== patch.patch.x || original.y !== patch.patch.y || original.w !== patch.patch.w || original.h !== patch.patch.h;
+    return original.x !== patch.patch.x || original.y !== patch.patch.y || original.w !== patch.patch.w || original.h !== patch.patch.h || original.internal !== patch.patch.internal;
   });
 
   return {
@@ -427,8 +436,23 @@ function layoutBranchingControl(model: Model, opdId: string, apps: Appearance[],
 function layoutInZoom(model: Model, opdId: string, apps: Appearance[], links: Link[], refines?: string): LayoutSuggestion {
   const patches: AppearancePatch[] = [];
   const container = refines ? apps.find((a) => a.thing === refines) : undefined;
-  const internal = apps.filter((a) => a.internal && a.thing !== refines).sort(sortByPosition);
-  const external = apps.filter((a) => !a.internal && a.thing !== refines).sort(sortByPosition);
+  const refinee = refines ? model.things.get(refines) : undefined;
+  const structuralInternalThingIds = new Set<string>();
+  if (refines && refinee?.kind === "object") {
+    for (const link of links) {
+      if (!["aggregation", "exhibition", "generalization", "classification"].includes(link.type)) continue;
+      if (link.source === refines) structuralInternalThingIds.add(link.target);
+      if (link.target === refines) structuralInternalThingIds.add(link.source);
+    }
+  }
+  const internal = apps
+    .filter((a) => a.thing !== refines)
+    .filter((a) => a.internal || structuralInternalThingIds.has(a.thing))
+    .sort(sortByPosition);
+  const external = apps
+    .filter((a) => a.thing !== refines)
+    .filter((a) => !a.internal && !structuralInternalThingIds.has(a.thing))
+    .sort(sortByPosition);
   if (!container || internal.length === 0) return { strategy: "none", patches: [], findings: [] };
 
   const containerX = container.x;
@@ -461,6 +485,9 @@ function layoutInZoom(model: Model, opdId: string, apps: Appearance[], links: Li
   const internalLeftEntries: Array<{ app: Appearance; y: number; h: number; w: number }> = [];
   const internalRightEntries: Array<{ app: Appearance; y: number; h: number; w: number }> = [];
   for (const app of internalObjects) {
+    if (structuralInternalThingIds.has(app.thing) && !app.internal) {
+      patches.push({ thingId: app.thing, opdId, patch: { internal: true } });
+    }
     const connected = linkedProcesses(app, internalProcessIds, links);
     const centerY = average(connected.map((id) => plannedCenters.get(id) ?? containerY + 120)) || containerY + 120;
     const thing = model.things.get(app.thing);
@@ -534,11 +561,8 @@ function layoutInZoom(model: Model, opdId: string, apps: Appearance[], links: Li
         cursorBottom = columnStartY;
         columnWidth = 0;
       }
-      // For left lanes (direction=-1): columns grow leftward from baseX
-      // For right lanes (direction=1): columns grow rightward from baseX
-      const x = direction === -1
-        ? baseX - column * (Math.max(entry.w, columnWidth) + colGap)
-        : baseX + column * (Math.max(entry.w, columnWidth) + colGap);
+      // Internal lanes must stay inside the container, so extra columns always grow inward.
+      const x = baseX + column * (Math.max(entry.w, columnWidth) + colGap);
       patches.push({ thingId: entry.app.thing, opdId, patch: { x, y: cursorBottom, w: entry.w, h: entry.h } });
       cursorBottom += entry.h + VISUAL_RULES.spacing.nodeGap + 8;
       columnWidth = Math.max(columnWidth, entry.w);
@@ -550,8 +574,8 @@ function layoutInZoom(model: Model, opdId: string, apps: Appearance[], links: Li
   placeInternalEntries(internalLeftEntries, internalLeftX, -1);
   placeInternalEntries(internalRightEntries, internalRightX, 1);
 
-  const laneBaseLeft = containerX - 260;
-  const laneBaseRight = containerX + targetContainerW + 90;
+  const laneBaseLeft = containerX - 280;
+  const laneBaseRight = containerX + targetContainerW + 170;
   const leftEntries: Array<{ app: Appearance; y: number; h: number; w: number }> = [];
   const rightEntries: Array<{ app: Appearance; y: number; h: number; w: number }> = [];
 
@@ -686,12 +710,12 @@ function layoutUnfold(model: Model, opdId: string, apps: Appearance[], links: Li
   };
 }
 
-const STRUCTURAL_TYPES = new Set(["aggregation", "exhibition", "generalization", "classification", "tagged"]);
+const STRUCTURAL_TYPES = new Set(["aggregation", "exhibition", "generalization", "classification"]);
 
 interface StructuralCluster {
   parentId: string;
   childIds: string[];
-  type: string;
+  types: Set<string>;
 }
 
 function findStructuralClusters(links: Link[], visibleThings: Set<string>): StructuralCluster[] {
@@ -702,11 +726,15 @@ function findStructuralClusters(links: Link[], visibleThings: Set<string>): Stru
     // Convention: parent is source for aggregation/exhibition/classification, target for generalization
     const parentId = link.type === "generalization" ? link.target : link.source;
     const childId = link.type === "generalization" ? link.source : link.target;
-    const key = `${link.type}::${parentId}`;
-    if (!groups.has(key)) groups.set(key, { parentId, childIds: [], type: link.type });
-    groups.get(key)!.childIds.push(childId);
+    if (!groups.has(parentId)) groups.set(parentId, { parentId, childIds: [], types: new Set() });
+    const group = groups.get(parentId)!;
+    group.childIds.push(childId);
+    group.types.add(link.type);
   }
-  return [...groups.values()].filter((g) => g.childIds.length >= 1);
+  return [...groups.values()].map((group) => ({
+    ...group,
+    childIds: [...new Set(group.childIds)],
+  })).filter((g) => g.childIds.length >= 1);
 }
 
 function estimateDurationTextWidth(thing: Thing): number {
@@ -781,8 +809,8 @@ function layoutStructuralCluster(
     if (childApps.length === 0) continue;
 
     const parentSize = autoSizeAppearance(model, parentApp);
-    const childGapX = cluster.type === "exhibition" ? 24 : 32;
-    const rowGapY = cluster.type === "generalization" ? 48 : 36;
+    const childGapX = cluster.types.has("exhibition") && cluster.childIds.length === 1 ? 24 : 32;
+    const rowGapY = cluster.types.has("generalization") ? 48 : 36;
     const childStartY = nextClusterY + parentSize.h + 42;
 
     const childLayouts: Array<{ app: Appearance; x: number; y: number; w: number; h: number }> = [];
@@ -839,7 +867,7 @@ function layoutStructuralCluster(
     remainY += size.h + VISUAL_RULES.spacing.nodeGap;
   }
 
-  const finalized = finalizeLayout(model, apps, links, patches);
+  const finalized = finalizeLayout(model, apps, links, patches, { relax: false });
   return {
     strategy: "structural-cluster",
     patches: finalized.patches,

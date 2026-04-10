@@ -7,6 +7,7 @@ import {
   addAppearance,
   addLink,
   isOk,
+  loadModel,
   parseOplDocuments,
   refineThing,
   type Link,
@@ -143,6 +144,45 @@ describe("visual systemic regressions", () => {
     expect(sdThings.has("obj-agent")).toBe(true);
     expect(sdThings.has("obj-input")).toBe(true);
     expect(sdThings.has("obj-output")).toBe(true);
+  });
+
+  it("internalizes structural object neighbors inside object in-zoom layouts and merges per-thing patches correctly", () => {
+    const fixture = readFileSync(new URL("../../../tests/object-visual-audit.opmodel", import.meta.url), "utf8");
+    const loaded = loadModel(fixture);
+    if (!loaded.ok) throw new Error(loaded.error.message);
+
+    const suggestion = suggestLayoutForOpd(loaded.value, "opd-sd1");
+    const patchByThing = new Map(suggestion.patches.map((patch) => [patch.thingId, patch.patch]));
+    const container = [...loaded.value.appearances.values()].find((app) => app.opd === "opd-sd1" && app.thing === "obj-hub");
+    if (!container) throw new Error("Missing obj-hub container appearance");
+
+    for (const thingId of ["obj-record", "obj-schedule", "obj-team", "obj-inventory", "obj-status"]) {
+      const patch = patchByThing.get(thingId);
+      expect(patch?.internal).toBe(true);
+      expect(typeof patch?.x).toBe("number");
+      expect(typeof patch?.y).toBe("number");
+      const effectiveX = patch?.x ?? 0;
+      const effectiveY = patch?.y ?? 0;
+      const effectiveW = patch?.w ?? 0;
+      const effectiveH = patch?.h ?? 0;
+      expect(effectiveX).toBeGreaterThanOrEqual(container.x);
+      expect(effectiveY).toBeGreaterThanOrEqual(container.y);
+      expect(effectiveX + effectiveW).toBeLessThanOrEqual(container.x + (patchByThing.get("obj-hub")?.w ?? container.w));
+      expect(effectiveY + effectiveH).toBeLessThanOrEqual(container.y + (patchByThing.get("obj-hub")?.h ?? container.h));
+    }
+  });
+
+  it("builds visual reports from the effective per-OPD visual slice instead of leaking child-refinement links into SD", () => {
+    const fixture = readFileSync(new URL("../../../tests/object-visual-audit.opmodel", import.meta.url), "utf8");
+    const loaded = loadModel(fixture);
+    if (!loaded.ok) throw new Error(loaded.error.message);
+    const laidOut = autoLayoutModel(loaded.value).model;
+    const report = buildVisualReport(laidOut);
+    const sd = report.opds.find((opd) => opd.name === "SD");
+
+    expect(sd).toBeTruthy();
+    expect(sd?.findings.some((finding) => finding.summary.includes("sd1-") || finding.summary.includes("sd2-"))).toBe(false);
+    expect(sd?.findings.some((finding) => finding.summary.includes("crossing"))).toBe(false);
   });
 
   it("improves the stress visual report enough to clear catastrophic SD/SD1 collapse", () => {

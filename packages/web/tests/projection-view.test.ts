@@ -199,6 +199,70 @@ describe("projection-view", () => {
     expect(slice.visualGraph.thingsById.get("opd-sd1-sub-1")?.implicit).toBe(true);
   });
 
+  it("keeps an explicit appearance visible even when the projection atlas prefers another OPD occurrence", () => {
+    const model = createModel("Projection explicit appearance precedence");
+
+    model.things.set("obj-shared", {
+      id: "obj-shared",
+      kind: "object",
+      name: "Shared",
+      essence: "physical",
+      affiliation: "systemic",
+    });
+    model.things.set("obj-local", {
+      id: "obj-local",
+      kind: "object",
+      name: "Local",
+      essence: "physical",
+      affiliation: "systemic",
+    });
+
+    model.opds.set("opd-sd1", {
+      id: "opd-sd1",
+      name: "SD1",
+      opd_type: "hierarchical",
+      parent_opd: "opd-sd",
+    });
+
+    model.appearances.set("obj-shared::opd-sd", {
+      thing: "obj-shared",
+      opd: "opd-sd",
+      x: 10,
+      y: 20,
+      w: 100,
+      h: 50,
+    });
+    model.appearances.set("obj-shared::opd-sd1", {
+      thing: "obj-shared",
+      opd: "opd-sd1",
+      x: 210,
+      y: 220,
+      w: 140,
+      h: 60,
+    });
+    model.appearances.set("obj-local::opd-sd1", {
+      thing: "obj-local",
+      opd: "opd-sd1",
+      x: 420,
+      y: 220,
+      w: 120,
+      h: 50,
+    });
+
+    model.links.set("link-local", {
+      id: "link-local",
+      type: "tagged",
+      source: "obj-shared",
+      target: "obj-local",
+    });
+
+    const slice = buildPatchableOpdProjectionSlice(model, "opd-sd1");
+    expect(slice.appearances.map((app) => app.thing)).toEqual(["obj-shared", "obj-local"]);
+    expect(slice.visualGraph.thingsById.has("obj-shared")).toBe(true);
+    expect(slice.visualGraph.thingsById.get("obj-shared")?.appearance.opd).toBe("opd-sd1");
+    expect(slice.visualGraph.links.map((entry) => entry.link.id)).toEqual(["link-local"]);
+  });
+
   it("prepares visual graph links for merged transforming pairs", () => {
     const model = createModel("Projection Visual Graph Links");
 
