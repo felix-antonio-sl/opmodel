@@ -729,12 +729,26 @@ export function exposeSemanticKernel(kernel: SemanticKernel): OpdAtlas {
       }
 
       const parentVisibleThings = new Set<ThingId>(nodes.get(opd.parent_opd ?? "")?.visibleThings ?? []);
+      const supportInfrastructureNames = ["sistema", "infraestructura", "centro", "establecimiento"];
+      const isPullbackExternalAllowed = (thingId: ThingId, viaLink: Link): boolean => {
+        const thing = kernel.things.get(thingId);
+        if (!thing) return false;
+        if (thing.kind === "process") return false;
+        if (viaLink.type !== "agent" && viaLink.type !== "instrument") return true;
+        const lowerName = (thing.name || "").toLowerCase();
+        const looksInfrastructure = supportInfrastructureNames.some((token) => lowerName.includes(token));
+        const isHumanActor = lowerName.includes("medico") || lowerName.includes("profesional") || lowerName.includes("cuidador") || lowerName.includes("paciente");
+        const isMaterialClinicalInterface = lowerName.includes("medicamento") || lowerName.includes("insumo") || lowerName.includes("equipamiento") || lowerName.includes("ficha") || lowerName.includes("plan") || lowerName.includes("epicrisis") || lowerName.includes("derivacion") || lowerName.includes("consentimiento") || lowerName.includes("domicilio") || lowerName.includes("vehiculo");
+        if (looksInfrastructure && !isHumanActor && !isMaterialClinicalInterface) return false;
+        return isHumanActor || isMaterialClinicalInterface;
+      };
       for (const link of kernel.links.values()) {
         if (shouldHideLinkInSlice(link, rules)) continue;
         const touchesRefined = link.source === refinement.parentThing || link.target === refinement.parentThing;
         if (!touchesRefined) continue;
         const otherThingId = link.source === refinement.parentThing ? link.target : link.source;
         if (parentVisibleThings.size > 0 && !parentVisibleThings.has(otherThingId)) continue;
+        if (!isPullbackExternalAllowed(otherThingId, link)) continue;
         visibleThings.add(otherThingId);
       }
 
