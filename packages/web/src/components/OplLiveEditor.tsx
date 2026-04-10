@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import type { Model, ValidationIssue } from "@opmodel/core";
 import { renderAll, parseOplDocuments, compileToKernel, legacyModelFromSemanticKernel, exposeSemanticKernel, validateOpl, semanticKernelFromModel, exposeFromKernel, render } from "@opmodel/core";
+import { autoLayoutModel } from "../lib/auto-layout";
 import type { Command } from "../lib/commands";
 import { findOpdIdByName, findSentenceForSelection, findThingIdByName, getActiveSentenceText, lineColumnToOffset } from "../lib/opl-navigation";
 import { useAutocomplete } from "../hooks/useAutocomplete";
@@ -268,15 +269,8 @@ export function OplLiveEditor({ model, opdId, selectedThing, selectedLink, dispa
         setStatus("error");
         return;
       }
-      const layoutHints = new Map<string, { x: number; y: number; w: number; h: number }>();
-      for (const [, app] of model.appearances) {
-        const thing = model.things.get(app.thing);
-        if (thing) layoutHints.set(thing.name, { x: app.x, y: app.y, w: app.w, h: app.h });
-      }
       const compiled = compileToKernel(parsed.value, {
         ignoreUnsupported: true,
-        preserveLayout: model.appearances,
-        layoutHints,
       });
       if (!compiled.ok) {
         setErrorMsg(`Compile: ${compiled.error.message}`);
@@ -285,7 +279,8 @@ export function OplLiveEditor({ model, opdId, selectedThing, selectedLink, dispa
       }
       const kernel = compiled.value;
       const atlas = exposeSemanticKernel(kernel);
-      dispatch({ tag: "importOpl", model: legacyModelFromSemanticKernel(kernel, atlas) });
+      const imported = legacyModelFromSemanticKernel(kernel, atlas);
+      dispatch({ tag: "importOpl", model: autoLayoutModel(imported).model });
       setStatus("idle");
       setErrorMsg(null);
       setValidationResult(null);
