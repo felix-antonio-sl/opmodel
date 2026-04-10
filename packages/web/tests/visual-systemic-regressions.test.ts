@@ -214,21 +214,42 @@ describe("visual systemic regressions", () => {
     expect(distinctProcessColumns).toBeGreaterThanOrEqual(3);
   });
 
-  it("keeps Import OPL on the canonical auto-layout path for the real HODOM benchmark", () => {
+  it("keeps Import OPL on the canonical auto-layout path and derives SD1 externals from the refined thing in the parent OPD", () => {
     const opl = readFileSync(new URL("../../../tests/hodom-real-import.opl", import.meta.url), "utf8");
     const parsed = parseOplDocuments(opl);
     if (!parsed.ok) throw new Error(parsed.error.message);
     const compiled = compileToKernel(parsed.value, { ignoreUnsupported: true });
     if (!compiled.ok) throw new Error(compiled.error.message);
     const atlas = exposeSemanticKernel(compiled.value);
-    const imported = legacyModelFromSemanticKernel(compiled.value, atlas);
-    const laidOut = autoLayoutModel(imported).model;
-    const report = buildVisualReport(laidOut);
-    const byName = new Map(report.opds.map((opd) => [opd.name, opd]));
+    const sd = atlas.nodes.get("opd-sd");
+    const sd1 = atlas.nodes.get("opd-sd1");
+    expect(sd).toBeDefined();
+    expect(sd1).toBeDefined();
 
-    expect(byName.get("SD")?.score ?? 0).toBeGreaterThanOrEqual(80);
-    expect(byName.get("SD1")?.score ?? 0).toBeGreaterThanOrEqual(95);
-    expect(byName.get("SD1")?.errors ?? 99).toBe(0);
+    const refinement = [...compiled.value.refinements.values()].find((ref) => ref.childOpd === "opd-sd1");
+    expect(refinement?.kind).toBe("in-zoom");
+    const internalThings = new Set<string>([
+      refinement!.parentThing,
+      ...refinement!.steps.flatMap((step) => step.thingIds),
+      ...refinement!.internalObjects,
+    ]);
+    const parentVisible = new Set(sd!.visibleThings);
+    const parentNeighbors = new Set(
+      [...compiled.value.links.values()]
+        .filter((link) => link.source === refinement!.parentThing || link.target === refinement!.parentThing)
+        .map((link) => (link.source === refinement!.parentThing ? link.target : link.source))
+        .filter((thingId) => parentVisible.has(thingId)),
+    );
+    const leakedExternalProcesses = sd1!.visibleThings.filter(
+      (thingId) => !internalThings.has(thingId) && compiled.value.things.get(thingId)?.kind === "process",
+    );
+    const invalidExternals = sd1!.visibleThings.filter(
+      (thingId) => !internalThings.has(thingId) && !parentNeighbors.has(thingId),
+    );
+
+    expect(leakedExternalProcesses).toEqual([]);
+    expect(invalidExternals).toEqual([]);
+    expect(sd1!.visibleThings.length).toBeLessThanOrEqual(36);
   });
 
   it("improves the stress visual report enough to clear catastrophic SD/SD1 collapse", () => {

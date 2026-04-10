@@ -597,32 +597,16 @@ export function exposeSemanticKernel(kernel: SemanticKernel): OpdAtlas {
       }
       for (const thingId of refinement.internalObjects) visibleThings.add(thingId);
 
-      const focusThings = new Set<ThingId>(visibleThings);
+      const parentVisibleThings = new Set<ThingId>(nodes.get(opd.parent_opd ?? "")?.visibleThings ?? []);
       for (const link of kernel.links.values()) {
         if (shouldHideLinkInSlice(link, rules)) continue;
-        const sourceFocused = focusThings.has(link.source);
-        const targetFocused = focusThings.has(link.target);
-        if (!sourceFocused && !targetFocused) continue;
-
-        const sourceThing = kernel.things.get(link.source);
-        const targetThing = kernel.things.get(link.target);
-
-        if (sourceFocused && targetFocused) {
-          visibleThings.add(link.source);
-          visibleThings.add(link.target);
-          continue;
-        }
-
-        if (sourceFocused && targetThing?.kind === "object") {
-          visibleThings.add(link.target);
-          continue;
-        }
-
-        if (targetFocused && sourceThing?.kind === "object") {
-          visibleThings.add(link.source);
-          continue;
-        }
+        const touchesRefined = link.source === refinement.parentThing || link.target === refinement.parentThing;
+        if (!touchesRefined) continue;
+        const otherThingId = link.source === refinement.parentThing ? link.target : link.source;
+        if (parentVisibleThings.size > 0 && !parentVisibleThings.has(otherThingId)) continue;
+        visibleThings.add(otherThingId);
       }
+
       for (const link of kernel.links.values()) {
         if (shouldHideLinkInSlice(link, rules)) continue;
         if (visibleThings.has(link.source) && visibleThings.has(link.target)) {
