@@ -176,7 +176,7 @@ describe("semantic-kernel adapters", () => {
     expect(parent?.role).toBe("context");
     expect(grinding?.semanticRank).toBe(0);
     expect(boiling?.semanticRank).toBe(1);
-    expect(brewing?.semanticRank).toBe(1);
+    expect(brewing?.semanticRank).toBe(2);
     expect(boiling?.parallelClass).toBeDefined();
     expect(boiling?.parallelClass).toBe(brewing?.parallelClass);
     expect(grinding?.parallelClass).toBeUndefined();
