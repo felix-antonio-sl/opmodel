@@ -21,6 +21,8 @@
 | **11** | [**10-isomorphism-architecture.md**](./10-isomorphism-architecture.md) | **ADR-003 — Arquitectura categorial para isomorfismo OPL ↔ OPD (VINCULANTE)** |
 | **12** | [**11-effective-visual-slice-adr.md**](./11-effective-visual-slice-adr.md) | **ADR-004 — Frontera canónica de vista efectiva para la capa visual web** |
 | **13** | [**12-web-visual-refactor-plan.md**](./12-web-visual-refactor-plan.md) | **Plan por fases para la refactor estructural profunda de la capa visual web** |
+| 14 | [14-opm-graph-generator-adr.md](./14-opm-graph-generator-adr.md) | ADR-005, nuevo slice principal: OPM Graph Generator |
+| 15 | [15-opm-graph-generator-mvp-plan.md](./15-opm-graph-generator-mvp-plan.md) | MVP plan, contratos y archivos concretos del vertical slice |
 
 ## SSOT reference
 
@@ -41,7 +43,8 @@ Precedence:
 - **Roundtrip categórico**: estabilizado en caso canónico
 - **Semantic kernel / atlas / layout**: introducidos como capa nueva
 - **Migración web**: en progreso con projection layer ya conectado a canvas/layout/reporting/store
-- **Siguiente paso**: canonizar `EffectiveVisualSlice` en web, adelgazar `OpdCanvas`, y luego abrir persistencia de layout más allá de `Appearance` legacy
+- **Siguiente paso visual**: canonizar `EffectiveVisualSlice` en web, adelgazar `OpdCanvas`, y luego abrir persistencia de layout más allá de `Appearance` legacy
+- **Siguiente paso de producto**: abrir el vertical slice `OPM Graph Generator` para mover la superficie primaria hacia `Describe / Wizard -> SemanticKernel -> OPL + Validation + SVG -> SD1`
 
 ## Decisión vinculante (ADR-003)
 
