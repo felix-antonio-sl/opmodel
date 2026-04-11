@@ -3,6 +3,18 @@ import { DiagramPreview } from "./DiagramPreview";
 import { OplPanel } from "./OplPanel";
 import { ValidationPanel } from "./ValidationPanel";
 
+function downloadText(filename: string, content: string, mimeType: string) {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  URL.revokeObjectURL(url);
+}
+
 interface ModelWorkspaceProps {
   model: Model;
   opl: string;
@@ -22,8 +34,10 @@ export function ModelWorkspace({ model, opl, svg, validation, onOpenInEditor, on
             Primer vertical slice operativo: <code>SdDraft -&gt; SemanticKernel -&gt; OPL + SVG</code>
           </div>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
           <button onClick={onBackToWizard}>Back to wizard</button>
+          <button onClick={() => downloadText(`${model.meta.name.toLowerCase().replace(/\s+/g, "-")}.opl.txt`, opl, "text/plain")}>Export OPL</button>
+          <button onClick={() => downloadText(`${model.meta.name.toLowerCase().replace(/\s+/g, "-")}.svg`, svg, "image/svg+xml")}>Export SVG</button>
           <button onClick={onOpenInEditor} style={{ background: "#1d4ed8", color: "white", border: "1px solid #2563eb", borderRadius: 10, padding: "10px 14px" }}>
             Open in editor
           </button>
