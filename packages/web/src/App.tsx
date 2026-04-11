@@ -42,6 +42,7 @@ const BugCapture = lazy(() => import("./components/BugCapture").then((m) => ({ d
 const SettingsPanel = lazy(() => import("./components/SettingsPanel").then((m) => ({ default: m.SettingsPanel })));
 const VerificationChecklist = lazy(() => import("./components/VerificationChecklist").then((m) => ({ default: m.VerificationChecklist })));
 const SdWizard = lazy(() => import("./components/SdWizard").then((m) => ({ default: m.SdWizard })));
+const OpmGraphGeneratorPanel = lazy(() => import("./features/generator/components/OpmGraphGeneratorPanel").then((m) => ({ default: m.OpmGraphGeneratorPanel })));
 const OplImportPanel = lazy(() => import("./components/OplImportPanel").then((m) => ({ default: m.OplImportPanel })));
 
 
@@ -86,13 +87,14 @@ function inlineSvgStyles(source: SVGSVGElement, clone: SVGSVGElement) {
 }
 
 
-function FileMenu({ model, onNew, onImport, onSave, onAutoLayoutAll, onShowVisualReport }: {
+function FileMenu({ model, onNew, onImport, onSave, onAutoLayoutAll, onShowVisualReport, onOpenGraphGenerator }: {
   model: Model;
   onNew: () => void;
   onImport: (model: Model) => void;
   onSave: () => void;
   onAutoLayoutAll?: () => void;
   onShowVisualReport?: () => void;
+  onOpenGraphGenerator?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [openError, setOpenError] = useState<string | null>(null);
@@ -222,7 +224,8 @@ function FileMenu({ model, onNew, onImport, onSave, onAutoLayoutAll, onShowVisua
           minWidth: 160, padding: "4px 0",
         }}>
           <button className="file-menu__item" onClick={() => { onNew(); setOpen(false); }}>New Empty Model</button>
-          <button className="file-menu__item" onClick={() => { (window as any).__openWizard?.(); setOpen(false); }} style={{ color: "var(--accent)" }}>✨ New with SD Wizard</button>
+          <button className="file-menu__item" onClick={() => { onOpenGraphGenerator?.(); setOpen(false); }} style={{ color: "var(--accent)" }}>✨ OPM Graph Generator</button>
+          <button className="file-menu__item" onClick={() => { (window as any).__openWizard?.(); setOpen(false); }}>New with SD Wizard</button>
           <button className="file-menu__item" onClick={handleOpen}>Open...</button>
           <button className="file-menu__item" onClick={() => { onSave(); setOpen(false); }}>Save .opmodel</button>
           {backups.length > 0 && (
@@ -276,6 +279,7 @@ function Editor({ initialModel, recoveryInfo, onNew, onImport }: { initialModel:
   const [showSettings, setShowSettings] = useState(false);
   const [showVerification, setShowVerification] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
+  const [showGraphGenerator, setShowGraphGenerator] = useState(false);
   (window as any).__openWizard = () => setShowWizard(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeSearchIndex, setActiveSearchIndex] = useState(0);
@@ -538,6 +542,13 @@ function Editor({ initialModel, recoveryInfo, onNew, onImport }: { initialModel:
         <div className="header__sep" />
         <button
           className="header__pill"
+          onClick={() => setShowGraphGenerator(true)}
+          title="Open OPM Graph Generator"
+        >
+          ✨ Generator
+        </button>
+        <button
+          className="header__pill"
           onClick={() => setShowImportOpl(v => !v)}
           title="Import OPL text"
         >
@@ -550,6 +561,7 @@ function Editor({ initialModel, recoveryInfo, onNew, onImport }: { initialModel:
           onSave={save}
           onAutoLayoutAll={autoLayoutAll}
           onShowVisualReport={() => { setValidationTab("visual-report"); setShowValidation(true); }}
+          onOpenGraphGenerator={() => setShowGraphGenerator(true)}
         />
         <div className="header__sep" />
         <button
@@ -663,7 +675,10 @@ function Editor({ initialModel, recoveryInfo, onNew, onImport }: { initialModel:
           <div className="welcome-state__title">Welcome to OPModeling</div>
           <div>Start building your OPM model</div>
           <div className="welcome-state__actions">
-            <button className="welcome-state__btn welcome-state__btn--primary" onClick={() => setShowWizard(true)}>
+            <button className="welcome-state__btn welcome-state__btn--primary" onClick={() => setShowGraphGenerator(true)}>
+              OPM Graph Generator
+            </button>
+            <button className="welcome-state__btn" onClick={() => setShowWizard(true)}>
               SD Wizard
             </button>
             <button className="welcome-state__btn" onClick={() => setShowImportOpl(true)}>
@@ -888,6 +903,17 @@ function Editor({ initialModel, recoveryInfo, onNew, onImport }: { initialModel:
               onImport(newModel);
             }}
             onCancel={() => setShowWizard(false)}
+          />
+        </Suspense>
+      )}
+      {showGraphGenerator && (
+        <Suspense fallback={null}>
+          <OpmGraphGeneratorPanel
+            onClose={() => setShowGraphGenerator(false)}
+            onOpenInEditor={(newModel) => {
+              setShowGraphGenerator(false);
+              onImport(newModel);
+            }}
           />
         </Suspense>
       )}

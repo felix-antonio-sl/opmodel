@@ -1,6 +1,7 @@
 export * from "./types";
 export * from "./semantic-kernel";
 export * from "./result";
+export * from "./generator";
 export { createModel } from "./model";
 export { appearanceKey, transformingMode, type TransformingMode } from "./helpers";
 export { loadModel, saveModel, type LoadError } from "./serialization";
