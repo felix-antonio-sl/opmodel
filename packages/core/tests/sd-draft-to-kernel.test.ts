@@ -4,6 +4,7 @@ import {
   buildArtifactsFromSdDraft,
   kernelToDiagramSpec,
   kernelToOpl,
+  kernelToVisualExportPrompt,
   validateSdDraft,
 } from "../src";
 
@@ -42,6 +43,10 @@ describe("SdDraft generator slice", () => {
     const diagram = kernelToDiagramSpec(result.value.kernel);
     expect(diagram.nodes.some((node) => node.label === "Battery Charging")).toBe(true);
     expect(diagram.edges.length).toBeGreaterThan(0);
+
+    const visualPrompt = kernelToVisualExportPrompt(result.value.kernel);
+    expect(visualPrompt.prompt).toContain("Battery Charging");
+    expect(visualPrompt.opl).toContain("Battery Charging is a process");
   });
 
   it("rejects drafts without main process and value object", () => {

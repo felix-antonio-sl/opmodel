@@ -3,6 +3,7 @@ import {
   buildArtifactsFromSdDraft,
   kernelToDiagramSpec,
   kernelToOpl,
+  kernelToVisualExportPrompt,
   validateSdDraft,
   type Model,
 } from "@opmodel/core";
@@ -23,6 +24,7 @@ export function OpmGraphGeneratorPanel({ onClose, onOpenInEditor }: OpmGraphGene
   const [generatedModel, setGeneratedModel] = useState<Model | null>(null);
   const [generatedOpl, setGeneratedOpl] = useState("");
   const [generatedSvg, setGeneratedSvg] = useState("");
+  const [generatedVisualExport, setGeneratedVisualExport] = useState<ReturnType<typeof kernelToVisualExportPrompt> | null>(null);
   const wizard = useSdWizard();
 
   const validation = useMemo(() => validateSdDraft(wizard.draft), [wizard.draft]);
@@ -40,6 +42,7 @@ export function OpmGraphGeneratorPanel({ onClose, onOpenInEditor }: OpmGraphGene
     setGeneratedModel(result.value.model);
     setGeneratedOpl(opl);
     setGeneratedSvg(svg);
+    setGeneratedVisualExport(kernelToVisualExportPrompt(result.value.kernel));
     setApplyError(null);
     setMode("workspace");
   };
@@ -70,12 +73,13 @@ export function OpmGraphGeneratorPanel({ onClose, onOpenInEditor }: OpmGraphGene
           </div>
         )}
 
-        {mode === "workspace" && generatedModel && (
+        {mode === "workspace" && generatedModel && generatedVisualExport && (
           <ModelWorkspace
             model={generatedModel}
             opl={generatedOpl}
             svg={generatedSvg}
             validation={validation}
+            visualExport={generatedVisualExport}
             onBackToWizard={() => setMode("wizard")}
             onOpenInEditor={() => onOpenInEditor(generatedModel)}
           />
