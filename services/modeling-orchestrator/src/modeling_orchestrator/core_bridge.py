@@ -9,6 +9,7 @@ REPO_ROOT = Path("/home/felix/projects/opmodel")
 OPL_IMPORT_SCRIPT_PATH = REPO_ROOT / "services/modeling-orchestrator/scripts/opl_import_bridge.ts"
 WIZARD_GENERATE_SCRIPT_PATH = REPO_ROOT / "services/modeling-orchestrator/scripts/wizard_generate_bridge.ts"
 INCREMENTAL_CHANGE_SCRIPT_PATH = REPO_ROOT / "services/modeling-orchestrator/scripts/incremental_change_bridge.ts"
+REFINE_PROCESS_SCRIPT_PATH = REPO_ROOT / "services/modeling-orchestrator/scripts/refine_process_bridge.ts"
 
 
 class CoreBridgeError(RuntimeError):
@@ -47,6 +48,24 @@ def run_incremental_change(
         "modelSnapshot": model_snapshot,
     }
     return _run_bun_bridge(INCREMENTAL_CHANGE_SCRIPT_PATH, payload, "incremental change")
+
+
+
+def run_refine_process(
+    process_id: str,
+    *,
+    request: str | None = None,
+    current_opl: str | None = None,
+    model_snapshot: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    payload = {
+        "kind": "refine-process",
+        "processId": process_id,
+        "request": request,
+        "currentOpl": current_opl,
+        "modelSnapshot": model_snapshot,
+    }
+    return _run_bun_bridge(REFINE_PROCESS_SCRIPT_PATH, payload, "refine process")
 
 
 

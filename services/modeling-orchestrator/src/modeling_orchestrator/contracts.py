@@ -99,11 +99,23 @@ class IncrementalChangeTask(BaseModel):
 
 
 class RefineProcessTask(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     kind: Literal["refine-process"]
     source: SourceKind = "incremental-session"
-    process_id: str = Field(min_length=1)
+    process_id: str = Field(
+        min_length=1,
+        validation_alias=AliasChoices("process_id", "processId"),
+    )
     request: str | None = None
-    model_snapshot: dict[str, Any] | None = None
+    model_snapshot: dict[str, Any] | None = Field(
+        default=None,
+        validation_alias=AliasChoices("model_snapshot", "modelSnapshot"),
+    )
+    current_opl: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("current_opl", "currentOpl"),
+    )
 
 
 class RenderTask(BaseModel):

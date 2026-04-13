@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from .agents import build_deep_agent_config
 from .contracts import ProposalArtifact
-from .core_bridge import CoreBridgeError, run_incremental_change, run_opl_import, run_wizard_generate
+from .core_bridge import CoreBridgeError, run_incremental_change, run_opl_import, run_refine_process, run_wizard_generate
 from .state import OrchestratorState
 
 
@@ -194,15 +194,54 @@ def incremental_change_worker(state: OrchestratorState) -> OrchestratorState:
 
 def refine_process_worker(state: OrchestratorState) -> OrchestratorState:
     task = state["task"]
+
+    try:
+        bridge_result = run_refine_process(
+            getattr(task, "process_id", ""),
+            request=getattr(task, "request", None),
+            current_opl=getattr(task, "current_opl", None),
+            model_snapshot=getattr(task, "model_snapshot", None),
+        )
+    except CoreBridgeError as exc:
+        artifact = ProposalArtifact(
+            artifact_kind="refinement-proposal",
+            summary="Refine-process failed before building a real refinement proposal.",
+            payload={
+                "process_id": getattr(task, "process_id", None),
+                "request": getattr(task, "request", None),
+                "bridge_error": str(exc),
+            },
+        )
+        next_state = _append_artifact(state, artifact, "refine-process-bridge-error")
+        return _extend_guardrail(
+            next_state,
+            issues=["Core bridge failed for refine-process."],
+            checks=["refine-process-core-bridge-invoked"],
+        )
+
+    proposal = bridge_result.get("proposal", {})
     artifact = ProposalArtifact(
         artifact_kind="refinement-proposal",
-        summary="Placeholder SD1 refinement proposal.",
-        payload={
-            "process_id": getattr(task, "process_id", None),
-            "request": getattr(task, "request", None),
-        },
+        summary=proposal.get("summary", "Refinement proposal generated from real core refinement slice."),
+        payload=bridge_result,
     )
-    return _append_artifact(state, artifact, "refinement-proposal-ready")
+    next_state = _append_artifact(state, artifact, "refinement-proposal-built")
+
+    issues: list[str] = []
+    if not bridge_result.get("ok", False):
+        issues.append("Refine-process did not pass methodology cleanly.")
+    if proposal.get("requiresHumanReview"):
+        issues.append("Refinement proposal requires human review before application.")
+
+    return _extend_guardrail(
+        next_state,
+        issues=issues,
+        checks=[
+            "refine-process-core-bridge-invoked",
+            "refinement-proposal-generated",
+            "sd-sd1-methodology-reviewed",
+        ],
+    )
 
 
 def render_worker(state: OrchestratorState) -> OrchestratorState:

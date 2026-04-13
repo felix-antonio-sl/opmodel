@@ -124,7 +124,9 @@ FastAPI -> LangGraph worker -> bun bridge
                           -> structured patch proposal
 ```
 
-Current proposal shape:
+Current proposal shapes:
+
+`incremental-change` returns:
 
 - `summary`
 - `rationale`
@@ -133,7 +135,19 @@ Current proposal shape:
 - `ssotChecksExpected`
 - `requiresHumanReview`
 
-Current operation kinds:
+`refine-process` returns:
+
+- `summary`
+- `rationale`
+- `refinementKind`
+- `confidence`
+- `ssotChecksExpected`
+- `requiresHumanReview`
+- `draft`
+- `childOpdId`
+- `mainProcessId`
+
+Current `incremental-change` operation kinds:
 
 - `add-enabler`
 - `add-transforming-link`
@@ -143,6 +157,26 @@ Current operation kinds:
 - `manual-review`
 
 This is intentionally proposal-only. Application back into the kernel remains a later step.
+
+## `refine-process` current behavior
+
+`refine-process` now also crosses the Python/TypeScript boundary for real:
+
+```text
+FastAPI -> LangGraph worker -> bun bridge -> @opmodel/core
+                                 -> loadModel or compile current OPL
+                                 -> refineMainProcess
+                                 -> validateRefinedModel
+                                 -> renderAllFromSemanticKernel
+```
+
+The worker returns a structured artifact with:
+
+- refinement proposal draft (`subprocesses`, `internalObjects`)
+- methodology validation report
+- canonical OPL for the refined kernel
+- serialized legacy model JSON snapshot
+- explicit review flag when the model context is weak or methodology reports issues
 
 ## `opl-import` current behavior
 
