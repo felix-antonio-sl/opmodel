@@ -227,7 +227,10 @@ This is still a proposal surface, not an authoritative mutation path.
 
 ## Common artifact payload shape
 
-All current worker artifacts now converge on the same top-level payload envelope:
+All current worker artifacts now converge on the same top-level payload envelope.
+This envelope is now modeled explicitly in `contracts.py` via `ArtifactProposal` and `ArtifactPayload`.
+
+The payload shape is:
 
 - `ok`
 - `proposal`

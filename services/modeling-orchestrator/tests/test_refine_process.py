@@ -22,13 +22,13 @@ def test_refine_process_builds_real_refinement_proposal_from_current_opl():
     assert result.artifacts[0].artifact_kind == "refinement-proposal"
 
     payload = result.artifacts[0].payload
-    assert payload["ok"] is True
-    assert payload["proposal"]["refinementKind"] == "in-zoom"
-    assert payload["proposal"]["requiresHumanReview"] is False
-    assert payload["proposal"]["draft"]["subprocesses"] == [
+    assert payload.ok is True
+    assert payload.proposal.refinementKind == "in-zoom"
+    assert payload.proposal.requiresHumanReview is False
+    assert payload.proposal.draft["subprocesses"] == [
         "Authorize Charge",
         "Transfer Energy",
         "Confirm Completion",
     ]
-    assert payload["context"]["methodology"]["issues"] == []
-    assert "=== SD1 ===" in payload["outputs"]["canonicalOpl"]
+    assert payload.context["methodology"]["issues"] == []
+    assert "=== SD1 ===" in payload.outputs["canonicalOpl"]

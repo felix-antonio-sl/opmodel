@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from .agents import build_deep_agent_config
-from .contracts import ProposalArtifact
+from .contracts import ArtifactPayload, ArtifactProposal, ProposalArtifact
 from .core_bridge import CoreBridgeError, run_incremental_change, run_opl_import, run_refine_process, run_render, run_wizard_generate
 from .state import OrchestratorState
 
@@ -15,20 +15,16 @@ def _normalized_artifact_payload(
     error: dict | None = None,
     agent: dict | None = None,
     inputs: dict | None = None,
-) -> dict:
-    payload: dict = {
-        "ok": ok,
-        "proposal": proposal,
-        "context": context or {},
-        "outputs": outputs or {},
-    }
-    if error is not None:
-        payload["error"] = error
-    if agent is not None:
-        payload["agent"] = agent
-    if inputs is not None:
-        payload["inputs"] = inputs
-    return payload
+) -> ArtifactPayload:
+    return ArtifactPayload(
+        ok=ok,
+        proposal=ArtifactProposal.model_validate(proposal),
+        context=context or {},
+        outputs=outputs or {},
+        error=error,
+        agent=agent,
+        inputs=inputs,
+    )
 
 
 def route_task(state: OrchestratorState) -> OrchestratorState:
@@ -243,10 +239,18 @@ def incremental_change_worker(state: OrchestratorState) -> OrchestratorState:
         artifact = ProposalArtifact(
             artifact_kind="kernel-patch-proposal",
             summary="Incremental change failed before building a stable patch proposal.",
-            payload={
-                "request": getattr(task, "request", None),
-                "bridge_error": str(exc),
-            },
+            payload=_normalized_artifact_payload(
+                ok=False,
+                proposal={
+                    "summary": "Incremental change failed before building a stable patch proposal.",
+                    "rationale": "The incremental request did not complete the stable proposal path.",
+                    "confidence": 0.1,
+                    "requiresHumanReview": True,
+                    "ssotChecksExpected": ["incremental-context-evaluated", "kernel-patch-proposal-generated"],
+                },
+                error={"stage": "incremental-bridge", "message": str(exc)},
+                inputs={"request": getattr(task, "request", None)},
+            ),
         )
         next_state = _append_artifact(state, artifact, "incremental-bridge-error")
         return _extend_guardrail(
@@ -259,7 +263,14 @@ def incremental_change_worker(state: OrchestratorState) -> OrchestratorState:
     artifact = ProposalArtifact(
         artifact_kind="kernel-patch-proposal",
         summary=proposal.get("summary", "Stable kernel patch proposal generated from incremental request."),
-        payload=bridge_result,
+        payload=_normalized_artifact_payload(
+            ok=bool(bridge_result.get("ok")),
+            proposal=proposal,
+            context=bridge_result.get("context") or {},
+            outputs=bridge_result.get("outputs") or {},
+            error=bridge_result.get("error"),
+            inputs={"request": getattr(task, "request", None)},
+        ),
     )
     next_state = _append_artifact(state, artifact, "incremental-proposal-built")
 
@@ -294,11 +305,21 @@ def refine_process_worker(state: OrchestratorState) -> OrchestratorState:
         artifact = ProposalArtifact(
             artifact_kind="refinement-proposal",
             summary="Refine-process failed before building a real refinement proposal.",
-            payload={
-                "process_id": getattr(task, "process_id", None),
-                "request": getattr(task, "request", None),
-                "bridge_error": str(exc),
-            },
+            payload=_normalized_artifact_payload(
+                ok=False,
+                proposal={
+                    "summary": "Refine-process failed before building a real refinement proposal.",
+                    "rationale": "The refine-process task did not complete the core refinement slice.",
+                    "confidence": 0.1,
+                    "requiresHumanReview": True,
+                    "ssotChecksExpected": ["refinement-proposal-generated", "sd-sd1-methodology-reviewed"],
+                },
+                error={"stage": "refine-process-bridge", "message": str(exc)},
+                inputs={
+                    "processId": getattr(task, "process_id", None),
+                    "request": getattr(task, "request", None),
+                },
+            ),
         )
         next_state = _append_artifact(state, artifact, "refine-process-bridge-error")
         return _extend_guardrail(
@@ -311,7 +332,17 @@ def refine_process_worker(state: OrchestratorState) -> OrchestratorState:
     artifact = ProposalArtifact(
         artifact_kind="refinement-proposal",
         summary=proposal.get("summary", "Refinement proposal generated from real core refinement slice."),
-        payload=bridge_result,
+        payload=_normalized_artifact_payload(
+            ok=bool(bridge_result.get("ok")),
+            proposal=proposal,
+            context=bridge_result.get("context") or {},
+            outputs=bridge_result.get("outputs") or {},
+            error=bridge_result.get("error"),
+            inputs={
+                "processId": getattr(task, "process_id", None),
+                "request": getattr(task, "request", None),
+            },
+        ),
     )
     next_state = _append_artifact(state, artifact, "refinement-proposal-built")
 
@@ -344,11 +375,21 @@ def render_worker(state: OrchestratorState) -> OrchestratorState:
         artifact = ProposalArtifact(
             artifact_kind="render-intent",
             summary="Render failed before building a real visual render artifact.",
-            payload={
-                "visual_spec_present": bool(getattr(task, "visual_spec", None)),
-                "model_snapshot_present": bool(getattr(task, "model_snapshot", None)),
-                "bridge_error": str(exc),
-            },
+            payload=_normalized_artifact_payload(
+                ok=False,
+                proposal={
+                    "summary": "Render failed before building a real visual render artifact.",
+                    "rationale": "The render task did not complete the core visual-spec generation or verification path.",
+                    "confidence": 0.1,
+                    "requiresHumanReview": True,
+                    "ssotChecksExpected": ["visual-render-spec-generated-or-verified", "visual-render-spec-verification-run"],
+                },
+                error={"stage": "render-bridge", "message": str(exc)},
+                inputs={
+                    "visualSpecPresent": bool(getattr(task, "visual_spec", None)),
+                    "modelSnapshotPresent": bool(getattr(task, "model_snapshot", None)),
+                },
+            ),
         )
         next_state = _append_artifact(state, artifact, "render-bridge-error")
         return _extend_guardrail(
@@ -361,7 +402,17 @@ def render_worker(state: OrchestratorState) -> OrchestratorState:
     artifact = ProposalArtifact(
         artifact_kind="render-intent",
         summary=proposal.get("summary", "Visual render artifact generated from core render pipeline."),
-        payload=bridge_result,
+        payload=_normalized_artifact_payload(
+            ok=bool(bridge_result.get("ok")),
+            proposal=proposal,
+            context=bridge_result.get("context") or {},
+            outputs=bridge_result.get("outputs") or {},
+            error=bridge_result.get("error"),
+            inputs={
+                "visualSpecPresent": bool(getattr(task, "visual_spec", None)),
+                "modelSnapshotPresent": bool(getattr(task, "model_snapshot", None)),
+            },
+        ),
     )
     next_state = _append_artifact(state, artifact, "render-visual-spec-built")
 

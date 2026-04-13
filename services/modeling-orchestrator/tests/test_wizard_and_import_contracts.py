@@ -29,14 +29,14 @@ def test_wizard_generate_uses_normalized_artifact_payload_shape():
 
     assert result.status == "proposed"
     payload = result.artifacts[0].payload
-    assert payload["ok"] is True
-    assert payload["proposal"]["requiresHumanReview"] is False
-    assert payload["context"]["validation"]
-    assert payload["context"]["kernel"]
-    assert payload["outputs"]["canonicalOpl"]
-    assert payload["outputs"]["modelJson"]
-    assert payload["agent"]
-    assert payload["inputs"]["draft"]["mainProcess"] == "Battery Charging"
+    assert payload.ok is True
+    assert payload.proposal.requiresHumanReview is False
+    assert payload.context["validation"]
+    assert payload.context["kernel"]
+    assert payload.outputs["canonicalOpl"]
+    assert payload.outputs["modelJson"]
+    assert payload.agent
+    assert payload.inputs["draft"]["mainProcess"] == "Battery Charging"
 
 
 def test_opl_import_uses_normalized_artifact_payload_shape():
@@ -55,10 +55,10 @@ def test_opl_import_uses_normalized_artifact_payload_shape():
 
     assert result.status == "proposed"
     payload = result.artifacts[0].payload
-    assert payload["ok"] is True
-    assert payload["proposal"]["requiresHumanReview"] is False
-    assert payload["context"]["language"] == "mixed"
-    assert payload["context"]["kernel"]
-    assert payload["outputs"]["canonicalOpl"]
-    assert payload["outputs"]["modelJson"]
-    assert payload["inputs"]["oplText"].startswith("Coffee Making")
+    assert payload.ok is True
+    assert payload.proposal.requiresHumanReview is False
+    assert payload.context["language"] == "mixed"
+    assert payload.context["kernel"]
+    assert payload.outputs["canonicalOpl"]
+    assert payload.outputs["modelJson"]
+    assert payload.inputs["oplText"].startswith("Coffee Making")

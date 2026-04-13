@@ -148,6 +148,25 @@ class ModelingTaskEnvelope(BaseModel):
     actor_id: str | None = None
 
 
+class ArtifactProposal(BaseModel):
+    summary: str
+    rationale: str
+    confidence: float
+    requiresHumanReview: bool
+    ssotChecksExpected: list[str] = Field(default_factory=list)
+    model_config = ConfigDict(extra="allow")
+
+
+class ArtifactPayload(BaseModel):
+    ok: bool
+    proposal: ArtifactProposal
+    context: dict[str, Any] = Field(default_factory=dict)
+    outputs: dict[str, Any] = Field(default_factory=dict)
+    error: dict[str, Any] | None = None
+    agent: dict[str, Any] | None = None
+    inputs: dict[str, Any] | None = None
+
+
 class ProposalArtifact(BaseModel):
     artifact_kind: Literal[
         "sd-draft",
@@ -157,7 +176,7 @@ class ProposalArtifact(BaseModel):
         "render-intent",
     ]
     summary: str
-    payload: dict[str, Any]
+    payload: ArtifactPayload
 
 
 class GuardrailReport(BaseModel):

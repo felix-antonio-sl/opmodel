@@ -27,7 +27,7 @@ def _build_wizard_model_snapshot() -> dict:
         }
     )
     wizard_result = run_task(wizard_envelope)
-    model_json = wizard_result.artifacts[0].payload["outputs"]["modelJson"]
+    model_json = wizard_result.artifacts[0].payload.outputs["modelJson"]
     return json.loads(model_json)
 
 
@@ -51,11 +51,11 @@ def test_render_generates_visual_render_spec_from_model_snapshot():
     assert result.artifacts[0].artifact_kind == "render-intent"
 
     payload = result.artifacts[0].payload
-    assert payload["ok"] is True
-    assert payload["proposal"]["requiresHumanReview"] is False
-    assert payload["context"]["diagramKind"] == "opm-sd"
-    assert payload["outputs"]["visualSpec"]["nodes"]
-    assert payload["outputs"]["canonicalOpl"]
+    assert payload.ok is True
+    assert payload.proposal.requiresHumanReview is False
+    assert payload.context["diagramKind"] == "opm-sd"
+    assert payload.outputs["visualSpec"]["nodes"]
+    assert payload.outputs["canonicalOpl"]
 
 
 def test_render_marks_invalid_visual_spec_for_review():
@@ -85,6 +85,6 @@ def test_render_marks_invalid_visual_spec_for_review():
     assert result.guardrail.ok is False
 
     payload = result.artifacts[0].payload
-    assert payload["ok"] is False
-    assert payload["proposal"]["requiresHumanReview"] is True
-    assert payload["context"]["verification"]["issues"]
+    assert payload.ok is False
+    assert payload.proposal.requiresHumanReview is True
+    assert payload.context["verification"]["issues"]

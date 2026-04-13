@@ -22,11 +22,11 @@ def test_incremental_change_builds_stable_patch_proposal():
     assert result.artifacts[0].artifact_kind == "kernel-patch-proposal"
 
     payload = result.artifacts[0].payload
-    assert payload["ok"] is True
-    assert payload["proposal"]["confidence"] >= 0.9
-    assert payload["proposal"]["requiresHumanReview"] is False
-    assert payload["proposal"]["operations"][0]["kind"] == "add-enabler"
-    assert payload["proposal"]["operations"][0]["role"] == "instrument"
+    assert payload.ok is True
+    assert payload.proposal.confidence >= 0.9
+    assert payload.proposal.requiresHumanReview is False
+    assert payload.proposal.operations[0]["kind"] == "add-enabler"
+    assert payload.proposal.operations[0]["role"] == "instrument"
 
 
 def test_incremental_change_marks_ambiguous_requests_for_review():
@@ -46,6 +46,6 @@ def test_incremental_change_marks_ambiguous_requests_for_review():
     assert result.guardrail.ok is False
 
     payload = result.artifacts[0].payload
-    assert payload["ok"] is False
-    assert payload["proposal"]["requiresHumanReview"] is True
-    assert payload["proposal"]["operations"][0]["kind"] == "manual-review"
+    assert payload.ok is False
+    assert payload.proposal.requiresHumanReview is True
+    assert payload.proposal.operations[0]["kind"] == "manual-review"
