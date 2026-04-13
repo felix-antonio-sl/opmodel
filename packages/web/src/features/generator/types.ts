@@ -58,6 +58,18 @@ export interface ReviewDecision {
   note: string;
 }
 
+export interface ReviewHistoryEntry {
+  id: string;
+  taskKind: ModelingTaskKind;
+  artifactKind: string;
+  status: string;
+  summary: string;
+  confidence: number;
+  decision: ReviewDecision["decision"];
+  note: string;
+  at: string;
+}
+
 export interface ApplySimplePreviewResult {
   ok: boolean;
   artifact_kind: string;

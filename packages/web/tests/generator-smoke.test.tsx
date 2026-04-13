@@ -266,6 +266,7 @@ describe("OpmGraphGeneratorPanel", () => {
     await screen.findByText(/Proposed 1 kernel patch operation/i);
     fireEvent.click(screen.getByText("Apply simple preview"));
     await waitFor(() => expect(screen.getByText(/decision: applied/i)).toBeTruthy());
+    expect(localStorage.getItem("opmodel:generator:review-history")).toContain("applied");
 
     fireEvent.click(screen.getByText("Open in editor"));
     expect(onOpenInEditor).toHaveBeenCalledTimes(1);

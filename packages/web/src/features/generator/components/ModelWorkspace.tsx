@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { DraftValidationReport, Model, VisualExportPrompt, VisualRenderSpec } from "@opmodel/core";
 import { createDiagramLLMProvider, loadStoredDiagramLLMConfig, verifyRenderedSvg, type RenderedSvgVerificationReport } from "../../../lib/renderers/llm-renderer";
-import type { OrchestratorResult, ReviewDecision } from "../types";
+import type { OrchestratorResult, ReviewDecision, ReviewHistoryEntry } from "../types";
 import { ProposalReviewPanel } from "./ProposalReviewPanel";
 import { DiagramPreview } from "./DiagramPreview";
 import { OplPanel } from "./OplPanel";
@@ -38,12 +38,13 @@ interface ModelWorkspaceProps {
   reviewDecision?: ReviewDecision | null;
   reviewBusy?: boolean;
   reviewError?: string | null;
+  reviewHistory?: ReviewHistoryEntry[];
   onAcceptReview?: () => void;
   onRejectReview?: () => void;
   onApplySimpleReview?: () => void;
 }
 
-export function ModelWorkspace({ model, opl, svg, validation, visualExport, visualSpec, currentViewLabel = "SD", onOpenInEditor, onBackToWizard, onOpenLlmSettings, onRefineMainProcess, onReturnToSd, onRunIncrementalChange, onVerifyRender, reviewResult, reviewDecision, reviewBusy = false, reviewError, onAcceptReview, onRejectReview, onApplySimpleReview }: ModelWorkspaceProps) {
+export function ModelWorkspace({ model, opl, svg, validation, visualExport, visualSpec, currentViewLabel = "SD", onOpenInEditor, onBackToWizard, onOpenLlmSettings, onRefineMainProcess, onReturnToSd, onRunIncrementalChange, onVerifyRender, reviewResult, reviewDecision, reviewBusy = false, reviewError, reviewHistory = [], onAcceptReview, onRejectReview, onApplySimpleReview }: ModelWorkspaceProps) {
   const [premiumSvg, setPremiumSvg] = useState<string | null>(null);
   const [premiumError, setPremiumError] = useState<string | null>(null);
   const [isGeneratingPremium, setIsGeneratingPremium] = useState(false);
@@ -194,6 +195,7 @@ export function ModelWorkspace({ model, opl, svg, validation, visualExport, visu
         <ProposalReviewPanel
           result={reviewResult}
           decision={reviewDecision}
+          history={reviewHistory}
           busy={reviewBusy}
           error={reviewError}
           onAccept={onAcceptReview}

@@ -16,7 +16,8 @@ import { StartScreen } from "./StartScreen";
 import { SdWizard } from "./SdWizard";
 import { ModelWorkspace } from "./ModelWorkspace";
 import { applySimplePreview, runModelingTask } from "../lib/orchestrator-client";
-import type { ApplySimplePreviewResult, OrchestratorPayload, OrchestratorResult, ReviewDecision } from "../types";
+import { appendReviewHistory, loadReviewHistory } from "../lib/review-history";
+import type { ApplySimplePreviewResult, OrchestratorPayload, OrchestratorResult, ReviewDecision, ReviewHistoryEntry } from "../types";
 import { useSdWizard } from "../state/useSdWizard";
 
 interface OpmGraphGeneratorPanelProps {
@@ -70,6 +71,7 @@ export function OpmGraphGeneratorPanel({ onClose, onOpenInEditor, onOpenLlmSetti
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [lastReview, setLastReview] = useState<OrchestratorResult | null>(null);
   const [reviewDecision, setReviewDecision] = useState<ReviewDecision | null>(null);
+  const [reviewHistory, setReviewHistory] = useState<ReviewHistoryEntry[]>(() => loadReviewHistory());
   const [baseWorkspace, setBaseWorkspace] = useState<WorkspaceState | null>(null);
   const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceState | null>(null);
   const wizard = useSdWizard();
@@ -231,13 +233,19 @@ export function OpmGraphGeneratorPanel({ onClose, onOpenInEditor, onOpenLlmSetti
   };
 
   const handleAcceptReview = () => {
-    const taskKind = lastReview?.task_kind ?? "review";
-    setReviewDecision({ decision: "accepted", note: `${taskKind} accepted for human review flow.` });
+    if (!lastReview) return;
+    const taskKind = lastReview.task_kind;
+    const decision = { decision: "accepted" as const, note: `${taskKind} accepted for human review flow.` };
+    setReviewDecision(decision);
+    setReviewHistory(appendReviewHistory(lastReview, decision));
   };
 
   const handleRejectReview = () => {
-    const taskKind = lastReview?.task_kind ?? "review";
-    setReviewDecision({ decision: "rejected", note: `${taskKind} rejected for now.` });
+    if (!lastReview) return;
+    const taskKind = lastReview.task_kind;
+    const decision = { decision: "rejected" as const, note: `${taskKind} rejected for now.` };
+    setReviewDecision(decision);
+    setReviewHistory(appendReviewHistory(lastReview, decision));
   };
 
   const handleApplySimpleReview = async () => {
@@ -255,7 +263,9 @@ export function OpmGraphGeneratorPanel({ onClose, onOpenInEditor, onOpenLlmSetti
         setBaseWorkspace(workspace);
       }
       setActiveWorkspace(workspace);
-      setReviewDecision({ decision: "applied", note: "Backend apply-simple validated and promoted the preview into the workspace." });
+      const decision = { decision: "applied" as const, note: "Backend apply-simple validated and promoted the preview into the workspace." };
+      setReviewDecision(decision);
+      setReviewHistory(appendReviewHistory(lastReview, decision));
       setApplyError(null);
     } catch (error) {
       setReviewError(error instanceof Error ? error.message : "Apply simple preview failed.");
@@ -310,6 +320,7 @@ export function OpmGraphGeneratorPanel({ onClose, onOpenInEditor, onOpenLlmSetti
             reviewDecision={reviewDecision}
             reviewBusy={reviewBusy}
             reviewError={reviewError ?? applyError}
+            reviewHistory={reviewHistory}
             onAcceptReview={handleAcceptReview}
             onRejectReview={handleRejectReview}
             onApplySimpleReview={() => void handleApplySimpleReview()}

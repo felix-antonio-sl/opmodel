@@ -1,8 +1,9 @@
-import type { OrchestratorResult, ReviewDecision } from "../types";
+import type { OrchestratorResult, ReviewDecision, ReviewHistoryEntry } from "../types";
 
 interface ProposalReviewPanelProps {
   result: OrchestratorResult;
   decision?: ReviewDecision | null;
+  history?: ReviewHistoryEntry[];
   busy?: boolean;
   error?: string | null;
   onAccept?: () => void;
@@ -15,7 +16,7 @@ function prettyValue(value: unknown) {
   return JSON.stringify(value, null, 2);
 }
 
-export function ProposalReviewPanel({ result, decision, busy = false, error, onAccept, onReject, onApplySimple }: ProposalReviewPanelProps) {
+export function ProposalReviewPanel({ result, decision, history = [], busy = false, error, onAccept, onReject, onApplySimple }: ProposalReviewPanelProps) {
   const artifact = result.artifacts[0];
   if (!artifact) return null;
 
@@ -83,6 +84,20 @@ export function ProposalReviewPanel({ result, decision, busy = false, error, onA
         {onReject && <button onClick={onReject} disabled={busy}>Reject review</button>}
         {onApplySimple && <button onClick={onApplySimple} disabled={busy || !hasPreviewModel} style={{ background: hasPreviewModel ? "#1d4ed8" : undefined, color: hasPreviewModel ? "white" : undefined, border: hasPreviewModel ? "1px solid #2563eb" : undefined }}>Apply simple preview</button>}
       </div>
+
+      {history.length > 0 && (
+        <details style={{ border: "1px solid var(--code-border)", borderRadius: 10, padding: 10, background: "rgba(2,6,23,0.45)" }}>
+          <summary style={{ cursor: "pointer", color: "var(--text-muted)", fontSize: 12, fontWeight: 700 }}>Recent review decisions</summary>
+          <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
+            {history.slice(0, 5).map((entry) => (
+              <div key={entry.id} style={{ fontSize: 12, color: "#cbd5e1", borderBottom: "1px solid rgba(148,163,184,0.15)", paddingBottom: 8 }}>
+                <div><strong>{entry.decision}</strong> · <code>{entry.taskKind}</code> · {entry.summary}</div>
+                <div style={{ color: "var(--text-muted)", marginTop: 4 }}>{entry.note}</div>
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
     </div>
   );
 }
