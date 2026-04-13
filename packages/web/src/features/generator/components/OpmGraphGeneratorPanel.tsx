@@ -4,6 +4,7 @@ import {
   kernelToOpl,
   kernelToVisualExportPrompt,
   kernelToVisualRenderSpec,
+  refineMainProcess,
   validateSdDraft,
   type Model,
   type VisualRenderSpec,
@@ -19,17 +20,37 @@ interface OpmGraphGeneratorPanelProps {
   onOpenInEditor: (model: Model) => void;
 }
 
+type WorkspaceState = {
+  model: Model;
+  opl: string;
+  svg: string;
+  visualExport: ReturnType<typeof kernelToVisualExportPrompt>;
+  visualSpec: VisualRenderSpec;
+  currentViewLabel: string;
+};
+
 export function OpmGraphGeneratorPanel({ onClose, onOpenInEditor }: OpmGraphGeneratorPanelProps) {
   const [mode, setMode] = useState<"start" | "wizard" | "workspace">("start");
   const [applyError, setApplyError] = useState<string | null>(null);
-  const [generatedModel, setGeneratedModel] = useState<Model | null>(null);
-  const [generatedOpl, setGeneratedOpl] = useState("");
-  const [generatedSvg, setGeneratedSvg] = useState("");
-  const [generatedVisualExport, setGeneratedVisualExport] = useState<ReturnType<typeof kernelToVisualExportPrompt> | null>(null);
-  const [generatedVisualSpec, setGeneratedVisualSpec] = useState<VisualRenderSpec | null>(null);
+  const [baseWorkspace, setBaseWorkspace] = useState<WorkspaceState | null>(null);
+  const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceState | null>(null);
   const wizard = useSdWizard();
 
   const validation = useMemo(() => validateSdDraft(wizard.draft), [wizard.draft]);
+
+  const buildWorkspaceState = (model: Model, kernel: Parameters<typeof kernelToVisualRenderSpec>[0], currentViewLabel: string, opdId?: string): WorkspaceState => {
+    const opl = kernelToOpl(kernel);
+    const visualSpec = kernelToVisualRenderSpec(kernel, opdId ? { opdId } : undefined);
+    const svg = renderVisualRenderSpec(visualSpec);
+    return {
+      model,
+      opl,
+      svg,
+      visualExport: kernelToVisualExportPrompt(kernel, opdId ? { opdId } : undefined),
+      visualSpec,
+      currentViewLabel,
+    };
+  };
 
   const handleGenerate = () => {
     const result = buildArtifactsFromSdDraft(wizard.draft);
@@ -37,17 +58,25 @@ export function OpmGraphGeneratorPanel({ onClose, onOpenInEditor }: OpmGraphGene
       setApplyError(result.error.message);
       return;
     }
-    const opl = kernelToOpl(result.value.kernel);
-    const visualSpec = kernelToVisualRenderSpec(result.value.kernel);
-    const svg = renderVisualRenderSpec(visualSpec);
+    const workspace = buildWorkspaceState(result.value.model, result.value.kernel, "SD");
 
-    setGeneratedModel(result.value.model);
-    setGeneratedOpl(opl);
-    setGeneratedSvg(svg);
-    setGeneratedVisualExport(kernelToVisualExportPrompt(result.value.kernel));
-    setGeneratedVisualSpec(visualSpec);
+    setBaseWorkspace(workspace);
+    setActiveWorkspace(workspace);
     setApplyError(null);
     setMode("workspace");
+  };
+
+  const handleRefineMainProcess = (draft: { subprocesses: string[]; internalObjects: string[] }) => {
+    if (!baseWorkspace) return;
+    const result = refineMainProcess(baseWorkspace.model, draft);
+    if (!result.ok) {
+      setApplyError(result.error.message);
+      return;
+    }
+
+    const refinedWorkspace = buildWorkspaceState(result.value.model, result.value.kernel, "SD1", result.value.childOpdId);
+    setActiveWorkspace(refinedWorkspace);
+    setApplyError(null);
   };
 
   return (
@@ -76,16 +105,19 @@ export function OpmGraphGeneratorPanel({ onClose, onOpenInEditor }: OpmGraphGene
           </div>
         )}
 
-        {mode === "workspace" && generatedModel && generatedVisualExport && generatedVisualSpec && (
+        {mode === "workspace" && activeWorkspace && (
           <ModelWorkspace
-            model={generatedModel}
-            opl={generatedOpl}
-            svg={generatedSvg}
+            model={activeWorkspace.model}
+            opl={activeWorkspace.opl}
+            svg={activeWorkspace.svg}
             validation={validation}
-            visualExport={generatedVisualExport}
-            visualSpec={generatedVisualSpec}
+            visualExport={activeWorkspace.visualExport}
+            visualSpec={activeWorkspace.visualSpec}
+            currentViewLabel={activeWorkspace.currentViewLabel}
             onBackToWizard={() => setMode("wizard")}
-            onOpenInEditor={() => onOpenInEditor(generatedModel)}
+            onOpenInEditor={() => onOpenInEditor(activeWorkspace.model)}
+            onRefineMainProcess={activeWorkspace.currentViewLabel === "SD" ? handleRefineMainProcess : undefined}
+            onReturnToSd={activeWorkspace.currentViewLabel === "SD1" && baseWorkspace ? () => setActiveWorkspace(baseWorkspace) : undefined}
           />
         )}
       </div>

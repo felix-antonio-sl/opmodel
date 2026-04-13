@@ -5,7 +5,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { OpmGraphGeneratorPanel } from "../src/features/generator/components/OpmGraphGeneratorPanel";
 
 describe("OpmGraphGeneratorPanel", () => {
-  it("walks the wizard and opens a generated model", () => {
+  it("walks the wizard, refines to SD1, and opens a generated model", () => {
     const onOpenInEditor = vi.fn();
 
     render(
@@ -33,6 +33,10 @@ describe("OpmGraphGeneratorPanel", () => {
     fireEvent.click(screen.getByText("Next"));
 
     fireEvent.click(screen.getByText("Generate model"));
+    fireEvent.click(screen.getByText("Refine main process"));
+    fireEvent.click(screen.getByText("Generate SD1"));
+    expect(screen.getByText(/Current view:/).textContent).toContain("SD1");
+
     fireEvent.click(screen.getByText("Open in editor"));
 
     expect(onOpenInEditor).toHaveBeenCalledTimes(1);

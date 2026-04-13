@@ -24,15 +24,21 @@ interface ModelWorkspaceProps {
   validation: DraftValidationReport;
   visualExport: VisualExportPrompt;
   visualSpec: VisualRenderSpec;
+  currentViewLabel?: string;
   onOpenInEditor: () => void;
   onBackToWizard: () => void;
+  onRefineMainProcess?: (draft: { subprocesses: string[]; internalObjects: string[] }) => void;
+  onReturnToSd?: () => void;
 }
 
-export function ModelWorkspace({ model, opl, svg, validation, visualExport, visualSpec, onOpenInEditor, onBackToWizard }: ModelWorkspaceProps) {
+export function ModelWorkspace({ model, opl, svg, validation, visualExport, visualSpec, currentViewLabel = "SD", onOpenInEditor, onBackToWizard, onRefineMainProcess, onReturnToSd }: ModelWorkspaceProps) {
   const [premiumSvg, setPremiumSvg] = useState<string | null>(null);
   const [premiumError, setPremiumError] = useState<string | null>(null);
   const [isGeneratingPremium, setIsGeneratingPremium] = useState(false);
   const [premiumVerification, setPremiumVerification] = useState<RenderedSvgVerificationReport | null>(null);
+  const [showRefinementForm, setShowRefinementForm] = useState(false);
+  const [subprocessesText, setSubprocessesText] = useState("Authorize Charge\nTransfer Energy\nConfirm Completion");
+  const [internalObjectsText, setInternalObjectsText] = useState("Charging Session\nCharge Status");
 
   const handleGeneratePremium = async () => {
     const config = loadStoredDiagramLLMConfig();
@@ -72,13 +78,15 @@ export function ModelWorkspace({ model, opl, svg, validation, visualExport, visu
         <div>
           <div style={{ fontSize: 22, fontWeight: 700, color: "var(--code-text)" }}>{model.meta.name}</div>
           <div style={{ marginTop: 6, color: "var(--text-muted)", fontSize: 13 }}>
-            Primer vertical slice operativo: <code>SdDraft -&gt; SemanticKernel -&gt; OPL + SVG</code>
+            Current view: <code>{currentViewLabel}</code> · Pipeline: <code>SdDraft -&gt; SemanticKernel -&gt; VisualRenderSpec -&gt; SVG</code>
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
           <button onClick={onBackToWizard}>Back to wizard</button>
+          {onReturnToSd && <button onClick={onReturnToSd}>Return to SD</button>}
           <button onClick={() => downloadText(`${model.meta.name.toLowerCase().replace(/\s+/g, "-")}.opl.txt`, opl, "text/plain")}>Export OPL</button>
           <button onClick={() => downloadText(`${model.meta.name.toLowerCase().replace(/\s+/g, "-")}.svg`, svg, "image/svg+xml")}>Export SVG</button>
+          {onRefineMainProcess && <button onClick={() => setShowRefinementForm((value) => !value)}>{showRefinementForm ? "Hide SD1 refine" : "Refine main process"}</button>}
           <button onClick={() => navigator.clipboard.writeText(visualExport.prompt)}>Copy premium prompt</button>
           <button onClick={handleGeneratePremium} disabled={isGeneratingPremium}>{isGeneratingPremium ? "Generating premium SVG..." : "Generate premium SVG"}</button>
           {premiumSvg && <button onClick={() => downloadText(`${model.meta.name.toLowerCase().replace(/\s+/g, "-")}.premium.svg`, premiumSvg, "image/svg+xml")}>Export premium SVG</button>}
@@ -89,6 +97,33 @@ export function ModelWorkspace({ model, opl, svg, validation, visualExport, visu
           </button>
         </div>
       </div>
+
+      {showRefinementForm && onRefineMainProcess && (
+        <div style={{ border: "1px solid var(--code-border)", borderRadius: 12, padding: 16, background: "rgba(15,23,42,0.55)", display: "grid", gap: 12 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>SD1 refinement</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div style={{ display: "grid", gap: 6 }}>
+              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>Subprocesses, one per line</div>
+              <textarea value={subprocessesText} onChange={(event) => setSubprocessesText(event.target.value)} style={{ minHeight: 120, resize: "vertical", background: "#020617", color: "#e2e8f0", border: "1px solid var(--code-border)", borderRadius: 10, padding: 12, fontFamily: "var(--font-mono, monospace)", fontSize: 12 }} />
+            </div>
+            <div style={{ display: "grid", gap: 6 }}>
+              <div style={{ fontSize: 12, color: "var(--text-muted)" }}>Internal objects, one per line</div>
+              <textarea value={internalObjectsText} onChange={(event) => setInternalObjectsText(event.target.value)} style={{ minHeight: 120, resize: "vertical", background: "#020617", color: "#e2e8f0", border: "1px solid var(--code-border)", borderRadius: 10, padding: 12, fontFamily: "var(--font-mono, monospace)", fontSize: 12 }} />
+            </div>
+          </div>
+          <div>
+            <button
+              onClick={() => onRefineMainProcess({
+                subprocesses: subprocessesText.split("\n").map((item) => item.trim()).filter(Boolean),
+                internalObjects: internalObjectsText.split("\n").map((item) => item.trim()).filter(Boolean),
+              })}
+              style={{ background: "#7c3aed", color: "white", border: "1px solid #8b5cf6", borderRadius: 10, padding: "10px 14px" }}
+            >
+              Generate SD1
+            </button>
+          </div>
+        </div>
+      )}
 
       <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: 16 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -122,7 +157,7 @@ export function ModelWorkspace({ model, opl, svg, validation, visualExport, visu
             <div>{model.states.size} states</div>
             <div>{model.links.size} links</div>
             <div>{model.opds.size} OPDs</div>
-            <div>Current slice: SD only</div>
+            <div>Current slice: {currentViewLabel}</div>
             <div>VisualRenderSpec: {visualSpec.nodes.length} nodes / {visualSpec.edges.length} edges</div>
             <div>Premium visual export adapter: ready</div>
             <div style={{ color: "var(--text-muted)" }}>Next cut: SD1 refinement, verifier hardening, and LLM backend hookup.</div>
