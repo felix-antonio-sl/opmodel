@@ -83,11 +83,19 @@ class OplImportTask(BaseModel):
 
 
 class IncrementalChangeTask(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     kind: Literal["incremental-change"]
     source: SourceKind = "incremental-session"
     request: str = Field(min_length=1)
-    model_snapshot: dict[str, Any] | None = None
-    current_opl: str | None = None
+    model_snapshot: dict[str, Any] | None = Field(
+        default=None,
+        validation_alias=AliasChoices("model_snapshot", "modelSnapshot"),
+    )
+    current_opl: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("current_opl", "currentOpl"),
+    )
 
 
 class RefineProcessTask(BaseModel):

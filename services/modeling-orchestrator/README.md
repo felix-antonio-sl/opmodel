@@ -39,6 +39,10 @@ This first slice only scaffolds:
   - `validateSdDraft`
   - `buildArtifactsFromSdDraft`
   - `renderAllFromSemanticKernel`
+- stable `incremental-change` bridge for `KernelPatchProposal`
+  - request classification
+  - current OPL context parsing through `compileToKernel`
+  - structured proposal with confidence and expected SSOT checks
 - placeholder Deep Agent builder hooks
 - FastAPI surface
 
@@ -49,6 +53,7 @@ It does **not** yet:
 - apply kernel patches back into the core
 - persist memory
 - run subagents in production
+- guarantee perfect NL understanding for arbitrary incremental requests
 
 ## Suggested dev run
 
@@ -107,6 +112,37 @@ The worker returns a structured artifact with:
 - serialized model JSON snapshot
 
 It still does not call a live model provider. The LLM-facing part remains proposal-time only.
+
+## `incremental-change` current behavior
+
+`incremental-change` now returns a stable `KernelPatchProposal` shape instead of a placeholder.
+
+```text
+FastAPI -> LangGraph worker -> bun bridge
+                          -> request classification
+                          -> optional current OPL parse/compile
+                          -> structured patch proposal
+```
+
+Current proposal shape:
+
+- `summary`
+- `rationale`
+- `operations`
+- `confidence`
+- `ssotChecksExpected`
+- `requiresHumanReview`
+
+Current operation kinds:
+
+- `add-enabler`
+- `add-transforming-link`
+- `add-state-transition`
+- `rename-thing`
+- `refine-process`
+- `manual-review`
+
+This is intentionally proposal-only. Application back into the kernel remains a later step.
 
 ## `opl-import` current behavior
 

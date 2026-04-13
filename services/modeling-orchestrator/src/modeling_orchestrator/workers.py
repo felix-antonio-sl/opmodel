@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from .agents import build_deep_agent_config
 from .contracts import ProposalArtifact
-from .core_bridge import CoreBridgeError, run_opl_import, run_wizard_generate
+from .core_bridge import CoreBridgeError, run_incremental_change, run_opl_import, run_wizard_generate
 from .state import OrchestratorState
 
 
@@ -144,16 +144,52 @@ def opl_import_worker(state: OrchestratorState) -> OrchestratorState:
 
 def incremental_change_worker(state: OrchestratorState) -> OrchestratorState:
     task = state["task"]
+
+    try:
+        bridge_result = run_incremental_change(
+            getattr(task, "request", ""),
+            current_opl=getattr(task, "current_opl", None),
+            model_snapshot=getattr(task, "model_snapshot", None),
+        )
+    except CoreBridgeError as exc:
+        artifact = ProposalArtifact(
+            artifact_kind="kernel-patch-proposal",
+            summary="Incremental change failed before building a stable patch proposal.",
+            payload={
+                "request": getattr(task, "request", None),
+                "bridge_error": str(exc),
+            },
+        )
+        next_state = _append_artifact(state, artifact, "incremental-bridge-error")
+        return _extend_guardrail(
+            next_state,
+            issues=["Core bridge failed for incremental-change."],
+            checks=["incremental-core-bridge-invoked"],
+        )
+
+    proposal = bridge_result.get("proposal", {})
     artifact = ProposalArtifact(
         artifact_kind="kernel-patch-proposal",
-        summary="Placeholder kernel patch proposal from incremental request.",
-        payload={
-            "request": getattr(task, "request", None),
-            "model_snapshot_present": bool(getattr(task, "model_snapshot", None)),
-            "operations": [],
-        },
+        summary=proposal.get("summary", "Stable kernel patch proposal generated from incremental request."),
+        payload=bridge_result,
     )
-    return _append_artifact(state, artifact, "incremental-proposal-ready")
+    next_state = _append_artifact(state, artifact, "incremental-proposal-built")
+
+    issues: list[str] = []
+    if not bridge_result.get("ok", False):
+        issues.append("Incremental change request remains ambiguous and needs manual review.")
+    if proposal.get("requiresHumanReview"):
+        issues.append("Kernel patch proposal requires human review before application.")
+
+    return _extend_guardrail(
+        next_state,
+        issues=issues,
+        checks=[
+            "incremental-core-bridge-invoked",
+            "kernel-patch-proposal-generated",
+            "incremental-context-evaluated",
+        ],
+    )
 
 
 def refine_process_worker(state: OrchestratorState) -> OrchestratorState:
