@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { DraftValidationReport, Model, VisualExportPrompt, VisualRenderSpec } from "@opmodel/core";
 import { createDiagramLLMProvider, loadStoredDiagramLLMConfig, verifyRenderedSvg, type RenderedSvgVerificationReport } from "../../../lib/renderers/llm-renderer";
 import { DiagramPreview } from "./DiagramPreview";
@@ -40,11 +40,19 @@ export function ModelWorkspace({ model, opl, svg, validation, visualExport, visu
   const [subprocessesText, setSubprocessesText] = useState("Authorize Charge\nTransfer Energy\nConfirm Completion");
   const [internalObjectsText, setInternalObjectsText] = useState("Charging Session\nCharge Status");
 
-  const handleGeneratePremium = async () => {
+  const workspaceKey = useMemo(
+    () => `${visualSpec.diagramKind}:${visualSpec.title}:${visualSpec.nodes.length}:${visualSpec.edges.length}:${currentViewLabel}`,
+    [visualSpec.diagramKind, visualSpec.title, visualSpec.nodes.length, visualSpec.edges.length, currentViewLabel],
+  );
+
+  const generatePremium = async (options?: { silentIfNoConfig?: boolean }) => {
     const config = loadStoredDiagramLLMConfig();
     if (!config) {
+      setPremiumSvg(null);
       setPremiumVerification(null);
-      setPremiumError("No LLM config found in localStorage key opmodel:nl-config. Reuse the NL settings first.");
+      if (!options?.silentIfNoConfig) {
+        setPremiumError("No LLM config found in localStorage key opmodel:nl-config. Reuse the NL settings first.");
+      }
       return;
     }
 
@@ -65,6 +73,7 @@ export function ModelWorkspace({ model, opl, svg, validation, visualExport, visu
         setPremiumError(verification.issues.map((issue) => issue.message).join(" "));
       }
     } catch (error) {
+      setPremiumSvg(null);
       setPremiumVerification(null);
       setPremiumError(error instanceof Error ? error.message : "Failed to generate premium diagram.");
     } finally {
@@ -72,24 +81,35 @@ export function ModelWorkspace({ model, opl, svg, validation, visualExport, visu
     }
   };
 
+  useEffect(() => {
+    setPremiumSvg(null);
+    setPremiumVerification(null);
+    setPremiumError(null);
+    void generatePremium({ silentIfNoConfig: true });
+  }, [workspaceKey]);
+
+  const primarySvg = premiumSvg ?? svg;
+  const isPremiumPrimary = Boolean(premiumSvg);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16, color: "var(--text-primary)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
         <div>
           <div style={{ fontSize: 22, fontWeight: 700, color: "var(--code-text)" }}>{model.meta.name}</div>
           <div style={{ marginTop: 6, color: "var(--text-muted)", fontSize: 13 }}>
-            Current view: <code>{currentViewLabel}</code> · Pipeline: <code>SdDraft -&gt; SemanticKernel -&gt; VisualRenderSpec -&gt; SVG</code>
+            Current view: <code>{currentViewLabel}</code> · Pipeline: <code>SdDraft -&gt; SemanticKernel -&gt; VisualRenderSpec -&gt; premium SVG</code>
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
           <button onClick={onBackToWizard}>Back to wizard</button>
           {onReturnToSd && <button onClick={onReturnToSd}>Return to SD</button>}
           <button onClick={() => downloadText(`${model.meta.name.toLowerCase().replace(/\s+/g, "-")}.opl.txt`, opl, "text/plain")}>Export OPL</button>
-          <button onClick={() => downloadText(`${model.meta.name.toLowerCase().replace(/\s+/g, "-")}.svg`, svg, "image/svg+xml")}>Export SVG</button>
+          <button onClick={() => downloadText(`${model.meta.name.toLowerCase().replace(/\s+/g, "-")}.svg`, primarySvg, "image/svg+xml")}>Export primary SVG</button>
           {onRefineMainProcess && <button onClick={() => setShowRefinementForm((value) => !value)}>{showRefinementForm ? "Hide SD1 refine" : "Refine main process"}</button>}
           <button onClick={() => navigator.clipboard.writeText(visualExport.prompt)}>Copy premium prompt</button>
-          <button onClick={handleGeneratePremium} disabled={isGeneratingPremium}>{isGeneratingPremium ? "Generating premium SVG..." : "Generate premium SVG"}</button>
+          <button onClick={() => void generatePremium()} disabled={isGeneratingPremium}>{isGeneratingPremium ? "Generating premium SVG..." : premiumSvg ? "Regenerate premium SVG" : "Generate premium SVG"}</button>
           {premiumSvg && <button onClick={() => downloadText(`${model.meta.name.toLowerCase().replace(/\s+/g, "-")}.premium.svg`, premiumSvg, "image/svg+xml")}>Export premium SVG</button>}
+          <button onClick={() => downloadText(`${model.meta.name.toLowerCase().replace(/\s+/g, "-")}.debug.svg`, svg, "image/svg+xml")}>Export fallback SVG</button>
           <button onClick={() => downloadText(`${model.meta.name.toLowerCase().replace(/\s+/g, "-")}.visual-render-spec.json`, JSON.stringify(visualSpec, null, 2), "application/json")}>Export render spec</button>
           <button onClick={() => downloadText(`${model.meta.name.toLowerCase().replace(/\s+/g, "-")}.visual-export.json`, JSON.stringify(visualExport, null, 2), "application/json")}>Export visual adapter</button>
           <button onClick={onOpenInEditor} style={{ background: "#1d4ed8", color: "white", border: "1px solid #2563eb", borderRadius: 10, padding: "10px 14px" }}>
@@ -127,7 +147,12 @@ export function ModelWorkspace({ model, opl, svg, validation, visualExport, visu
 
       <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: 16 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <DiagramPreview svg={svg} />
+          <div style={{ border: "1px solid var(--code-border)", borderRadius: 12, padding: 12, background: "rgba(15,23,42,0.55)", fontSize: 12, color: "var(--text-muted)" }}>
+            Primary renderer: <strong style={{ color: isPremiumPrimary ? "#22c55e" : "#f59e0b" }}>{isPremiumPrimary ? "premium LLM" : "deterministic fallback"}</strong>
+            {isGeneratingPremium && <span style={{ marginLeft: 8 }}>Generating premium output...</span>}
+            {!isPremiumPrimary && !isGeneratingPremium && <span style={{ marginLeft: 8 }}>Premium output not available yet, showing fallback.</span>}
+          </div>
+          <DiagramPreview svg={primarySvg} />
           {premiumError && <div style={{ color: "var(--warning)", fontSize: 13 }}>{premiumError}</div>}
           {premiumVerification && (
             <div style={{ border: "1px solid var(--code-border)", borderRadius: 12, padding: 12, background: "rgba(15,23,42,0.55)", fontSize: 12 }}>
@@ -143,7 +168,14 @@ export function ModelWorkspace({ model, opl, svg, validation, visualExport, visu
               </div>
             </div>
           )}
-          {premiumSvg && <DiagramPreview svg={premiumSvg} />}
+          {premiumSvg && (
+            <details style={{ border: "1px solid var(--code-border)", borderRadius: 12, padding: 12, background: "rgba(15,23,42,0.4)" }}>
+              <summary style={{ cursor: "pointer", color: "var(--text-muted)", fontSize: 12, fontWeight: 700 }}>Show fallback/debug SVG</summary>
+              <div style={{ marginTop: 12 }}>
+                <DiagramPreview svg={svg} />
+              </div>
+            </details>
+          )}
         </div>
         <ValidationPanel report={validation} />
       </div>
@@ -159,8 +191,9 @@ export function ModelWorkspace({ model, opl, svg, validation, visualExport, visu
             <div>{model.opds.size} OPDs</div>
             <div>Current slice: {currentViewLabel}</div>
             <div>VisualRenderSpec: {visualSpec.nodes.length} nodes / {visualSpec.edges.length} edges</div>
-            <div>Premium visual export adapter: ready</div>
-            <div style={{ color: "var(--text-muted)" }}>Next cut: SD1 refinement, verifier hardening, and LLM backend hookup.</div>
+            <div>Primary renderer: premium LLM</div>
+            <div>Fallback renderer: deterministic debug path</div>
+            <div style={{ color: "var(--text-muted)" }}>Premium output is now the canonical delivery target for this slice.</div>
           </div>
         </div>
       </div>
