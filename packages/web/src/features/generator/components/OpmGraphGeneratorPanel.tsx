@@ -5,6 +5,7 @@ import {
   kernelToVisualExportPrompt,
   kernelToVisualRenderSpec,
   refineMainProcess,
+  validateRefinedModel,
   validateSdDraft,
   type Model,
   type VisualRenderSpec,
@@ -27,6 +28,7 @@ type WorkspaceState = {
   visualExport: ReturnType<typeof kernelToVisualExportPrompt>;
   visualSpec: VisualRenderSpec;
   currentViewLabel: string;
+  validationReport: ReturnType<typeof validateSdDraft>;
 };
 
 export function OpmGraphGeneratorPanel({ onClose, onOpenInEditor }: OpmGraphGeneratorPanelProps) {
@@ -49,6 +51,7 @@ export function OpmGraphGeneratorPanel({ onClose, onOpenInEditor }: OpmGraphGene
       visualExport: kernelToVisualExportPrompt(kernel, opdId ? { opdId } : undefined),
       visualSpec,
       currentViewLabel,
+      validationReport: currentViewLabel === "SD" ? validation : validateRefinedModel(model),
     };
   };
 
@@ -110,7 +113,7 @@ export function OpmGraphGeneratorPanel({ onClose, onOpenInEditor }: OpmGraphGene
             model={activeWorkspace.model}
             opl={activeWorkspace.opl}
             svg={activeWorkspace.svg}
-            validation={validation}
+            validation={activeWorkspace.validationReport}
             visualExport={activeWorkspace.visualExport}
             visualSpec={activeWorkspace.visualSpec}
             currentViewLabel={activeWorkspace.currentViewLabel}
