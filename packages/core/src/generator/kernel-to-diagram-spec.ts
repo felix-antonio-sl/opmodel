@@ -34,12 +34,17 @@ export function kernelToDiagramSpec(kernel: SemanticKernel, opdId = "opd-sd"): D
           : "object";
 
     const lane = kind === "process" ? "center" : kind === "external" ? "left" : "right";
+    const emphasis = occurrence.role === "primary"
+      || (slice.refinementId && thing.kind === "process" && occurrence.role === "internal")
+      ? "primary"
+      : "secondary";
+
     nodes.push({
       id: thing.id,
       label: thing.name,
       kind,
       lane,
-      emphasis: occurrence.role === "primary" ? "primary" : "secondary",
+      emphasis,
     });
   }
 
