@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { DraftValidationReport, Model, VisualExportPrompt, VisualRenderSpec } from "@opmodel/core";
-import { createDiagramLLMProvider, loadStoredDiagramLLMConfig } from "../../../lib/renderers/llm-renderer";
+import { createDiagramLLMProvider, loadStoredDiagramLLMConfig, verifyRenderedSvg, type RenderedSvgVerificationReport } from "../../../lib/renderers/llm-renderer";
 import { DiagramPreview } from "./DiagramPreview";
 import { OplPanel } from "./OplPanel";
 import { ValidationPanel } from "./ValidationPanel";
@@ -32,16 +32,19 @@ export function ModelWorkspace({ model, opl, svg, validation, visualExport, visu
   const [premiumSvg, setPremiumSvg] = useState<string | null>(null);
   const [premiumError, setPremiumError] = useState<string | null>(null);
   const [isGeneratingPremium, setIsGeneratingPremium] = useState(false);
+  const [premiumVerification, setPremiumVerification] = useState<RenderedSvgVerificationReport | null>(null);
 
   const handleGeneratePremium = async () => {
     const config = loadStoredDiagramLLMConfig();
     if (!config) {
+      setPremiumVerification(null);
       setPremiumError("No LLM config found in localStorage key opmodel:nl-config. Reuse the NL settings first.");
       return;
     }
 
     setIsGeneratingPremium(true);
     setPremiumError(null);
+    setPremiumVerification(null);
     try {
       const provider = createDiagramLLMProvider(config);
       const result = await provider.generateSvg({
@@ -49,8 +52,14 @@ export function ModelWorkspace({ model, opl, svg, validation, visualExport, visu
         stylePack: visualSpec.style,
         systemPrompt: visualExport.prompt,
       });
+      const verification = verifyRenderedSvg(visualSpec, result.svg);
       setPremiumSvg(result.svg);
+      setPremiumVerification(verification);
+      if (!verification.ok) {
+        setPremiumError(verification.issues.map((issue) => issue.message).join(" "));
+      }
     } catch (error) {
+      setPremiumVerification(null);
       setPremiumError(error instanceof Error ? error.message : "Failed to generate premium diagram.");
     } finally {
       setIsGeneratingPremium(false);
@@ -85,6 +94,20 @@ export function ModelWorkspace({ model, opl, svg, validation, visualExport, visu
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <DiagramPreview svg={svg} />
           {premiumError && <div style={{ color: "var(--warning)", fontSize: 13 }}>{premiumError}</div>}
+          {premiumVerification && (
+            <div style={{ border: "1px solid var(--code-border)", borderRadius: 12, padding: 12, background: "rgba(15,23,42,0.55)", fontSize: 12 }}>
+              <div style={{ fontWeight: 700, color: premiumVerification.ok ? "#22c55e" : "#f59e0b", marginBottom: 8 }}>
+                Premium SVG verification: {premiumVerification.ok ? "pass" : "issues found"}
+              </div>
+              <div style={{ display: "grid", gap: 6, color: "var(--text-muted)" }}>
+                {premiumVerification.issues.length === 0 ? (
+                  <div>No structural issues detected against VisualRenderSpec.</div>
+                ) : premiumVerification.issues.slice(0, 8).map((issue, index) => (
+                  <div key={`${issue.code}-${index}`}>{issue.code}: {issue.message}</div>
+                ))}
+              </div>
+            </div>
+          )}
           {premiumSvg && <DiagramPreview svg={premiumSvg} />}
         </div>
         <ValidationPanel report={validation} />
