@@ -1,4 +1,4 @@
-import type { OrchestratorResult, ReviewDecision, ReviewHistoryEntry } from "../types";
+import { artifactHasModelJson, type OrchestratorResult, type ReviewDecision, type ReviewHistoryEntry } from "../types";
 
 interface ProposalReviewPanelProps {
   result: OrchestratorResult;
@@ -21,7 +21,7 @@ export function ProposalReviewPanel({ result, decision, history = [], busy = fal
   if (!artifact) return null;
 
   const payload = artifact.payload;
-  const hasPreviewModel = typeof payload.outputs?.modelJson === "string" && payload.outputs.modelJson.length > 0;
+  const hasPreviewModel = artifactHasModelJson(artifact);
   const operations = Array.isArray(payload.proposal.operations) ? payload.proposal.operations : [];
   const checks = payload.proposal.ssotChecksExpected ?? [];
   const outputEntries = Object.entries(payload.outputs ?? {}).filter(([key]) => key !== "modelJson");

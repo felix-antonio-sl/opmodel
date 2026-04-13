@@ -3,6 +3,7 @@ import type { Model, ValidationResult } from "@opmodel/core";
 import { validateOpl, parseOplDocuments, compileToKernel, legacyModelFromSemanticKernel, exposeSemanticKernel, loadModel } from "@opmodel/core";
 import { autoLayoutModel } from "../lib/auto-layout";
 import { runModelingTask } from "../features/generator/lib/orchestrator-client";
+import { artifactHasModelJson } from "../features/generator/types";
 
 interface OplImportPanelProps {
   model: Model;
@@ -93,7 +94,10 @@ export function OplImportPanel({ model, onClose, onApply, onOpenInGraphGenerator
         },
       });
       const artifact = result.artifacts[0];
-      const modelJson = artifact?.payload.outputs?.modelJson;
+      if (!artifact || !artifactHasModelJson(artifact)) {
+        throw new Error("Modeling orchestrator did not return modelJson for OPL import.");
+      }
+      const modelJson = artifact.payload.outputs.modelJson;
       if (typeof modelJson !== "string" || modelJson.trim().length === 0) {
         throw new Error("Modeling orchestrator did not return modelJson for OPL import.");
       }

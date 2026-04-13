@@ -86,6 +86,14 @@ GET /health
 POST /v1/modeling-tasks/run
 ```
 
+### Apply deterministic preview as workspace state
+
+```bash
+POST /v1/reviews/apply-simple
+```
+
+This endpoint does not persist domain mutations. It validates that an artifact already carries a deterministic `modelJson` preview, reruns the core render path, and returns a workspace-ready payload (`modelJson`, `canonicalOpl`, `visualSpec`) for the web generator.
+
 Example payload:
 
 ```json
@@ -247,6 +255,25 @@ The payload shape is:
 - optional `inputs`
 
 This keeps proposal-only orchestration consistent across import, generation, refinement, incremental change, and render, while still allowing each task to expose task-specific details inside `proposal/context/outputs`.
+
+## V1 functional status
+
+The current V1 slice is now functionally usable end-to-end for guided modeling review:
+
+- wizard generation through the orchestrator
+- OPL import into the graph generator through the orchestrator
+- incremental proposal review
+- refine-process review
+- render verification review
+- backend `apply-simple` of deterministic previews
+- local persistence of review decisions in the web workspace
+
+What still remains intentionally out of scope for V1:
+
+- persistent patch application back into semantic authority
+- provider-backed NL generation in production
+- durable server-side review history
+- arbitrary freeform edit execution beyond supported proposal slices
 
 ## Service shape
 

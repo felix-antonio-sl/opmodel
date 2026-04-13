@@ -17,7 +17,7 @@ import { SdWizard } from "./SdWizard";
 import { ModelWorkspace } from "./ModelWorkspace";
 import { applySimplePreview, runModelingTask } from "../lib/orchestrator-client";
 import { appendReviewHistory, loadReviewHistory } from "../lib/review-history";
-import type { ApplySimplePreviewResult, OrchestratorPayload, OrchestratorResult, ReviewDecision, ReviewHistoryEntry } from "../types";
+import { artifactHasModelJson, type ApplySimplePreviewResult, type OrchestratorArtifact, type OrchestratorResult, type ReviewDecision, type ReviewHistoryEntry } from "../types";
 import { useSdWizard } from "../state/useSdWizard";
 
 interface OpmGraphGeneratorPanelProps {
@@ -37,8 +37,9 @@ type WorkspaceState = {
   validationReport: ReturnType<typeof validateSdDraft>;
 };
 
-function parseModelSnapshot(payload: OrchestratorPayload) {
-  const modelJson = payload.outputs?.modelJson;
+function parseModelSnapshot(artifact: OrchestratorArtifact) {
+  if (!artifactHasModelJson(artifact)) return null;
+  const modelJson = artifact.payload.outputs.modelJson;
   if (typeof modelJson !== "string" || modelJson.trim().length === 0) return null;
   const loaded = loadModel(modelJson);
   if (!loaded.ok) {
@@ -97,7 +98,7 @@ export function OpmGraphGeneratorPanel({ onClose, onOpenInEditor, onOpenLlmSetti
   const applyWorkspaceFromReview = (result: OrchestratorResult, options?: { asBase?: boolean; fallbackViewLabel?: string }) => {
     const artifact = result.artifacts[0];
     if (!artifact) return null;
-    const model = parseModelSnapshot(artifact.payload);
+    const model = parseModelSnapshot(artifact);
     if (!model) return null;
 
     const nextViewLabel = artifact.payload.proposal.childOpdId
