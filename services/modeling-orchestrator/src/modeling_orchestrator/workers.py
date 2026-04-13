@@ -1,7 +1,13 @@
 from __future__ import annotations
 
 from .agents import build_deep_agent_config
-from .contracts import ArtifactPayload, ArtifactProposal, ProposalArtifact
+from .contracts import (
+    ArtifactPayload,
+    ArtifactProposal,
+    IncrementalPreviewContext,
+    IncrementalPreviewOutputs,
+    ProposalArtifact,
+)
 from .core_bridge import CoreBridgeError, run_incremental_change, run_opl_import, run_refine_process, run_render, run_wizard_generate
 from .state import OrchestratorState
 
@@ -260,14 +266,17 @@ def incremental_change_worker(state: OrchestratorState) -> OrchestratorState:
         )
 
     proposal = bridge_result.get("proposal", {})
+    incremental_context = IncrementalPreviewContext.model_validate(bridge_result.get("context") or {})
+    incremental_outputs = IncrementalPreviewOutputs.model_validate(bridge_result.get("outputs") or {})
+
     artifact = ProposalArtifact(
         artifact_kind="kernel-patch-proposal",
         summary=proposal.get("summary", "Stable kernel patch proposal generated from incremental request."),
         payload=_normalized_artifact_payload(
             ok=bool(bridge_result.get("ok")),
             proposal=proposal,
-            context=bridge_result.get("context") or {},
-            outputs=bridge_result.get("outputs") or {},
+            context=incremental_context.model_dump(exclude_none=True),
+            outputs=incremental_outputs.model_dump(exclude_none=True),
             error=bridge_result.get("error"),
             inputs={"request": getattr(task, "request", None)},
         ),

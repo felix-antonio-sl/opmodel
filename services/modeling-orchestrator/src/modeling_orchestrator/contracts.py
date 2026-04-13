@@ -167,6 +167,46 @@ class ArtifactPayload(BaseModel):
     inputs: dict[str, Any] | None = None
 
 
+class BridgeStageError(BaseModel):
+    stage: str
+    message: str
+
+
+class KernelStats(BaseModel):
+    things: int
+    states: int
+    links: int
+    refinements: int
+    opds: int
+
+
+class ThingSummary(BaseModel):
+    id: str | None = None
+    name: str
+    kind: Literal["object", "process"]
+
+
+class IncrementalPreviewContext(BaseModel):
+    currentOplPresent: bool = False
+    modelSnapshotPresent: bool = False
+    currentOplParsed: bool = False
+    previewBaseSource: Literal["modelSnapshot", "currentOpl", "none"] = "none"
+    previewApplied: bool = False
+    normalizedOpl: str | None = None
+    kernelStats: KernelStats | None = None
+    knownThings: list[ThingSummary] = Field(default_factory=list)
+    unresolvedReferences: list[str] = Field(default_factory=list)
+    previewIssues: list[str] = Field(default_factory=list)
+    appliedOperationCount: int | None = None
+    currentOplError: BridgeStageError | None = None
+    previewBaseError: BridgeStageError | None = None
+
+
+class IncrementalPreviewOutputs(BaseModel):
+    canonicalOpl: str | None = None
+    modelJson: str | None = None
+
+
 class ProposalArtifact(BaseModel):
     artifact_kind: Literal[
         "sd-draft",
