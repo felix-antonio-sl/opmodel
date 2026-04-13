@@ -5,7 +5,9 @@ import {
   kernelToDiagramSpec,
   kernelToOpl,
   kernelToVisualExportPrompt,
+  kernelToVisualRenderSpec,
   validateSdDraft,
+  verifyVisualRenderSpec,
 } from "../src";
 
 describe("SdDraft generator slice", () => {
@@ -44,9 +46,19 @@ describe("SdDraft generator slice", () => {
     expect(diagram.nodes.some((node) => node.label === "Battery Charging")).toBe(true);
     expect(diagram.edges.length).toBeGreaterThan(0);
 
+    const visualSpec = kernelToVisualRenderSpec(result.value.kernel);
+    expect(visualSpec.diagramKind).toBe("opm-sd");
+    expect(visualSpec.nodes.some((node) => node.visualRole === "main-process")).toBe(true);
+    expect(visualSpec.edges.length).toBeGreaterThan(0);
+    expect(visualSpec.canonicalOpl).toContain("Battery Charging is a process");
+
+    const visualReport = verifyVisualRenderSpec(visualSpec);
+    expect(visualReport.ok).toBe(true);
+
     const visualPrompt = kernelToVisualExportPrompt(result.value.kernel);
     expect(visualPrompt.prompt).toContain("Battery Charging");
     expect(visualPrompt.opl).toContain("Battery Charging is a process");
+    expect(visualPrompt.semanticsGuardrails.length).toBeGreaterThanOrEqual(5);
   });
 
   it("rejects drafts without main process and value object", () => {

@@ -5,4 +5,7 @@ export * from "./kernel-to-opl";
 export * from "./diagram-spec-types";
 export * from "./kernel-to-diagram-spec";
 export * from "./visual-export-types";
+export * from "./visual-render-spec";
+export * from "./kernel-to-visual-render-spec";
+export * from "./visual-render-verifier";
 export * from "./kernel-to-visual-export";

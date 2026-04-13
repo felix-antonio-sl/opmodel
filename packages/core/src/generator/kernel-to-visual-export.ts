@@ -1,6 +1,5 @@
 import type { SemanticKernel } from "../semantic-kernel";
-import { kernelToDiagramSpec } from "./kernel-to-diagram-spec";
-import { kernelToOpl } from "./kernel-to-opl";
+import { kernelToVisualRenderSpec } from "./kernel-to-visual-render-spec";
 import type { VisualExportPrompt, VisualExportStyle } from "./visual-export-types";
 
 function prettyKind(kind: string) {
@@ -22,65 +21,56 @@ export function kernelToVisualExportPrompt(
 ): VisualExportPrompt {
   const style = options?.style ?? "dark-terminal";
   const opdId = options?.opdId ?? "opd-sd";
-  const diagram = kernelToDiagramSpec(kernel, opdId);
-  const opl = kernelToOpl(kernel);
+  const spec = kernelToVisualRenderSpec(kernel, { style, opdId });
 
-  const mainProcess = diagram.nodes.find((node) => node.kind === "process" && node.emphasis === "primary")
-    ?? diagram.nodes.find((node) => node.kind === "process");
-  const beneficiary = diagram.nodes.find((node) => node.kind === "external");
-  const valueObject = diagram.nodes.find((node) => node.kind === "object" || node.kind === "system");
-
-  const guardrails = [
-    "Do not invent OPM semantics absent from the provided OPL and node/edge set.",
-    "Treat OPL as canonical semantics and the diagram as a derived visualization.",
-    "Prefer a left-to-right architecture view with three lanes: Context, Function, System.",
-    "Preserve process vs object distinction visually.",
-    "Label edges using the provided OPM relation names, not generic arrows.",
-  ];
+  const mainProcess = spec.nodes.find((node) => node.visualRole === "main-process")
+    ?? spec.nodes.find((node) => node.opmKind === "process");
+  const beneficiary = spec.nodes.find((node) => node.visualRole === "beneficiary" || node.affiliation === "environmental");
+  const valueObject = spec.nodes.find((node) => node.visualRole === "value-object" || node.visualRole === "system");
 
   const prompt = [
-    `Generate a technical diagram in ${style} style for the OPM model \"${kernel.meta.name}\".`,
-    "Use an architecture-diagram layout with lanes Context -> Function -> System.",
+    `Generate a technical diagram in ${style} style for the OPM model \"${spec.title}\".`,
+    `Use a ${spec.diagramKind} architecture layout with lanes ${spec.scene.lanes.map((lane) => lane.label).join(" -> ")}.`,
     mainProcess ? `Center the primary process \"${mainProcess.label}\" as the functional core.` : undefined,
     beneficiary ? `Show beneficiary/context on the left, including \"${beneficiary.label}\".` : undefined,
     valueObject ? `Show the main transformed system-side object \"${valueObject.label}\" on the right.` : undefined,
     "Use the following nodes and relations as the only semantic source for the diagram:",
-    ...diagram.nodes.map((node) => `- node ${node.id}: ${node.label} [${node.kind}${node.lane ? `, lane=${node.lane}` : ""}]`),
-    ...diagram.edges.map((edge) => `- edge ${edge.source} -> ${edge.target}: ${prettyKind(edge.kind)}${edge.label ? ` (${edge.label})` : ""}`),
+    ...spec.nodes.map((node) => `- node ${node.id}: ${node.label} [${node.opmKind}, role=${node.visualRole}, lane=${node.laneId}]`),
+    ...spec.edges.map((edge) => `- edge ${edge.source} -> ${edge.target}: ${prettyKind(edge.opmLinkKind)}${edge.label ? ` (${edge.label})` : ""}`),
     "Canonical OPL follows. Use it to preserve naming and semantics:",
-    opl,
+    spec.canonicalOpl,
   ].filter(Boolean).join("\n");
 
   return {
-    title: kernel.meta.name,
+    title: spec.title,
     diagramType: "architecture",
     style,
     intent: "Render a polished derived diagram from an already-correct OPM kernel.",
-    semanticsGuardrails: guardrails,
+    semanticsGuardrails: spec.guardrails,
     systemSummary: {
-      systemName: kernel.meta.name,
+      systemName: spec.title,
       ...(mainProcess ? { mainProcess: mainProcess.label } : { mainProcess: "" }),
       ...(beneficiary ? { beneficiary: beneficiary.label } : {}),
       ...(valueObject ? { valueObject: valueObject.label } : {}),
     },
     layout: {
       orientation: "left-to-right",
-      lanes: ["Context", "Function", "System"],
+      lanes: spec.scene.lanes.map((lane) => lane.label),
     },
-    nodes: diagram.nodes.map((node) => ({
+    nodes: spec.nodes.map((node) => ({
       id: node.id,
       label: node.label,
-      kind: node.kind,
-      lane: node.lane,
-      emphasis: node.emphasis,
+      kind: node.opmKind,
+      lane: node.laneId,
+      emphasis: node.importance === 1 ? "primary" : "secondary",
     })),
-    edges: diagram.edges.map((edge) => ({
+    edges: spec.edges.map((edge) => ({
       source: edge.source,
       target: edge.target,
-      kind: edge.kind,
+      kind: edge.opmLinkKind,
       label: edge.label,
     })),
-    opl,
+    opl: spec.canonicalOpl,
     prompt,
   };
 }
