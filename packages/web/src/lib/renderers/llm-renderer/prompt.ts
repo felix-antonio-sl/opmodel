@@ -28,9 +28,9 @@ export function buildDiagramRenderUserPrompt(spec: VisualRenderSpec): string {
   ].join("\n");
 }
 
-export function buildDiagramRenderMessages(spec: VisualRenderSpec, stylePack: string): DiagramLLMMessage[] {
+export function buildDiagramRenderMessages(spec: VisualRenderSpec, stylePack: string, systemPrompt?: string): DiagramLLMMessage[] {
   return [
-    { role: "system", content: buildDiagramRenderSystemPrompt(stylePack) },
+    { role: "system", content: systemPrompt?.trim() || buildDiagramRenderSystemPrompt(stylePack) },
     { role: "user", content: buildDiagramRenderUserPrompt(spec) },
   ];
 }

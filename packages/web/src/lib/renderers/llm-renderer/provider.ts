@@ -23,7 +23,7 @@ abstract class BaseChatDiagramProvider implements DiagramLLMProvider {
   protected abstract complete(messages: DiagramLLMMessage[]): Promise<string>;
 
   async generateSvg(input: DiagramLLMGenerateInput): Promise<DiagramLLMGenerateResult> {
-    const messages = buildDiagramRenderMessages(input.spec, input.stylePack);
+    const messages = buildDiagramRenderMessages(input.spec, input.stylePack, input.systemPrompt);
     const raw = await this.complete(messages);
     return {
       svg: extractSvg(raw),

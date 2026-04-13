@@ -1,4 +1,6 @@
+import { useState } from "react";
 import type { DraftValidationReport, Model, VisualExportPrompt, VisualRenderSpec } from "@opmodel/core";
+import { createDiagramLLMProvider, loadStoredDiagramLLMConfig } from "../../../lib/renderers/llm-renderer";
 import { DiagramPreview } from "./DiagramPreview";
 import { OplPanel } from "./OplPanel";
 import { ValidationPanel } from "./ValidationPanel";
@@ -27,6 +29,34 @@ interface ModelWorkspaceProps {
 }
 
 export function ModelWorkspace({ model, opl, svg, validation, visualExport, visualSpec, onOpenInEditor, onBackToWizard }: ModelWorkspaceProps) {
+  const [premiumSvg, setPremiumSvg] = useState<string | null>(null);
+  const [premiumError, setPremiumError] = useState<string | null>(null);
+  const [isGeneratingPremium, setIsGeneratingPremium] = useState(false);
+
+  const handleGeneratePremium = async () => {
+    const config = loadStoredDiagramLLMConfig();
+    if (!config) {
+      setPremiumError("No LLM config found in localStorage key opmodel:nl-config. Reuse the NL settings first.");
+      return;
+    }
+
+    setIsGeneratingPremium(true);
+    setPremiumError(null);
+    try {
+      const provider = createDiagramLLMProvider(config);
+      const result = await provider.generateSvg({
+        spec: visualSpec,
+        stylePack: visualSpec.style,
+        systemPrompt: visualExport.prompt,
+      });
+      setPremiumSvg(result.svg);
+    } catch (error) {
+      setPremiumError(error instanceof Error ? error.message : "Failed to generate premium diagram.");
+    } finally {
+      setIsGeneratingPremium(false);
+    }
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16, color: "var(--text-primary)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
@@ -41,6 +71,8 @@ export function ModelWorkspace({ model, opl, svg, validation, visualExport, visu
           <button onClick={() => downloadText(`${model.meta.name.toLowerCase().replace(/\s+/g, "-")}.opl.txt`, opl, "text/plain")}>Export OPL</button>
           <button onClick={() => downloadText(`${model.meta.name.toLowerCase().replace(/\s+/g, "-")}.svg`, svg, "image/svg+xml")}>Export SVG</button>
           <button onClick={() => navigator.clipboard.writeText(visualExport.prompt)}>Copy premium prompt</button>
+          <button onClick={handleGeneratePremium} disabled={isGeneratingPremium}>{isGeneratingPremium ? "Generating premium SVG..." : "Generate premium SVG"}</button>
+          {premiumSvg && <button onClick={() => downloadText(`${model.meta.name.toLowerCase().replace(/\s+/g, "-")}.premium.svg`, premiumSvg, "image/svg+xml")}>Export premium SVG</button>}
           <button onClick={() => downloadText(`${model.meta.name.toLowerCase().replace(/\s+/g, "-")}.visual-render-spec.json`, JSON.stringify(visualSpec, null, 2), "application/json")}>Export render spec</button>
           <button onClick={() => downloadText(`${model.meta.name.toLowerCase().replace(/\s+/g, "-")}.visual-export.json`, JSON.stringify(visualExport, null, 2), "application/json")}>Export visual adapter</button>
           <button onClick={onOpenInEditor} style={{ background: "#1d4ed8", color: "white", border: "1px solid #2563eb", borderRadius: 10, padding: "10px 14px" }}>
@@ -50,7 +82,11 @@ export function ModelWorkspace({ model, opl, svg, validation, visualExport, visu
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: 16 }}>
-        <DiagramPreview svg={svg} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <DiagramPreview svg={svg} />
+          {premiumError && <div style={{ color: "var(--warning)", fontSize: 13 }}>{premiumError}</div>}
+          {premiumSvg && <DiagramPreview svg={premiumSvg} />}
+        </div>
         <ValidationPanel report={validation} />
       </div>
 
