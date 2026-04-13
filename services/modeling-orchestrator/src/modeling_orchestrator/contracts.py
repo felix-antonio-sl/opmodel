@@ -207,6 +207,47 @@ class IncrementalPreviewOutputs(BaseModel):
     modelJson: str | None = None
 
 
+class MethodologyReport(BaseModel):
+    ok: bool
+    issues: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class RefineProcessContext(BaseModel):
+    processId: str
+    resolvedProcessId: str | None = None
+    baseModelSource: Literal["modelSnapshot", "currentOpl", "fallback", "none"]
+    modelSnapshotPresent: bool = False
+    currentOplPresent: bool = False
+    normalizedOpl: str | None = None
+    snapshotError: BridgeStageError | None = None
+    currentOplError: BridgeStageError | None = None
+    fallbackError: BridgeStageError | None = None
+    methodology: MethodologyReport | None = None
+
+
+class RefineProcessOutputs(BaseModel):
+    canonicalOpl: str | None = None
+    modelJson: str | None = None
+
+
+class RenderVerificationReport(BaseModel):
+    ok: bool
+    issues: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class RenderContext(BaseModel):
+    source: Literal["modelSnapshot", "visualSpec", "none"]
+    nodeCount: int | None = None
+    edgeCount: int | None = None
+    diagramKind: str | None = None
+    verification: RenderVerificationReport | None = None
+
+
+class RenderOutputs(BaseModel):
+    visualSpec: dict[str, Any] | None = None
+    canonicalOpl: str | None = None
+
+
 class ProposalArtifact(BaseModel):
     artifact_kind: Literal[
         "sd-draft",

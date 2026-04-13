@@ -169,6 +169,8 @@ When a valid `modelSnapshot` or `currentOpl` base is available, the bridge also 
 
 The incremental preview surface is now hardened in `contracts.py` with explicit submodels for preview context and outputs (`IncrementalPreviewContext`, `IncrementalPreviewOutputs`), even though the outer artifact envelope remains uniform across task kinds.
 
+The same hardening now covers the stable `refine-process` and `render` slices through explicit context/output models (`RefineProcessContext`, `RefineProcessOutputs`, `RenderContext`, `RenderOutputs`), so the V1 review/apply flow depends less on loose nested dicts.
+
 ## `refine-process` current behavior
 
 `refine-process` now also crosses the Python/TypeScript boundary for real:

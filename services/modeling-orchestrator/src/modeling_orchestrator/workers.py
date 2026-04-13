@@ -7,6 +7,10 @@ from .contracts import (
     IncrementalPreviewContext,
     IncrementalPreviewOutputs,
     ProposalArtifact,
+    RefineProcessContext,
+    RefineProcessOutputs,
+    RenderContext,
+    RenderOutputs,
 )
 from .core_bridge import CoreBridgeError, run_incremental_change, run_opl_import, run_refine_process, run_render, run_wizard_generate
 from .state import OrchestratorState
@@ -338,14 +342,16 @@ def refine_process_worker(state: OrchestratorState) -> OrchestratorState:
         )
 
     proposal = bridge_result.get("proposal", {})
+    refine_context = RefineProcessContext.model_validate(bridge_result.get("context") or {})
+    refine_outputs = RefineProcessOutputs.model_validate(bridge_result.get("outputs") or {})
     artifact = ProposalArtifact(
         artifact_kind="refinement-proposal",
         summary=proposal.get("summary", "Refinement proposal generated from real core refinement slice."),
         payload=_normalized_artifact_payload(
             ok=bool(bridge_result.get("ok")),
             proposal=proposal,
-            context=bridge_result.get("context") or {},
-            outputs=bridge_result.get("outputs") or {},
+            context=refine_context.model_dump(exclude_none=True),
+            outputs=refine_outputs.model_dump(exclude_none=True),
             error=bridge_result.get("error"),
             inputs={
                 "processId": getattr(task, "process_id", None),
@@ -408,14 +414,16 @@ def render_worker(state: OrchestratorState) -> OrchestratorState:
         )
 
     proposal = bridge_result.get("proposal", {})
+    render_context = RenderContext.model_validate(bridge_result.get("context") or {})
+    render_outputs = RenderOutputs.model_validate(bridge_result.get("outputs") or {})
     artifact = ProposalArtifact(
         artifact_kind="render-intent",
         summary=proposal.get("summary", "Visual render artifact generated from core render pipeline."),
         payload=_normalized_artifact_payload(
             ok=bool(bridge_result.get("ok")),
             proposal=proposal,
-            context=bridge_result.get("context") or {},
-            outputs=bridge_result.get("outputs") or {},
+            context=render_context.model_dump(exclude_none=True),
+            outputs=render_outputs.model_dump(exclude_none=True),
             error=bridge_result.get("error"),
             inputs={
                 "visualSpecPresent": bool(getattr(task, "visual_spec", None)),
