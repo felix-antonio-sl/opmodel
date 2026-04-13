@@ -165,6 +165,8 @@ Current `incremental-change` operation kinds:
 
 This is intentionally proposal-only. Application back into the kernel remains a later step.
 
+When a valid `modelSnapshot` or `currentOpl` base is available, the bridge also produces a deterministic, non-persistent preview for supported operations (`add-enabler`, `add-transforming-link`, `add-state-transition`, `rename-thing`). That preview is returned as artifact `outputs.modelJson` and `outputs.canonicalOpl`, while the proposal remains the authoritative result.
+
 ## `refine-process` current behavior
 
 `refine-process` now also crosses the Python/TypeScript boundary for real:

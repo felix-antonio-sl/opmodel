@@ -27,6 +27,9 @@ def test_incremental_change_builds_stable_patch_proposal():
     assert payload.proposal.requiresHumanReview is False
     assert payload.proposal.operations[0]["kind"] == "add-enabler"
     assert payload.proposal.operations[0]["role"] == "instrument"
+    assert payload.context["previewApplied"] is True
+    assert payload.outputs["canonicalOpl"]
+    assert payload.outputs["modelJson"]
 
 
 def test_incremental_change_marks_ambiguous_requests_for_review():
@@ -49,3 +52,4 @@ def test_incremental_change_marks_ambiguous_requests_for_review():
     assert payload.ok is False
     assert payload.proposal.requiresHumanReview is True
     assert payload.proposal.operations[0]["kind"] == "manual-review"
+    assert payload.outputs == {}
