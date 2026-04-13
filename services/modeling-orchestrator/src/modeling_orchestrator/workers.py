@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from .agents import build_deep_agent_config
 from .contracts import ProposalArtifact
-from .core_bridge import CoreBridgeError, run_incremental_change, run_opl_import, run_refine_process, run_wizard_generate
+from .core_bridge import CoreBridgeError, run_incremental_change, run_opl_import, run_refine_process, run_render, run_wizard_generate
 from .state import OrchestratorState
 
 
@@ -245,14 +245,53 @@ def refine_process_worker(state: OrchestratorState) -> OrchestratorState:
 
 
 def render_worker(state: OrchestratorState) -> OrchestratorState:
+    task = state["task"]
+
+    try:
+        bridge_result = run_render(
+            model_snapshot=getattr(task, "model_snapshot", None),
+            visual_spec=getattr(task, "visual_spec", None),
+        )
+    except CoreBridgeError as exc:
+        artifact = ProposalArtifact(
+            artifact_kind="render-intent",
+            summary="Render failed before building a real visual render artifact.",
+            payload={
+                "visual_spec_present": bool(getattr(task, "visual_spec", None)),
+                "model_snapshot_present": bool(getattr(task, "model_snapshot", None)),
+                "bridge_error": str(exc),
+            },
+        )
+        next_state = _append_artifact(state, artifact, "render-bridge-error")
+        return _extend_guardrail(
+            next_state,
+            issues=["Core bridge failed for render."],
+            checks=["render-core-bridge-invoked"],
+        )
+
+    proposal = bridge_result.get("proposal", {})
     artifact = ProposalArtifact(
         artifact_kind="render-intent",
-        summary="Placeholder premium render intent derived from the model.",
-        payload={
-            "visual_spec_present": bool(getattr(state["task"], "visual_spec", None)),
-        },
+        summary=proposal.get("summary", "Visual render artifact generated from core render pipeline."),
+        payload=bridge_result,
     )
-    return _append_artifact(state, artifact, "render-intent-ready")
+    next_state = _append_artifact(state, artifact, "render-visual-spec-built")
+
+    issues: list[str] = []
+    if not bridge_result.get("ok", False):
+        issues.append("Render artifact did not pass visual verification cleanly.")
+    if proposal.get("requiresHumanReview"):
+        issues.append("Render artifact requires human review before renderer handoff.")
+
+    return _extend_guardrail(
+        next_state,
+        issues=issues,
+        checks=[
+            "render-core-bridge-invoked",
+            "visual-render-spec-generated-or-verified",
+            "visual-render-spec-verification-run",
+        ],
+    )
 
 
 def apply_ssot_guardrail(state: OrchestratorState) -> OrchestratorState:

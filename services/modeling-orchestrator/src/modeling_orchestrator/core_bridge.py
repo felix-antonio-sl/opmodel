@@ -10,6 +10,7 @@ OPL_IMPORT_SCRIPT_PATH = REPO_ROOT / "services/modeling-orchestrator/scripts/opl
 WIZARD_GENERATE_SCRIPT_PATH = REPO_ROOT / "services/modeling-orchestrator/scripts/wizard_generate_bridge.ts"
 INCREMENTAL_CHANGE_SCRIPT_PATH = REPO_ROOT / "services/modeling-orchestrator/scripts/incremental_change_bridge.ts"
 REFINE_PROCESS_SCRIPT_PATH = REPO_ROOT / "services/modeling-orchestrator/scripts/refine_process_bridge.ts"
+RENDER_SCRIPT_PATH = REPO_ROOT / "services/modeling-orchestrator/scripts/render_bridge.ts"
 
 
 class CoreBridgeError(RuntimeError):
@@ -66,6 +67,20 @@ def run_refine_process(
         "modelSnapshot": model_snapshot,
     }
     return _run_bun_bridge(REFINE_PROCESS_SCRIPT_PATH, payload, "refine process")
+
+
+
+def run_render(
+    *,
+    model_snapshot: dict[str, Any] | None = None,
+    visual_spec: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    payload = {
+        "kind": "render",
+        "modelSnapshot": model_snapshot,
+        "visualSpec": visual_spec,
+    }
+    return _run_bun_bridge(RENDER_SCRIPT_PATH, payload, "render")
 
 
 

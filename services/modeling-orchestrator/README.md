@@ -43,6 +43,13 @@ This first slice only scaffolds:
   - request classification
   - current OPL context parsing through `compileToKernel`
   - structured proposal with confidence and expected SSOT checks
+- real `refine-process` bridge into the core refinement slice
+  - `refineMainProcess`
+  - `validateRefinedModel`
+- real `render` bridge into the core render slice
+  - `semanticKernelFromModel`
+  - `kernelToVisualRenderSpec`
+  - `verifyVisualRenderSpec`
 - placeholder Deep Agent builder hooks
 - FastAPI surface
 
@@ -177,6 +184,24 @@ The worker returns a structured artifact with:
 - canonical OPL for the refined kernel
 - serialized legacy model JSON snapshot
 - explicit review flag when the model context is weak or methodology reports issues
+
+## `render` current behavior
+
+`render` now crosses the Python/TypeScript boundary for real:
+
+```text
+FastAPI -> LangGraph worker -> bun bridge -> @opmodel/core
+                                 -> semanticKernelFromModel
+                                 -> kernelToVisualRenderSpec
+                                 -> verifyVisualRenderSpec
+```
+
+The worker returns a structured artifact with:
+
+- generated or verified `VisualRenderSpec`
+- verification report
+- canonical OPL carried into the render artifact
+- explicit review flag when the render spec fails core verification
 
 ## `opl-import` current behavior
 

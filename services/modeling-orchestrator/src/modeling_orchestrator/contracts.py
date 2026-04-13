@@ -119,10 +119,18 @@ class RefineProcessTask(BaseModel):
 
 
 class RenderTask(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     kind: Literal["render"]
     source: SourceKind = "system"
-    model_snapshot: dict[str, Any] | None = None
-    visual_spec: dict[str, Any] | None = None
+    model_snapshot: dict[str, Any] | None = Field(
+        default=None,
+        validation_alias=AliasChoices("model_snapshot", "modelSnapshot"),
+    )
+    visual_spec: dict[str, Any] | None = Field(
+        default=None,
+        validation_alias=AliasChoices("visual_spec", "visualSpec"),
+    )
 
 
 ModelingTask = Union[
