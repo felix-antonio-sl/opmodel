@@ -1,4 +1,4 @@
-import { addAppearance, addThing, refineThing, updateThing } from "../api";
+import { addAppearance, addLink, addThing, refineThing, removeLink, updateThing } from "../api";
 import type { Result } from "../result";
 import { err, ok } from "../result";
 import { semanticKernelFromModel } from "../semantic-kernel";
@@ -34,6 +34,10 @@ function slug(input: string) {
 
 function nonEmpty(items: string[] | undefined): string[] {
   return (items ?? []).map((item) => item.trim()).filter(Boolean);
+}
+
+function linkId(childOpdId: string, role: string, source: string, target: string, index: number) {
+  return `${childOpdId}-${role}-${source}-${target}-${index}`;
 }
 
 export function inferMainProcessId(model: Model): string | null {
@@ -138,6 +142,77 @@ export function refineMainProcess(
     });
     if (!appearanceResult.ok) return err({ message: appearanceResult.error.message });
     nextModel = appearanceResult.value;
+  }
+
+  const orderedSubprocessIds = [...nextModel.appearances.values()]
+    .filter((appearance) => appearance.opd === childOpdId && appearance.internal && nextModel.things.get(appearance.thing)?.kind === "process" && appearance.thing !== mainProcessId)
+    .sort((a, b) => a.y - b.y)
+    .map((appearance) => appearance.thing);
+
+  const parentTransformLinks = [...nextModel.links.values()].filter(
+    (link) => (link.source === mainProcessId || link.target === mainProcessId) && ["consumption", "result", "input", "output", "effect"].includes(link.type),
+  );
+
+  const inboundLinks = parentTransformLinks.filter((link) => link.target === mainProcessId && ["consumption", "input"].includes(link.type));
+  const outboundLinks = parentTransformLinks.filter((link) => link.source === mainProcessId && ["result", "output", "effect"].includes(link.type));
+
+  for (const link of parentTransformLinks) {
+    if (link.type === "consumption" || link.type === "result" || link.type === "input" || link.type === "output") {
+      const removed = removeLink(nextModel, link.id);
+      if (!removed.ok) return err({ message: removed.error.message });
+      nextModel = removed.value;
+    }
+  }
+
+  const firstSubprocessId = orderedSubprocessIds[0];
+  const lastSubprocessId = orderedSubprocessIds[orderedSubprocessIds.length - 1];
+  let generatedLinkIndex = 0;
+
+  if (firstSubprocessId) {
+    for (const link of inboundLinks) {
+      const added = addLink(nextModel, {
+        ...link,
+        id: linkId(childOpdId, "distributed-in", link.source, firstSubprocessId, ++generatedLinkIndex),
+        target: firstSubprocessId,
+      });
+      if (!added.ok) return err({ message: added.error.message });
+      nextModel = added.value;
+    }
+  }
+
+  if (lastSubprocessId) {
+    for (const link of outboundLinks) {
+      const added = addLink(nextModel, {
+        ...link,
+        id: linkId(childOpdId, "distributed-out", lastSubprocessId, link.target, ++generatedLinkIndex),
+        source: lastSubprocessId,
+      });
+      if (!added.ok) return err({ message: added.error.message });
+      nextModel = added.value;
+    }
+  }
+
+  const fallbackTransformeeId = inboundLinks[0]?.source ?? outboundLinks[0]?.target;
+  if (fallbackTransformeeId) {
+    for (const subprocessId of orderedSubprocessIds.slice(1, -1)) {
+      const consume = addLink(nextModel, {
+        id: linkId(childOpdId, "sub-consumption", fallbackTransformeeId, subprocessId, ++generatedLinkIndex),
+        type: "consumption",
+        source: fallbackTransformeeId,
+        target: subprocessId,
+      });
+      if (!consume.ok) return err({ message: consume.error.message });
+      nextModel = consume.value;
+
+      const resultLink = addLink(nextModel, {
+        id: linkId(childOpdId, "sub-result", subprocessId, fallbackTransformeeId, ++generatedLinkIndex),
+        type: "result",
+        source: subprocessId,
+        target: fallbackTransformeeId,
+      });
+      if (!resultLink.ok) return err({ message: resultLink.error.message });
+      nextModel = resultLink.value;
+    }
   }
 
   return ok({

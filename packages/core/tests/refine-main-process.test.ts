@@ -4,6 +4,7 @@ import {
   buildArtifactsFromSdDraft,
   kernelToVisualRenderSpec,
   refineMainProcess,
+  validateRefinedModel,
   verifyVisualRenderSpec,
 } from "../src";
 
@@ -40,10 +41,13 @@ describe("refineMainProcess", () => {
     const spec = kernelToVisualRenderSpec(refined.value.kernel, { opdId: refined.value.childOpdId });
     const report = verifyVisualRenderSpec(spec);
 
+    const methodology = validateRefinedModel(refined.value.model);
+
     expect(spec.diagramKind).toBe("opm-sd1");
     expect(spec.nodes.some((node) => node.label === "Authorize Charge")).toBe(true);
     expect(spec.nodes.some((node) => node.label === "Charging Session")).toBe(true);
     expect(spec.nodes.some((node) => node.visualRole === "main-process" || node.visualRole === "subprocess")).toBe(true);
     expect(report.ok).toBe(true);
+    expect(methodology.ok).toBe(true);
   });
 });
