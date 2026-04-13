@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  buildArtifactsFromSdDraft,
   kernelToOpl,
   kernelToVisualExportPrompt,
   kernelToVisualRenderSpec,
-  refineMainProcess,
+  loadModel,
+  saveModel,
   semanticKernelFromModel,
   validateRefinedModel,
   validateSdDraft,
@@ -15,6 +15,8 @@ import { renderVisualRenderSpec } from "../../../lib/svg/render-visual-render-sp
 import { StartScreen } from "./StartScreen";
 import { SdWizard } from "./SdWizard";
 import { ModelWorkspace } from "./ModelWorkspace";
+import { runModelingTask } from "../lib/orchestrator-client";
+import type { OrchestratorPayload, OrchestratorResult, ReviewDecision } from "../types";
 import { useSdWizard } from "../state/useSdWizard";
 
 interface OpmGraphGeneratorPanelProps {
@@ -34,16 +36,35 @@ type WorkspaceState = {
   validationReport: ReturnType<typeof validateSdDraft>;
 };
 
+function parseModelSnapshot(payload: OrchestratorPayload) {
+  const modelJson = payload.outputs?.modelJson;
+  if (typeof modelJson !== "string" || modelJson.trim().length === 0) return null;
+  const loaded = loadModel(modelJson);
+  if (!loaded.ok) {
+    throw new Error(`Model preview could not be loaded: ${loaded.error.message}`);
+  }
+  return loaded.value;
+}
+
+function snapshotFromModel(model: Model) {
+  return JSON.parse(saveModel(model)) as Record<string, unknown>;
+}
+
 export function OpmGraphGeneratorPanel({ onClose, onOpenInEditor, onOpenLlmSettings, initialModel = null }: OpmGraphGeneratorPanelProps) {
   const [mode, setMode] = useState<"start" | "wizard" | "workspace">("start");
   const [applyError, setApplyError] = useState<string | null>(null);
+  const [reviewBusy, setReviewBusy] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
+  const [lastReview, setLastReview] = useState<OrchestratorResult | null>(null);
+  const [reviewDecision, setReviewDecision] = useState<ReviewDecision | null>(null);
   const [baseWorkspace, setBaseWorkspace] = useState<WorkspaceState | null>(null);
   const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceState | null>(null);
   const wizard = useSdWizard();
 
   const validation = useMemo(() => validateSdDraft(wizard.draft), [wizard.draft]);
 
-  const buildWorkspaceState = (model: Model, kernel: Parameters<typeof kernelToVisualRenderSpec>[0], currentViewLabel: string, opdId?: string): WorkspaceState => {
+  const buildWorkspaceState = (model: Model, currentViewLabel: string, opdId?: string): WorkspaceState => {
+    const kernel = semanticKernelFromModel(model);
     const opl = kernelToOpl(kernel);
     const visualSpec = kernelToVisualRenderSpec(kernel, opdId ? { opdId } : undefined);
     const svg = renderVisualRenderSpec(visualSpec);
@@ -58,39 +79,168 @@ export function OpmGraphGeneratorPanel({ onClose, onOpenInEditor, onOpenLlmSetti
     };
   };
 
+  const applyWorkspaceFromReview = (result: OrchestratorResult, options?: { asBase?: boolean; fallbackViewLabel?: string }) => {
+    const artifact = result.artifacts[0];
+    if (!artifact) return null;
+    const model = parseModelSnapshot(artifact.payload);
+    if (!model) return null;
+
+    const nextViewLabel = artifact.payload.proposal.childOpdId
+      ? "SD1"
+      : options?.fallbackViewLabel ?? (result.task_kind === "opl-import" ? "Imported OPL" : "SD");
+    const workspace = buildWorkspaceState(model, nextViewLabel, artifact.payload.proposal.childOpdId);
+
+    if (options?.asBase) {
+      setBaseWorkspace(workspace);
+    }
+    setActiveWorkspace(workspace);
+    return workspace;
+  };
+
   useEffect(() => {
     if (!initialModel) return;
-    const importedWorkspace = buildWorkspaceState(initialModel, semanticKernelFromModel(initialModel), "Imported OPL");
+    const importedWorkspace = buildWorkspaceState(initialModel, "Imported OPL");
     setBaseWorkspace(importedWorkspace);
     setActiveWorkspace(importedWorkspace);
     setApplyError(null);
+    setLastReview(null);
+    setReviewDecision(null);
     setMode("workspace");
   }, [initialModel]);
 
-  const handleGenerate = () => {
-    const result = buildArtifactsFromSdDraft(wizard.draft);
-    if (!result.ok) {
-      setApplyError(result.error.message);
-      return;
+  const runReviewTask = async (
+    task: Parameters<typeof runModelingTask>[0]["task"],
+    options?: { applyWorkspace?: boolean; asBase?: boolean; fallbackViewLabel?: string },
+  ) => {
+    setReviewBusy(true);
+    setReviewError(null);
+    try {
+      const result = await runModelingTask({ task });
+      setLastReview(result);
+      setReviewDecision(null);
+      if (options?.applyWorkspace) {
+        applyWorkspaceFromReview(result, { asBase: options.asBase, fallbackViewLabel: options.fallbackViewLabel });
+      }
+      return result;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Modeling orchestrator request failed.";
+      setReviewError(message);
+      throw error;
+    } finally {
+      setReviewBusy(false);
     }
-    const workspace = buildWorkspaceState(result.value.model, result.value.kernel, "SD");
-
-    setBaseWorkspace(workspace);
-    setActiveWorkspace(workspace);
-    setApplyError(null);
-    setMode("workspace");
   };
 
-  const handleRefineMainProcess = (draft: { subprocesses: string[]; internalObjects: string[] }) => {
-    if (!baseWorkspace) return;
-    const result = refineMainProcess(baseWorkspace.model, draft);
-    if (!result.ok) {
-      setApplyError(result.error.message);
+  const handleGenerate = async () => {
+    if (!validation.ok) {
+      setApplyError("Wizard draft must pass local validation before orchestrator handoff.");
       return;
     }
 
-    const refinedWorkspace = buildWorkspaceState(result.value.model, result.value.kernel, "SD1", result.value.childOpdId);
-    setActiveWorkspace(refinedWorkspace);
+    try {
+      const result = await runReviewTask(
+        {
+          kind: "wizard-generate",
+          source: "wizard",
+          ...wizard.draft,
+        },
+        { applyWorkspace: true, asBase: true, fallbackViewLabel: "SD" },
+      );
+      setMode("workspace");
+      setApplyError(null);
+      if (!result.guardrail.ok) {
+        setApplyError(result.guardrail.issues.join(" · "));
+      }
+    } catch (error) {
+      setApplyError(error instanceof Error ? error.message : "Wizard generation failed.");
+    }
+  };
+
+  const handleRefineMainProcess = async (draft: { subprocesses: string[]; internalObjects: string[] }) => {
+    if (!baseWorkspace) return;
+    const processName = [...baseWorkspace.model.things.values()].find((thing) => thing.kind === "process")?.name;
+    if (!processName) {
+      setApplyError("No main process found in the current workspace.");
+      return;
+    }
+
+    const request = [
+      `subprocesses: ${draft.subprocesses.join(", ")}`,
+      draft.internalObjects.length > 0 ? `internal objects: ${draft.internalObjects.join(", ")}` : null,
+    ].filter(Boolean).join("; ");
+
+    try {
+      await runReviewTask(
+        {
+          kind: "refine-process",
+          source: "incremental-session",
+          processId: processName,
+          request,
+          modelSnapshot: snapshotFromModel(baseWorkspace.model),
+          currentOpl: baseWorkspace.opl,
+        },
+        { applyWorkspace: true, fallbackViewLabel: "SD1" },
+      );
+      setApplyError(null);
+    } catch (error) {
+      setApplyError(error instanceof Error ? error.message : "Refine-process failed.");
+    }
+  };
+
+  const handleRunIncrementalChange = async (request: string) => {
+    if (!activeWorkspace) return;
+    try {
+      await runReviewTask({
+        kind: "incremental-change",
+        source: "incremental-session",
+        request,
+        modelSnapshot: snapshotFromModel(activeWorkspace.model),
+        currentOpl: activeWorkspace.opl,
+      });
+      setApplyError(null);
+    } catch (error) {
+      setApplyError(error instanceof Error ? error.message : "Incremental change failed.");
+    }
+  };
+
+  const handleVerifyRender = async () => {
+    if (!activeWorkspace) return;
+    try {
+      await runReviewTask({
+        kind: "render",
+        source: "system",
+        modelSnapshot: snapshotFromModel(activeWorkspace.model),
+      });
+      setApplyError(null);
+    } catch (error) {
+      setApplyError(error instanceof Error ? error.message : "Render verification failed.");
+    }
+  };
+
+  const handleAcceptReview = () => {
+    const taskKind = lastReview?.task_kind ?? "review";
+    setReviewDecision({ decision: "accepted", note: `${taskKind} accepted for human review flow.` });
+  };
+
+  const handleRejectReview = () => {
+    const taskKind = lastReview?.task_kind ?? "review";
+    setReviewDecision({ decision: "rejected", note: `${taskKind} rejected for now.` });
+  };
+
+  const handleApplySimpleReview = () => {
+    if (!lastReview) return;
+    const workspace = applyWorkspaceFromReview(lastReview, {
+      asBase: lastReview.task_kind === "wizard-generate" || lastReview.task_kind === "opl-import",
+      fallbackViewLabel: activeWorkspace?.currentViewLabel ?? "SD",
+    });
+    if (!workspace) {
+      setReviewError("This proposal does not expose a deterministic model preview to apply.");
+      return;
+    }
+    if (lastReview.task_kind === "incremental-change" && baseWorkspace) {
+      setBaseWorkspace(baseWorkspace.currentViewLabel === "SD" ? workspace : baseWorkspace);
+    }
+    setReviewDecision({ decision: "applied", note: "Deterministic preview promoted into the workspace." });
     setApplyError(null);
   };
 
@@ -114,7 +264,7 @@ export function OpmGraphGeneratorPanel({ onClose, onOpenInEditor, onOpenLlmSetti
               onChange={wizard.updateDraft}
               onBack={wizard.back}
               onNext={wizard.next}
-              onGenerate={handleGenerate}
+              onGenerate={() => void handleGenerate()}
             />
             {applyError && <div style={{ color: "var(--error)", fontSize: 13 }}>{applyError}</div>}
           </div>
@@ -134,6 +284,15 @@ export function OpmGraphGeneratorPanel({ onClose, onOpenInEditor, onOpenLlmSetti
             onOpenLlmSettings={onOpenLlmSettings}
             onRefineMainProcess={activeWorkspace.currentViewLabel === "SD" ? handleRefineMainProcess : undefined}
             onReturnToSd={activeWorkspace.currentViewLabel === "SD1" && baseWorkspace ? () => setActiveWorkspace(baseWorkspace) : undefined}
+            onRunIncrementalChange={handleRunIncrementalChange}
+            onVerifyRender={handleVerifyRender}
+            reviewResult={lastReview}
+            reviewDecision={reviewDecision}
+            reviewBusy={reviewBusy}
+            reviewError={reviewError ?? applyError}
+            onAcceptReview={handleAcceptReview}
+            onRejectReview={handleRejectReview}
+            onApplySimpleReview={handleApplySimpleReview}
           />
         )}
       </div>

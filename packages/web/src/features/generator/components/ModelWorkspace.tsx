@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import type { DraftValidationReport, Model, VisualExportPrompt, VisualRenderSpec } from "@opmodel/core";
 import { createDiagramLLMProvider, loadStoredDiagramLLMConfig, verifyRenderedSvg, type RenderedSvgVerificationReport } from "../../../lib/renderers/llm-renderer";
+import type { OrchestratorResult, ReviewDecision } from "../types";
+import { ProposalReviewPanel } from "./ProposalReviewPanel";
 import { DiagramPreview } from "./DiagramPreview";
 import { OplPanel } from "./OplPanel";
 import { ValidationPanel } from "./ValidationPanel";
@@ -28,18 +30,29 @@ interface ModelWorkspaceProps {
   onOpenInEditor: () => void;
   onBackToWizard: () => void;
   onOpenLlmSettings?: () => void;
-  onRefineMainProcess?: (draft: { subprocesses: string[]; internalObjects: string[] }) => void;
+  onRefineMainProcess?: (draft: { subprocesses: string[]; internalObjects: string[] }) => void | Promise<void>;
   onReturnToSd?: () => void;
+  onRunIncrementalChange?: (request: string) => void | Promise<void>;
+  onVerifyRender?: () => void | Promise<void>;
+  reviewResult?: OrchestratorResult | null;
+  reviewDecision?: ReviewDecision | null;
+  reviewBusy?: boolean;
+  reviewError?: string | null;
+  onAcceptReview?: () => void;
+  onRejectReview?: () => void;
+  onApplySimpleReview?: () => void;
 }
 
-export function ModelWorkspace({ model, opl, svg, validation, visualExport, visualSpec, currentViewLabel = "SD", onOpenInEditor, onBackToWizard, onOpenLlmSettings, onRefineMainProcess, onReturnToSd }: ModelWorkspaceProps) {
+export function ModelWorkspace({ model, opl, svg, validation, visualExport, visualSpec, currentViewLabel = "SD", onOpenInEditor, onBackToWizard, onOpenLlmSettings, onRefineMainProcess, onReturnToSd, onRunIncrementalChange, onVerifyRender, reviewResult, reviewDecision, reviewBusy = false, reviewError, onAcceptReview, onRejectReview, onApplySimpleReview }: ModelWorkspaceProps) {
   const [premiumSvg, setPremiumSvg] = useState<string | null>(null);
   const [premiumError, setPremiumError] = useState<string | null>(null);
   const [isGeneratingPremium, setIsGeneratingPremium] = useState(false);
   const [premiumVerification, setPremiumVerification] = useState<RenderedSvgVerificationReport | null>(null);
   const [showRefinementForm, setShowRefinementForm] = useState(false);
+  const [showIncrementalForm, setShowIncrementalForm] = useState(false);
   const [subprocessesText, setSubprocessesText] = useState("Authorize Charge\nTransfer Energy\nConfirm Completion");
   const [internalObjectsText, setInternalObjectsText] = useState("Charging Session\nCharge Status");
+  const [incrementalRequest, setIncrementalRequest] = useState("add instrument Backup Generator to Battery Charging");
 
   const workspaceKey = useMemo(
     () => `${visualSpec.diagramKind}:${visualSpec.title}:${visualSpec.nodes.length}:${visualSpec.edges.length}:${currentViewLabel}`,
@@ -116,6 +129,8 @@ export function ModelWorkspace({ model, opl, svg, validation, visualExport, visu
           <button onClick={() => downloadText(`${model.meta.name.toLowerCase().replace(/\s+/g, "-")}.opl.txt`, opl, "text/plain")}>Export OPL</button>
           <button onClick={() => downloadText(`${model.meta.name.toLowerCase().replace(/\s+/g, "-")}.svg`, primarySvg, "image/svg+xml")}>Export primary SVG</button>
           {onRefineMainProcess && <button onClick={() => setShowRefinementForm((value) => !value)}>{showRefinementForm ? "Hide SD1 refine" : "Refine main process"}</button>}
+          {onRunIncrementalChange && <button onClick={() => setShowIncrementalForm((value) => !value)}>{showIncrementalForm ? "Hide incremental change" : "Run incremental change"}</button>}
+          {onVerifyRender && <button onClick={() => void onVerifyRender()} disabled={reviewBusy}>{reviewBusy ? "Checking render..." : "Review render"}</button>}
           <button onClick={() => navigator.clipboard.writeText(visualExport.prompt)}>Copy premium prompt</button>
           <button onClick={() => void generatePremium()} disabled={isGeneratingPremium}>{isGeneratingPremium ? "Generating premium SVG..." : premiumSvg ? "Regenerate premium SVG" : "Generate premium SVG"}</button>
           {premiumSvg && <button onClick={() => downloadText(`${model.meta.name.toLowerCase().replace(/\s+/g, "-")}.premium.svg`, premiumSvg, "image/svg+xml")}>Export premium SVG</button>}
@@ -143,7 +158,7 @@ export function ModelWorkspace({ model, opl, svg, validation, visualExport, visu
           </div>
           <div>
             <button
-              onClick={() => onRefineMainProcess({
+              onClick={() => void onRefineMainProcess({
                 subprocesses: subprocessesText.split("\n").map((item) => item.trim()).filter(Boolean),
                 internalObjects: internalObjectsText.split("\n").map((item) => item.trim()).filter(Boolean),
               })}
@@ -153,6 +168,38 @@ export function ModelWorkspace({ model, opl, svg, validation, visualExport, visu
             </button>
           </div>
         </div>
+      )}
+
+      {showIncrementalForm && onRunIncrementalChange && (
+        <div style={{ border: "1px solid var(--code-border)", borderRadius: 12, padding: 16, background: "rgba(15,23,42,0.55)", display: "grid", gap: 12 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>Incremental change</div>
+          <textarea
+            value={incrementalRequest}
+            onChange={(event) => setIncrementalRequest(event.target.value)}
+            style={{ minHeight: 110, resize: "vertical", background: "#020617", color: "#e2e8f0", border: "1px solid var(--code-border)", borderRadius: 10, padding: 12, fontFamily: "var(--font-mono, monospace)", fontSize: 12 }}
+          />
+          <div>
+            <button
+              onClick={() => void onRunIncrementalChange(incrementalRequest)}
+              disabled={reviewBusy || incrementalRequest.trim().length === 0}
+              style={{ background: "#0f766e", color: "white", border: "1px solid #14b8a6", borderRadius: 10, padding: "10px 14px" }}
+            >
+              {reviewBusy ? "Building proposal..." : "Build proposal"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {reviewResult && (
+        <ProposalReviewPanel
+          result={reviewResult}
+          decision={reviewDecision}
+          busy={reviewBusy}
+          error={reviewError}
+          onAccept={onAcceptReview}
+          onReject={onRejectReview}
+          onApplySimple={onApplySimpleReview}
+        />
       )}
 
       <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: 16 }}>

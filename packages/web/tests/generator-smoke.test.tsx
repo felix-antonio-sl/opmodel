@@ -1,9 +1,9 @@
 // @vitest-environment happy-dom
 import React from "react";
-import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi, afterEach } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { addAppearance, addThing, buildArtifactsFromSdDraft, createModel, EMPTY_SD_DRAFT, refineMainProcess, saveModel } from "@opmodel/core";
 import { OpmGraphGeneratorPanel } from "../src/features/generator/components/OpmGraphGeneratorPanel";
-import { createModel, addAppearance, addThing } from "@opmodel/core";
 
 function buildImportedModel() {
   let model = createModel("Imported Coffee");
@@ -16,10 +16,187 @@ function buildImportedModel() {
   return model;
 }
 
+function okJson(body: unknown) {
+  return Promise.resolve({
+    ok: true,
+    text: async () => JSON.stringify(body),
+  } as Response);
+}
+
+function buildWizardResult() {
+  const built = buildArtifactsFromSdDraft({
+    ...EMPTY_SD_DRAFT,
+    systemName: "Battery Charging System",
+    mainProcess: "Battery Charging",
+    beneficiary: "Driver Group",
+    beneficiaryAttribute: "Mobility Convenience",
+    beneficiaryStateIn: "limited",
+    beneficiaryStateOut: "enhanced",
+    valueObject: "Battery",
+    valueStateIn: "depleted",
+    valueStateOut: "charged",
+    agents: ["Operator"],
+    instruments: ["Charging Station"],
+    inputs: ["Electrical Energy"],
+    outputs: ["Charged Battery"],
+  });
+  if (!built.ok) throw new Error(built.error.message);
+
+  return {
+    task_kind: "wizard-generate",
+    status: "proposed",
+    artifacts: [{
+      artifact_kind: "sd-draft",
+      summary: "Wizard draft validated and compiled into real core artifacts.",
+      payload: {
+        ok: true,
+        proposal: {
+          summary: "Wizard draft validated and compiled into real core artifacts.",
+          rationale: "Wizard generation should converge to a validated SdDraft and real derived artifacts from the core generator slice.",
+          confidence: 0.92,
+          requiresHumanReview: false,
+          ssotChecksExpected: ["sd-draft-validation-attempted"],
+        },
+        context: {},
+        outputs: {
+          modelJson: saveModel(built.value.model),
+          canonicalOpl: built.value.opl,
+        },
+      },
+    }],
+    guardrail: { ok: true, checks: [], issues: [] },
+    trace: ["received-task"],
+  };
+}
+
+function buildRefineResult() {
+  const built = buildArtifactsFromSdDraft({
+    ...EMPTY_SD_DRAFT,
+    systemName: "Battery Charging System",
+    mainProcess: "Battery Charging",
+    beneficiary: "Driver Group",
+    beneficiaryAttribute: "Mobility Convenience",
+    beneficiaryStateIn: "limited",
+    beneficiaryStateOut: "enhanced",
+    valueObject: "Battery",
+    valueStateIn: "depleted",
+    valueStateOut: "charged",
+  });
+  if (!built.ok) throw new Error(built.error.message);
+  const refined = refineMainProcess(built.value.model, {
+    subprocesses: ["Authorize Charge", "Transfer Energy", "Confirm Completion"],
+    internalObjects: ["Charging Session", "Charge Status"],
+  });
+  if (!refined.ok) throw new Error(refined.error.message);
+
+  return {
+    task_kind: "refine-process",
+    status: "proposed",
+    artifacts: [{
+      artifact_kind: "refinement-proposal",
+      summary: "Built in-zoom refinement proposal through the real core refinement slice.",
+      payload: {
+        ok: true,
+        proposal: {
+          summary: "Built in-zoom refinement proposal through the real core refinement slice.",
+          rationale: "Refine-process should converge to a real refinement proposal.",
+          confidence: 0.9,
+          requiresHumanReview: false,
+          ssotChecksExpected: ["sd-sd1-methodology-required"],
+          childOpdId: refined.value.childOpdId,
+        },
+        context: {},
+        outputs: {
+          modelJson: saveModel(refined.value.model),
+          canonicalOpl: built.value.opl,
+        },
+      },
+    }],
+    guardrail: { ok: true, checks: [], issues: [] },
+    trace: ["received-task"],
+  };
+}
+
+function buildIncrementalResult() {
+  const built = buildArtifactsFromSdDraft({
+    ...EMPTY_SD_DRAFT,
+    systemName: "Battery Charging System",
+    mainProcess: "Battery Charging",
+    beneficiary: "Driver Group",
+    beneficiaryAttribute: "Mobility Convenience",
+    beneficiaryStateIn: "limited",
+    beneficiaryStateOut: "enhanced",
+    valueObject: "Battery",
+    valueStateIn: "depleted",
+    valueStateOut: "charged",
+  });
+  if (!built.ok) throw new Error(built.error.message);
+  let model = built.value.model;
+  const backup = addThing(model, { id: "obj-backup-generator", name: "Backup Generator", kind: "object", essence: "physical", affiliation: "systemic" } as const);
+  if (!backup.ok) throw new Error(backup.error.message);
+  model = backup.value;
+  const appearance = addAppearance(model, { thing: "obj-backup-generator", opd: "opd-sd", x: 650, y: 140, w: 160, h: 50 });
+  if (!appearance.ok) throw new Error(appearance.error.message);
+  model = appearance.value;
+
+  return {
+    task_kind: "incremental-change",
+    status: "proposed",
+    artifacts: [{
+      artifact_kind: "kernel-patch-proposal",
+      summary: "Proposed 1 kernel patch operation from incremental request.",
+      payload: {
+        ok: true,
+        proposal: {
+          summary: "Proposed 1 kernel patch operation from incremental request.",
+          rationale: "Incremental change requests should converge to a stable KernelPatchProposal.",
+          confidence: 0.94,
+          requiresHumanReview: false,
+          ssotChecksExpected: ["kernel-patch-proposal-generated"],
+          operations: [{ kind: "add-enabler", role: "instrument", processName: "Battery Charging", thingName: "Backup Generator" }],
+        },
+        context: { previewApplied: true },
+        outputs: {
+          modelJson: saveModel(model),
+          canonicalOpl: "=== SD ===\nBackup Generator is an object, physical.",
+        },
+      },
+    }],
+    guardrail: { ok: true, checks: [], issues: [] },
+    trace: ["received-task"],
+  };
+}
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 describe("OpmGraphGeneratorPanel", () => {
-  it("walks the wizard, refines to SD1, and opens a generated model", () => {
+  it("walks the wizard, refines to SD1, and applies an incremental preview", async () => {
     const onOpenInEditor = vi.fn();
     const onOpenLlmSettings = vi.fn();
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const payload = JSON.parse(String(init?.body ?? "{}"));
+      switch (payload.task?.kind) {
+        case "wizard-generate":
+          return okJson(buildWizardResult());
+        case "refine-process":
+          return okJson(buildRefineResult());
+        case "incremental-change":
+          return okJson(buildIncrementalResult());
+        case "render":
+          return okJson({
+            task_kind: "render",
+            status: "proposed",
+            artifacts: [{ artifact_kind: "render-intent", summary: "Render verified.", payload: { ok: true, proposal: { summary: "Render verified.", rationale: "ok", confidence: 0.9, requiresHumanReview: false, ssotChecksExpected: [] }, context: {}, outputs: { canonicalOpl: "=== SD ===" } } }],
+            guardrail: { ok: true, checks: [], issues: [] },
+            trace: ["received-task"],
+          });
+        default:
+          throw new Error(`Unexpected task kind ${payload.task?.kind}`);
+      }
+    });
+    vi.stubGlobal("fetch", fetchMock);
 
     render(
       React.createElement(OpmGraphGeneratorPanel, {
@@ -47,15 +224,24 @@ describe("OpmGraphGeneratorPanel", () => {
     fireEvent.click(screen.getByText("Next"));
 
     fireEvent.click(screen.getByText("Generate model"));
+    await screen.findByText(/Proposal review/i);
     expect(screen.getByText(/Active LLM:/).textContent).toContain("not configured");
     fireEvent.click(screen.getByText("Change LLM settings"));
     expect(onOpenLlmSettings).toHaveBeenCalledTimes(1);
+
     fireEvent.click(screen.getByText("Refine main process"));
     fireEvent.click(screen.getByText("Generate SD1"));
-    expect(screen.getByText(/Current view:/).textContent).toContain("SD1");
+    await waitFor(() => expect(screen.getByText(/Current view:/).textContent).toContain("SD1"));
+
+    fireEvent.click(screen.getByText("Return to SD"));
+    fireEvent.click(screen.getByText("Run incremental change"));
+    fireEvent.change(screen.getByDisplayValue(/add instrument Backup Generator/i), { target: { value: "add instrument Backup Generator to Battery Charging" } });
+    fireEvent.click(screen.getByText("Build proposal"));
+    await screen.findByText(/Proposed 1 kernel patch operation/i);
+    fireEvent.click(screen.getByText("Apply simple preview"));
+    expect(screen.getByText(/decision: applied/i)).toBeTruthy();
 
     fireEvent.click(screen.getByText("Open in editor"));
-
     expect(onOpenInEditor).toHaveBeenCalledTimes(1);
   });
 

@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { Model, ValidationResult } from "@opmodel/core";
-import { validateOpl, parseOplDocuments, compileToKernel, legacyModelFromSemanticKernel, exposeSemanticKernel } from "@opmodel/core";
+import { validateOpl, parseOplDocuments, compileToKernel, legacyModelFromSemanticKernel, exposeSemanticKernel, loadModel } from "@opmodel/core";
 import { autoLayoutModel } from "../lib/auto-layout";
+import { runModelingTask } from "../features/generator/lib/orchestrator-client";
 
 interface OplImportPanelProps {
   model: Model;
@@ -20,6 +21,7 @@ export function OplImportPanel({ model, onClose, onApply, onOpenInGraphGenerator
   const [text, setText] = useState("");
   const [validation, setValidation] = useState<ValidationResult | null>(null);
   const [applyError, setApplyError] = useState<string | null>(null);
+  const [isOpeningInGenerator, setIsOpeningInGenerator] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const debouncedValidate = useCallback((t: string) => {
@@ -78,15 +80,33 @@ export function OplImportPanel({ model, onClose, onApply, onOpenInGraphGenerator
     }
   };
 
-  const handleOpenInGraphGenerator = () => {
+  const handleOpenInGraphGenerator = async () => {
     if (!text.trim() || !onOpenInGraphGenerator) return;
+    setIsOpeningInGenerator(true);
     try {
-      const importedModel = compileImportedModel();
-      if (!importedModel) return;
-      onOpenInGraphGenerator(importedModel);
+      const result = await runModelingTask({
+        task: {
+          kind: "opl-import",
+          source: "imported-opl",
+          oplText: text,
+          language: "mixed",
+        },
+      });
+      const artifact = result.artifacts[0];
+      const modelJson = artifact?.payload.outputs?.modelJson;
+      if (typeof modelJson !== "string" || modelJson.trim().length === 0) {
+        throw new Error("Modeling orchestrator did not return modelJson for OPL import.");
+      }
+      const loaded = loadModel(modelJson);
+      if (!loaded.ok) {
+        throw new Error(`Imported model preview could not be loaded: ${loaded.error.message}`);
+      }
+      onOpenInGraphGenerator(autoLayoutModel(loaded.value).model);
       onClose();
     } catch (e) {
       setApplyError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setIsOpeningInGenerator(false);
     }
   };
 
@@ -174,8 +194,8 @@ export function OplImportPanel({ model, onClose, onApply, onOpenInGraphGenerator
         </button>
         {onOpenInGraphGenerator && (
           <button
-            onClick={handleOpenInGraphGenerator}
-            disabled={!canApply}
+            onClick={() => void handleOpenInGraphGenerator()}
+            disabled={!canApply || isOpeningInGenerator}
             style={{
               flex: 1,
               padding: "8px 16px",
@@ -188,7 +208,7 @@ export function OplImportPanel({ model, onClose, onApply, onOpenInGraphGenerator
               fontSize: 14,
             }}
           >
-            Open in Graph Generator
+            {isOpeningInGenerator ? "Opening in Graph Generator..." : "Open in Graph Generator"}
           </button>
         )}
         <button

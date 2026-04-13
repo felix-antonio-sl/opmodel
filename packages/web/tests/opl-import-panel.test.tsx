@@ -2,7 +2,7 @@
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { createModel } from "@opmodel/core";
+import { createModel, saveModel } from "@opmodel/core";
 import { OplImportPanel } from "../src/components/OplImportPanel";
 
 describe("OplImportPanel", () => {
@@ -10,6 +10,33 @@ describe("OplImportPanel", () => {
     const onApply = vi.fn();
     const onOpenInGraphGenerator = vi.fn();
     const onClose = vi.fn();
+
+    const imported = createModel("Imported from orchestrator");
+    vi.stubGlobal("fetch", vi.fn(async () => ({
+      ok: true,
+      text: async () => JSON.stringify({
+        task_kind: "opl-import",
+        status: "proposed",
+        artifacts: [{
+          artifact_kind: "normalized-opl",
+          summary: "Imported OPL compiled through @opmodel/core into a real SemanticKernel.",
+          payload: {
+            ok: true,
+            proposal: {
+              summary: "Imported OPL compiled through @opmodel/core into a real SemanticKernel.",
+              rationale: "ok",
+              confidence: 0.93,
+              requiresHumanReview: false,
+              ssotChecksExpected: [],
+            },
+            context: {},
+            outputs: { modelJson: saveModel(imported), canonicalOpl: "=== SD ===" },
+          },
+        }],
+        guardrail: { ok: true, checks: [], issues: [] },
+        trace: ["received-task"],
+      }),
+    }) as Response));
 
     render(
       React.createElement(OplImportPanel, {
@@ -36,8 +63,10 @@ describe("OplImportPanel", () => {
 
     fireEvent.click(screen.getByText("Open in Graph Generator"));
 
-    expect(onOpenInGraphGenerator).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(onOpenInGraphGenerator).toHaveBeenCalledTimes(1);
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
     expect(onApply).not.toHaveBeenCalled();
-    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

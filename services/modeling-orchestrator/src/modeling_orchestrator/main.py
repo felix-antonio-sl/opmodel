@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from .contracts import ModelingTaskEnvelope, ModelingTaskResult
 from .graph import run_modeling_task
@@ -9,6 +10,14 @@ app = FastAPI(
     title="OPModel Modeling Orchestrator",
     version="0.1.0",
     description="LangGraph/Deep Agents orchestration service under OPM SSOT guardrails.",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
