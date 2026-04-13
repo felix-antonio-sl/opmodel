@@ -44,6 +44,7 @@ const VerificationChecklist = lazy(() => import("./components/VerificationCheckl
 const SdWizard = lazy(() => import("./components/SdWizard").then((m) => ({ default: m.SdWizard })));
 const OpmGraphGeneratorPanel = lazy(() => import("./features/generator/components/OpmGraphGeneratorPanel").then((m) => ({ default: m.OpmGraphGeneratorPanel })));
 const OplImportPanel = lazy(() => import("./components/OplImportPanel").then((m) => ({ default: m.OplImportPanel })));
+const NlSettingsModal = lazy(() => import("./components/NlSettingsModal").then((m) => ({ default: m.NlSettingsModal })));
 
 
 function downloadBlob(blob: Blob, filename: string) {
@@ -277,10 +278,24 @@ function Editor({ initialModel, recoveryInfo, onNew, onImport }: { initialModel:
   const [showHelp, setShowHelp] = useState(false);
   const [showImportOpl, setShowImportOpl] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showLlmSettings, setShowLlmSettings] = useState(false);
+  const [llmConfigVersion, setLlmConfigVersion] = useState(0);
   const [showVerification, setShowVerification] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
   const [showGraphGenerator, setShowGraphGenerator] = useState(false);
   (window as any).__openWizard = () => setShowWizard(true);
+
+  const llmConfigSummary = useMemo(() => {
+    try {
+      const raw = localStorage.getItem("opmodel:nl-config");
+      if (!raw) return "LLM renderer not configured";
+      const parsed = JSON.parse(raw) as { provider?: string; model?: string };
+      if (!parsed.provider) return "LLM renderer not configured";
+      return `LLM renderer: ${parsed.provider}${parsed.model ? ` / ${parsed.model}` : ""}`;
+    } catch {
+      return "LLM renderer not configured";
+    }
+  }, [llmConfigVersion, showLlmSettings]);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeSearchIndex, setActiveSearchIndex] = useState(0);
 
@@ -553,6 +568,13 @@ function Editor({ initialModel, recoveryInfo, onNew, onImport }: { initialModel:
           title="Import OPL text"
         >
           📝 OPL
+        </button>
+        <button
+          className="header__pill"
+          onClick={() => setShowLlmSettings(true)}
+          title={llmConfigSummary}
+        >
+          🤖 LLM
         </button>
         <FileMenu
           model={model}
@@ -925,6 +947,22 @@ function Editor({ initialModel, recoveryInfo, onNew, onImport }: { initialModel:
       {showSettings && (
         <Suspense fallback={null}>
           <SettingsPanel model={model} dispatch={dispatch} onClose={() => setShowSettings(false)} />
+        </Suspense>
+      )}
+      {showLlmSettings && (
+        <Suspense fallback={null}>
+          <NlSettingsModal
+            config={(() => {
+              try {
+                const raw = localStorage.getItem("opmodel:nl-config");
+                return raw ? JSON.parse(raw) : null;
+              } catch {
+                return null;
+              }
+            })()}
+            onSave={() => setLlmConfigVersion((value) => value + 1)}
+            onClose={() => setShowLlmSettings(false)}
+          />
         </Suspense>
       )}
       {showImportOpl && (

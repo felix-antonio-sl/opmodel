@@ -33,15 +33,16 @@ export function NlSettingsModal({ config, onSave, onClose }: Props) {
       <div className="nl-settings" onClick={(e) => e.stopPropagation()}>
         <h3 className="nl-settings__title">NL Settings</h3>
         <div className="nl-settings__field">
-          <label className="opl-editor__label">Provider</label>
-          <select className="opl-editor__select" value={provider} onChange={(e) => setProvider(e.target.value as any)}>
+          <label className="opl-editor__label" htmlFor="nl-settings-provider">Provider</label>
+          <select id="nl-settings-provider" className="opl-editor__select" value={provider} onChange={(e) => setProvider(e.target.value as any)}>
             <option value="claude">Claude (Anthropic)</option>
             <option value="openai">OpenAI</option>
           </select>
         </div>
         <div className="nl-settings__field">
-          <label className="opl-editor__label">API Key</label>
+          <label className="opl-editor__label" htmlFor="nl-settings-api-key">API Key</label>
           <input
+            id="nl-settings-api-key"
             className="opl-editor__input"
             type="password"
             value={apiKey}
@@ -55,8 +56,9 @@ export function NlSettingsModal({ config, onSave, onClose }: Props) {
           )}
         </div>
         <div className="nl-settings__field">
-          <label className="opl-editor__label">Model (optional)</label>
+          <label className="opl-editor__label" htmlFor="nl-settings-model">Model (optional)</label>
           <input
+            id="nl-settings-model"
             className="opl-editor__input"
             value={model}
             onChange={(e) => setModel(e.target.value)}
