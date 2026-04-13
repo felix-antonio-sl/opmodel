@@ -1,10 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   buildArtifactsFromSdDraft,
   kernelToOpl,
   kernelToVisualExportPrompt,
   kernelToVisualRenderSpec,
   refineMainProcess,
+  semanticKernelFromModel,
   validateRefinedModel,
   validateSdDraft,
   type Model,
@@ -20,6 +21,7 @@ interface OpmGraphGeneratorPanelProps {
   onClose: () => void;
   onOpenInEditor: (model: Model) => void;
   onOpenLlmSettings?: () => void;
+  initialModel?: Model | null;
 }
 
 type WorkspaceState = {
@@ -32,7 +34,7 @@ type WorkspaceState = {
   validationReport: ReturnType<typeof validateSdDraft>;
 };
 
-export function OpmGraphGeneratorPanel({ onClose, onOpenInEditor, onOpenLlmSettings }: OpmGraphGeneratorPanelProps) {
+export function OpmGraphGeneratorPanel({ onClose, onOpenInEditor, onOpenLlmSettings, initialModel = null }: OpmGraphGeneratorPanelProps) {
   const [mode, setMode] = useState<"start" | "wizard" | "workspace">("start");
   const [applyError, setApplyError] = useState<string | null>(null);
   const [baseWorkspace, setBaseWorkspace] = useState<WorkspaceState | null>(null);
@@ -55,6 +57,15 @@ export function OpmGraphGeneratorPanel({ onClose, onOpenInEditor, onOpenLlmSetti
       validationReport: currentViewLabel === "SD" ? validation : validateRefinedModel(model),
     };
   };
+
+  useEffect(() => {
+    if (!initialModel) return;
+    const importedWorkspace = buildWorkspaceState(initialModel, semanticKernelFromModel(initialModel), "Imported OPL");
+    setBaseWorkspace(importedWorkspace);
+    setActiveWorkspace(importedWorkspace);
+    setApplyError(null);
+    setMode("workspace");
+  }, [initialModel]);
 
   const handleGenerate = () => {
     const result = buildArtifactsFromSdDraft(wizard.draft);

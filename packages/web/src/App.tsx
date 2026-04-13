@@ -279,6 +279,7 @@ function Editor({ initialModel, recoveryInfo, onNew, onImport }: { initialModel:
   const [showImportOpl, setShowImportOpl] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showLlmSettings, setShowLlmSettings] = useState(false);
+  const [graphGeneratorInitialModel, setGraphGeneratorInitialModel] = useState<Model | null>(null);
   const [llmConfigVersion, setLlmConfigVersion] = useState(0);
   const [showVerification, setShowVerification] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
@@ -557,7 +558,10 @@ function Editor({ initialModel, recoveryInfo, onNew, onImport }: { initialModel:
         <div className="header__sep" />
         <button
           className="header__pill"
-          onClick={() => setShowGraphGenerator(true)}
+          onClick={() => {
+            setGraphGeneratorInitialModel(null);
+            setShowGraphGenerator(true);
+          }}
           title="Open OPM Graph Generator"
         >
           ✨ Generator
@@ -583,7 +587,10 @@ function Editor({ initialModel, recoveryInfo, onNew, onImport }: { initialModel:
           onSave={save}
           onAutoLayoutAll={autoLayoutAll}
           onShowVisualReport={() => { setValidationTab("visual-report"); setShowValidation(true); }}
-          onOpenGraphGenerator={() => setShowGraphGenerator(true)}
+          onOpenGraphGenerator={() => {
+            setGraphGeneratorInitialModel(null);
+            setShowGraphGenerator(true);
+          }}
         />
         <div className="header__sep" />
         <button
@@ -697,7 +704,10 @@ function Editor({ initialModel, recoveryInfo, onNew, onImport }: { initialModel:
           <div className="welcome-state__title">Welcome to OPModeling</div>
           <div>Start building your OPM model</div>
           <div className="welcome-state__actions">
-            <button className="welcome-state__btn welcome-state__btn--primary" onClick={() => setShowGraphGenerator(true)}>
+            <button className="welcome-state__btn welcome-state__btn--primary" onClick={() => {
+              setGraphGeneratorInitialModel(null);
+              setShowGraphGenerator(true);
+            }}>
               OPM Graph Generator
             </button>
             <button className="welcome-state__btn" onClick={() => setShowWizard(true)}>
@@ -931,10 +941,15 @@ function Editor({ initialModel, recoveryInfo, onNew, onImport }: { initialModel:
       {showGraphGenerator && (
         <Suspense fallback={null}>
           <OpmGraphGeneratorPanel
-            onClose={() => setShowGraphGenerator(false)}
+            initialModel={graphGeneratorInitialModel}
+            onClose={() => {
+              setShowGraphGenerator(false);
+              setGraphGeneratorInitialModel(null);
+            }}
             onOpenLlmSettings={() => setShowLlmSettings(true)}
             onOpenInEditor={(newModel) => {
               setShowGraphGenerator(false);
+              setGraphGeneratorInitialModel(null);
               onImport(newModel);
             }}
           />
@@ -974,6 +989,11 @@ function Editor({ initialModel, recoveryInfo, onNew, onImport }: { initialModel:
             onApply={(newModel) => {
               dispatch({ tag: "importOpl", model: newModel });
               setShowImportOpl(false);
+            }}
+            onOpenInGraphGenerator={(newModel) => {
+              setShowImportOpl(false);
+              setGraphGeneratorInitialModel(newModel);
+              setShowGraphGenerator(true);
             }}
           />
         </Suspense>

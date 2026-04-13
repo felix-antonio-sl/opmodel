@@ -7,9 +7,16 @@ interface OplImportPanelProps {
   model: Model;
   onClose: () => void;
   onApply: (model: Model) => void;
+  onOpenInGraphGenerator?: (model: Model) => void;
 }
 
-export function OplImportPanel({ model, onClose, onApply }: OplImportPanelProps) {
+function normalizeOplInput(text: string) {
+  const trimmed = text.trim();
+  if (!trimmed) return "";
+  return /^===\s+.+\s+===/m.test(trimmed) ? trimmed : `=== SD ===\n${trimmed}`;
+}
+
+export function OplImportPanel({ model, onClose, onApply, onOpenInGraphGenerator }: OplImportPanelProps) {
   const [text, setText] = useState("");
   const [validation, setValidation] = useState<ValidationResult | null>(null);
   const [applyError, setApplyError] = useState<string | null>(null);
@@ -22,7 +29,7 @@ export function OplImportPanel({ model, onClose, onApply }: OplImportPanelProps)
       return;
     }
     timerRef.current = setTimeout(() => {
-      const result = validateOpl(t);
+      const result = validateOpl(normalizeOplInput(t));
       setValidation(result);
     }, 300);
   }, []);
@@ -40,25 +47,43 @@ export function OplImportPanel({ model, onClose, onApply }: OplImportPanelProps)
     debouncedValidate(t);
   };
 
+  const compileImportedModel = () => {
+    const parsed = parseOplDocuments(normalizeOplInput(text));
+    if (!parsed.ok) {
+      setApplyError(`Parse error: ${parsed.error.message}`);
+      return null;
+    }
+    const compiled = compileToKernel(parsed.value, {
+      ignoreUnsupported: true,
+    });
+    if (!compiled.ok) {
+      setApplyError(`Compile error: ${compiled.error.message}`);
+      return null;
+    }
+    const kernel = compiled.value;
+    const atlas = exposeSemanticKernel(kernel);
+    const imported = legacyModelFromSemanticKernel(kernel, atlas);
+    return autoLayoutModel(imported).model;
+  };
+
   const handleApply = () => {
     if (!text.trim()) return;
     try {
-      const parsed = parseOplDocuments(text);
-      if (!parsed.ok) {
-        setApplyError(`Parse error: ${parsed.error.message}`);
-        return;
-      }
-      const compiled = compileToKernel(parsed.value, {
-        ignoreUnsupported: true,
-      });
-      if (!compiled.ok) {
-        setApplyError(`Compile error: ${compiled.error.message}`);
-        return;
-      }
-      const kernel = compiled.value;
-      const atlas = exposeSemanticKernel(kernel);
-      const imported = legacyModelFromSemanticKernel(kernel, atlas);
-      onApply(autoLayoutModel(imported).model);
+      const importedModel = compileImportedModel();
+      if (!importedModel) return;
+      onApply(importedModel);
+      onClose();
+    } catch (e) {
+      setApplyError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const handleOpenInGraphGenerator = () => {
+    if (!text.trim() || !onOpenInGraphGenerator) return;
+    try {
+      const importedModel = compileImportedModel();
+      if (!importedModel) return;
+      onOpenInGraphGenerator(importedModel);
       onClose();
     } catch (e) {
       setApplyError(e instanceof Error ? e.message : String(e));
@@ -129,7 +154,7 @@ export function OplImportPanel({ model, onClose, onApply }: OplImportPanelProps)
       )}
 
       {/* Action buttons */}
-      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+      <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
         <button
           onClick={handleApply}
           disabled={!canApply}
@@ -147,6 +172,25 @@ export function OplImportPanel({ model, onClose, onApply }: OplImportPanelProps)
         >
           Apply
         </button>
+        {onOpenInGraphGenerator && (
+          <button
+            onClick={handleOpenInGraphGenerator}
+            disabled={!canApply}
+            style={{
+              flex: 1,
+              padding: "8px 16px",
+              background: canApply ? "var(--accent)" : "var(--code-border)",
+              color: canApply ? "#fff" : "var(--text-muted)",
+              border: "none",
+              borderRadius: 4,
+              cursor: canApply ? "pointer" : "not-allowed",
+              fontWeight: 600,
+              fontSize: 14,
+            }}
+          >
+            Open in Graph Generator
+          </button>
+        )}
         <button
           onClick={onClose}
           style={{

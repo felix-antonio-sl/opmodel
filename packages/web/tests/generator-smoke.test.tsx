@@ -3,6 +3,18 @@ import React from "react";
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { OpmGraphGeneratorPanel } from "../src/features/generator/components/OpmGraphGeneratorPanel";
+import { createModel, addAppearance, addThing } from "@opmodel/core";
+
+function buildImportedModel() {
+  let model = createModel("Imported Coffee");
+  const process = { id: "proc-coffee-making", name: "Coffee Making", kind: "process", essence: "physical", affiliation: "system" } as const;
+  const water = { id: "obj-water", name: "Water", kind: "object", essence: "physical", affiliation: "system" } as const;
+  let result = addThing(model, process); if (!result.ok) throw new Error(result.error.message); model = result.value;
+  result = addThing(model, water); if (!result.ok) throw new Error(result.error.message); model = result.value;
+  let appearance = addAppearance(model, { thing: process.id, opd: "opd-sd", x: 220, y: 80, w: 180, h: 90 }); if (!appearance.ok) throw new Error(appearance.error.message); model = appearance.value;
+  appearance = addAppearance(model, { thing: water.id, opd: "opd-sd", x: 40, y: 80, w: 140, h: 70 }); if (!appearance.ok) throw new Error(appearance.error.message); model = appearance.value;
+  return model;
+}
 
 describe("OpmGraphGeneratorPanel", () => {
   it("walks the wizard, refines to SD1, and opens a generated model", () => {
@@ -45,5 +57,18 @@ describe("OpmGraphGeneratorPanel", () => {
     fireEvent.click(screen.getByText("Open in editor"));
 
     expect(onOpenInEditor).toHaveBeenCalledTimes(1);
+  });
+
+  it("can open directly into workspace from an imported model", () => {
+    render(
+      React.createElement(OpmGraphGeneratorPanel, {
+        onClose: vi.fn(),
+        onOpenInEditor: vi.fn(),
+        initialModel: buildImportedModel(),
+      }),
+    );
+
+    expect(screen.getByText(/Current view:/).textContent).toContain("Imported OPL");
+    expect(screen.getByText(/Imported Coffee/)).toBeTruthy();
   });
 });
