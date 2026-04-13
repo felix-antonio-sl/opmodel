@@ -23,6 +23,28 @@ function okJson(body: unknown) {
   } as Response);
 }
 
+function buildApplySimpleResponse() {
+  const incremental = buildIncrementalResult();
+  return {
+    ok: true,
+    artifact_kind: "kernel-patch-proposal",
+    appliedFromTaskKind: "incremental-change",
+    modelJson: incremental.artifacts[0].payload.outputs.modelJson,
+    canonicalOpl: incremental.artifacts[0].payload.outputs.canonicalOpl,
+    visualSpec: {
+      version: "v1",
+      diagramKind: "opm-sd",
+      title: "Battery Charging System",
+      style: "dark-terminal",
+      scene: { lanes: [], groups: [] },
+      nodes: [{ id: "proc-battery-charging", kind: "process" }],
+      edges: [],
+      guardrails: [],
+      canonicalOpl: incremental.artifacts[0].payload.outputs.canonicalOpl,
+    },
+  };
+}
+
 function buildWizardResult() {
   const built = buildArtifactsFromSdDraft({
     ...EMPTY_SD_DRAFT,
@@ -175,8 +197,12 @@ describe("OpmGraphGeneratorPanel", () => {
   it("walks the wizard, refines to SD1, and applies an incremental preview", async () => {
     const onOpenInEditor = vi.fn();
     const onOpenLlmSettings = vi.fn();
-    const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
       const payload = JSON.parse(String(init?.body ?? "{}"));
+      if (url.includes("/v1/reviews/apply-simple")) {
+        return okJson(buildApplySimpleResponse());
+      }
       switch (payload.task?.kind) {
         case "wizard-generate":
           return okJson(buildWizardResult());
@@ -239,7 +265,7 @@ describe("OpmGraphGeneratorPanel", () => {
     fireEvent.click(screen.getByText("Build proposal"));
     await screen.findByText(/Proposed 1 kernel patch operation/i);
     fireEvent.click(screen.getByText("Apply simple preview"));
-    expect(screen.getByText(/decision: applied/i)).toBeTruthy();
+    await waitFor(() => expect(screen.getByText(/decision: applied/i)).toBeTruthy());
 
     fireEvent.click(screen.getByText("Open in editor"));
     expect(onOpenInEditor).toHaveBeenCalledTimes(1);

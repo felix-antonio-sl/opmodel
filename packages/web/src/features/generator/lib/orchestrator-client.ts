@@ -1,4 +1,4 @@
-import type { OrchestratorResult } from "../types";
+import type { ApplySimplePreviewResult, OrchestratorArtifact, OrchestratorResult } from "../types";
 
 type SourceKind = "wizard" | "imported-opl" | "incremental-session" | "system";
 
@@ -18,6 +18,19 @@ function baseUrl() {
   return (envBase && envBase.length > 0 ? envBase : "/api/modeling-orchestrator").replace(/\/$/, "");
 }
 
+async function parseJsonResponse<T>(response: Response, fallbackMessage: string): Promise<T> {
+  const bodyText = await response.text();
+  if (!response.ok) {
+    throw new Error(bodyText || `${fallbackMessage} (${response.status})`);
+  }
+
+  try {
+    return JSON.parse(bodyText) as T;
+  } catch {
+    throw new Error("Modeling orchestrator returned invalid JSON.");
+  }
+}
+
 export async function runModelingTask(envelope: ModelingTaskEnvelope): Promise<OrchestratorResult> {
   const response = await fetch(`${baseUrl()}/v1/modeling-tasks/run`, {
     method: "POST",
@@ -27,14 +40,17 @@ export async function runModelingTask(envelope: ModelingTaskEnvelope): Promise<O
     body: JSON.stringify(envelope),
   });
 
-  const bodyText = await response.text();
-  if (!response.ok) {
-    throw new Error(bodyText || `Modeling orchestrator request failed (${response.status})`);
-  }
+  return parseJsonResponse<OrchestratorResult>(response, "Modeling orchestrator request failed");
+}
 
-  try {
-    return JSON.parse(bodyText) as OrchestratorResult;
-  } catch {
-    throw new Error("Modeling orchestrator returned invalid JSON.");
-  }
+export async function applySimplePreview(artifact: OrchestratorArtifact): Promise<ApplySimplePreviewResult> {
+  const response = await fetch(`${baseUrl()}/v1/reviews/apply-simple`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ artifact }),
+  });
+
+  return parseJsonResponse<ApplySimplePreviewResult>(response, "Apply simple preview failed");
 }

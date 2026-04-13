@@ -232,3 +232,17 @@ class ModelingTaskResult(BaseModel):
     artifacts: list[ProposalArtifact] = Field(default_factory=list)
     guardrail: GuardrailReport
     trace: list[str] = Field(default_factory=list)
+
+
+class ApplySimplePreviewRequest(BaseModel):
+    artifact: ProposalArtifact
+
+
+class ApplySimplePreviewResult(BaseModel):
+    ok: bool
+    artifact_kind: str
+    modelJson: str
+    canonicalOpl: str | None = None
+    visualSpec: dict[str, Any] | None = None
+    childOpdId: str | None = None
+    appliedFromTaskKind: TaskKind | None = None

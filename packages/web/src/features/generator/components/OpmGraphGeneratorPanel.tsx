@@ -15,8 +15,8 @@ import { renderVisualRenderSpec } from "../../../lib/svg/render-visual-render-sp
 import { StartScreen } from "./StartScreen";
 import { SdWizard } from "./SdWizard";
 import { ModelWorkspace } from "./ModelWorkspace";
-import { runModelingTask } from "../lib/orchestrator-client";
-import type { OrchestratorPayload, OrchestratorResult, ReviewDecision } from "../types";
+import { applySimplePreview, runModelingTask } from "../lib/orchestrator-client";
+import type { ApplySimplePreviewResult, OrchestratorPayload, OrchestratorResult, ReviewDecision } from "../types";
 import { useSdWizard } from "../state/useSdWizard";
 
 interface OpmGraphGeneratorPanelProps {
@@ -48,6 +48,19 @@ function parseModelSnapshot(payload: OrchestratorPayload) {
 
 function snapshotFromModel(model: Model) {
   return JSON.parse(saveModel(model)) as Record<string, unknown>;
+}
+
+function workspaceFromAppliedPreview(
+  applied: ApplySimplePreviewResult,
+  buildWorkspaceState: (model: Model, currentViewLabel: string, opdId?: string) => WorkspaceState,
+  fallbackViewLabel: string,
+) {
+  const loaded = loadModel(applied.modelJson);
+  if (!loaded.ok) {
+    throw new Error(`Applied preview could not be loaded: ${loaded.error.message}`);
+  }
+  const nextViewLabel = applied.childOpdId ? "SD1" : fallbackViewLabel;
+  return buildWorkspaceState(loaded.value, nextViewLabel, applied.childOpdId ?? undefined);
 }
 
 export function OpmGraphGeneratorPanel({ onClose, onOpenInEditor, onOpenLlmSettings, initialModel = null }: OpmGraphGeneratorPanelProps) {
@@ -227,21 +240,28 @@ export function OpmGraphGeneratorPanel({ onClose, onOpenInEditor, onOpenLlmSetti
     setReviewDecision({ decision: "rejected", note: `${taskKind} rejected for now.` });
   };
 
-  const handleApplySimpleReview = () => {
-    if (!lastReview) return;
-    const workspace = applyWorkspaceFromReview(lastReview, {
-      asBase: lastReview.task_kind === "wizard-generate" || lastReview.task_kind === "opl-import",
-      fallbackViewLabel: activeWorkspace?.currentViewLabel ?? "SD",
-    });
-    if (!workspace) {
-      setReviewError("This proposal does not expose a deterministic model preview to apply.");
-      return;
+  const handleApplySimpleReview = async () => {
+    if (!lastReview?.artifacts[0]) return;
+    setReviewBusy(true);
+    setReviewError(null);
+    try {
+      const applied = await applySimplePreview(lastReview.artifacts[0]);
+      const fallbackViewLabel = activeWorkspace?.currentViewLabel ?? "SD";
+      const workspace = workspaceFromAppliedPreview(applied, buildWorkspaceState, fallbackViewLabel);
+      if (lastReview.task_kind === "wizard-generate" || lastReview.task_kind === "opl-import") {
+        setBaseWorkspace(workspace);
+      }
+      if (lastReview.task_kind === "incremental-change" && baseWorkspace?.currentViewLabel === "SD") {
+        setBaseWorkspace(workspace);
+      }
+      setActiveWorkspace(workspace);
+      setReviewDecision({ decision: "applied", note: "Backend apply-simple validated and promoted the preview into the workspace." });
+      setApplyError(null);
+    } catch (error) {
+      setReviewError(error instanceof Error ? error.message : "Apply simple preview failed.");
+    } finally {
+      setReviewBusy(false);
     }
-    if (lastReview.task_kind === "incremental-change" && baseWorkspace) {
-      setBaseWorkspace(baseWorkspace.currentViewLabel === "SD" ? workspace : baseWorkspace);
-    }
-    setReviewDecision({ decision: "applied", note: "Deterministic preview promoted into the workspace." });
-    setApplyError(null);
   };
 
   return (
@@ -292,7 +312,7 @@ export function OpmGraphGeneratorPanel({ onClose, onOpenInEditor, onOpenLlmSetti
             reviewError={reviewError ?? applyError}
             onAcceptReview={handleAcceptReview}
             onRejectReview={handleRejectReview}
-            onApplySimpleReview={handleApplySimpleReview}
+            onApplySimpleReview={() => void handleApplySimpleReview()}
           />
         )}
       </div>

@@ -57,3 +57,13 @@ export interface ReviewDecision {
   decision: "accepted" | "rejected" | "applied";
   note: string;
 }
+
+export interface ApplySimplePreviewResult {
+  ok: boolean;
+  artifact_kind: string;
+  modelJson: string;
+  canonicalOpl?: string | null;
+  visualSpec?: Record<string, unknown> | null;
+  childOpdId?: string | null;
+  appliedFromTaskKind?: ModelingTaskKind | null;
+}
