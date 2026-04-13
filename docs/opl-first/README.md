@@ -23,6 +23,7 @@
 | **13** | [**12-web-visual-refactor-plan.md**](./12-web-visual-refactor-plan.md) | **Plan por fases para la refactor estructural profunda de la capa visual web** |
 | 14 | [14-opm-graph-generator-adr.md](./14-opm-graph-generator-adr.md) | ADR-005, nuevo slice principal: OPM Graph Generator |
 | 15 | [15-opm-graph-generator-mvp-plan.md](./15-opm-graph-generator-mvp-plan.md) | MVP plan, contratos y archivos concretos del vertical slice |
+| 16 | [16-llm-mediated-renderer-adr.md](./16-llm-mediated-renderer-adr.md) | ADR-006, renderer visual derivado mediado por LLM bajo contrato explícito |
 
 ## SSOT reference
 
@@ -45,6 +46,7 @@ Precedence:
 - **Migración web**: en progreso con projection layer ya conectado a canvas/layout/reporting/store
 - **Siguiente paso visual**: canonizar `EffectiveVisualSlice` en web, adelgazar `OpdCanvas`, y luego abrir persistencia de layout más allá de `Appearance` legacy
 - **Siguiente paso de producto**: abrir el vertical slice `OPM Graph Generator` para mover la superficie primaria hacia `Describe / Wizard -> SemanticKernel -> OPL + Validation + SVG -> SD1`
+- **Nueva línea propuesta**: introducir `VisualRenderSpec` y un `LLM-mediated renderer` como backend premium derivado, sin mover la autoridad semántica fuera de `SemanticKernel`
 
 ## Decisión vinculante (ADR-003)
 
