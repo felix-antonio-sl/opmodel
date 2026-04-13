@@ -225,6 +225,20 @@ The worker returns a structured artifact with:
 
 This is still a proposal surface, not an authoritative mutation path.
 
+## Common artifact payload shape
+
+All current worker artifacts now converge on the same top-level payload envelope:
+
+- `ok`
+- `proposal`
+- `context`
+- `outputs`
+- optional `error`
+- optional `agent`
+- optional `inputs`
+
+This keeps proposal-only orchestration consistent across import, generation, refinement, incremental change, and render, while still allowing each task to expose task-specific details inside `proposal/context/outputs`.
+
 ## Service shape
 
 ```text

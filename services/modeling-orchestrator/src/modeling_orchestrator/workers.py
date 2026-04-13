@@ -6,6 +6,31 @@ from .core_bridge import CoreBridgeError, run_incremental_change, run_opl_import
 from .state import OrchestratorState
 
 
+def _normalized_artifact_payload(
+    *,
+    ok: bool,
+    proposal: dict,
+    context: dict | None = None,
+    outputs: dict | None = None,
+    error: dict | None = None,
+    agent: dict | None = None,
+    inputs: dict | None = None,
+) -> dict:
+    payload: dict = {
+        "ok": ok,
+        "proposal": proposal,
+        "context": context or {},
+        "outputs": outputs or {},
+    }
+    if error is not None:
+        payload["error"] = error
+    if agent is not None:
+        payload["agent"] = agent
+    if inputs is not None:
+        payload["inputs"] = inputs
+    return payload
+
+
 def route_task(state: OrchestratorState) -> OrchestratorState:
     task = state["task"]
     route = {
@@ -48,11 +73,21 @@ def wizard_worker(state: OrchestratorState) -> OrchestratorState:
         artifact = ProposalArtifact(
             artifact_kind="sd-draft",
             summary="Wizard generation failed before building real artifacts.",
-            payload={
-                "agent": agent_config,
-                "draft": draft,
-                "bridge_error": str(exc),
-            },
+            payload=_normalized_artifact_payload(
+                ok=False,
+                proposal={
+                    "summary": "Wizard generation failed before building real artifacts.",
+                    "rationale": "The wizard task did not complete the real core artifact path.",
+                    "confidence": 0.1,
+                    "requiresHumanReview": True,
+                    "ssotChecksExpected": ["sd-draft-validation-attempted", "sd-draft-artifact-build-attempted"],
+                },
+                context={},
+                outputs={},
+                error={"stage": "wizard-bridge", "message": str(exc)},
+                agent=agent_config,
+                inputs={"draft": draft},
+            ),
         )
         next_state = _append_artifact(state, artifact, "wizard-bridge-error")
         return _extend_guardrail(
@@ -68,10 +103,28 @@ def wizard_worker(state: OrchestratorState) -> OrchestratorState:
             if bridge_result.get("ok")
             else "Wizard draft produced but needs review before artifact acceptance."
         ),
-        payload={
-            "agent": agent_config,
-            **bridge_result,
-        },
+        payload=_normalized_artifact_payload(
+            ok=bool(bridge_result.get("ok")),
+            proposal={
+                "summary": (
+                    "Wizard draft validated and compiled into real core artifacts."
+                    if bridge_result.get("ok")
+                    else "Wizard draft produced but needs review before artifact acceptance."
+                ),
+                "rationale": "Wizard generation should converge to a validated SdDraft and real derived artifacts from the core generator slice.",
+                "confidence": 0.92 if bridge_result.get("ok") else 0.58,
+                "requiresHumanReview": not bool(bridge_result.get("ok")),
+                "ssotChecksExpected": ["sd-draft-validation-attempted", "sd-draft-artifact-build-attempted"],
+            },
+            context={
+                "validation": bridge_result.get("validation"),
+                "kernel": bridge_result.get("kernel"),
+            },
+            outputs=bridge_result.get("outputs") or {},
+            error=bridge_result.get("error"),
+            agent=agent_config,
+            inputs={"draft": bridge_result.get("draft", draft)},
+        ),
     )
     next_state = _append_artifact(state, artifact, "wizard-core-artifacts-built")
 
@@ -102,10 +155,20 @@ def opl_import_worker(state: OrchestratorState) -> OrchestratorState:
         artifact = ProposalArtifact(
             artifact_kind="normalized-opl",
             summary="OPL import failed before reaching SemanticKernel compilation.",
-            payload={
-                "language": language,
-                "bridge_error": str(exc),
-            },
+            payload=_normalized_artifact_payload(
+                ok=False,
+                proposal={
+                    "summary": "OPL import failed before reaching SemanticKernel compilation.",
+                    "rationale": "The imported OPL did not complete the real parse/compile path.",
+                    "confidence": 0.1,
+                    "requiresHumanReview": True,
+                    "ssotChecksExpected": ["core-parse-attempted", "semantic-kernel-compile-attempted"],
+                },
+                context={"language": language},
+                outputs={},
+                error={"stage": "opl-import-bridge", "message": str(exc)},
+                inputs={"oplText": getattr(task, "oplText", "")},
+            ),
         )
         next_state = _append_artifact(state, artifact, "opl-import-bridge-error")
         return _extend_guardrail(
@@ -121,7 +184,32 @@ def opl_import_worker(state: OrchestratorState) -> OrchestratorState:
             if bridge_result.get("ok")
             else "Imported OPL reached @opmodel/core but needs review before acceptance."
         ),
-        payload=bridge_result,
+        payload=_normalized_artifact_payload(
+            ok=bool(bridge_result.get("ok")),
+            proposal={
+                "summary": (
+                    "Imported OPL compiled through @opmodel/core into a real SemanticKernel."
+                    if bridge_result.get("ok")
+                    else "Imported OPL reached @opmodel/core but needs review before acceptance."
+                ),
+                "rationale": "OPL import should converge to normalized text, kernel evidence, and derived outputs from the real core compiler.",
+                "confidence": 0.93 if bridge_result.get("ok") else 0.55,
+                "requiresHumanReview": not bool(bridge_result.get("ok")),
+                "ssotChecksExpected": ["core-parse-attempted", "semantic-kernel-compile-attempted"],
+            },
+            context={
+                "language": language,
+                "validation": bridge_result.get("validation"),
+                "parsed": bridge_result.get("parsed"),
+                "kernel": bridge_result.get("kernel"),
+            },
+            outputs={
+                **(bridge_result.get("outputs") or {}),
+                "modelJson": (bridge_result.get("outputs") or {}).get("legacyModelJson"),
+            },
+            error=bridge_result.get("error"),
+            inputs={"oplText": getattr(task, "oplText", "")},
+        ),
     )
     next_state = _append_artifact(state, artifact, "opl-import-core-compiled")
 
