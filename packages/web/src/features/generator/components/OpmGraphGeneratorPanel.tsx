@@ -19,6 +19,7 @@ import { useSdWizard } from "../state/useSdWizard";
 interface OpmGraphGeneratorPanelProps {
   onClose: () => void;
   onOpenInEditor: (model: Model) => void;
+  onOpenLlmSettings?: () => void;
 }
 
 type WorkspaceState = {
@@ -31,7 +32,7 @@ type WorkspaceState = {
   validationReport: ReturnType<typeof validateSdDraft>;
 };
 
-export function OpmGraphGeneratorPanel({ onClose, onOpenInEditor }: OpmGraphGeneratorPanelProps) {
+export function OpmGraphGeneratorPanel({ onClose, onOpenInEditor, onOpenLlmSettings }: OpmGraphGeneratorPanelProps) {
   const [mode, setMode] = useState<"start" | "wizard" | "workspace">("start");
   const [applyError, setApplyError] = useState<string | null>(null);
   const [baseWorkspace, setBaseWorkspace] = useState<WorkspaceState | null>(null);
@@ -119,6 +120,7 @@ export function OpmGraphGeneratorPanel({ onClose, onOpenInEditor }: OpmGraphGene
             currentViewLabel={activeWorkspace.currentViewLabel}
             onBackToWizard={() => setMode("wizard")}
             onOpenInEditor={() => onOpenInEditor(activeWorkspace.model)}
+            onOpenLlmSettings={onOpenLlmSettings}
             onRefineMainProcess={activeWorkspace.currentViewLabel === "SD" ? handleRefineMainProcess : undefined}
             onReturnToSd={activeWorkspace.currentViewLabel === "SD1" && baseWorkspace ? () => setActiveWorkspace(baseWorkspace) : undefined}
           />

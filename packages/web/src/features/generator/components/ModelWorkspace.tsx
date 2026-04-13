@@ -27,11 +27,12 @@ interface ModelWorkspaceProps {
   currentViewLabel?: string;
   onOpenInEditor: () => void;
   onBackToWizard: () => void;
+  onOpenLlmSettings?: () => void;
   onRefineMainProcess?: (draft: { subprocesses: string[]; internalObjects: string[] }) => void;
   onReturnToSd?: () => void;
 }
 
-export function ModelWorkspace({ model, opl, svg, validation, visualExport, visualSpec, currentViewLabel = "SD", onOpenInEditor, onBackToWizard, onRefineMainProcess, onReturnToSd }: ModelWorkspaceProps) {
+export function ModelWorkspace({ model, opl, svg, validation, visualExport, visualSpec, currentViewLabel = "SD", onOpenInEditor, onBackToWizard, onOpenLlmSettings, onRefineMainProcess, onReturnToSd }: ModelWorkspaceProps) {
   const [premiumSvg, setPremiumSvg] = useState<string | null>(null);
   const [premiumError, setPremiumError] = useState<string | null>(null);
   const [isGeneratingPremium, setIsGeneratingPremium] = useState(false);
@@ -88,6 +89,11 @@ export function ModelWorkspace({ model, opl, svg, validation, visualExport, visu
     void generatePremium({ silentIfNoConfig: true });
   }, [workspaceKey]);
 
+  const llmConfig = useMemo(() => loadStoredDiagramLLMConfig(), [workspaceKey, premiumSvg, premiumError]);
+  const llmConfigLabel = llmConfig
+    ? `${llmConfig.provider}${llmConfig.model ? ` / ${llmConfig.model}` : ""}`
+    : "not configured";
+
   const primarySvg = premiumSvg ?? svg;
   const isPremiumPrimary = Boolean(premiumSvg);
 
@@ -98,6 +104,10 @@ export function ModelWorkspace({ model, opl, svg, validation, visualExport, visu
           <div style={{ fontSize: 22, fontWeight: 700, color: "var(--code-text)" }}>{model.meta.name}</div>
           <div style={{ marginTop: 6, color: "var(--text-muted)", fontSize: 13 }}>
             Current view: <code>{currentViewLabel}</code> · Pipeline: <code>SdDraft -&gt; SemanticKernel -&gt; VisualRenderSpec -&gt; premium SVG</code>
+          </div>
+          <div style={{ marginTop: 8, color: "var(--text-muted)", fontSize: 13, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <span>Active LLM: <code>{llmConfigLabel}</code></span>
+            {onOpenLlmSettings && <button onClick={onOpenLlmSettings}>Change LLM settings</button>}
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
@@ -149,6 +159,7 @@ export function ModelWorkspace({ model, opl, svg, validation, visualExport, visu
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <div style={{ border: "1px solid var(--code-border)", borderRadius: 12, padding: 12, background: "rgba(15,23,42,0.55)", fontSize: 12, color: "var(--text-muted)" }}>
             Primary renderer: <strong style={{ color: isPremiumPrimary ? "#22c55e" : "#f59e0b" }}>{isPremiumPrimary ? "premium LLM" : "deterministic fallback"}</strong>
+            <span style={{ marginLeft: 8 }}>· Active config: <code>{llmConfigLabel}</code></span>
             {isGeneratingPremium && <span style={{ marginLeft: 8 }}>Generating premium output...</span>}
             {!isPremiumPrimary && !isGeneratingPremium && <span style={{ marginLeft: 8 }}>Premium output not available yet, showing fallback.</span>}
           </div>
@@ -192,6 +203,7 @@ export function ModelWorkspace({ model, opl, svg, validation, visualExport, visu
             <div>Current slice: {currentViewLabel}</div>
             <div>VisualRenderSpec: {visualSpec.nodes.length} nodes / {visualSpec.edges.length} edges</div>
             <div>Primary renderer: premium LLM</div>
+            <div>Active LLM config: {llmConfigLabel}</div>
             <div>Fallback renderer: deterministic debug path</div>
             <div style={{ color: "var(--text-muted)" }}>Premium output is now the canonical delivery target for this slice.</div>
           </div>

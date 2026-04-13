@@ -932,6 +932,7 @@ function Editor({ initialModel, recoveryInfo, onNew, onImport }: { initialModel:
         <Suspense fallback={null}>
           <OpmGraphGeneratorPanel
             onClose={() => setShowGraphGenerator(false)}
+            onOpenLlmSettings={() => setShowLlmSettings(true)}
             onOpenInEditor={(newModel) => {
               setShowGraphGenerator(false);
               onImport(newModel);

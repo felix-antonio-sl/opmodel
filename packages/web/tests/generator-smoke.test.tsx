@@ -7,11 +7,13 @@ import { OpmGraphGeneratorPanel } from "../src/features/generator/components/Opm
 describe("OpmGraphGeneratorPanel", () => {
   it("walks the wizard, refines to SD1, and opens a generated model", () => {
     const onOpenInEditor = vi.fn();
+    const onOpenLlmSettings = vi.fn();
 
     render(
       React.createElement(OpmGraphGeneratorPanel, {
         onClose: vi.fn(),
         onOpenInEditor,
+        onOpenLlmSettings,
       }),
     );
 
@@ -33,6 +35,9 @@ describe("OpmGraphGeneratorPanel", () => {
     fireEvent.click(screen.getByText("Next"));
 
     fireEvent.click(screen.getByText("Generate model"));
+    expect(screen.getByText(/Active LLM:/).textContent).toContain("not configured");
+    fireEvent.click(screen.getByText("Change LLM settings"));
+    expect(onOpenLlmSettings).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByText("Refine main process"));
     fireEvent.click(screen.getByText("Generate SD1"));
     expect(screen.getByText(/Current view:/).textContent).toContain("SD1");
