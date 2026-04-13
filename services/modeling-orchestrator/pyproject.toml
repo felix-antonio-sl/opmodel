@@ -1,0 +1,30 @@
+[project]
+name = "opmodel-modeling-orchestrator"
+version = "0.1.0"
+description = "SSOT-governed LLM-mediated modeling orchestrator for OPModel"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.116.0",
+  "uvicorn>=0.35.0",
+  "langgraph>=0.6.0",
+  "langchain-core>=0.3.0",
+  "deepagents>=0.0.7",
+  "pydantic>=2.11.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.4.0",
+  "httpx>=0.28.0",
+]
+
+[build-system]
+requires = ["setuptools>=69.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
