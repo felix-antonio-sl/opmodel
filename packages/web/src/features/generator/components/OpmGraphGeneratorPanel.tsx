@@ -1,13 +1,14 @@
 import { useMemo, useState } from "react";
 import {
   buildArtifactsFromSdDraft,
-  kernelToDiagramSpec,
   kernelToOpl,
   kernelToVisualExportPrompt,
+  kernelToVisualRenderSpec,
   validateSdDraft,
   type Model,
+  type VisualRenderSpec,
 } from "@opmodel/core";
-import { renderDiagramSpec } from "../../../lib/svg/render-diagram-spec";
+import { renderVisualRenderSpec } from "../../../lib/svg/render-visual-render-spec";
 import { StartScreen } from "./StartScreen";
 import { SdWizard } from "./SdWizard";
 import { ModelWorkspace } from "./ModelWorkspace";
@@ -25,6 +26,7 @@ export function OpmGraphGeneratorPanel({ onClose, onOpenInEditor }: OpmGraphGene
   const [generatedOpl, setGeneratedOpl] = useState("");
   const [generatedSvg, setGeneratedSvg] = useState("");
   const [generatedVisualExport, setGeneratedVisualExport] = useState<ReturnType<typeof kernelToVisualExportPrompt> | null>(null);
+  const [generatedVisualSpec, setGeneratedVisualSpec] = useState<VisualRenderSpec | null>(null);
   const wizard = useSdWizard();
 
   const validation = useMemo(() => validateSdDraft(wizard.draft), [wizard.draft]);
@@ -36,13 +38,14 @@ export function OpmGraphGeneratorPanel({ onClose, onOpenInEditor }: OpmGraphGene
       return;
     }
     const opl = kernelToOpl(result.value.kernel);
-    const diagram = kernelToDiagramSpec(result.value.kernel);
-    const svg = renderDiagramSpec(diagram);
+    const visualSpec = kernelToVisualRenderSpec(result.value.kernel);
+    const svg = renderVisualRenderSpec(visualSpec);
 
     setGeneratedModel(result.value.model);
     setGeneratedOpl(opl);
     setGeneratedSvg(svg);
     setGeneratedVisualExport(kernelToVisualExportPrompt(result.value.kernel));
+    setGeneratedVisualSpec(visualSpec);
     setApplyError(null);
     setMode("workspace");
   };
@@ -73,13 +76,14 @@ export function OpmGraphGeneratorPanel({ onClose, onOpenInEditor }: OpmGraphGene
           </div>
         )}
 
-        {mode === "workspace" && generatedModel && generatedVisualExport && (
+        {mode === "workspace" && generatedModel && generatedVisualExport && generatedVisualSpec && (
           <ModelWorkspace
             model={generatedModel}
             opl={generatedOpl}
             svg={generatedSvg}
             validation={validation}
             visualExport={generatedVisualExport}
+            visualSpec={generatedVisualSpec}
             onBackToWizard={() => setMode("wizard")}
             onOpenInEditor={() => onOpenInEditor(generatedModel)}
           />

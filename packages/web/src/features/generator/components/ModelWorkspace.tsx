@@ -1,4 +1,4 @@
-import type { DraftValidationReport, Model, VisualExportPrompt } from "@opmodel/core";
+import type { DraftValidationReport, Model, VisualExportPrompt, VisualRenderSpec } from "@opmodel/core";
 import { DiagramPreview } from "./DiagramPreview";
 import { OplPanel } from "./OplPanel";
 import { ValidationPanel } from "./ValidationPanel";
@@ -21,11 +21,12 @@ interface ModelWorkspaceProps {
   svg: string;
   validation: DraftValidationReport;
   visualExport: VisualExportPrompt;
+  visualSpec: VisualRenderSpec;
   onOpenInEditor: () => void;
   onBackToWizard: () => void;
 }
 
-export function ModelWorkspace({ model, opl, svg, validation, visualExport, onOpenInEditor, onBackToWizard }: ModelWorkspaceProps) {
+export function ModelWorkspace({ model, opl, svg, validation, visualExport, visualSpec, onOpenInEditor, onBackToWizard }: ModelWorkspaceProps) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16, color: "var(--text-primary)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
@@ -40,6 +41,7 @@ export function ModelWorkspace({ model, opl, svg, validation, visualExport, onOp
           <button onClick={() => downloadText(`${model.meta.name.toLowerCase().replace(/\s+/g, "-")}.opl.txt`, opl, "text/plain")}>Export OPL</button>
           <button onClick={() => downloadText(`${model.meta.name.toLowerCase().replace(/\s+/g, "-")}.svg`, svg, "image/svg+xml")}>Export SVG</button>
           <button onClick={() => navigator.clipboard.writeText(visualExport.prompt)}>Copy premium prompt</button>
+          <button onClick={() => downloadText(`${model.meta.name.toLowerCase().replace(/\s+/g, "-")}.visual-render-spec.json`, JSON.stringify(visualSpec, null, 2), "application/json")}>Export render spec</button>
           <button onClick={() => downloadText(`${model.meta.name.toLowerCase().replace(/\s+/g, "-")}.visual-export.json`, JSON.stringify(visualExport, null, 2), "application/json")}>Export visual adapter</button>
           <button onClick={onOpenInEditor} style={{ background: "#1d4ed8", color: "white", border: "1px solid #2563eb", borderRadius: 10, padding: "10px 14px" }}>
             Open in editor
@@ -62,8 +64,9 @@ export function ModelWorkspace({ model, opl, svg, validation, visualExport, onOp
             <div>{model.links.size} links</div>
             <div>{model.opds.size} OPDs</div>
             <div>Current slice: SD only</div>
+            <div>VisualRenderSpec: {visualSpec.nodes.length} nodes / {visualSpec.edges.length} edges</div>
             <div>Premium visual export adapter: ready</div>
-            <div style={{ color: "var(--text-muted)" }}>Next cut: SD1 refinement and prompt-to-wizard seeding.</div>
+            <div style={{ color: "var(--text-muted)" }}>Next cut: SD1 refinement, verifier hardening, and LLM backend hookup.</div>
           </div>
         </div>
       </div>
