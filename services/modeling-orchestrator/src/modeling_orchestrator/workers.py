@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from .agents import build_deep_agent_config
 from .contracts import ProposalArtifact
+from .core_bridge import CoreBridgeError, run_opl_import
 from .state import OrchestratorState
 
 
@@ -38,17 +39,52 @@ def wizard_worker(state: OrchestratorState) -> OrchestratorState:
 
 def opl_import_worker(state: OrchestratorState) -> OrchestratorState:
     task = state["task"]
-    text = getattr(task, "oplText", "")
-    normalized = text if text.lstrip().startswith("===") else f"=== SD ===\n{text.strip()}"
+    language = getattr(task, "language", "mixed")
+
+    try:
+        bridge_result = run_opl_import(getattr(task, "oplText", ""), language)
+    except CoreBridgeError as exc:
+        artifact = ProposalArtifact(
+            artifact_kind="normalized-opl",
+            summary="OPL import failed before reaching SemanticKernel compilation.",
+            payload={
+                "language": language,
+                "bridge_error": str(exc),
+            },
+        )
+        next_state = _append_artifact(state, artifact, "opl-import-bridge-error")
+        return _extend_guardrail(
+            next_state,
+            issues=["Core bridge failed for opl-import."],
+            checks=["core-bridge-invoked"],
+        )
+
     artifact = ProposalArtifact(
         artifact_kind="normalized-opl",
-        summary="Normalized imported OPL for downstream parsing.",
-        payload={
-            "normalized_opl": normalized,
-            "language": getattr(task, "language", "mixed"),
-        },
+        summary=(
+            "Imported OPL compiled through @opmodel/core into a real SemanticKernel."
+            if bridge_result.get("ok")
+            else "Imported OPL reached @opmodel/core but needs review before acceptance."
+        ),
+        payload=bridge_result,
     )
-    return _append_artifact(state, artifact, "opl-normalized")
+    next_state = _append_artifact(state, artifact, "opl-import-core-compiled")
+
+    issues: list[str] = []
+    if not bridge_result.get("ok", False):
+        issues.append("OPL import did not pass core validation cleanly.")
+    if bridge_result.get("error"):
+        issues.append(f"Core stage failed: {bridge_result['error'].get('stage', 'unknown')}.")
+
+    return _extend_guardrail(
+        next_state,
+        issues=issues,
+        checks=[
+            "core-bridge-invoked",
+            "core-parse-attempted",
+            "semantic-kernel-compile-attempted",
+        ],
+    )
 
 
 def incremental_change_worker(state: OrchestratorState) -> OrchestratorState:
@@ -124,3 +160,25 @@ def _append_artifact(state: OrchestratorState, artifact: ProposalArtifact, trace
     trace = list(state.get("trace", []))
     trace.append(trace_line)
     return {**state, "artifacts": artifacts, "trace": trace}
+
+
+
+def _extend_guardrail(
+    state: OrchestratorState,
+    *,
+    issues: list[str] | None = None,
+    checks: list[str] | None = None,
+) -> OrchestratorState:
+    guardrail_issues = list(state.get("guardrail_issues", []))
+    guardrail_checks = list(state.get("guardrail_checks", []))
+
+    if issues:
+        guardrail_issues.extend(issues)
+    if checks:
+        guardrail_checks.extend(checks)
+
+    return {
+        **state,
+        "guardrail_issues": guardrail_issues,
+        "guardrail_checks": guardrail_checks,
+    }

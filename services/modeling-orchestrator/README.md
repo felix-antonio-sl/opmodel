@@ -31,6 +31,10 @@ This first slice only scaffolds:
   - `wizard-generate`
   - `opl-import`
   - `incremental-change`
+- real `opl-import` bridge into `@opmodel/core`
+  - `parseOplDocuments`
+  - `compileToKernel`
+  - `exposeSemanticKernel`
 - placeholder Deep Agent builder hooks
 - FastAPI surface
 
@@ -38,7 +42,7 @@ It does **not** yet:
 
 - call real model providers
 - mutate `SemanticKernel`
-- validate through the TypeScript core
+- apply kernel patches back into the core
 - persist memory
 - run subagents in production
 
@@ -77,6 +81,28 @@ Example payload:
   }
 }
 ```
+
+## `opl-import` current behavior
+
+`opl-import` now crosses the Python/TypeScript boundary for real:
+
+```text
+FastAPI -> LangGraph worker -> bun bridge -> @opmodel/core
+                                 -> parseOplDocuments
+                                 -> compileToKernel
+                                 -> exposeSemanticKernel
+```
+
+The worker returns a structured artifact with:
+
+- normalized OPL
+- validation result
+- parsed OPD summary
+- SemanticKernel stats
+- canonical OPL re-render
+- serialized legacy model JSON snapshot
+
+This is still a proposal surface, not an authoritative mutation path.
 
 ## Service shape
 
