@@ -6,7 +6,8 @@ from pathlib import Path
 from typing import Any
 
 REPO_ROOT = Path("/home/felix/projects/opmodel")
-SCRIPT_PATH = REPO_ROOT / "services/modeling-orchestrator/scripts/opl_import_bridge.ts"
+OPL_IMPORT_SCRIPT_PATH = REPO_ROOT / "services/modeling-orchestrator/scripts/opl_import_bridge.ts"
+WIZARD_GENERATE_SCRIPT_PATH = REPO_ROOT / "services/modeling-orchestrator/scripts/wizard_generate_bridge.ts"
 
 
 class CoreBridgeError(RuntimeError):
@@ -19,9 +20,22 @@ def run_opl_import(opl_text: str, language: str = "mixed") -> dict[str, Any]:
         "oplText": opl_text,
         "language": language,
     }
+    return _run_bun_bridge(OPL_IMPORT_SCRIPT_PATH, payload, "OPL import")
 
+
+
+def run_wizard_generate(draft: dict[str, Any]) -> dict[str, Any]:
+    payload = {
+        "kind": "wizard-generate",
+        "draft": draft,
+    }
+    return _run_bun_bridge(WIZARD_GENERATE_SCRIPT_PATH, payload, "wizard generate")
+
+
+
+def _run_bun_bridge(script_path: Path, payload: dict[str, Any], label: str) -> dict[str, Any]:
     result = subprocess.run(
-        ["bun", str(SCRIPT_PATH)],
+        ["bun", str(script_path)],
         cwd=REPO_ROOT,
         input=json.dumps(payload),
         text=True,
@@ -31,7 +45,7 @@ def run_opl_import(opl_text: str, language: str = "mixed") -> dict[str, Any]:
 
     if result.returncode != 0:
         raise CoreBridgeError(
-            "OPL import bridge failed"
+            f"{label} bridge failed"
             f"\nstdout:\n{result.stdout.strip()}"
             f"\nstderr:\n{result.stderr.strip()}"
         )
@@ -40,7 +54,7 @@ def run_opl_import(opl_text: str, language: str = "mixed") -> dict[str, Any]:
         return json.loads(result.stdout)
     except json.JSONDecodeError as exc:
         raise CoreBridgeError(
-            "OPL import bridge returned invalid JSON"
+            f"{label} bridge returned invalid JSON"
             f"\nstdout:\n{result.stdout.strip()}"
             f"\nstderr:\n{result.stderr.strip()}"
         ) from exc

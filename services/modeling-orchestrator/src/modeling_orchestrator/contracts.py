@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Literal, Union
 
-from pydantic import BaseModel, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 
 TaskKind = Literal[
@@ -22,15 +22,56 @@ SourceKind = Literal[
 
 
 class WizardGenerateTask(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     kind: Literal["wizard-generate"]
     source: SourceKind = "wizard"
-    system_type: Literal["artificial", "natural", "social", "socio-technical"] | None = None
-    system_name: str | None = None
-    main_process: str | None = None
+    system_type: Literal["artificial", "natural", "social", "socio-technical"] | None = Field(
+        default=None,
+        validation_alias=AliasChoices("system_type", "systemType"),
+    )
+    system_name: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("system_name", "systemName"),
+    )
+    main_process: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("main_process", "mainProcess"),
+    )
     beneficiary: str | None = None
-    benefit_attribute: str | None = None
-    benefit_input_state: str | None = None
-    benefit_output_state: str | None = None
+    beneficiary_attribute: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("beneficiary_attribute", "beneficiaryAttribute", "benefit_attribute"),
+    )
+    beneficiary_state_in: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("beneficiary_state_in", "beneficiaryStateIn", "benefit_input_state"),
+    )
+    beneficiary_state_out: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("beneficiary_state_out", "beneficiaryStateOut", "benefit_output_state"),
+    )
+    value_object: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("value_object", "valueObject"),
+    )
+    value_state_in: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("value_state_in", "valueStateIn"),
+    )
+    value_state_out: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("value_state_out", "valueStateOut"),
+    )
+    agents: list[str] = Field(default_factory=list)
+    instruments: list[str] = Field(default_factory=list)
+    inputs: list[str] = Field(default_factory=list)
+    outputs: list[str] = Field(default_factory=list)
+    environment: list[str] = Field(default_factory=list)
+    problem_occurrence: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("problem_occurrence", "problemOccurrence"),
+    )
     raw_intent: str | None = None
 
 

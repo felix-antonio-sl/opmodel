@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from .agents import build_deep_agent_config
 from .contracts import ProposalArtifact
-from .core_bridge import CoreBridgeError, run_opl_import
+from .core_bridge import CoreBridgeError, run_opl_import, run_wizard_generate
 from .state import OrchestratorState
 
 
@@ -23,18 +23,73 @@ def route_task(state: OrchestratorState) -> OrchestratorState:
 def wizard_worker(state: OrchestratorState) -> OrchestratorState:
     task = state["task"]
     agent_config = build_deep_agent_config(ssot_summary=state["ssot_summary"], task_kind=task.kind)
+    draft = {
+        "systemType": getattr(task, "system_type", None) or "artificial",
+        "systemName": getattr(task, "system_name", None) or "",
+        "mainProcess": getattr(task, "main_process", None) or "",
+        "beneficiary": getattr(task, "beneficiary", None) or "",
+        "beneficiaryAttribute": getattr(task, "beneficiary_attribute", None) or "",
+        "beneficiaryStateIn": getattr(task, "beneficiary_state_in", None) or "",
+        "beneficiaryStateOut": getattr(task, "beneficiary_state_out", None) or "",
+        "valueObject": getattr(task, "value_object", None) or "",
+        "valueStateIn": getattr(task, "value_state_in", None) or "",
+        "valueStateOut": getattr(task, "value_state_out", None) or "",
+        "agents": list(getattr(task, "agents", []) or []),
+        "instruments": list(getattr(task, "instruments", []) or []),
+        "inputs": list(getattr(task, "inputs", []) or []),
+        "outputs": list(getattr(task, "outputs", []) or []),
+        "environment": list(getattr(task, "environment", []) or []),
+        "problemOccurrence": getattr(task, "problem_occurrence", None),
+    }
+
+    try:
+        bridge_result = run_wizard_generate(draft)
+    except CoreBridgeError as exc:
+        artifact = ProposalArtifact(
+            artifact_kind="sd-draft",
+            summary="Wizard generation failed before building real artifacts.",
+            payload={
+                "agent": agent_config,
+                "draft": draft,
+                "bridge_error": str(exc),
+            },
+        )
+        next_state = _append_artifact(state, artifact, "wizard-bridge-error")
+        return _extend_guardrail(
+            next_state,
+            issues=["Core bridge failed for wizard-generate."],
+            checks=["wizard-core-bridge-invoked"],
+        )
+
     artifact = ProposalArtifact(
         artifact_kind="sd-draft",
-        summary="Proposed SD draft skeleton from wizard input.",
+        summary=(
+            "Wizard draft validated and compiled into real core artifacts."
+            if bridge_result.get("ok")
+            else "Wizard draft produced but needs review before artifact acceptance."
+        ),
         payload={
             "agent": agent_config,
-            "system_type": getattr(task, "system_type", None),
-            "system_name": getattr(task, "system_name", None),
-            "main_process": getattr(task, "main_process", None),
-            "beneficiary": getattr(task, "beneficiary", None),
+            **bridge_result,
         },
     )
-    return _append_artifact(state, artifact, "wizard-proposal-ready")
+    next_state = _append_artifact(state, artifact, "wizard-core-artifacts-built")
+
+    issues: list[str] = []
+    if not bridge_result.get("ok", False):
+        issues.append("Wizard draft did not pass core validation cleanly.")
+    if bridge_result.get("error"):
+        issues.append(f"Wizard stage failed: {bridge_result['error'].get('stage', 'unknown')}.")
+
+    return _extend_guardrail(
+        next_state,
+        issues=issues,
+        checks=[
+            "wizard-core-bridge-invoked",
+            "sd-draft-validation-attempted",
+            "sd-draft-artifact-build-attempted",
+        ],
+    )
 
 
 def opl_import_worker(state: OrchestratorState) -> OrchestratorState:

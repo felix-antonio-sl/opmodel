@@ -35,6 +35,10 @@ This first slice only scaffolds:
   - `parseOplDocuments`
   - `compileToKernel`
   - `exposeSemanticKernel`
+- real `wizard-generate` bridge into `@opmodel/core`
+  - `validateSdDraft`
+  - `buildArtifactsFromSdDraft`
+  - `renderAllFromSemanticKernel`
 - placeholder Deep Agent builder hooks
 - FastAPI surface
 
@@ -81,6 +85,28 @@ Example payload:
   }
 }
 ```
+
+## `wizard-generate` current behavior
+
+`wizard-generate` now crosses the boundary into the real generator slice:
+
+```text
+FastAPI -> LangGraph worker -> bun bridge -> @opmodel/core
+                                 -> validateSdDraft
+                                 -> buildArtifactsFromSdDraft
+                                 -> SemanticKernel
+                                 -> canonical OPL
+```
+
+The worker returns a structured artifact with:
+
+- normalized `SdDraft`
+- draft validation report
+- SemanticKernel stats
+- canonical OPL
+- serialized model JSON snapshot
+
+It still does not call a live model provider. The LLM-facing part remains proposal-time only.
 
 ## `opl-import` current behavior
 
