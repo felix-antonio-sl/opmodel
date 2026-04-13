@@ -24,6 +24,8 @@
 | 14 | [14-opm-graph-generator-adr.md](./14-opm-graph-generator-adr.md) | ADR-005, nuevo slice principal: OPM Graph Generator |
 | 15 | [15-opm-graph-generator-mvp-plan.md](./15-opm-graph-generator-mvp-plan.md) | MVP plan, contratos y archivos concretos del vertical slice |
 | 16 | [16-llm-mediated-renderer-adr.md](./16-llm-mediated-renderer-adr.md) | ADR-006, renderer visual derivado mediado por LLM bajo contrato explícito |
+| 17 | [17-llm-mediated-modeling-orchestrator-adr.md](./17-llm-mediated-modeling-orchestrator-adr.md) | ADR-007, orquestación de modelado mediada por LLM bajo SSOT usando LangGraph / Deep Agents |
+| 18 | [18-minimal-extraction-plan.md](./18-minimal-extraction-plan.md) | Plan mínimo: qué conservar de opmodel, qué depriorizar y qué extraer a un servicio nuevo |
 
 ## SSOT reference
 
@@ -47,6 +49,7 @@ Precedence:
 - **Siguiente paso visual**: canonizar `EffectiveVisualSlice` en web, adelgazar `OpdCanvas`, y luego abrir persistencia de layout más allá de `Appearance` legacy
 - **Siguiente paso de producto**: abrir el vertical slice `OPM Graph Generator` para mover la superficie primaria hacia `Describe / Wizard -> SemanticKernel -> OPL + Validation + SVG -> SD1`
 - **Nueva línea propuesta**: introducir `VisualRenderSpec` y un `LLM-mediated renderer` como backend premium derivado, sin mover la autoridad semántica fuera de `SemanticKernel`
+- **Nueva dirección**: orquestar generación, importación OPL, refinamiento y evolución incremental mediante una capa LangGraph / Deep Agents subordinada al corpus SSOT y al `SemanticKernel`
 
 ## Decisión vinculante (ADR-003)
 
