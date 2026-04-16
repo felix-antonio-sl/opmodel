@@ -88,6 +88,21 @@ Current priority: **close Fase 4 (source mapping bidireccional) and Fase 5 (OPL 
 - **No new code** may introduce layout→semantics dependency or Model round-trips in kernel-native functions
 - Compiler must target `SemanticKernel` directly (not Model). Render must operate on kernel directly (not via `legacyModelFromSemanticKernel`).
 
+## Binding ADR: JointJS Renderer Adapter (ADR-008)
+
+**`docs/opl-first/19-jointjs-renderer-adr.md`** is a binding architectural decision (2026-04-16). All visual/render work must respect:
+
+- **JointJS is NOT the SSOT**. `SemanticKernel` remains the only source of truth.
+- **Single kernel→visual boundary**: `VisualRenderSpec` (in `packages/core/src/generator/`). No alternative path from kernel to JointJS.
+- **Layout events write only to 𝓛**. Dragging/resizing a shape modifies `LayoutModel`, never the kernel.
+- **Semantic events pass through `KernelPatchOperation`**. Add/delete/rename/reconnect operations are validated against SSOT before applying. On failure, the JointJS graph is reverted from kernel.
+- **No LLM in the render pipeline**. Rendering is 100% deterministic: `kernel → spec → joint.dia.Graph → Paper → SVG/PNG`.
+- **The 4 laws of ADR-003 must keep passing** after any change to the JointJS integration.
+- `packages/web/src/lib/renderers/llm-renderer/` and `packages/web/src/components/OpdCanvas.tsx` are deprecated. Do not add features to them.
+- Execution plan: `docs/opl-first/20-jointjs-execution-plan.md` (4 phases). Do not open ADR-009 or equivalent architectural reformulations until phase 4 closes.
+
+Superseded by ADR-008: ADR-006 (LLM-mediated renderer), ADR-007 (LLM-mediated modeling orchestrator, LangGraph/Deep Agents), phases 2-3 of `12-web-visual-refactor-plan.md`, and the "Add service" section of `18-minimal-extraction-plan.md`.
+
 ## Development
 
 - **Runtime:** Bun (`~/.bun/bin/bun`). Setup: `export BUN_INSTALL="$HOME/.bun" && export PATH="$BUN_INSTALL/bin:$PATH"`

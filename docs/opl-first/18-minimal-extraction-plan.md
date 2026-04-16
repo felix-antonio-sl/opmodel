@@ -1,5 +1,36 @@
 # 18. Minimal extraction plan for the new direction
 
+| Estado | **Superseded parcial** por ADR-008 (19-jointjs-renderer-adr) — 2026-04-16 |
+|--------|--------|
+
+> **SUPERSEDED PARCIAL 2026-04-16**
+>
+> Este plan proponia extraer un servicio Python externo con LangGraph + Deep Agents para orquestar modelado (seccion "Add" y "First interfaces to define"). ADR-008 descarta esa linea.
+>
+> **Lo que se conserva integro**:
+> - Seccion "Keep — Core semantic layer": todos los archivos listados siguen siendo centrales
+> - Seccion "Keep — Web primary surface": idem, con adicion de `packages/web/src/lib/renderers/jointjs/**`
+> - Seccion "Stop treating as strategic center": aplica, y ademas `OpdCanvas` se deprecia formalmente post Fase 4 del plan JointJS
+>
+> **Lo que se descarta**:
+> - Seccion "Add — New service": NO se crea `services/modeling-orchestrator/`
+> - Python como stack adicional
+> - LangGraph como runtime de orquestacion
+> - Deep Agents como harness
+> - `ModelingTask` como tipo de entrada al orquestador externo
+> - `KernelPatchProposal` con `confidence`, `ssotChecksExpected`, `requiresHumanReview` como estructura generada por LLM
+>
+> **Lo que se reformula**:
+> - `KernelPatchOperation` (sin "Proposal" ni "confidence") se implementa en core como operacion deterministica emitida por la UI JointJS, validada contra SSOT, aplicada o rechazada. Ver Fase 3 de `20-jointjs-execution-plan.md`.
+>
+> **Secuencia a implementar**: reemplazada por `20-jointjs-execution-plan.md` (4 fases, 4-6 semanas).
+>
+> El texto original se conserva abajo como referencia de la direccion que se exploro y se descarto.
+
+---
+
+## Texto original (2026-04-13)
+
 ## Goal
 
 Quedarse solo con lo necesario de `opmodel` para la nueva direccion:

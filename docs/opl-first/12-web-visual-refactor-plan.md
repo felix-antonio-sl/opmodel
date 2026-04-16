@@ -3,9 +3,27 @@
 | Campo | Valor |
 |-------|-------|
 | Fecha | 2026-04-09 |
-| Estado | Proposed |
+| Estado | **Superseded parcial** por `20-jointjs-execution-plan.md` — 2026-04-16 |
 | Base | ADR-004 — Effective Visual Slice |
 | Objetivo | Refactor estructural profunda de la capa visual web sin rewrite total |
+
+> **SUPERSEDED PARCIAL 2026-04-16**
+>
+> Este plan proponia 3 fases para refactorizar la capa visual manteniendo el renderer SVG manual. ADR-008 (19-jointjs-renderer-adr) reemplaza el renderer por JointJS y hace obsoleto el refactor interno de `spatial-layout.ts` y `OpdCanvas.tsx`.
+>
+> **Estado por fase**:
+>
+> | Fase original | Estado |
+> |---------------|--------|
+> | Fase 1 — Canonizar `EffectiveVisualSlice` | **Vigente**. Sigue siendo precondicion del pipeline. Ver nota 2026-04-16 en `11-effective-visual-slice-adr.md` |
+> | Fase 2 — Partir layout pipeline (`spatial-layout.ts`) | **Superseded**. JointJS reemplaza `spatial-layout.ts` con dagre/elk nativos. Ver Fase 2 de `20-jointjs-execution-plan.md` |
+> | Fase 3 — Adelgazar `OpdCanvas` | **Superseded**. `OpdCanvas` se deprecia en Fase 4 de `20-jointjs-execution-plan.md`; `JointDiagramPreview` lo reemplaza |
+>
+> El texto original se conserva abajo como referencia de que problemas se intentaban resolver. Las mitigaciones de riesgos (R1-R4) siguen siendo aplicables al plan nuevo.
+
+---
+
+## Texto original (2026-04-09, Proposed)
 
 ## Objetivo ejecutivo
 

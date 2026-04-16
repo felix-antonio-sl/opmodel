@@ -3,9 +3,39 @@
 | Campo | Valor |
 |-------|-------|
 | Fecha | 2026-04-13 |
-| Estado | Proposed |
+| Estado | **Superseded** por ADR-008 (19-jointjs-renderer-adr) — 2026-04-16 |
 | Precede | ADR-003, ADR-005, ADR-006 |
 | Autor | Felix (Ominono) + steipete |
+
+> **SUPERSEDED 2026-04-16**
+>
+> Esta ADR introducía un servicio Python externo con LangGraph + Deep Agents para orquestar modelado (wizard, import OPL, refinement, render premium, critique). ADR-008 concluye que **agregar una capa agéntica sobre una superficie que aún no está pulida amplifica el problema en vez de resolverlo**.
+>
+> La causa raíz del estancamiento de `opmodel` no era falta de orquestación inteligente — era la ausencia de un renderer visual determinista que cerrara el loop semántica→diagrama sin fricción. JointJS (ADR-008) resuelve eso con dependencia cero fuera del navegador.
+>
+> **Qué se conserva de esta ADR**:
+> - El corpus normativo vinculante (ISO 19450 → OPL-ES → Metodología) sigue siendo SSOT
+> - La idea de `KernelPatchOperation` como artefacto controlado de mutación se conserva y se implementa en Fase 3 de `20-jointjs-execution-plan.md`, pero **sin LLM**: los patches los emite el usuario vía context menu de JointJS y los valida determinísticamente contra el kernel
+> - La invariante "SemanticKernel + SSOT validators = autoridad normativa" se refuerza con ADR-008 I1
+>
+> **Qué se descarta**:
+> - Servicio Python externo (`services/modeling-orchestrator/`)
+> - LangGraph como runtime de orquestación
+> - Deep Agents como harness
+> - Workers especializados LLM (Intent Framer, OPL Normalizer, Kernel Patch Proposer, Refinement Planner, Render Compiler, Critic)
+> - Topología LangGraph del flujo input→output
+> - Integración visual premium mediada por LLM
+>
+> **Razón operativa**:
+> - Felix como single operator no necesita orquestación multi-agente para modelar
+> - El costo de sostener una capa agéntica sobre producto no cerrado excede el valor
+> - La orquestación LLM, si se justifica a futuro, será decisión posterior al cierre de producción estable de la surface JointJS (post Fase 4 + período de uso real)
+>
+> El texto original se conserva abajo como referencia histórica.
+
+---
+
+## Texto original (2026-04-13, Proposed)
 
 ## Problema
 

@@ -3,8 +3,36 @@
 | Campo | Valor |
 |-------|-------|
 | Fecha | 2026-04-11 |
-| Estado | Proposed |
+| Estado | **Vigente con ajustes** — actualizado 2026-04-16 con ADR-008 |
 | Base | ADR-005 — OPM Graph Generator as the primary product slice |
+| Integrado con | `20-jointjs-execution-plan.md` (Fase 4) |
+
+> **Actualizacion 2026-04-16**
+>
+> Los 4 cortes del MVP se mantienen. Los ajustes por ADR-008:
+>
+> **Corte 2 — Derived outputs**:
+> - `DiagramSpec` ya existe en `packages/core/src/generator/diagram-spec-types.ts`; se mantiene como tipo, pero el rendering NO pasa por el
+> - Pipeline activo: `SemanticKernel → kernelToVisualRenderSpec() → VisualRenderSpec → joint.dia.Graph`
+> - `packages/web/src/features/generator/components/DiagramPreview.tsx` usa `<JointDiagramPreview spec={renderSpec} />`
+> - `packages/web/src/lib/svg/render-diagram-spec.ts` queda como fallback SSR/CI, no es camino primario
+> - Nuevo archivo: `packages/web/src/lib/renderers/jointjs/visual-render-spec-to-joint-graph.ts`
+>
+> **Corte 3 — Refinar proceso principal a SD1**:
+> - Sin cambios en core
+> - `RefinementWorkspace.tsx` renderiza SD1 via JointJS igual que SD
+>
+> **Corte 4 — Casos reales**:
+> - Los 3 casos (coffee-making, hospitalizacion-domiciliaria, ev-ams) se extienden a las 7 fixtures por consistencia con plan JointJS
+> - Los tests de generator incluyen snapshots JointJS en vez de SVG
+>
+> **Riesgo R4 del ADR original** ("Acoplar renderer con semantica") queda mas robusto: `VisualRenderSpec` es la frontera explicita, JointJS solo consume.
+>
+> Ver `20-jointjs-execution-plan.md` Fase 4 para el detalle de integracion.
+
+---
+
+## Texto original (2026-04-11, Proposed)
 
 ## Objetivo ejecutivo
 

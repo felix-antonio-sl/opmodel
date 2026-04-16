@@ -3,7 +3,8 @@
 | Campo | Valor |
 |-------|-------|
 | Fecha | 2026-04-06 |
-| Estado | **Fases 1-3 completadas, Fase 4-5 parcial** |
+| Estado | **Fases 1-3 completadas, Fase 4-5 parcial, Fase 6 JointJS activa** |
+| Ultima actualizacion | 2026-04-16 — agregada Fase 6 (JointJS) por ADR-008 |
 
 ## Fase 0 — Definir gramática OPL de entrada
 
@@ -117,8 +118,28 @@ Thing declarations, state enumerations, state descriptions, durations (simple + 
 - ✅ Live OPL editor tab con Ctrl+S apply + inline validation (`OplEditorView`)
 - ✅ OPL text import panel con live validation (`OplImportPanel`)
 - ✅ Bidirectional OPL panel con entity highlighting + export (`OplPanel`)
-- ⬜ Editor OPL como superficie principal (no solo tab secundario)
-- ⬜ Visual preview derivado que se actualiza en tiempo real
+- ⬜ Editor OPL como superficie principal (no solo tab secundario) — **se cierra en Fase 6**
+- ⬜ Visual preview derivado que se actualiza en tiempo real — **se cierra en Fase 6 con JointJS**
+
+## Fase 6 — JointJS renderer adapter 🔨 Activa
+
+**Objetivo**: Reemplazar el renderer SVG manual + `OpdCanvas` por JointJS consumiendo `VisualRenderSpec`. Habilitar isomorfismo textual-grafico determinista sin LLM.
+
+**Base**: ADR-008 (`19-jointjs-renderer-adr.md`)
+
+**Plan de ejecucion**: `20-jointjs-execution-plan.md` (4 cortes, 4-6 semanas)
+
+**Entregables**:
+- ⬜ **Fase 6.1 (Bootstrap)**: `@joint/core` instalado, adapter minimo `spec → joint.dia.Graph`, ruta sandbox con `coffee-making` renderizado
+- ⬜ **Fase 6.2 (Shapes completos)**: 7 fixtures renderizan via JointJS con style pack `iso-19450`, verifier post-render pasa
+- ⬜ **Fase 6.3 (Eventos/layout)**: drag solo escribe `LayoutModel`, context menu emite `KernelPatchOperation` con validacion SSOT, Ley 4 verificada por test
+- ⬜ **Fase 6.4 (Integracion Generator)**: `DiagramPreview` del Generator usa JointJS, source mapping bidireccional OPL ↔ visual, export SVG/PNG, `OpdCanvas` deprecado
+
+**Criterio de cierre global**:
+- Las 7 fixtures se crean/editan/exportan end-to-end via JointJS sin abrir `OpdCanvas`
+- Ningun LLM participa en render o modelado
+- `bun run test` + `bun run web:build` verdes
+- 4 leyes del ADR-003 siguen pasando
 
 ---
 
@@ -163,4 +184,4 @@ EN y ES soportados. ¿Parser acepta ambos? ¿Se fija por modelo?
 | Constructos OPM compilados | Todos |
 | Fixtures roundtrip | 6/6 |
 | Fases completadas | 1, 2, 3 |
-| Fases en progreso | 4 (parcial), 5 (parcial) |
+| Fases en progreso | 4 (parcial), 5 (parcial), 6 (arrancando — 2026-04-16) |

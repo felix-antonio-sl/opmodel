@@ -3,9 +3,34 @@
 | Campo | Valor |
 |-------|-------|
 | Fecha | 2026-04-12 |
-| Estado | Proposed |
+| Estado | **Superseded** por ADR-008 (19-jointjs-renderer-adr) — 2026-04-16 |
 | Precede | ADR-003, ADR-004, ADR-005 |
 | Autor | Felix (Ominono) + steipete |
+
+> **SUPERSEDED 2026-04-16**
+>
+> Esta ADR introducía un backend LLM para renderizar `VisualRenderSpec` y proponía coexistencia con un backend determinista hermano. ADR-008 (19-jointjs-renderer-adr) concluye que **la mediación LLM era innecesaria**: el problema a resolver era de composición determinista (shapes, layout, routing, style), no de estética generativa. JointJS (clientio/joint) cubre exactamente ese gap con un runtime maduro, determinista y reproducible.
+>
+> **Qué se conserva de esta ADR**:
+> - `VisualRenderSpec` como contrato intermedio entre kernel y renderer (invariante I2 de ADR-008)
+> - Separación kernel → spec → renderer (ahora con JointJS como único renderer primario)
+> - Verificación post-render obligatoria (`visual-render-verifier.ts` sigue activo)
+> - Style packs versionados (ahora implementados en JointJS)
+>
+> **Qué se descarta**:
+> - Backend `llm-mediated-renderer` como camino de producción
+> - `DiagramLLMProvider` como interfaz activa
+> - Dependencia externa de proveedores LLM (Anthropic, OpenAI, Gemini) para render
+> - Prompts y eval LLM de rendering
+>
+> **Estado del código asociado**:
+> - `packages/web/src/lib/renderers/llm-renderer/` queda marcado deprecated. No recibe features nuevas. Se puede eliminar físicamente 30 días después de cerrar Fase 4 del plan `20-jointjs-execution-plan.md`.
+>
+> El texto original se conserva abajo como referencia histórica.
+
+---
+
+## Texto original (2026-04-12, Proposed)
 
 ## Problema
 

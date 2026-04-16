@@ -3,9 +3,35 @@
 | Campo | Valor |
 |-------|-------|
 | Fecha | 2026-04-11 |
-| Estado | Proposed |
+| Estado | **Vigente** — actualizado 2026-04-16 con ADR-008 |
 | Precede | ADR-003, ADR-004 |
+| Complementado por | ADR-008 (19-jointjs-renderer-adr) |
 | Autor | Felix (Ominono) + steipete |
+
+> **Actualizacion 2026-04-16**
+>
+> La tesis central de esta ADR se confirma: el Generator sigue siendo la surface primaria del producto. El pipeline se actualiza para reflejar ADR-008:
+>
+> **Pipeline original (ADR-005)**:
+> ```text
+> intent capture / wizard → SdDraft → SemanticKernel → ValidationReport → OPL → DiagramSpec → SVG/PNG
+> ```
+>
+> **Pipeline actualizado**:
+> ```text
+> intent capture / wizard → SdDraft → SemanticKernel → ValidationReport → OPL → VisualRenderSpec → joint.dia.Graph → SVG/PNG
+> ```
+>
+> Cambios concretos:
+> - `DiagramSpec` queda como artefacto legacy; `VisualRenderSpec` lo reemplaza como frontera kernel → visual
+> - `DiagramPreview.tsx` del generator renderiza via `JointDiagramPreview` (no SVG manual)
+> - Export SVG/PNG sale de `paper.toSVG()` de JointJS, no del render SVG manual
+>
+> Los invariantes I1-I5 del ADR original se preservan integramente. Ver tambien Fase 4 de `20-jointjs-execution-plan.md`.
+
+---
+
+## Texto original (2026-04-11, Proposed)
 
 ## Problema
 

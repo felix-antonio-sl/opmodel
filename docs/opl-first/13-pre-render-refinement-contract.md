@@ -1,5 +1,10 @@
 # 13 — Pre-render refinement contract
 
+| Estado | **Vigente** — aplica a renderer JointJS (ADR-008) |
+|--------|--------|
+
+> Este contrato pre-render es **agnostico del backend visual** y sigue siendo la secuencia obligatoria para cualquier OPD refinado, incluyendo el renderer JointJS introducido por ADR-008. La construccion de slice y la resolucion de ocurrencias preceden a `VisualRenderSpec`, que es consumido por JointJS sin reinterpretacion semantica.
+
 ## Intent
 
 Freeze the order of operations before any web rendering for refined OPDs, especially process in-zoom, so visual fixes stop fighting semantic leaks.

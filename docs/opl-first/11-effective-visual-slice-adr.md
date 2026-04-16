@@ -3,9 +3,35 @@
 | Campo | Valor |
 |-------|-------|
 | Fecha | 2026-04-09 |
-| Estado | Proposed |
+| Estado | **Vigente con alcance reducido** — actualizado 2026-04-16 |
 | Precede | ADR-003 (Arquitectura categorial para isomorfismo OPL ↔ OPD) |
+| Complementado por | ADR-008 (19-jointjs-renderer-adr) |
 | Autor | Felix (Ominono) + steipete |
+
+> **Actualizacion 2026-04-16**
+>
+> ADR-008 (JointJS como renderer adapter) sustituye al renderer SVG manual y absorbe varios de los problemas que motivaron este ADR (OpdCanvas como "mini-engine", layout pipeline opaco). Sin embargo, `EffectiveVisualSlice` **sigue siendo la frontera canonica por OPD** — ahora consumida principalmente por:
+>
+> 1. `kernelToVisualRenderSpec()` (convierte slice + atlas a spec)
+> 2. `visual-render-verifier` (audita sobre la vista efectiva, no sobre semantica total)
+>
+> Los invariantes I1 (unicidad), I2 (auditoria sobre vista efectiva), I3 (`internal` preservado), I4 (patches composicionales) se mantienen. I5 (relaxation como politica) e I6 (canvas sin logica semantica ad hoc) se cumplen por construccion en JointJS: el layout lo resuelve dagre/elk; la logica semantica vive exclusivamente en `VisualRenderSpec`.
+>
+> **Superficies afectadas del ADR original** — estado post ADR-008:
+>
+> | Archivo | Estado |
+> |---------|--------|
+> | `packages/web/src/lib/projection-view.ts` | Se mantiene. Alimenta el slice que consume el generador de spec |
+> | `packages/web/src/lib/spatial-layout.ts` | Deprecated post Fase 4 de plan JointJS. JointJS layout lo reemplaza |
+> | `packages/web/src/lib/visual-report.ts` | Se mantiene como auditoria textual/JSON sobre slice |
+> | `packages/web/src/lib/visual-lint.ts` | Se mantiene como lint pre-render |
+> | `packages/web/src/components/OpdCanvas.tsx` | Deprecated post Fase 4. Reemplazado por `JointDiagramPreview.tsx` |
+>
+> El texto original se conserva abajo sin cambios.
+
+---
+
+## Texto original (2026-04-09)
 
 ## Problema
 

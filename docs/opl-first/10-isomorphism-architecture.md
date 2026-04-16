@@ -285,3 +285,44 @@ describe("OPL <-> OPD isomorphism", () => {
 > OPModel no renderiza diagramas desde coordenadas.
 > Proyecta un sistema semantico canonico a un atlas de OPDs y luego lo dispone visualmente.
 > El isomorfismo vive en el SemanticKernel, no entre pixeles y texto.
+
+---
+
+## Extension 2026-04-16 — JointJS como runtime de Presentacion
+
+ADR-008 (19-jointjs-renderer-adr) agrega JointJS como runtime determinista de la capa de Presentacion sin alterar ninguna de las 4 leyes de este ADR. La cadena queda:
+
+```
+𝒮 (SemanticKernel)
+  → VisualRenderSpec                       [existe: core/generator/]
+  → joint.dia.Graph                        [nuevo: web/lib/renderers/jointjs/]
+  → Paper (JointJS runtime web)
+```
+
+### Compatibilidad con las 4 leyes
+
+| Ley | Preservacion |
+|-----|--------------|
+| Ley 1 — Roundtrip textual (PutGet) | Intacta. JointJS no participa en parse/render de OPL |
+| Ley 2 — Colimite del atlas | Intacta. Atlas y colimite viven sobre el kernel; JointJS es proyeccion |
+| Ley 3 — Conmutatividad del diamante | Intacta. JointJS sale despues del diamante |
+| Ley 4 — Ortogonalidad layout/semantica | **Reforzada**. Eventos de drag en JointJS escriben a `LayoutModel` (𝓛), no al kernel (𝒮). Eventos semanticos pasan por `KernelPatchOperation` + validacion antes de aplicarse |
+
+### Funtores nuevos introducidos por ADR-008
+
+```typescript
+// F_visual — 𝒮 × 𝓛 → JointGraph
+visualRenderSpecToJointGraph(spec: VisualRenderSpec, layout: LayoutModel): joint.dia.Graph
+
+// F_layout_back — JointGraphEvent → 𝓛
+jointDragToLayoutDelta(event: JointEvent): LayoutPatch
+
+// F_patch_back — JointGraphEdit → 𝒮 (via patch)
+jointEditToKernelPatch(event: JointEvent): KernelPatchOperation
+```
+
+### Regla vinculante anadida
+
+Ningun consumidor visual (JointJS Paper, export SVG, export PNG, preview del Generator) puede acceder al kernel sin pasar por `VisualRenderSpec`. El spec es la unica frontera kernel→visual.
+
+Ver `19-jointjs-renderer-adr.md` para los detalles de la decision y `20-jointjs-execution-plan.md` para el plan de ejecucion.
