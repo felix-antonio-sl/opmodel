@@ -7,36 +7,31 @@ import { createFanShape } from "./joint-shapes/fan-shape";
 import { applyModifierMarker } from "./joint-shapes/modifier-marker";
 import { createProceduralLink } from "./joint-links/procedural-link";
 import { isoStyle } from "./style-packs/iso-19450";
+import { computeOpmLayout } from "./layout/opm-layout";
 import { DEFAULT_LAYOUT, type JointGraphBuildResult, type NodeLayoutOptions } from "./types";
-
-function gridPosition(index: number, layout: NodeLayoutOptions): { x: number; y: number } {
-  const col = index % layout.columns;
-  const row = Math.floor(index / layout.columns);
-  return {
-    x: layout.marginX + col * (layout.nodeWidth + layout.gapX),
-    y: layout.marginY + row * (layout.nodeHeight + layout.gapY),
-  };
-}
 
 export function visualRenderSpecToJointGraph(
   spec: VisualRenderSpec,
   options: { layout?: Partial<NodeLayoutOptions> } = {},
 ): JointGraphBuildResult {
-  const layout: NodeLayoutOptions = { ...DEFAULT_LAYOUT, ...(options.layout ?? {}) };
+  void options;
   const graph = new dia.Graph();
 
   const nodeIdToCell = new Map<string, dia.Element>();
   const edgeIdToLink = new Map<string, dia.Link>();
 
-  spec.nodes.forEach((node, index) => {
-    const pos = gridPosition(index, layout);
+  const layoutResult = computeOpmLayout(spec);
+
+  spec.nodes.forEach((node) => {
+    const box = layoutResult.nodes.get(node.id);
+    if (!box) return;
     const common = {
       id: node.id,
       label: node.label,
-      x: pos.x,
-      y: pos.y,
-      width: layout.nodeWidth,
-      height: layout.nodeHeight,
+      x: box.x,
+      y: box.y,
+      width: box.width,
+      height: box.height,
       affiliation: node.affiliation,
       essence: node.essence,
       isRefined: node.isRefined,
@@ -47,6 +42,14 @@ export function visualRenderSpecToJointGraph(
     graph.addCell(cell);
     nodeIdToCell.set(node.id, cell as dia.Element);
   });
+
+  // Apply embedding for in-zoom: container embeds internal children.
+  for (const box of layoutResult.nodes.values()) {
+    if (!box.parentId) continue;
+    const parent = nodeIdToCell.get(box.parentId);
+    const child = nodeIdToCell.get(box.id);
+    if (parent && child) parent.embed(child);
+  }
 
   const knownIds = new Set(nodeIdToCell.keys());
   spec.edges.forEach((edge) => {
@@ -68,6 +71,7 @@ export function visualRenderSpecToJointGraph(
   });
 
   // States: embed as rountangles into the bottom strip of the owner object.
+  // Wrap into multiple rows if they would overflow the owner width.
   const specStates = spec.states ?? [];
   const specFans = spec.fans ?? [];
   const specModifiers = spec.modifiers ?? [];
@@ -82,13 +86,12 @@ export function visualRenderSpecToJointGraph(
     if (!parent) continue;
     const parentPos = parent.position();
     const parentSize = parent.size();
-    const stateWidth = isoStyle.dimensions.state.width;
-    const stateHeight = isoStyle.dimensions.state.height;
-    const totalWidth = states.length * stateWidth + (states.length - 1) * 4;
-    let startX = parentPos.x + (parentSize.width - totalWidth) / 2;
-    const y = parentPos.y + parentSize.height - stateHeight - 6;
-
-    for (const st of states) {
+    const stateW = isoStyle.dimensions.state.width;
+    const stateH = isoStyle.dimensions.state.height;
+    const gap = 4;
+    const availW = parentSize.width - 8;
+    const perRow = Math.max(1, Math.floor((availW + gap) / (stateW + gap)));
+    states.forEach((st, i) => {
       const shape = createStateShape({
         id: st.id,
         label: st.label,
@@ -97,25 +100,25 @@ export function visualRenderSpecToJointGraph(
         default: st.default,
         current: st.current,
       });
-      shape.position(startX, y);
+      const row = Math.floor(i / perRow);
+      const col = i % perRow;
+      const itemsInRow = Math.min(perRow, states.length - row * perRow);
+      const rowWidth = itemsInRow * stateW + (itemsInRow - 1) * gap;
+      const x = parentPos.x + (parentSize.width - rowWidth) / 2 + col * (stateW + gap);
+      const y = parentPos.y + parentSize.height - (Math.ceil(states.length / perRow) - row) * (stateH + 2) - 2;
+      shape.position(x, y);
       graph.addCell(shape);
       parent.embed(shape);
-      startX += stateWidth + 4;
-    }
+    });
   }
 
-  // Fan badges: placed at the shared endpoint (convergent end) of the fan members.
+  // Fan badges: placed at the shared endpoint (convergent end).
   for (const fan of specFans) {
     if (fan.operator === "and") continue;
-    const memberLinks = fan.members
-      .map((id) => edgeIdToLink.get(id))
-      .filter((l): l is dia.Link => !!l);
-    if (memberLinks.length === 0) continue;
-
-    // Compute convergent endpoint: the ID shared by all members on the same side.
     const memberEdges = fan.members
       .map((id) => spec.edges.find((e) => e.id === id))
       .filter((e): e is NonNullable<typeof e> => !!e);
+    if (memberEdges.length === 0) continue;
     const sharedSources = new Set(memberEdges.map((e) => e.source));
     const sharedTargets = new Set(memberEdges.map((e) => e.target));
     const commonNodeId = sharedTargets.size === 1
@@ -123,20 +126,18 @@ export function visualRenderSpecToJointGraph(
       : sharedSources.size === 1
         ? [...sharedSources][0]
         : null;
-
     if (!commonNodeId) continue;
     const commonCell = nodeIdToCell.get(commonNodeId);
     if (!commonCell) continue;
     const cp = commonCell.position();
     const cs = commonCell.size();
     const cx = cp.x + cs.width / 2;
-    const cy = cp.y - 14; // above the node
-
+    const cy = cp.y - 14;
     try {
       const badge = createFanShape({ id: `fan-badge-${fan.id}`, operator: fan.operator, x: cx, y: cy });
       graph.addCell(badge);
     } catch {
-      // AND case already filtered; any other throw is ignored.
+      // AND already skipped; others ignored
     }
   }
 
