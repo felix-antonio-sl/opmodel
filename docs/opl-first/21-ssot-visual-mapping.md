@@ -41,24 +41,24 @@ El style pack `iso-19450` (slice 2.2) toma decisiones de implementación **en es
 
 | Constructo SSOT | Sección | Forma | Markers normativos | Estado en adapter |
 |-----------------|---------|-------|--------------------|-------------------|
-| **Objeto** (Object) | §1.1, §1.4 | rectángulo | contorno sólido=systemic / punteado=environmental (§1.2, V-71); sombra=physical / plano=informational (§1.3, V-1); contorno grueso si refinado (V-69) | ✅ Fase 1 parcial — falta dashed para environmental diferenciado del caso objeto-en-estado y contorno grueso |
-| **Proceso** (Process) | §1.1, §1.4 | elipse | mismas reglas de afiliación/esencia; elipse agrandada si contiene subprocesos (V-34) | ✅ Fase 1 parcial — falta contorno grueso de refinado y elipse contenedora |
-| **Estado** (State / rountangle) | §1.1, §2 | rectángulo redondeado interno al objeto | dispuestos horizontalmente en zona inferior (V-4, V-5); borde grueso=inicial; doble borde=final; flecha diagonal abierta=default; `...` en esquina inferior derecha=supresión (§1.8, §10.6) | ❌ Slice 2.3 |
-| **System boundary** | — | **no existe como entidad visual** | la frontera se codifica por contorno de cada cosa (V-71). Cualquier caja envolvente en UI es decoración no-normativa | ❌ No se implementa como entidad; posible group visual en slice 2.5 solo si es puramente decorativo |
-| **Internal vs external vs environmental** | §10.3b | 3 ejes ortogonales | afiliación: contorno sólido/punteado (V-71); rol en OPD hijo: contenedor agrandado vs posicionado alrededor (V-79..V-85); esencia: sombra/plano (V-95) | ⚠️ Parcial — el campo `affiliation` del spec cubre eje 1. Ejes 2 y 3 no están expuestos aún en `VisualRenderSpec` |
+| **Objeto** (Object) | §1.1, §1.4 | rectángulo | contorno sólido=systemic / punteado=environmental (§1.2, V-71); sombra=physical / plano=informational (§1.3, V-1); contorno grueso si refinado (V-69) | ✅ **Slice 2.2 cerrado** — afiliación dashed, essence dropShadow, isRefined strokeWidth |
+| **Proceso** (Process) | §1.1, §1.4 | elipse | mismas reglas de afiliación/esencia; elipse agrandada si contiene subprocesos (V-34) | ✅ **Slice 2.2 + 2.5 cerrado** — más elipse contenedora en in-zoom |
+| **Estado** (State / rountangle) | §1.1, §2 | rectángulo redondeado interno al objeto | dispuestos horizontalmente en zona inferior (V-4, V-5); borde grueso=inicial; doble borde=final; flecha diagonal abierta=default; `...` en esquina inferior derecha=supresión (§1.8, §10.6) | ✅ **Slice 2.3 cerrado** — embedded rountangles, initial/final/default markers; doble borde geométrico real diferido |
+| **System boundary** | — | **no existe como entidad visual** | la frontera se codifica por contorno de cada cosa (V-71). Cualquier caja envolvente en UI es decoración no-normativa | ✅ No implementado como entidad (decisión SSOT-respetada) |
+| **Internal vs external vs environmental** | §10.3b | 3 ejes ortogonales | afiliación: contorno sólido/punteado (V-71); rol en OPD hijo: contenedor agrandado vs posicionado alrededor (V-79..V-85); esencia: sombra/plano (V-95) | ✅ **Slice 2.1 + 2.2 + 2.5 cerrado** — los 3 ejes visibles |
 
 ### B. Links procedurales
 
 | Constructo SSOT | Sección | Marker destino | Marker origen | Estado en adapter |
 |-----------------|---------|----------------|---------------|-------------------|
-| **Consumo** (consumption) | §3.1 | punta de flecha cerrada | ninguno | ✅ Fase 1 — revisar marker en slice 2.4 |
-| **Resultado** (result) | §3.1 | punta cerrada | ninguno | ✅ Fase 1 — V-8: no conectar a estado inicial |
-| **Efecto** (effect) | §3.1 | punta cerrada en ambos extremos | mismo | ✅ Fase 1 — verificar bidireccional |
-| **Agente** (agent) | §3.3, §1.5 | **piruleta negra** (círculo relleno) | corchete cuadrado abierto | ⚠️ Fase 1 usa filled-triangle placeholder; slice 2.4 corrige a lollipop negro |
-| **Instrumento** (instrument) | §3.3, §1.5 | **piruleta blanca** (círculo vacío) | corchete cuadrado abierto | ⚠️ Fase 1 usa circle placeholder; slice 2.4 corrige a lollipop blanco |
-| **Invocación** (invocation) | §9, §1.5 | **zigzag/rayo** con punta | — | ⚠️ Fase 1 usa dashed placeholder; slice 2.4 corrige a lightning |
-| **Excepción sobretiempo** (overtime) | §4.4 | marca `/` sobre la línea | — | ❌ Slice 2.4 |
-| **Excepción subtiempo** (undertime) | §4.4 | marca `//` sobre la línea | — | ❌ Slice 2.4 |
+| **Consumo** (consumption) | §3.1 | punta de flecha cerrada | ninguno | ✅ **Slice 2.4 cerrado** |
+| **Resultado** (result) | §3.1 | punta cerrada | ninguno | ✅ **Slice 2.4 cerrado** |
+| **Efecto** (effect) | §3.1 | punta cerrada en ambos extremos | mismo | ✅ **Slice 2.4 cerrado** (bidireccional queda para slice futuro) |
+| **Agente** (agent) | §3.3, §1.5 | **piruleta negra** (círculo relleno) | corchete cuadrado abierto | ✅ **Slice 2.4 cerrado** — lollipop-black |
+| **Instrumento** (instrument) | §3.3, §1.5 | **piruleta blanca** (círculo vacío) | corchete cuadrado abierto | ✅ **Slice 2.4 cerrado** — lollipop-white |
+| **Invocación** (invocation) | §9, §1.5 | **zigzag/rayo** con punta | — | ✅ **Slice 2.4 cerrado** — lightning path |
+| **Excepción sobretiempo** (overtime) | §4.4 | marca `/` sobre la línea | — | ✅ **Slice 2.4 cerrado** |
+| **Excepción subtiempo** (undertime) | §4.4 | marca `//` sobre la línea | — | ✅ **Slice 2.4 cerrado** |
 
 ### C. Links estructurales
 
@@ -66,36 +66,36 @@ Anatomía común: triángulo+línea. **Vértice apunta al refinable**, base cone
 
 | Constructo SSOT | Sección | Marker | Estado en adapter |
 |-----------------|---------|--------|-------------------|
-| **Agregación-participación** | §1.7, §8.2 | triángulo negro sólido | ⚠️ Fase 1 usa línea gris; slice 2.4 incorpora marker |
-| **Exhibición-caracterización** | §1.7 | triángulo vacío con triángulo negro más pequeño dentro | ❌ Slice 2.4 |
-| **Generalización-especialización** | §1.7 | triángulo vacío | ❌ Slice 2.4 |
-| **Clasificación-instanciación** | §1.7 | triángulo vacío con círculo negro dentro | ❌ Slice 2.4 |
-| **Tagged unidireccional** | §8.1 | punta abierta + etiqueta en itálica | ❌ Slice 2.4 |
-| **Tagged bidireccional / recíproco** | §8.1 | arpones en ambos extremos | ❌ Slice 2.4 |
-| **Colección incompleta** | §1.8 | barra horizontal corta bajo triángulo | ❌ Slice 2.4 — excluido para clasificación-instanciación (V-27) |
+| **Agregación-participación** | §1.7, §8.2 | triángulo negro sólido | ✅ **Slice 2.4 cerrado** — triangle-filled |
+| **Exhibición-caracterización** | §1.7 | triángulo vacío con triángulo negro más pequeño dentro | ✅ **Slice 2.4 cerrado** — triangle-hollow + glyph ▲ Unicode |
+| **Generalización-especialización** | §1.7 | triángulo vacío | ✅ **Slice 2.4 cerrado** — triangle-hollow |
+| **Clasificación-instanciación** | §1.7 | triángulo vacío con círculo negro dentro | ✅ **Slice 2.4 cerrado** — triangle-hollow + glyph ● Unicode |
+| **Tagged unidireccional** | §8.1 | punta abierta + etiqueta en itálica | ✅ **Slice 2.4 cerrado** — open-arrow |
+| **Tagged bidireccional / recíproco** | §8.1 | arpones en ambos extremos | ⚠️ Pendiente — hoy open-arrow en ambos lados |
+| **Colección incompleta** | §1.8 | barra horizontal corta bajo triángulo | ⚠️ Pendiente — sin ejercitarse en fixtures |
 
 ### D. Modificadores de Link
 
 | Constructo SSOT | Sección | Representación | Estado en adapter |
 |-----------------|---------|----------------|-------------------|
-| **Fan AND** | §5.1 | enlaces separados sin arco (default, V-14) | ❌ Slice 2.3 — sin render adicional |
-| **Fan XOR** | §5.2 | **un arco discontinuo** en extremo convergente (V-16) | ❌ Slice 2.3 |
-| **Fan OR** | §5.3 | **dos arcos discontinuos concéntricos** | ❌ Slice 2.3 |
-| **Fan probabilístico** | §5.8 | marca `Pr=p` sobre cada enlace (V-18: siempre XOR) | ❌ Slice 2.3 |
-| **Event marker (e)** | §4.1 | letra `e` sobre la línea, cerca del proceso | ❌ Slice 2.3 |
-| **Condition marker (c)** | §4.2 | letra `c` sobre la línea, cerca del proceso | ❌ Slice 2.3 |
-| **Multiplicidad** | §7, §1.8 | `?` / `*` / `+` / rangos, junto al extremo | ❌ Slice 2.4 |
-| **Path label** | §6 | texto sobre enlaces procedurales | ❌ Slice 2.4 |
+| **Fan AND** | §5.1 | enlaces separados sin arco (default, V-14) | ✅ Slice 2.3 cerrado — sin render, correcto |
+| **Fan XOR** | §5.2 | **un arco discontinuo** en extremo convergente (V-16) | ✅ **Slice 2.3 cerrado** — badge XOR; arco geométrico real diferido |
+| **Fan OR** | §5.3 | **dos arcos discontinuos concéntricos** | ✅ **Slice 2.3 cerrado** — badge OR con dash; arco geométrico diferido |
+| **Fan probabilístico** | §5.8 | marca `Pr=p` sobre cada enlace (V-18: siempre XOR) | ⚠️ Pendiente — no ejercitado en fixtures |
+| **Event marker (e)** | §4.1 | letra `e` sobre la línea, cerca del proceso | ✅ **Slice 2.3 cerrado** |
+| **Condition marker (c)** | §4.2 | letra `c` sobre la línea, cerca del proceso | ✅ **Slice 2.3 cerrado** — soporta negated y condition_mode |
+| **Multiplicidad** | §7, §1.8 | `?` / `*` / `+` / rangos, junto al extremo | ✅ **Slice 2.4 cerrado** — labels en pos 0.1 y 0.9 |
+| **Path label** | §6 | texto sobre enlaces procedurales | ✅ **Slice 2.4 cerrado** — italics mid-link |
 
 ### E. Refinamiento
 
 | Constructo SSOT | Sección | Indicador | Estado en adapter |
 |-----------------|---------|-----------|-------------------|
-| **In-zoom** (descomposición en nuevo OPD) | §10.3, §10.4 | padre: contorno grueso (V-33, V-69); hijo: elipse agrandada como contenedor con subprocesos dispuestos arriba→abajo (V-34, V-35, V-79) | ❌ Slice 2.5 |
-| **Unfolding** de objeto en nuevo OPD | §10.2, §10.3b | objeto padre con contorno grueso (V-69); rectángulo agrandado como contenedor en hijo (V-79) | ❌ Slice 2.5 |
-| **Despliegue intradiagrama** (unfolding estructural sin OPD hijo) | §10.2 | no engrosa contorno (V-70) | ⚠️ No hay diferencia visual; se maneja vía link estructural |
-| **Semi-folding** | §10.12 | íconos triangulares con nombre de parte **dentro del rectángulo del todo**; número junto al triángulo = refinadores ocultos (V-118) | ❌ Slice 2.5 (opcional) |
-| **Supresión de estados** | §1.8, §10.6 | rountangle con `...` en esquina inferior derecha (V-86: computada bajo demanda) | ❌ Slice 2.3 |
+| **In-zoom** (descomposición en nuevo OPD) | §10.3, §10.4 | padre: contorno grueso (V-33, V-69); hijo: elipse agrandada como contenedor con subprocesos dispuestos arriba→abajo (V-34, V-35, V-79) | ✅ **Slice 2.5 cerrado** — container embed + timeline vertical |
+| **Unfolding** de objeto en nuevo OPD | §10.2, §10.3b | objeto padre con contorno grueso (V-69); rectángulo agrandado como contenedor en hijo (V-79) | ✅ **Slice 2.5 cerrado** — mismo layout para unfold containers |
+| **Despliegue intradiagrama** (unfolding estructural sin OPD hijo) | §10.2 | no engrosa contorno (V-70) | ✅ Correcto — sin isRefined no hay engrosamiento |
+| **Semi-folding** | §10.12 | íconos triangulares con nombre de parte **dentro del rectángulo del todo**; número junto al triángulo = refinadores ocultos (V-118) | ⚠️ Pendiente — no ejercitado en fixtures |
+| **Supresión de estados** | §1.8, §10.6 | rountangle con `...` en esquina inferior derecha (V-86: computada bajo demanda) | ⚠️ Pendiente — se requiere computación on-demand en kernel |
 | **SD-tree iconografía** | §15.1 | texto `SD`, `SD1`, `SD1.1` — **no hay iconografía normada** para árbol de OPDs | fuera de scope JointJS (vista de árbol, no de OPD) |
 
 ## Constructos ejercitados por las 6 fixtures
@@ -270,3 +270,30 @@ Cada decisión comenta la sección SSOT ejercitada y, si corresponde, declara "g
 ## Cierre del slice 2.0
 
 Este documento + `candidate-extensions.md` + README de `docs/ssot/` actualizado cierran el Slice 2.0. La apertura de Slice 2.1 requiere: lectura de este mapping y confirmación de scope. Cada slice posterior debe citar sección(es) de SSOT que ejercita y actualizar la tabla "Estado en adapter" cuando cierre.
+
+## Cierre T2 — 2026-04-17
+
+Los 7 slices (2.0–2.6) cerraron. Commits de cada slice:
+
+| Slice | Commit | Cobertura SSOT |
+|-------|--------|-----------------|
+| 2.0 | `af18667` | Mapping + candidate-extensions |
+| 2.1 | `6c79d07` | VisualRenderSpec extension (states/fans/modifiers/refinement/exception/multiplicity) |
+| 2.2 | `10be521` | Style pack `iso-19450` — V-71, V-1, V-69, §1.3, §2.2 |
+| 2.3 | `f2f90a5` | state/fan/modifier shapes — §2.2, §5.1–§5.3, §4.1–§4.2 |
+| 2.4 | `4441e18` | markers ISO + path label + multiplicity — §1.7, §3.3, §4.4, §6, §7, §8.1, §9 |
+| 2.5 | `68c9ff1` | in-zoom container + layout jerárquico — §10.3, §10.4, V-34, V-35, V-79 |
+| 2.6 | (pendiente) | snapshot tests + handoff update |
+
+Gaps SSOT residuales (quedarán como candidate-extensions o slices futuros):
+- Tagged bidireccional con arpones separados (§8.1) — hoy open-arrow en ambos lados.
+- Colección incompleta barra horizontal (§1.8).
+- Fan probabilístico `Pr=p` (§5.8) — no ejercitado en fixtures.
+- Supresión de estados `...` (§1.8, §10.6) — requiere computación on-demand en kernel.
+- Semi-folding (§10.12) — no ejercitado.
+- Doble borde geométrico real de final-state (§2.2).
+- Arco geométrico literal de fan XOR/OR (§5.2–§5.3) — hoy badge textual.
+- Distribución horizontal de subprocesos en in-zoom con muchos miembros.
+
+Apertura T3: `KernelPatchOperation` + drag-to-layout + context menu. Gate
+T3 ya abierto desde T1 (24/24 isomorphism laws verdes).

@@ -15,10 +15,12 @@ export function verifyVisualRenderSpec(spec: VisualRenderSpec): VisualRenderVeri
   }
 
   if (!spec.nodes.some((node) => node.visualRole === "main-process")) {
+    // Views that are purely structural (aggregation/classification trees, §15)
+    // may contain zero processes. Treated as warning, not hard error.
     issues.push({
       code: "VR-002",
-      severity: "error",
-      message: "VisualRenderSpec must contain one primary process node.",
+      severity: "warning",
+      message: "VisualRenderSpec has no primary process — acceptable for structural/view OPDs (§15).",
     });
   }
 
