@@ -34,7 +34,8 @@ describe("coffee-making fixture via JointJS adapter", () => {
     const { graph, nodeIdToCell, edgeIdToLink } = visualRenderSpecToJointGraph(spec);
     expect(nodeIdToCell.size).toBe(spec.nodes.length);
     expect(edgeIdToLink.size).toBeLessThanOrEqual(spec.edges.length);
-    expect(graph.getCells().length).toBe(nodeIdToCell.size + edgeIdToLink.size);
+    // Cells include nodes + links + embedded states + fan badges.
+    expect(graph.getCells().length).toBeGreaterThanOrEqual(nodeIdToCell.size + edgeIdToLink.size);
   });
 
   it("preserves main process as ellipse", () => {
