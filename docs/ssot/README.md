@@ -1,27 +1,43 @@
 # SSOT References
 
-This directory exposes the authoritative OPM reference corpus used by OPModel.
+Este directorio expone el corpus normativo OPM al que se subordina `opmodel`.
 
-## Canonical link
+## Vigente (canónico)
 
-- [`opm-ssot`](./opm-ssot) → symlink to `/home/felix/kora/KNOWLEDGE/fxsl/opm/opm-ssot`
+**`opm-ssot-es/`** — corpus OPM ES v2.x, 4 capas con URN estables.
 
-## Contents of the SSOT corpus
+- `opm-iso-19450-es.md` — núcleo conceptual. URN `urn:fxsl:kb:opm-es`.
+- `opm-opl-es.md` — gramática OPL-ES + EBNF (Apéndice A). URN `urn:fxsl:kb:opl-es`.
+- `opm-visual-es.md` — gramática visual OPD (123 reglas V-*). URN `urn:fxsl:kb:opd-es`.
+- `metodologia-opm-es.md` — procedimientos y heurísticas. URN `urn:fxsl:kb:manual-metodologico-opm-es`.
 
-- `opm-iso-19450.md` — normative OPM semantics and OPL-EN surface
-- `opm-opl-es.md` — normative OPL-ES linguistic surface
-- `metodologia-modelamiento-opm.md` — operational modelling methodology
+Symlink vivo: [`opm-ssot-es`](./opm-ssot-es) → `/home/felix/kora/KNOWLEDGE/fxsl/opm/opm-ssot-es`.
 
-## Precedence
+## Histórico (referencia, no normativo)
 
-When there is any conflict or ambiguity, use this order:
+**`opm-ssot/`** — corpus previo en inglés, fragmentado (p02..p05). Preservado para trazabilidad.
 
-1. **ISO 19450**
-2. **OPL-ES**
-3. **Metodología de Modelamiento OPM**
+Symlink: [`opm-ssot`](./opm-ssot).
 
-## Repo rule
+## Precedencia normativa
 
-All OPM / OPL modelling, parsing, rendering, validation, and refinement work in this repo should be checked against this SSOT corpus.
+Dentro del corpus vigente, orden de autoridad:
 
-The symlink exists so the corpus stays visible from inside the repo and can be referenced consistently in code, docs, and future tooling.
+1. Núcleo conceptual — `opm-iso-19450-es.md`
+2. Realización textual — `opm-opl-es.md`
+3. Realización gráfica — `opm-visual-es.md`
+4. Procedimientos — `metodologia-opm-es.md`
+
+## Regla de subordinación del repo
+
+El repositorio `opmodel` es **implementación** de la SSOT. No redefine semántica OPM. Toda decisión del repo que tenga dimensión normativa debe:
+
+1. Citar URN + sección de la capa propietaria.
+2. Ante conflicto, ganar la SSOT y proponer corrección en el repo.
+3. Si el repo descubre una regla o caso no cubierto por la SSOT, registrar en `candidate-extensions.md` para retorno a kora.
+
+ADRs del repo deciden **implementación** (cómo se ejecuta OPM en TS), no semántica (qué ES OPM).
+
+## Enriquecimiento reverso
+
+Aprendizajes operacionales del repo que deben reflejarse en SSOT se registran en [`candidate-extensions.md`](./candidate-extensions.md). Son candidatos para PR contra kora.
