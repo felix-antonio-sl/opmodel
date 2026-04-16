@@ -105,6 +105,18 @@ interface ExposeVisibility {
   internalObjects: Array<{ thingId: string; name: string }>;
   /** Semi-folded thing IDs */
   semiFoldedThings: Set<string>;
+  /**
+   * When true, references to a thing that has an exhibitor (via exhibition link)
+   * always render as compound "Feature of Exhibitor" — in duration sentences,
+   * link sentences, modifiers, etc. Enables roundtrip stability for the
+   * kernel-native render path (renderAllFromKernelNative), whose thing names
+   * are already stripped ("Gestión" from "Gestión de Medicamentos") and would
+   * become unresolvable on re-parse in documents where the exhibitor is
+   * declared only later in a different OPD. The legacy renderAll path keeps
+   * the bare convention intact (its thing names are still full, so references
+   * parse unambiguously).
+   */
+  forceCompoundReferences?: boolean;
 }
 
 /** Build ExposeVisibility from Model appearances (legacy path) */
@@ -188,7 +200,7 @@ function buildExposeVisibilityFromKernel(
     internalObjects.sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  return { visibleThings, internalThings, subprocessOrder, internalObjects, semiFoldedThings };
+  return { visibleThings, internalThings, subprocessOrder, internalObjects, semiFoldedThings, forceCompoundReferences: true };
 }
 
 /**
@@ -266,6 +278,27 @@ function exposeInternal(model: OpmDataView & { settings: Settings }, opdId: stri
     if (ta.kind !== tb.kind) return ta.kind === "object" ? -1 : 1;
     return a.localeCompare(b);
   });
+
+  // displayNameOf — returns compound "Feature of Exhibitor" either always
+  // (kernel-native path, where thing names are stripped) or only when the
+  // bare name collides with another thing (legacy path, where thing names
+  // are still full and bare usually resolves). See ExposeVisibility.
+  // forceCompoundReferences.
+  const ofWord = locale === "es" ? "de" : "of";
+  const actualNameCount = new Map<string, number>();
+  for (const t of model.things.values()) {
+    actualNameCount.set(t.name, (actualNameCount.get(t.name) ?? 0) + 1);
+  }
+  const displayNameOf = (thingId: string): string => {
+    const thing = model.things.get(thingId);
+    if (!thing) return thingId;
+    const exhibitor = exhibitorOf.get(thingId);
+    if (!exhibitor) return thing.name;
+    if (!vis.forceCompoundReferences && (actualNameCount.get(thing.name) ?? 0) <= 1) {
+      return thing.name;
+    }
+    return `${thing.name} ${ofWord} ${exhibitor.name}`;
+  };
 
   const sentences: OplSentence[] = [];
 
@@ -385,7 +418,7 @@ function exposeInternal(model: OpmDataView & { settings: Settings }, opdId: stri
       sentences.push({
         kind: "duration",
         thingId,
-        thingName: thing.name,
+        thingName: displayNameOf(thingId),
         nominal: thing.duration.nominal,
         min: thing.duration.min,
         max: thing.duration.max,
@@ -533,14 +566,25 @@ function exposeInternal(model: OpmDataView & { settings: Settings }, opdId: stri
   // Non-structural links: emit individually (skip fan-suppressed)
   for (const link of nonStructuralLinks) {
     if (fanSuppressed.has(link.id)) continue;
+    // State-prefixed references ("certified X", "nominal Y") use bare names:
+    // the parser does not currently accept "state Feature of Exhibitor" as a
+    // single reference. Bare names remain unambiguous because the kernel has
+    // only one stripped thing per actualName (the compound suffix is embedded
+    // in the exhibition link, not in the thing name).
+    const srcName = link.source_state
+      ? (model.things.get(link.source)?.name ?? link.source)
+      : displayNameOf(link.source);
+    const tgtName = link.target_state
+      ? (model.things.get(link.target)?.name ?? link.target)
+      : displayNameOf(link.target);
     const sentence: OplLinkSentence = {
       kind: "link",
       linkId: link.id,
       linkType: link.type,
       sourceId: link.source,
       targetId: link.target,
-      sourceName: model.things.get(link.source)?.name ?? link.source,
-      targetName: model.things.get(link.target)?.name ?? link.target,
+      sourceName: srcName,
+      targetName: tgtName,
       sourceKind: model.things.get(link.source)?.kind,
       targetKind: model.things.get(link.target)?.kind,
       incomplete: link.incomplete ?? false,
@@ -588,8 +632,8 @@ function exposeInternal(model: OpmDataView & { settings: Settings }, opdId: stri
       modifierId: mod.id,
       linkId: mod.over,
       linkType: link.type,
-      sourceName: model.things.get(link.source)?.name ?? link.source,
-      targetName: model.things.get(link.target)?.name ?? link.target,
+      sourceName: displayNameOf(link.source),
+      targetName: displayNameOf(link.target),
       modifierType: mod.type,
       negated: mod.negated ?? false,
       conditionMode: mod.type === "condition" ? (mod.condition_mode ?? "wait") : undefined,

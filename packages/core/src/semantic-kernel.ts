@@ -785,6 +785,28 @@ export function exposeSemanticKernel(kernel: SemanticKernel): OpdAtlas {
       }
     }
 
+    // Exhibitor propagation (root OPD only): any exhibition link whose feature
+    // is visible in the root OPD must also make its exhibitor visible here.
+    // Otherwise the kernel-native OPL render emits a compound declaration
+    // "Feature of Exhibitor" in the SD section but the exhibitor itself is
+    // only declared in a descendant OPD, breaking parse-time compound-name
+    // stripping on re-compile. Scoped to root OPD to preserve the tighter
+    // visibility contract for child OPDs (visual regression tests depend on
+    // child OPDs showing only refinement participants + direct parent
+    // neighbors).
+    if (!refinement) {
+      const exhibitorAdditions = new Set<ThingId>();
+      for (const link of kernel.links.values()) {
+        if (link.type !== "exhibition") continue;
+        const featureId = link.target;
+        const exhibitorId = link.source;
+        if (visibleThings.has(featureId) && !visibleThings.has(exhibitorId)) {
+          exhibitorAdditions.add(exhibitorId);
+        }
+      }
+      for (const id of exhibitorAdditions) visibleThings.add(id);
+    }
+
     const visibleStates = [...kernel.states.values()]
       .filter((state) => visibleThings.has(state.parentThing))
       .map((state) => state.id);
