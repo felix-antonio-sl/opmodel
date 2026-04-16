@@ -1,4 +1,5 @@
 import { dia, shapes } from "@joint/core";
+import { isoStyle } from "../style-packs/iso-19450";
 
 export interface ProceduralLinkAttrs {
   id: string;
@@ -9,34 +10,34 @@ export interface ProceduralLinkAttrs {
   routingPriority: "primary" | "secondary";
 }
 
-const LINK_KIND_STYLE: Record<string, { stroke: string; dash?: string; marker?: string }> = {
-  agent: { stroke: "#0f172a", marker: "filled-triangle" },
-  instrument: { stroke: "#0f172a", marker: "circle" },
-  consumption: { stroke: "#b91c1c" },
-  result: { stroke: "#047857" },
-  effect: { stroke: "#7c3aed", dash: "4 3" },
-  invocation: { stroke: "#ea580c", dash: "2 3" },
-  exhibition: { stroke: "#334155" },
-  aggregation: { stroke: "#334155" },
-  generalization: { stroke: "#334155" },
-  classification: { stroke: "#334155" },
-};
+/**
+ * Fase 1+2.2: marker closed-triangle para todos los kinds. Los markers
+ * especializados (lollipop-black/white §3.3, lightning §9, structural
+ * triangles §1.7, open-arrow §8.1) quedan para slice 2.4 donde se
+ * materializan respetando iso-19450 style pack.
+ */
+const CLOSED_TRIANGLE_PATH = "M 10 -5 L 0 0 L 10 5 Z";
 
 export function createProceduralLink(attrs: ProceduralLinkAttrs): dia.Link {
-  const style = LINK_KIND_STYLE[attrs.opmLinkKind] ?? { stroke: "#475569" };
+  const kindStyle = isoStyle.links.byKind[attrs.opmLinkKind] ?? { stroke: "#475569", marker: "closed-triangle" as const };
+  const strokeWidth = attrs.routingPriority === "primary"
+    ? isoStyle.links.strokeWidthPrimary
+    : isoStyle.links.strokeWidthSecondary;
+
   const link = new shapes.standard.Link({
     id: attrs.id,
     source: { id: attrs.sourceId },
     target: { id: attrs.targetId },
     attrs: {
       line: {
-        stroke: style.stroke,
-        strokeWidth: attrs.routingPriority === "primary" ? 2 : 1.5,
-        strokeDasharray: style.dash ?? "0",
+        stroke: kindStyle.stroke,
+        strokeWidth,
+        strokeDasharray: kindStyle.dash ?? "0",
         targetMarker: {
           type: "path",
-          d: "M 10 -5 L 0 0 L 10 5 Z",
-          fill: style.stroke,
+          d: CLOSED_TRIANGLE_PATH,
+          fill: kindStyle.stroke,
+          stroke: kindStyle.stroke,
         },
       },
     },
@@ -48,9 +49,9 @@ export function createProceduralLink(attrs: ProceduralLinkAttrs): dia.Link {
       attrs: {
         text: {
           text: attrs.label,
-          fill: "#0f172a",
-          fontSize: 10,
-          fontFamily: "Inter, system-ui, sans-serif",
+          fill: isoStyle.palette.labelText,
+          fontSize: isoStyle.typography.linkFontSize,
+          fontFamily: isoStyle.typography.family,
         },
         rect: {
           fill: "#ffffff",

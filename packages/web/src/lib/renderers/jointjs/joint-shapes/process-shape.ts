@@ -1,4 +1,5 @@
 import { dia, shapes } from "@joint/core";
+import { isoStyle } from "../style-packs/iso-19450";
 
 export interface ProcessShapeAttrs {
   id: string;
@@ -8,12 +9,43 @@ export interface ProcessShapeAttrs {
   width: number;
   height: number;
   affiliation: "systemic" | "environmental";
+  essence?: "physical" | "informational";
   isMainProcess: boolean;
+  isRefined?: boolean;
 }
 
 export function createProcessShape(attrs: ProcessShapeAttrs): dia.Element {
-  const stroke = attrs.affiliation === "environmental" ? "#9aa4ad" : "#047857";
-  const fill = attrs.isMainProcess ? "#bbf7d0" : "#d1fae5";
+  const stroke = attrs.affiliation === "environmental"
+    ? isoStyle.palette.thingStrokeEnvironmental
+    : isoStyle.palette.thingStrokeProcess;
+
+  const fill = attrs.isMainProcess
+    ? isoStyle.palette.thingFillProcessMain
+    : isoStyle.palette.thingFillProcess;
+
+  const strokeDasharray = attrs.affiliation === "environmental"
+    ? isoStyle.affiliation.environmentalDash
+    : isoStyle.affiliation.systemicDash;
+
+  const strokeWidth = attrs.isRefined
+    ? isoStyle.dimensions.stroke.refined
+    : isoStyle.dimensions.stroke.normal;
+
+  const filter = attrs.essence === "physical"
+    ? {
+        name: "dropShadow",
+        args: {
+          dx: isoStyle.essence.physicalShadowOffsetX,
+          dy: isoStyle.essence.physicalShadowOffsetY,
+          blur: isoStyle.essence.physicalShadowBlur,
+          color: isoStyle.essence.physicalShadowColor,
+        },
+      }
+    : undefined;
+
+  const fontWeight = attrs.isMainProcess
+    ? isoStyle.typography.thingFontWeightMain
+    : isoStyle.typography.thingFontWeightNormal;
 
   const ellipse = new shapes.standard.Ellipse({
     id: attrs.id,
@@ -23,15 +55,16 @@ export function createProcessShape(attrs: ProcessShapeAttrs): dia.Element {
       body: {
         fill,
         stroke,
-        strokeWidth: attrs.isMainProcess ? 3 : 2,
-        strokeDasharray: attrs.affiliation === "environmental" ? "6 4" : "0",
+        strokeWidth,
+        strokeDasharray,
+        ...(filter ? { filter } : {}),
       },
       label: {
         text: attrs.label,
-        fill: "#0f172a",
-        fontFamily: "Inter, system-ui, sans-serif",
-        fontSize: 12,
-        fontWeight: attrs.isMainProcess ? 700 : 500,
+        fill: isoStyle.palette.labelText,
+        fontFamily: isoStyle.typography.family,
+        fontSize: isoStyle.typography.thingFontSize,
+        fontWeight,
         textWrap: { width: attrs.width - 16, height: attrs.height - 8, ellipsis: true },
       },
     },

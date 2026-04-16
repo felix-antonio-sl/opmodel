@@ -26,26 +26,20 @@ export function visualRenderSpecToJointGraph(
 
   spec.nodes.forEach((node, index) => {
     const pos = gridPosition(index, layout);
+    const common = {
+      id: node.id,
+      label: node.label,
+      x: pos.x,
+      y: pos.y,
+      width: layout.nodeWidth,
+      height: layout.nodeHeight,
+      affiliation: node.affiliation,
+      essence: node.essence,
+      isRefined: node.isRefined,
+    };
     const cell = node.opmKind === "process"
-      ? createProcessShape({
-          id: node.id,
-          label: node.label,
-          x: pos.x,
-          y: pos.y,
-          width: layout.nodeWidth,
-          height: layout.nodeHeight,
-          affiliation: node.affiliation,
-          isMainProcess: node.visualRole === "main-process",
-        })
-      : createObjectShape({
-          id: node.id,
-          label: node.label,
-          x: pos.x,
-          y: pos.y,
-          width: layout.nodeWidth,
-          height: layout.nodeHeight,
-          affiliation: node.affiliation,
-        });
+      ? createProcessShape({ ...common, isMainProcess: node.visualRole === "main-process" })
+      : createObjectShape(common);
     graph.addCell(cell);
     nodeIdToCell.set(node.id, cell);
   });
