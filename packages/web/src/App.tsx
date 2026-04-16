@@ -45,6 +45,7 @@ const SdWizard = lazy(() => import("./components/SdWizard").then((m) => ({ defau
 const OpmGraphGeneratorPanel = lazy(() => import("./features/generator/components/OpmGraphGeneratorPanel").then((m) => ({ default: m.OpmGraphGeneratorPanel })));
 const OplImportPanel = lazy(() => import("./components/OplImportPanel").then((m) => ({ default: m.OplImportPanel })));
 const NlSettingsModal = lazy(() => import("./components/NlSettingsModal").then((m) => ({ default: m.NlSettingsModal })));
+const JointSandbox = lazy(() => import("./pages/JointSandbox").then((m) => ({ default: m.JointSandbox })));
 
 
 function downloadBlob(blob: Blob, filename: string) {
@@ -1004,12 +1005,33 @@ function Editor({ initialModel, recoveryInfo, onNew, onImport }: { initialModel:
 
 
 
+function useHashRoute(): string {
+  const [hash, setHash] = useState<string>(() => (typeof window !== "undefined" ? window.location.hash : ""));
+  useEffect(() => {
+    const handler = () => setHash(window.location.hash);
+    window.addEventListener("hashchange", handler);
+    return () => window.removeEventListener("hashchange", handler);
+  }, []);
+  return hash;
+}
+
 export function App() {
+  const hash = useHashRoute();
   const [initialModel, setInitialModel] = useState<Model | null>(null);
   const [recoveryInfo, setRecoveryInfo] = useState<LocalRecoveryInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Increment key to force Editor remount when switching models
   const [editorKey, setEditorKey] = useState(0);
+
+  if (hash === "#/joint-sandbox") {
+    return (
+      <ErrorBoundary>
+        <Suspense fallback={<div className="loading">Loading sandbox…</div>}>
+          <JointSandbox />
+        </Suspense>
+      </ErrorBoundary>
+    );
+  }
 
   useEffect(() => {
     // Try localStorage first (sync), then IndexedDB (async), fallback to new model
