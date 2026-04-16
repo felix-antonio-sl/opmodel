@@ -41,9 +41,12 @@ export interface VisualRenderNode {
   opmKind: "object" | "process";
   visualRole: VisualNodeRole;
   affiliation: "systemic" | "environmental";
+  essence?: "physical" | "informational";
   laneId: string;
   groupId?: string;
   importance: 1 | 2 | 3;
+  isRefined?: boolean;
+  inZoomContainerOf?: string;
 }
 
 export interface VisualRenderEdge {
@@ -54,6 +57,40 @@ export interface VisualRenderEdge {
   label?: string;
   semanticRole?: string;
   routingPriority: "primary" | "secondary";
+  exceptionKind?: "overtime" | "undertime";
+  multiplicitySource?: string;
+  multiplicityTarget?: string;
+  pathLabel?: string;
+  probability?: number;
+  tag?: string;
+  tagReverse?: string;
+}
+
+export interface VisualRenderState {
+  id: string;
+  ownerThingId: string;
+  label: string;
+  initial: boolean;
+  final: boolean;
+  default: boolean;
+  current?: boolean;
+}
+
+export interface VisualRenderFan {
+  id: string;
+  operator: "xor" | "or" | "and";
+  direction?: "converging" | "diverging";
+  members: string[];
+  incomplete?: boolean;
+  memberMultiplicities?: Record<string, string>;
+}
+
+export interface VisualRenderModifier {
+  id: string;
+  edgeId: string;
+  kind: "event" | "condition";
+  negated?: boolean;
+  conditionMode?: "skip" | "wait";
 }
 
 export interface VisualRenderSpec {
@@ -67,6 +104,9 @@ export interface VisualRenderSpec {
   };
   nodes: VisualRenderNode[];
   edges: VisualRenderEdge[];
+  states: VisualRenderState[];
+  fans: VisualRenderFan[];
+  modifiers: VisualRenderModifier[];
   guardrails: string[];
   canonicalOpl: string;
 }
@@ -78,7 +118,10 @@ export interface VisualRenderVerificationIssue {
     | "VR-003"
     | "VR-004"
     | "VR-005"
-    | "VR-006";
+    | "VR-006"
+    | "VR-007"
+    | "VR-008"
+    | "VR-009";
   severity: "error" | "warning";
   message: string;
   refs?: string[];

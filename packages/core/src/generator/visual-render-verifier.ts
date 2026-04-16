@@ -3,6 +3,7 @@ import type { VisualRenderVerificationReport, VisualRenderVerificationIssue, Vis
 export function verifyVisualRenderSpec(spec: VisualRenderSpec): VisualRenderVerificationReport {
   const issues: VisualRenderVerificationIssue[] = [];
   const nodeIds = new Set(spec.nodes.map((node) => node.id));
+  const edgeIds = new Set(spec.edges.map((edge) => edge.id));
   const laneIds = new Set(spec.scene.lanes.map((lane) => lane.id));
 
   if (spec.nodes.length === 0) {
@@ -57,6 +58,40 @@ export function verifyVisualRenderSpec(spec: VisualRenderSpec): VisualRenderVeri
       severity: "warning",
       message: "VisualRenderSpec should declare enough semantic guardrails for the renderer.",
     });
+  }
+
+  for (const state of spec.states) {
+    if (!nodeIds.has(state.ownerThingId)) {
+      issues.push({
+        code: "VR-007",
+        severity: "error",
+        message: `State ${state.id} references missing owner node ${state.ownerThingId}.`,
+        refs: [state.id, state.ownerThingId],
+      });
+    }
+  }
+
+  for (const fan of spec.fans) {
+    const missing = fan.members.filter((m) => !edgeIds.has(m));
+    if (missing.length > 0) {
+      issues.push({
+        code: "VR-008",
+        severity: "error",
+        message: `Fan ${fan.id} references missing edge members: ${missing.join(", ")}.`,
+        refs: [fan.id, ...missing],
+      });
+    }
+  }
+
+  for (const mod of spec.modifiers) {
+    if (!edgeIds.has(mod.edgeId)) {
+      issues.push({
+        code: "VR-009",
+        severity: "error",
+        message: `Modifier ${mod.id} references missing edge ${mod.edgeId}.`,
+        refs: [mod.id, mod.edgeId],
+      });
+    }
   }
 
   return {
