@@ -43,10 +43,10 @@ Precedence:
 2. OPL-ES
 3. Metodología de Modelamiento OPM
 
-## Estado actual (2026-04-16)
+## Estado actual (2026-04-16, post-T1)
 
 - **Parser + compiler + validation**: operativos
-- **Roundtrip categórico**: 4 leyes verificadas sobre 6 fixtures; convergencia doble pendiente en 5 de 6 (no bloqueante)
+- **Roundtrip categórico**: 4 leyes del ADR-003 **verdes sobre las 6 fixtures** del suite — `coffee-making`, `driver-rescuing`, `hodom-v2`, `hodom-hsc-v0`, `ev-ams`, `hospitalizacion-dom`. Gate T3 del rescate abierto.
 - **Semantic kernel / atlas / layout**: estables
 - **VisualRenderSpec**: existe en `packages/core/src/generator/` junto con `kernelToVisualRenderSpec` y `visual-render-verifier`
 - **Decisión vigente (ADR-008)**: JointJS (clientio/joint) es el renderer determinista de producción. Sin LLM en el pipeline de render ni de modelado. El kernel sigue siendo SSOT.
