@@ -11,3 +11,5 @@ export * from "./visual-render-spec";
 export * from "./kernel-to-visual-render-spec";
 export * from "./visual-render-verifier";
 export * from "./kernel-to-visual-export";
+export * from "./kernel-patch-types";
+export * from "./kernel-patch-apply";
