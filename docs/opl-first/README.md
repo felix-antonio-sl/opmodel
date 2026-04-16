@@ -28,6 +28,7 @@
 | 18 | [18-minimal-extraction-plan.md](./18-minimal-extraction-plan.md) | Plan mínimo: qué conservar de opmodel, qué depriorizar y qué extraer a un servicio nuevo — **SUPERSEDED parcial por ADR-008** |
 | **19** | [**19-jointjs-renderer-adr.md**](./19-jointjs-renderer-adr.md) | **ADR-008 — JointJS as deterministic renderer adapter (VINCULANTE)** |
 | 20 | [20-jointjs-execution-plan.md](./20-jointjs-execution-plan.md) | Plan de ejecución 4 fases para integrar JointJS como renderer |
+| — | [HANDOFF-2026-04-16.md](./HANDOFF-2026-04-16.md) | Handoff de rescate: T0 lock, T1 convergencia, T2-T4 JointJS con gate duro |
 
 ## SSOT reference
 
