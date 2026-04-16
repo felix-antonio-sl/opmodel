@@ -35,7 +35,7 @@ export function createProceduralLink(attrs: ProceduralLinkAttrs): dia.Link {
         strokeDasharray: style.dash ?? "0",
         targetMarker: {
           type: "path",
-          d: "M 10 -5 0 0 10 5 Z",
+          d: "M 10 -5 L 0 0 L 10 5 Z",
           fill: style.stroke,
         },
       },

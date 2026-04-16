@@ -17,10 +17,9 @@ export function createPaper(options: PaperSetupOptions): dia.Paper {
     width: options.width ?? "100%",
     height: options.height ?? "100%",
     gridSize: options.gridSize ?? 10,
-    drawGrid: { name: "dot", args: { color: "#e2e8f0", thickness: 1 } },
     background: { color: options.background ?? "#f8fafc" },
     cellViewNamespace: shapes,
-    async: true,
+    async: false,
     interactive: options.interactive ?? false,
   });
   return paper;
