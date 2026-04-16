@@ -289,9 +289,25 @@ export function semanticKernelFromModel(model: Model): SemanticKernel {
         .filter(a => model.things.get(a.thing)?.kind === "process")
         .sort((a, b) => a.y - b.y)
         .map(a => a.thing);
-      // Only truly internal objects (not present in parent OPD) — externals appear in both
+      // Only truly internal objects (not present in parent OPD) — externals appear in both.
+      // Also exclude objects that are agent/instrument of a sub-process: those are
+      // external participants (visualized within the sub-OPD but covered by their
+      // own agent/instrument OPL sentences). Including them in internalObjects
+      // causes the renderer to emit an "as well as" clause for roles already
+      // expressed by link sentences, and the parser does not register Things
+      // from that clause, so they vanish on roundtrip.
+      const subProcessSet = new Set(stepProcesses);
+      const isExternalParticipant = (thingId: string): boolean => {
+        for (const link of model.links.values()) {
+          if (link.source !== thingId) continue;
+          if (link.type !== "agent" && link.type !== "instrument") continue;
+          if (subProcessSet.has(link.target)) return true;
+        }
+        return false;
+      };
       const internalObjs = childApps
         .filter(a => model.things.get(a.thing)?.kind === "object" && !parentThingIds.has(a.thing))
+        .filter(a => !isExternalParticipant(a.thing))
         .map(a => a.thing);
 
       refinements.set(refinementId, {
