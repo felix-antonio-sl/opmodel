@@ -58,6 +58,10 @@ export function visualRenderSpecToJointGraph(
       opmLinkKind: edge.opmLinkKind,
       label: edge.label,
       routingPriority: edge.routingPriority,
+      exceptionKind: edge.exceptionKind,
+      multiplicitySource: edge.multiplicitySource,
+      multiplicityTarget: edge.multiplicityTarget,
+      pathLabel: edge.pathLabel,
     });
     graph.addCell(link);
     edgeIdToLink.set(edge.id, link);
