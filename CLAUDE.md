@@ -13,10 +13,10 @@ OPModel is a single-user power tool for **Object Process Methodology (ISO 19450)
 - **packages/nl/** — Natural language layer (parse, resolve, prompt builders, LLM providers, pipeline). ~50 tests.
 - **tests/** — Shared fixture files (`.opmodel`): coffee-making, driver-rescuing, hospitalizacion-domiciliaria, hodom-v2, ev-ams, hodom-hsc-v0.
 - **scripts/** — Build scripts for fixtures: `build-hodom-v2.ts`, `build-hodom-hsc-v0.ts`, `build-ev-ams.ts`.
-- **docs/** — Specs, plans, methodology docs. Historical — may not reflect current state.
-- **docs/archive/sessions/** — Session handoffs. Historical context, not guaranteed current.
-- **docs/archive/analysis/** — Formal foundations research. Read-only reference.
-- **docs/archive/audits/** — Formal verification against ISO 19450.
+- **docs/** — Only current, binding documents. Start at `docs/README.md` for the index.
+- **docs/opl-first/** — ADRs and plan for the active JointJS rescue (ADR-003, ADR-004, ADR-005, ADR-008, plan 20, mapping 21, HANDOFF).
+- **docs/ssot/** — Subordination rule to kora SSOT (`opm-ssot-es/`) and candidate extensions that should return to SSOT.
+- **docs/archive/** — Historical context (sessions, analyses, audits, superseded plans). Not normative.
 
 ## Language and Conventions
 
@@ -113,6 +113,7 @@ Superseded by ADR-008: ADR-006 (LLM-mediated renderer), ADR-007 (LLM-mediated mo
 - **Monorepo:** Bun workspaces (root `package.json`). No build step for core/cli/nl — web consumes TS source directly.
 - **Pattern:** Immutable Model — pure functions return `Result<Model, InvariantError>`, Maps for O(1) lookups.
 - **Docker:** `docker-compose.yml` runs web dev via Traefik on `opmodel.sanixai.com`. Mounts repo as volume. Note: Docker creates `.vite` cache as root.
+  - **Arquitectura**: split host/container. El **host** corre `bun install` (dependencias escriben en `node_modules/` vía volumen). El **container** solo corre el Vite dev server con HMR (no ejecuta `bun install`, no hay COPY, no hay nginx). Vite dev no queda expuesto al host — el acceso es exclusivamente vía **Traefik con SSL automático** en `opmodel.sanixai.com`. Este arreglo permite editar archivos desde host o IDE y que Vite los recoja inmediatamente por volumen montado.
 
 ## Session Continuity
 
