@@ -45,7 +45,7 @@ Ver [`../ssot/README.md`](../ssot/README.md) para la regla de subordinación.
 
 | Archivo | Uso |
 |---------|-----|
-| [`HANDOFF-2026-04-16.md`](./HANDOFF-2026-04-16.md) | Handoff operativo — T2 cerrado, T3 abierto |
+| [`HANDOFF-2026-04-17.md`](./HANDOFF-2026-04-17.md) | Handoff operativo — T2 cerrado, T3 en curso (3.1+3.2 cerrados) |
 | [`opl-grammar.md`](./opl-grammar.md) | Gramática canónica de referencia |
 
 ## Regla de oro
@@ -56,7 +56,12 @@ Ver [`../ssot/README.md`](../ssot/README.md) para la regla de subordinación.
 
 ## Línea de trabajo actual
 
-Branch: `feat/jointjs-integration` · rescate T3 (Fase 3 JointJS:
-`KernelPatchOperation` + drag-to-layout + context menu).
+Branch: `feat/jointjs-integration` · rescate **T3 en curso**.
 
-Ver HANDOFF para estado operativo exacto.
+Slices cerrados: **T3.1** (types `KernelPatchOperation`) + **T3.2** (validate+apply
+sobre Model via API existente) en commit `082d029`.
+
+Próximo: **T3.3** — `kernel-patch-from-joint.ts` + context menu JointJS que
+traduce eventos visuales en patches validados contra el kernel.
+
+Ver HANDOFF-2026-04-17 para estado operativo exacto.
