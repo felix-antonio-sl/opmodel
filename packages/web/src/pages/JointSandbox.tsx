@@ -28,7 +28,7 @@ export function JointSandbox() {
   const [fixtureId, setFixtureId] = useState<string>("coffee-making");
   const [opdId, setOpdId] = useState<string>("opd-sd1");
 
-  const fixture = FIXTURES.find((f) => f.id === fixtureId) ?? FIXTURES[0];
+  const fixture = FIXTURES.find((f) => f.id === fixtureId) ?? FIXTURES[0]!;
 
   const { error, model } = useMemo(() => {
     const result = loadModel(fixture.raw);

@@ -70,7 +70,7 @@ export function createProcessShape(attrs: ProcessShapeAttrs): dia.Element {
         stroke,
         strokeWidth,
         strokeDasharray,
-        ...(filter ? { filter } : {}),
+        ...(filter ? { filter: filter as any } : {}),
       },
       label: {
         text: displayText,

@@ -51,7 +51,7 @@ export function createObjectShape(attrs: ObjectShapeAttrs): dia.Element {
         rx: isoStyle.dimensions.object.cornerRadius,
         ry: isoStyle.dimensions.object.cornerRadius,
         strokeDasharray,
-        ...(filter ? { filter } : {}),
+        ...(filter ? { filter: filter as any } : {}),
       },
       label: {
         text: attrs.label,

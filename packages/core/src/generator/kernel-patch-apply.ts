@@ -119,14 +119,14 @@ export function validateKernelPatch(
       issues: [{ code: applied.error.code, message: applied.error.message, severity: "error" }],
     };
   }
-  const validation = validate(applied.value.model);
-  if (validation.errors.length > 0) {
+  const errors = validate(applied.value.model);
+  if (errors.length > 0) {
     return {
       ok: false,
-      issues: validation.errors.map((e) => ({ code: e.code, message: e.message, severity: "error" as const })),
+      issues: errors.map((e) => ({ code: e.code, message: e.message, severity: "error" as const })),
     };
   }
-  return { ok: true, issues: validation.warnings.map((w) => ({ code: w.code, message: w.message, severity: "warning" as const })) };
+  return { ok: true, issues: [] };
 }
 
 export function tryApplyKernelPatch(
