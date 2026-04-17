@@ -39,7 +39,12 @@ export function visualRenderSpecToJointGraph(
       isRefined: node.isRefined,
     };
     const cell = node.opmKind === "process"
-      ? createProcessShape({ ...common, isMainProcess: node.visualRole === "main-process", duration: node.duration })
+      ? createProcessShape({
+          ...common,
+          isMainProcess: node.visualRole === "main-process",
+          isContainer: Boolean(node.inZoomContainerOf),
+          duration: node.duration,
+        })
       : createObjectShape(common);
     graph.addCell(cell);
     nodeIdToCell.set(node.id, cell as dia.Element);
@@ -54,8 +59,23 @@ export function visualRenderSpecToJointGraph(
   }
 
   const knownIds = new Set(nodeIdToCell.keys());
+  // Map each node id to its container parent (if embedded in an in-zoom).
+  const childToContainer = new Map<string, string>();
+  for (const [id, box] of layoutResult.nodes) {
+    if (box.parentId) childToContainer.set(id, box.parentId);
+  }
+  const STRUCTURAL_KINDS = new Set(["aggregation", "exhibition", "generalization", "classification"]);
   spec.edges.forEach((edge) => {
     if (!knownIds.has(edge.source) || !knownIds.has(edge.target)) return;
+    // §10.3/V-69: in an in-zoom OPD, the embed already expresses the
+    // structural relation between a subprocess and its container parent,
+    // so a redundant aggregation/exhibition/generalization/classification
+    // link in the same direction is visual noise — suppress it.
+    if (STRUCTURAL_KINDS.has(edge.opmLinkKind)) {
+      const srcParent = childToContainer.get(edge.source);
+      const tgtParent = childToContainer.get(edge.target);
+      if (srcParent === edge.target || tgtParent === edge.source) return;
+    }
     const link = createProceduralLink({
       id: edge.id,
       sourceId: edge.source,

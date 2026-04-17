@@ -54,12 +54,26 @@ export function createObjectShape(attrs: ObjectShapeAttrs): dia.Element {
         ...(filter ? { filter: filter as any } : {}),
       },
       label: {
+        // V-4/V-5: keep label in top band so the bottom state strip never
+        // hides it. Override the standard.Rectangle's centered y=calc(0.5*h)
+        // with an absolute y, anchored to the top.
+        y: 6,
+        refY: null,
+        textVerticalAnchor: "top",
         text: attrs.label,
         fill: isoStyle.palette.labelText,
         fontFamily: isoStyle.typography.family,
         fontSize: isoStyle.typography.thingFontSize,
         fontWeight: isoStyle.typography.thingFontWeightNormal,
-        textWrap: { width: attrs.width - 16, height: attrs.height - 8, ellipsis: true },
+        // Label band height: when the box grew because of states (height>60),
+        // reserve at least 32px (≥2 text lines @13px) so long names like
+        // "Servicio de Hospitalización Domiciliaria" wrap instead of getting
+        // ellipsis-truncated. Otherwise use most of the box.
+        textWrap: {
+          width: attrs.width - 16,
+          height: attrs.height > 60 ? Math.max(32, attrs.height - 36) : attrs.height - 14,
+          ellipsis: true,
+        },
       },
     },
   });
