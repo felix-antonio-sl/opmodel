@@ -1,4 +1,4 @@
-import { dia } from "@joint/core";
+import { dia, shapes } from "@joint/core";
 import type { VisualRenderSpec } from "@opmodel/core";
 import { createObjectShape } from "./joint-shapes/object-shape";
 import { createProcessShape } from "./joint-shapes/process-shape";
@@ -25,9 +25,11 @@ export function visualRenderSpecToJointGraph(
   spec.nodes.forEach((node) => {
     const box = layoutResult.nodes.get(node.id);
     if (!box) return;
+    // V-122: alias shown in parentheses next to full name
+    const displayLabel = node.alias ? `${node.label} (${node.alias})` : node.label;
     const common = {
       id: node.id,
-      label: node.label,
+      label: displayLabel,
       x: box.x,
       y: box.y,
       width: box.width,
@@ -37,7 +39,7 @@ export function visualRenderSpecToJointGraph(
       isRefined: node.isRefined,
     };
     const cell = node.opmKind === "process"
-      ? createProcessShape({ ...common, isMainProcess: node.visualRole === "main-process" })
+      ? createProcessShape({ ...common, isMainProcess: node.visualRole === "main-process", duration: node.duration })
       : createObjectShape(common);
     graph.addCell(cell);
     nodeIdToCell.set(node.id, cell as dia.Element);
@@ -65,6 +67,9 @@ export function visualRenderSpecToJointGraph(
       multiplicitySource: edge.multiplicitySource,
       multiplicityTarget: edge.multiplicityTarget,
       pathLabel: edge.pathLabel,
+      bidirectional: edge.bidirectional,
+      isSplit: edge.isSplit,
+      splitRole: edge.splitRole,
     });
     graph.addCell(link);
     edgeIdToLink.set(edge.id, link);
@@ -134,7 +139,7 @@ export function visualRenderSpecToJointGraph(
     const cx = cp.x + cs.width / 2;
     const cy = cp.y - 14;
     try {
-      const badge = createFanShape({ id: `fan-badge-${fan.id}`, operator: fan.operator, x: cx, y: cy });
+      const badge = createFanShape({ id: `fan-badge-${fan.id}`, operator: fan.operator, x: cx, y: cy, isProbabilistic: fan.isProbabilistic, hiddenRefinersCount: fan.hiddenRefinersCount });
       graph.addCell(badge);
     } catch {
       // AND already skipped; others ignored
@@ -151,6 +156,55 @@ export function visualRenderSpecToJointGraph(
       negated: mod.negated,
       conditionMode: mod.conditionMode,
     });
+  }
+
+  // §1.8: indicador de partes incompletas (barra bajo el nodo)
+  for (const node of spec.nodes) {
+    if (!node.hasIncompleteParts) continue;
+    const cell = nodeIdToCell.get(node.id);
+    if (!cell) continue;
+    const pos = cell.position();
+    const size = cell.size();
+    const marker = new shapes.standard.Rectangle({
+      id: `incomplete-${node.id}`,
+      position: { x: pos.x + size.width / 2 - 12, y: pos.y + size.height + 2 },
+      size: { width: 24, height: 12 },
+      attrs: {
+        body: { fill: "transparent", stroke: "transparent" },
+        label: {
+          text: isoStyle.markers.incompletePartsBar,
+          fill: "#475569",
+          fontSize: isoStyle.typography.markerFontSize,
+          fontFamily: isoStyle.typography.family,
+        },
+      },
+    });
+    graph.addCell(marker);
+  }
+
+  // §10.12: icono de semi-plegado en esquina superior derecha
+  for (const node of spec.nodes) {
+    if (!node.isSemiFolded) continue;
+    const cell = nodeIdToCell.get(node.id);
+    if (!cell) continue;
+    const pos = cell.position();
+    const size = cell.size();
+    const foldIcon = new shapes.standard.Rectangle({
+      id: `semifold-${node.id}`,
+      position: { x: pos.x + size.width - 16, y: pos.y + 2 },
+      size: { width: 14, height: 14 },
+      attrs: {
+        body: { fill: "transparent", stroke: "transparent" },
+        label: {
+          text: isoStyle.markers.semiFoldIcon,
+          fill: "#64748b",
+          fontSize: isoStyle.typography.markerFontSize - 1,
+          fontFamily: isoStyle.typography.family,
+        },
+      },
+    });
+    graph.addCell(foldIcon);
+    cell.embed(foldIcon);
   }
 
   return { graph, nodeIdToCell: nodeIdToCell as Map<string, dia.Cell>, edgeIdToLink };

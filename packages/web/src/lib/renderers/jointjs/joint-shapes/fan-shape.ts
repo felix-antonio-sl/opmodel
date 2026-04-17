@@ -6,6 +6,8 @@ export interface FanShapeAttrs {
   operator: "xor" | "or" | "and";
   x: number;
   y: number;
+  isProbabilistic?: boolean;       // §5.8, V-18: badge con "Pr" prefix
+  hiddenRefinersCount?: number;    // V-118: refinadores ocultos en semi-plegado
 }
 
 /**
@@ -23,8 +25,15 @@ export function createFanShape(attrs: FanShapeAttrs): dia.Element {
     throw new Error("AND fans have no explicit visual marker; caller must skip");
   }
 
-  const label = attrs.operator.toUpperCase();
-  const width = 36;
+  // §5.8 V-18: fan probabilístico → prefijo "Pr:" en el badge
+  const baseLabel = attrs.isProbabilistic
+    ? `Pr:${attrs.operator.toUpperCase()}`
+    : attrs.operator.toUpperCase();
+  // V-118: número de refinadores ocultos sufijo "+N"
+  const label = attrs.hiddenRefinersCount
+    ? `${baseLabel} +${attrs.hiddenRefinersCount}`
+    : baseLabel;
+  const width = attrs.hiddenRefinersCount ? 52 : 36;
   const height = 18;
 
   return new shapes.standard.Rectangle({

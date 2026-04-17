@@ -41,11 +41,11 @@ El style pack `iso-19450` (slice 2.2) toma decisiones de implementación **en es
 
 | Constructo SSOT | Sección | Forma | Markers normativos | Estado en adapter |
 |-----------------|---------|-------|--------------------|-------------------|
-| **Objeto** (Object) | §1.1, §1.4 | rectángulo | contorno sólido=systemic / punteado=environmental (§1.2, V-71); sombra=physical / plano=informational (§1.3, V-1); contorno grueso si refinado (V-69) | ✅ **Slice 2.2 cerrado** — afiliación dashed, essence dropShadow, isRefined strokeWidth |
+| **Objeto** (Object) | §1.1, §1.4 | rectángulo | contorno sólido=systemic / punteado=environmental (§1.2, V-1); sombra=physical / plano=informational (§1.3, V-1); contorno grueso si refinado (V-69); contorno persiste en todos los niveles de refinamiento (V-71) | ✅ **Slice 2.2 cerrado** — afiliación dashed, essence dropShadow, isRefined strokeWidth |
 | **Proceso** (Process) | §1.1, §1.4 | elipse | mismas reglas de afiliación/esencia; elipse agrandada si contiene subprocesos (V-34) | ✅ **Slice 2.2 + 2.5 cerrado** — más elipse contenedora en in-zoom |
 | **Estado** (State / rountangle) | §1.1, §2 | rectángulo redondeado interno al objeto | dispuestos horizontalmente en zona inferior (V-4, V-5); borde grueso=inicial; doble borde=final; flecha diagonal abierta=default; `...` en esquina inferior derecha=supresión (§1.8, §10.6) | ✅ **Slice 2.3 cerrado** — embedded rountangles, initial/final/default markers; doble borde geométrico real diferido |
-| **System boundary** | — | **no existe como entidad visual** | la frontera se codifica por contorno de cada cosa (V-71). Cualquier caja envolvente en UI es decoración no-normativa | ✅ No implementado como entidad (decisión SSOT-respetada) |
-| **Internal vs external vs environmental** | §10.3b | 3 ejes ortogonales | afiliación: contorno sólido/punteado (V-71); rol en OPD hijo: contenedor agrandado vs posicionado alrededor (V-79..V-85); esencia: sombra/plano (V-95) | ✅ **Slice 2.1 + 2.2 + 2.5 cerrado** — los 3 ejes visibles |
+| **System boundary** | — | **no existe como entidad visual** | ausencia normativa: la SSOT no define este constructo. La afiliación sistémica/ambiental se codifica por el contorno de cada thing individualmente (§1.2, V-1). Cualquier caja envolvente en UI es decoración no-normativa. | ✅ No implementado como entidad (decisión SSOT-respetada) |
+| **Internal vs external vs environmental** | §10.3b | 3 ejes ortogonales | afiliación: contorno sólido/punteado (§1.2, V-1); persistencia del tipo de contorno en refinamiento (V-71); rol en OPD hijo: contenedor agrandado vs posicionado alrededor (V-79..V-85); esencia: sombra/plano (V-95) | ✅ **Slice 2.1 + 2.2 + 2.5 cerrado** — los 3 ejes visibles |
 
 ### B. Links procedurales
 

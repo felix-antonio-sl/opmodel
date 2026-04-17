@@ -88,6 +88,7 @@ export interface IsoStyle {
           | "triangle-hollow-with-filled-inner"
           | "triangle-hollow-with-circle-inner"
           | "open-arrow"
+          | "harpoon"
           | "none";
       }
     >;
@@ -97,6 +98,10 @@ export interface IsoStyle {
     conditionLabel: string;
     suppressionGlyph: string;
     defaultArrow: string;
+    splitEntryGlyph: string;    // V-40: enlace de entrada al in-zoom
+    splitExitGlyph: string;     // V-41: enlace de salida del in-zoom
+    semiFoldIcon: string;       // §10.12: semi-plegado
+    incompletePartsBar: string; // §1.8: partes ocultas
   };
 }
 
@@ -165,6 +170,7 @@ export const isoStyle: IsoStyle = {
       generalization: { stroke: "#334155", marker: "triangle-hollow" },
       classification: { stroke: "#334155", marker: "triangle-hollow-with-circle-inner" },
       tagged: { stroke: "#334155", marker: "open-arrow" },
+      "tagged-bidirectional": { stroke: "#334155", marker: "harpoon" },
       input: { stroke: "#b91c1c", marker: "closed-triangle" },
       output: { stroke: "#0f5132", marker: "closed-triangle" },
     },
@@ -174,5 +180,9 @@ export const isoStyle: IsoStyle = {
     conditionLabel: "c",
     suppressionGlyph: "…",
     defaultArrow: "↘",
+    splitEntryGlyph: "⤵",
+    splitExitGlyph: "⤴",
+    semiFoldIcon: "⊞",
+    incompletePartsBar: "┄",
   },
 };

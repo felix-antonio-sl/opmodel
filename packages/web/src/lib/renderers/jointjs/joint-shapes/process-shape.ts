@@ -12,6 +12,15 @@ export interface ProcessShapeAttrs {
   essence?: "physical" | "informational";
   isMainProcess: boolean;
   isRefined?: boolean;
+  duration?: { min?: number; expected?: number; max?: number; unit?: string; distribution?: string };
+}
+
+function formatDuration(d: NonNullable<ProcessShapeAttrs["duration"]>): string {
+  const u = d.unit ?? "";
+  if (d.min !== undefined && d.max !== undefined) return `[${d.min}–${d.max}${u}]`;
+  if (d.expected !== undefined) return `[~${d.expected}${u}]`;
+  if (d.distribution) return `[${d.distribution}]`;
+  return "";
 }
 
 export function createProcessShape(attrs: ProcessShapeAttrs): dia.Element {
@@ -47,6 +56,10 @@ export function createProcessShape(attrs: ProcessShapeAttrs): dia.Element {
     ? isoStyle.typography.thingFontWeightMain
     : isoStyle.typography.thingFontWeightNormal;
 
+  // V-45: duration annotation below process name
+  const durationStr = attrs.duration ? formatDuration(attrs.duration) : "";
+  const displayText = durationStr ? `${attrs.label}\n${durationStr}` : attrs.label;
+
   const ellipse = new shapes.standard.Ellipse({
     id: attrs.id,
     position: { x: attrs.x, y: attrs.y },
@@ -60,7 +73,7 @@ export function createProcessShape(attrs: ProcessShapeAttrs): dia.Element {
         ...(filter ? { filter } : {}),
       },
       label: {
-        text: attrs.label,
+        text: displayText,
         fill: isoStyle.palette.labelText,
         fontFamily: isoStyle.typography.family,
         fontSize: isoStyle.typography.thingFontSize,

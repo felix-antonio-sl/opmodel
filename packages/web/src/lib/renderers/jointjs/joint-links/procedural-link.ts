@@ -12,6 +12,9 @@ export interface ProceduralLinkAttrs {
   multiplicitySource?: string;
   multiplicityTarget?: string;
   pathLabel?: string;
+  bidirectional?: boolean;        // §8.1 V-56: arpones en ambos extremos
+  isSplit?: boolean;              // V-40, V-41: enlace escindido en descomposición
+  splitRole?: "entry" | "exit";  // V-40: entrada al in-zoom, V-41: salida
 }
 
 /**
@@ -60,11 +63,34 @@ function buildTargetMarker(kind: string, stroke: string): Record<string, unknown
         stroke,
         "stroke-width": 2,
       };
+    case "harpoon": {
+      // Arpón: open-arrow con línea vertical de cierre (§8.1 V-56)
+      const a = isoStyle.links.arrowSize;
+      return {
+        type: "path",
+        d: `M ${a + 1} -${a / 2} L 0 0 L ${a + 1} ${a / 2} M ${a + 3} -${a / 2} L ${a + 3} ${a / 2}`,
+        fill: "none",
+        stroke,
+        "stroke-width": 1.5,
+      };
+    }
     case "none":
       return { type: "path", d: "M 0 0 Z", fill: "none", stroke: "transparent" };
     default:
       return { type: "path", d: `M ${a + 1} -${a / 2} L 0 0 L ${a + 1} ${a / 2} Z`, fill: stroke, stroke };
   }
+}
+
+function buildTargetMarkerForKind(kind: string, stroke: string): Record<string, unknown> {
+  return buildTargetMarker(kind, stroke);
+}
+
+function buildSourceMarker(effectiveKind: string, stroke: string): Record<string, unknown> | null {
+  const marker = isoStyle.links.byKind[effectiveKind]?.marker;
+  if (marker !== "harpoon" && marker !== "open-arrow") return null;
+  // Arpón espejo en extremo origen (§8.1 V-56: bidireccional)
+  const a = isoStyle.links.arrowSize;
+  return { type: "path", d: `M 0 -${a / 2} L ${a + 1} 0 L 0 ${a / 2}`, fill: "none", stroke, "stroke-width": 1.5 };
 }
 
 function innerGlyphForMarker(kind: string): string | null {
@@ -75,12 +101,22 @@ function innerGlyphForMarker(kind: string): string | null {
 }
 
 export function createProceduralLink(attrs: ProceduralLinkAttrs): dia.Link {
-  const kindStyle = isoStyle.links.byKind[attrs.opmLinkKind] ?? { stroke: "#475569", marker: "closed-triangle" as const };
+  // §8.1 V-56: tagged bidireccional usa estilo de harpoon
+  const effectiveKind = (attrs.opmLinkKind === "tagged" && attrs.bidirectional)
+    ? "tagged-bidirectional"
+    : attrs.opmLinkKind;
+
+  const kindStyle = isoStyle.links.byKind[effectiveKind]
+    ?? isoStyle.links.byKind[attrs.opmLinkKind]
+    ?? { stroke: "#475569", marker: "closed-triangle" as const };
   const strokeWidth = attrs.routingPriority === "primary"
     ? isoStyle.links.strokeWidthPrimary
     : isoStyle.links.strokeWidthSecondary;
 
-  const targetMarker = buildTargetMarker(attrs.opmLinkKind, kindStyle.stroke);
+  const targetMarker = buildTargetMarkerForKind(effectiveKind, kindStyle.stroke);
+
+  // V-40/V-41: enlace escindido usa dash alternado
+  const splitDash = attrs.isSplit ? "8 4 2 4" : undefined;
 
   const link = new shapes.standard.Link({
     id: attrs.id,
@@ -90,11 +126,17 @@ export function createProceduralLink(attrs: ProceduralLinkAttrs): dia.Link {
       line: {
         stroke: kindStyle.stroke,
         strokeWidth,
-        strokeDasharray: kindStyle.dash ?? "0",
+        strokeDasharray: splitDash ?? kindStyle.dash ?? "0",
         targetMarker,
       },
     },
   });
+
+  // §8.1 V-56: arpón en extremo fuente para tagged bidireccional
+  if (attrs.bidirectional) {
+    const srcMarker = buildSourceMarker(effectiveKind, kindStyle.stroke);
+    if (srcMarker) link.attr("line/sourceMarker", srcMarker);
+  }
 
   // Base kind label (secondary — small, unobtrusive).
   if (attrs.label && attrs.label.trim().length > 0) {
@@ -194,6 +236,25 @@ export function createProceduralLink(attrs: ProceduralLinkAttrs): dia.Link {
           text: attrs.multiplicityTarget,
           fill: "#475569",
           fontSize: isoStyle.typography.markerFontSize - 1,
+          fontFamily: isoStyle.typography.family,
+        },
+        rect: { fill: "#fff", stroke: "transparent" },
+      },
+    });
+  }
+
+  // V-40, V-41: glifo indicador de cruce de frontera en enlace escindido
+  if (attrs.isSplit) {
+    const glyph = attrs.splitRole === "entry"
+      ? isoStyle.markers.splitEntryGlyph
+      : isoStyle.markers.splitExitGlyph;
+    link.appendLabel({
+      position: attrs.splitRole === "entry" ? 0.15 : 0.85,
+      attrs: {
+        text: {
+          text: glyph,
+          fill: kindStyle.stroke,
+          fontSize: isoStyle.typography.markerFontSize + 2,
           fontFamily: isoStyle.typography.family,
         },
         rect: { fill: "#fff", stroke: "transparent" },

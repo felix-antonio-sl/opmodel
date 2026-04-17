@@ -73,9 +73,22 @@ export function kernelToVisualRenderSpec(
     const thing = kernel.things.get(node.id);
     const isRefined = refinementsByParent.has(node.id);
     const isContainer = containerRef?.parentThing === node.id;
+    // V-45: propagate duration from kernel process thing
+    const duration = (thing?.kind === "process" && thing.duration)
+      ? {
+          ...(thing.duration.min !== undefined ? { min: thing.duration.min } : {}),
+          ...(thing.duration.nominal !== undefined ? { expected: thing.duration.nominal } : {}),
+          ...(thing.duration.max !== undefined ? { max: thing.duration.max } : {}),
+          ...(thing.duration.unit ? { unit: thing.duration.unit } : {}),
+          ...(thing.duration.distribution ? { distribution: thing.duration.distribution.name } : {}),
+        }
+      : undefined;
+    // V-122: propagate alias from kernel thing
+    const alias = (thing as { alias?: string } | undefined)?.alias;
     return {
       id: node.id,
       label: node.label,
+      ...(alias ? { alias } : {}),
       opmKind: thing?.kind === "process" ? "process" : "object",
       visualRole: inferNodeRole(node),
       affiliation: thing?.affiliation === "environmental" ? "environmental" : "systemic",
@@ -84,6 +97,7 @@ export function kernelToVisualRenderSpec(
       importance: node.emphasis === "primary" ? 1 : thing?.kind === "process" ? 2 : 3,
       ...(isRefined ? { isRefined: true } : {}),
       ...(isContainer && containerRef ? { inZoomContainerOf: containerRef.parentThing } : {}),
+      ...(duration ? { duration } : {}),
     };
   });
 
@@ -107,7 +121,14 @@ export function kernelToVisualRenderSpec(
       ...(link?.path_label ? { pathLabel: link.path_label } : {}),
       ...(typeof link?.probability === "number" ? { probability: link.probability } : {}),
       ...(link?.tag ? { tag: link.tag } : {}),
-      ...(link?.tag_reverse ? { tagReverse: link.tag_reverse } : {}),
+      ...(link?.tag_reverse ? { tagReverse: link.tag_reverse, bidirectional: true } : {}),
+      // V-40, V-41: enlace escindido cuando cruza frontera del in-zoom
+      ...(containerRef && (
+        (visibleThingIds.has(edge.source) !== visibleThingIds.has(edge.target))
+      ) ? {
+        isSplit: true,
+        splitRole: visibleThingIds.has(edge.target) ? "entry" as const : "exit" as const,
+      } : {}),
     };
   });
 
@@ -132,10 +153,37 @@ export function kernelToVisualRenderSpec(
     });
   }
 
+  // V-86–V-90: marcador de supresión cuando estados del objeto existen en kernel
+  // pero no están visibles en este OPD hijo
+  if (containerRef && slice?.visibleStates) {
+    for (const nodeId of visibleThingIds) {
+      const thing = kernel.things.get(nodeId);
+      if (!thing || thing.kind !== "object") continue;
+      const allThingStates = [...kernel.states.values()].filter(
+        (s) => (s.parentThing ?? s.parent) === nodeId,
+      );
+      const hiddenStates = allThingStates.filter((s) => !visibleStateIds.has(s.id));
+      const visibleOwnStates = states.filter((s) => s.ownerThingId === nodeId && !s.suppressed);
+      if (hiddenStates.length > 0 && visibleOwnStates.length > 0) {
+        states.push({
+          id: `suppressed-${nodeId}`,
+          ownerThingId: nodeId,
+          label: "…",
+          initial: false,
+          final: false,
+          default: false,
+          suppressed: true,
+        });
+      }
+    }
+  }
+
   const fans: VisualRenderFan[] = [];
   for (const fan of kernel.fans.values()) {
     const visibleMembers = fan.members.filter((m) => edgeIds.has(m));
     if (visibleMembers.length === 0) continue;
+    // §5.8, V-18: fan probabilístico si algún miembro tiene probability definida
+    const isProbabilistic = visibleMembers.some((m) => typeof kernel.links.get(m)?.probability === "number");
     fans.push({
       id: fan.id,
       operator: fan.type,
@@ -143,6 +191,7 @@ export function kernelToVisualRenderSpec(
       members: visibleMembers,
       ...(fan.incomplete ? { incomplete: true } : {}),
       ...(fan.member_multiplicities ? { memberMultiplicities: fan.member_multiplicities } : {}),
+      ...(isProbabilistic ? { isProbabilistic: true } : {}),
     });
   }
 
