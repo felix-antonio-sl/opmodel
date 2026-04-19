@@ -10,3 +10,4 @@ artifacts/visual-audit/
 __pycache__/
 *.egg-info/
 .venv/
+.vibeyardignore
