@@ -72,9 +72,9 @@
   "scenarios": [],
   "settings": {},
   "states": [
-    {"id":"st-status-alerted","name":"alerted","parent":"obj-status"},
-    {"id":"st-status-coordinated","name":"coordinated","parent":"obj-status"},
-    {"default":true,"id":"st-status-idle","initial":true,"name":"idle","parent":"obj-status"}
+    {"default":false,"final":false,"id":"st-status-alerted","initial":false,"name":"alerted","parent":"obj-status"},
+    {"default":false,"final":false,"id":"st-status-coordinated","initial":false,"name":"coordinated","parent":"obj-status"},
+    {"default":true,"final":false,"id":"st-status-idle","initial":true,"name":"idle","parent":"obj-status"}
   ],
   "stereotypes": [],
   "sub_models": [],

@@ -65,6 +65,20 @@ export function visualRenderSpecToJointGraph(
     if (box.parentId) childToContainer.set(id, box.parentId);
   }
   const STRUCTURAL_KINDS = new Set(["aggregation", "exhibition", "generalization", "classification"]);
+  const NORMATIVE_MARKER_KINDS = new Set([
+    "agent",
+    "instrument",
+    "consumption",
+    "result",
+    "effect",
+    "invocation",
+    "exception",
+    "aggregation",
+    "exhibition",
+    "generalization",
+    "classification",
+    "tagged",
+  ]);
   spec.edges.forEach((edge) => {
     if (!knownIds.has(edge.source) || !knownIds.has(edge.target)) return;
     // §10.3/V-69: in an in-zoom OPD, the embed already expresses the
@@ -81,12 +95,12 @@ export function visualRenderSpecToJointGraph(
       sourceId: edge.source,
       targetId: edge.target,
       opmLinkKind: edge.opmLinkKind,
-      label: edge.label,
+      label: NORMATIVE_MARKER_KINDS.has(edge.opmLinkKind) ? undefined : edge.label,
       routingPriority: edge.routingPriority,
       exceptionKind: edge.exceptionKind,
       multiplicitySource: edge.multiplicitySource,
       multiplicityTarget: edge.multiplicityTarget,
-      pathLabel: edge.pathLabel,
+      pathLabel: edge.pathLabel ?? (edge.opmLinkKind === "tagged" ? edge.tag : undefined),
       bidirectional: edge.bidirectional,
       isSplit: edge.isSplit,
       splitRole: edge.splitRole,

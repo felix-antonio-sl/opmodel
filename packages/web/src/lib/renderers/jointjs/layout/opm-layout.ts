@@ -1,4 +1,4 @@
-import type { VisualRenderSpec, VisualRenderNode } from "@opmodel/core";
+import type { VisualRenderEdge, VisualRenderSpec, VisualRenderNode } from "@opmodel/core";
 import { isoStyle } from "../style-packs/iso-19450";
 
 export interface NodeBox {
@@ -78,7 +78,8 @@ export function computeOpmLayout(spec: VisualRenderSpec): LayoutResult {
 }
 
 function inZoomLayout(spec: VisualRenderSpec, container: VisualRenderNode): LayoutResult {
-  const CANVAS_W = 1080;
+  const isObjectContainer = container.opmKind === "object";
+  const BASE_CANVAS_W = 1080;
   const MARGIN = 30;
   // V-35 timeline gap: needs room for edge labels (event/condition/multiplicity)
   // on the procedural links connecting consecutive subprocesses.
@@ -104,10 +105,12 @@ function inZoomLayout(spec: VisualRenderSpec, container: VisualRenderNode): Layo
     const sz = objectBoxSize(150, 60, envCountByOwner.get(n.id) ?? 0);
     return Math.max(m, sz.height);
   }, environmentalNodes.length ? 60 : 0);
+  const envSideBand = isObjectContainer && environmentalNodes.length > 0 ? 260 : 0;
+  const CANVAS_W = BASE_CANVAS_W + envSideBand;
   // Reserve more vertical space for edge labels of links coming from
   // environmentals into the container (e.g. "agent" caption falling near the
   // container's own label band). 32px gap keeps both legible.
-  const envBand = environmentalNodes.length ? envMaxH + 32 : 24;
+  const envBand = !isObjectContainer && environmentalNodes.length ? envMaxH + 32 : 24;
 
   const CANVAS_H = Math.max(680, envBand + 2 * MARGIN + subColumnH + 60);
 
@@ -115,7 +118,7 @@ function inZoomLayout(spec: VisualRenderSpec, container: VisualRenderNode): Layo
     id: container.id,
     x: MARGIN,
     y: MARGIN + envBand,
-    width: CANVAS_W - 2 * MARGIN,
+    width: CANVAS_W - 2 * MARGIN - envSideBand,
     height: CANVAS_H - 2 * MARGIN - envBand,
     isContainer: true,
   };
@@ -206,7 +209,10 @@ function inZoomLayout(spec: VisualRenderSpec, container: VisualRenderNode): Layo
     });
   });
 
-  // Environmentals positioned OUTSIDE the container (top row), sized for states + label.
+  // Environmentals positioned OUTSIDE the container, sized for states + label.
+  // Process in-zoom keeps the historical top band. Object in-zoom/unfold puts
+  // environmentals on the right so structural/tagged links do not cross the
+  // internal object/process arrangement.
   const defEnvW = 150;
   const defEnvH = 60;
   const envSizes = environmentals.map((n) => {
@@ -216,21 +222,39 @@ function inZoomLayout(spec: VisualRenderSpec, container: VisualRenderNode): Layo
     const labelW = labelBoxWidth(n.label);
     return { ...sz, width: Math.max(sz.width, Math.min(220, labelW + 30)) };
   });
-  const envGap = 18;
-  const envRowWidth = envSizes.reduce((acc, sz, i) => acc + sz.width + (i > 0 ? envGap : 0), 0);
-  let envX = (CANVAS_W - envRowWidth) / 2;
-  environmentals.forEach((n, i) => {
-    const sz = envSizes[i]!;
-    nodes.set(n.id, {
-      id: n.id,
-      x: envX,
-      y: 4,
-      width: sz.width,
-      height: sz.height,
-      isEmbedded: false,
+  if (isObjectContainer) {
+    const envGap = 24;
+    const envTotalH = envSizes.reduce((acc, sz, i) => acc + sz.height + (i > 0 ? envGap : 0), 0);
+    let envY = containerBox.y + Math.max(40, (containerBox.height - envTotalH) / 2);
+    environmentals.forEach((n, i) => {
+      const sz = envSizes[i]!;
+      nodes.set(n.id, {
+        id: n.id,
+        x: containerBox.x + containerBox.width + 34,
+        y: envY,
+        width: sz.width,
+        height: sz.height,
+        isEmbedded: false,
+      });
+      envY += sz.height + envGap;
     });
-    envX += sz.width + envGap;
-  });
+  } else {
+    const envGap = 18;
+    const envRowWidth = envSizes.reduce((acc, sz, i) => acc + sz.width + (i > 0 ? envGap : 0), 0);
+    let envX = (CANVAS_W - envRowWidth) / 2;
+    environmentals.forEach((n, i) => {
+      const sz = envSizes[i]!;
+      nodes.set(n.id, {
+        id: n.id,
+        x: envX,
+        y: 4,
+        width: sz.width,
+        height: sz.height,
+        isEmbedded: false,
+      });
+      envX += sz.width + envGap;
+    });
+  }
 
   return { nodes, canvasWidth: CANVAS_W, canvasHeight: CANVAS_H };
 }
@@ -244,6 +268,13 @@ function rootLayout(spec: VisualRenderSpec): LayoutResult {
 
   const mainProc = spec.nodes.find((n) => n.visualRole === "main-process");
   const others = spec.nodes.filter((n) => n !== mainProc);
+
+  // Structural/view OPDs may intentionally have no process as center of
+  // gravity (§15). In those cases a circular process-centric layout produces
+  // crossings and false visual hierarchy. Use graph-aware object clusters.
+  if (!mainProc && spec.edges.some((e) => STRUCTURAL_ROOT_LINKS.has(e.opmLinkKind))) {
+    return structuralRootLayout(spec, statesByOwner);
+  }
 
   // Grid fallback for crowded SD diagrams (>18 satellites): the concentric
   // ring layout collapses into illegible overlap, so switch to a top-banner
@@ -298,6 +329,135 @@ function rootLayout(spec: VisualRenderSpec): LayoutResult {
   });
 
   return { nodes, canvasWidth: CANVAS_W, canvasHeight: CANVAS_H };
+}
+
+const STRUCTURAL_ROOT_LINKS = new Set(["aggregation", "exhibition", "generalization", "classification", "tagged"]);
+
+function rootNodeSize(node: VisualRenderNode, statesByOwner: Map<string, number>, maxWidth = 240): { width: number; height: number } {
+  const baseW = node.opmKind === "object" ? 170 : 180;
+  const baseH = node.opmKind === "object" ? 68 : 74;
+  const stateSz = node.opmKind === "object"
+    ? objectBoxSize(baseW, baseH, statesByOwner.get(node.id) ?? 0, maxWidth)
+    : { width: baseW, height: baseH };
+  const labelW = labelBoxWidth(node.label, node.opmKind === "process" ? node.duration : undefined);
+  return {
+    width: Math.max(stateSz.width, Math.min(maxWidth, labelW + 48)),
+    height: stateSz.height,
+  };
+}
+
+function preferredStructuralRoot(component: VisualRenderNode[], edges: VisualRenderEdge[]): VisualRenderNode {
+  const score = new Map(component.map((node) => [node.id, node.isRefined ? 4 : 0]));
+  for (const edge of edges) {
+    if (edge.opmLinkKind === "generalization" || edge.opmLinkKind === "classification") {
+      score.set(edge.target, (score.get(edge.target) ?? 0) + 3);
+      score.set(edge.source, (score.get(edge.source) ?? 0) + 1);
+    } else {
+      score.set(edge.source, (score.get(edge.source) ?? 0) + 3);
+      score.set(edge.target, (score.get(edge.target) ?? 0) + 1);
+    }
+  }
+  return [...component].sort((a, b) => (score.get(b.id) ?? 0) - (score.get(a.id) ?? 0) || a.label.localeCompare(b.label))[0]!;
+}
+
+function structuralRootLayout(spec: VisualRenderSpec, statesByOwner: Map<string, number>): LayoutResult {
+  const CANVAS_W = 1280;
+  const MARGIN = 36;
+  const CLUSTER_GAP_X = 44;
+  const CLUSTER_GAP_Y = 56;
+  const NODE_GAP_X = 36;
+  const NODE_GAP_Y = 42;
+
+  const nodeById = new Map(spec.nodes.map((node) => [node.id, node]));
+  const structuralEdges = spec.edges.filter((edge) =>
+    STRUCTURAL_ROOT_LINKS.has(edge.opmLinkKind) && nodeById.has(edge.source) && nodeById.has(edge.target),
+  );
+
+  const adjacency = new Map(spec.nodes.map((node) => [node.id, new Set<string>()]));
+  for (const edge of structuralEdges) {
+    adjacency.get(edge.source)?.add(edge.target);
+    adjacency.get(edge.target)?.add(edge.source);
+  }
+
+  const seen = new Set<string>();
+  const components: VisualRenderNode[][] = [];
+  for (const node of spec.nodes) {
+    if (seen.has(node.id)) continue;
+    const stack = [node.id];
+    const ids: string[] = [];
+    seen.add(node.id);
+    while (stack.length > 0) {
+      const id = stack.pop()!;
+      ids.push(id);
+      for (const next of adjacency.get(id) ?? []) {
+        if (seen.has(next)) continue;
+        seen.add(next);
+        stack.push(next);
+      }
+    }
+    components.push(ids.map((id) => nodeById.get(id)!).sort((a, b) => a.label.localeCompare(b.label)));
+  }
+
+  components.sort((a, b) => b.length - a.length || a[0]!.label.localeCompare(b[0]!.label));
+
+  const nodes = new Map<string, NodeBox>();
+  let cursorX = MARGIN;
+  let cursorY = MARGIN;
+  let rowH = 0;
+
+  for (const component of components) {
+    const componentEdges = structuralEdges.filter((edge) =>
+      component.some((node) => node.id === edge.source) && component.some((node) => node.id === edge.target),
+    );
+    const root = preferredStructuralRoot(component, componentEdges);
+    const children = component.filter((node) => node.id !== root.id);
+    const rootSize = rootNodeSize(root, statesByOwner, 300);
+    const childSizes = children.map((node) => rootNodeSize(node, statesByOwner, 240));
+    const cols = Math.max(1, Math.min(3, children.length || 1));
+    const childRows = Math.ceil(children.length / cols);
+    const colWidths = Array.from({ length: cols }, (_, col) => {
+      const colChildren = childSizes.filter((_, i) => i % cols === col);
+      return Math.max(190, ...colChildren.map((size) => size.width));
+    });
+    const childGridW = colWidths.reduce((sum, w) => sum + w, 0) + NODE_GAP_X * Math.max(0, cols - 1);
+    const clusterW = Math.max(rootSize.width, childGridW);
+    const childRowHeights = Array.from({ length: childRows }, (_, row) => {
+      const rowChildren = childSizes.filter((_, i) => Math.floor(i / cols) === row);
+      return Math.max(0, ...rowChildren.map((size) => size.height));
+    });
+    const childrenH = childRowHeights.reduce((sum, h) => sum + h, 0) + NODE_GAP_Y * Math.max(0, childRows - 1);
+    const clusterH = rootSize.height + (children.length > 0 ? NODE_GAP_Y + childrenH : 0);
+
+    if (cursorX + clusterW > CANVAS_W - MARGIN && cursorX > MARGIN) {
+      cursorX = MARGIN;
+      cursorY += rowH + CLUSTER_GAP_Y;
+      rowH = 0;
+    }
+
+    nodes.set(root.id, {
+      id: root.id,
+      x: cursorX + (clusterW - rootSize.width) / 2,
+      y: cursorY,
+      width: rootSize.width,
+      height: rootSize.height,
+    });
+
+    const gridX = cursorX + (clusterW - childGridW) / 2;
+    const gridY = cursorY + rootSize.height + NODE_GAP_Y;
+    children.forEach((node, i) => {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const size = childSizes[i]!;
+      const x = gridX + colWidths.slice(0, col).reduce((sum, w) => sum + w + NODE_GAP_X, 0) + (colWidths[col]! - size.width) / 2;
+      const y = gridY + childRowHeights.slice(0, row).reduce((sum, h) => sum + h + NODE_GAP_Y, 0);
+      nodes.set(node.id, { id: node.id, x, y, width: size.width, height: size.height });
+    });
+
+    cursorX += clusterW + CLUSTER_GAP_X;
+    rowH = Math.max(rowH, clusterH);
+  }
+
+  return { nodes, canvasWidth: CANVAS_W, canvasHeight: Math.max(680, cursorY + rowH + MARGIN) };
 }
 
 // Grid fallback for very crowded root OPDs (e.g. ev-ams SD with ~30 things):

@@ -73,9 +73,9 @@ const objectThings: Array<Thing> = [
 
 for (const thing of objectThings) m = withThing(m, thing);
 
-m = must(addState(m, { id: "st-status-idle", parent: "obj-status", name: "idle", initial: true, default: true }));
-m = must(addState(m, { id: "st-status-coordinated", parent: "obj-status", name: "coordinated" }));
-m = must(addState(m, { id: "st-status-alerted", parent: "obj-status", name: "alerted" }));
+m = must(addState(m, { id: "st-status-idle", parent: "obj-status", name: "idle", initial: true, final: false, default: true }));
+m = must(addState(m, { id: "st-status-coordinated", parent: "obj-status", name: "coordinated", initial: false, final: false, default: false }));
+m = must(addState(m, { id: "st-status-alerted", parent: "obj-status", name: "alerted", initial: false, final: false, default: false }));
 
 const processThings: Array<Thing> = [
   { id: "proc-sync", kind: "process", name: "Record Synchronizing", essence: "informatical", affiliation: "systemic" },
@@ -157,6 +157,15 @@ for (const link of [
   { id: "sd-root-agg-kit-defib", type: "aggregation", source: "obj-home-kit", target: "obj-defib" },
   { id: "sd2-tag-sensor", type: "tagged", source: "obj-home-kit", target: "obj-sensor", tag: "monitors with", direction: "unidirectional" },
 ] as const satisfies Link[]) m = withLink(m, link);
+
+m = {
+  ...m,
+  meta: {
+    ...m.meta,
+    created: "2026-04-10T05:40:52.065Z",
+    modified: "2026-04-10T05:40:52.068Z",
+  },
+};
 
 const outPath = join(process.cwd(), "tests", "object-visual-audit.opmodel");
 writeFileSync(outPath, saveModel(m));

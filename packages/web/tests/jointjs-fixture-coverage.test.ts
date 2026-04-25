@@ -32,6 +32,7 @@ const fixtures = [
   "hodom-v2",
   "ev-ams",
   "hodom-hsc-v0",
+  "object-visual-audit",
 ];
 
 describe("JointJS fixture coverage — 6 fixtures × all their OPDs", () => {

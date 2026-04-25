@@ -91,4 +91,57 @@ describe("visualRenderSpecToJointGraph", () => {
     expect(edgeIdToLink.has("e-orphan")).toBe(false);
     expect(edgeIdToLink.size).toBe(1);
   });
+
+  it("uses markers instead of generic type labels for normative links", () => {
+    const spec = makeSpec();
+    spec.edges = [
+      {
+        id: "e-aggregation",
+        source: "obj-a",
+        target: "proc-m",
+        opmLinkKind: "aggregation",
+        label: "aggregation",
+        routingPriority: "secondary",
+      },
+    ];
+
+    const { edgeIdToLink } = visualRenderSpecToJointGraph(spec);
+    expect(edgeIdToLink.get("e-aggregation")?.labels()).toEqual([]);
+  });
+
+  it("renders tagged links with the tag text, not the generic tagged label", () => {
+    const spec = makeSpec();
+    spec.edges = [
+      {
+        id: "e-tagged",
+        source: "obj-a",
+        target: "proc-m",
+        opmLinkKind: "tagged",
+        label: "tagged",
+        tag: "serves",
+        routingPriority: "secondary",
+      },
+    ];
+
+    const { edgeIdToLink } = visualRenderSpecToJointGraph(spec);
+    expect(edgeIdToLink.get("e-tagged")?.labels().map((label) => label.attrs?.text?.text)).toEqual(["serves"]);
+  });
+
+  it("lays out structural object views as top-down clusters", () => {
+    const spec = makeSpec();
+    spec.nodes = [
+      { id: "obj-hub", label: "Hub", opmKind: "object", visualRole: "value-object", affiliation: "systemic", laneId: "lane-function", importance: 2, isRefined: true },
+      { id: "obj-a", label: "Part A", opmKind: "object", visualRole: "value-object", affiliation: "systemic", laneId: "lane-function", importance: 2 },
+      { id: "obj-b", label: "Part B", opmKind: "object", visualRole: "value-object", affiliation: "systemic", laneId: "lane-function", importance: 2 },
+    ];
+    spec.edges = [
+      { id: "e-a", source: "obj-hub", target: "obj-a", opmLinkKind: "aggregation", label: "aggregation", routingPriority: "secondary" },
+      { id: "e-b", source: "obj-hub", target: "obj-b", opmLinkKind: "aggregation", label: "aggregation", routingPriority: "secondary" },
+    ];
+
+    const { nodeIdToCell } = visualRenderSpecToJointGraph(spec);
+    const hubY = nodeIdToCell.get("obj-hub")!.position().y;
+    expect(nodeIdToCell.get("obj-a")!.position().y).toBeGreaterThan(hubY);
+    expect(nodeIdToCell.get("obj-b")!.position().y).toBeGreaterThan(hubY);
+  });
 });

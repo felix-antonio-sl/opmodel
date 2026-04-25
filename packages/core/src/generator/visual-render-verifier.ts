@@ -271,10 +271,14 @@ export function verifyVisualRenderSpec(spec: VisualRenderSpec): VisualRenderVeri
       (n) => n.opmKind === "process" && n.visualRole === "main-process" && n.affiliation === "systemic",
     );
     if (mainSystemicProcesses.length === 0) {
+      const structuralOnlyView = spec.nodes.every((n) => n.opmKind === "object")
+        && spec.edges.every((e) => ["aggregation", "exhibition", "generalization", "classification", "tagged"].includes(e.opmLinkKind));
       issues.push({
         code: "VR-018",
-        severity: "error",
-        message: "SD OPD has no systemic main process — exactly one required (V-46).",
+        severity: structuralOnlyView ? "warning" : "error",
+        message: structuralOnlyView
+          ? "SD OPD has no systemic main process because this is a structural object view — acceptable for visual-audit/view contexts (§15), but not for a complete system SD (V-46)."
+          : "SD OPD has no systemic main process — exactly one required (V-46).",
       });
     } else if (mainSystemicProcesses.length > 1) {
       issues.push({

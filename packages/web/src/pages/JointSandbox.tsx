@@ -13,6 +13,7 @@ import hospDomJson from "../../../../tests/hospitalizacion-domiciliaria.opmodel?
 import hodomV2Json from "../../../../tests/hodom-v2.opmodel?raw";
 import evAmsJson from "../../../../tests/ev-ams.opmodel?raw";
 import hodomHscV0Json from "../../../../tests/hodom-hsc-v0.opmodel?raw";
+import objectVisualAuditJson from "../../../../tests/object-visual-audit.opmodel?raw";
 import { JointDiagramPreview } from "../components/JointDiagramPreview";
 
 const FIXTURES: Array<{ id: string; name: string; raw: string }> = [
@@ -22,6 +23,7 @@ const FIXTURES: Array<{ id: string; name: string; raw: string }> = [
   { id: "hodom-v2", name: "hodom-v2", raw: hodomV2Json },
   { id: "ev-ams", name: "ev-ams", raw: evAmsJson },
   { id: "hodom-hsc-v0", name: "hodom-hsc-v0", raw: hodomHscV0Json },
+  { id: "object-visual-audit", name: "object-visual-audit", raw: objectVisualAuditJson },
 ];
 
 export function JointSandbox() {
